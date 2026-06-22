@@ -17,11 +17,22 @@ declare(strict_types=1);
  *       --ayanamsa=lahiri --year=2026 --gochar=today
  *
  * Arguments (all optional; sensible defaults shown):
- *   --date=YYYY-MM-DD     birth date            (default 1990-01-01)
- *   --time=HH:MM          birth time, local     (default 12:00)
- *   --lat=DEG             latitude, north +     (default 28.6139, New Delhi)
- *   --lon=DEG             longitude, east +     (default 77.2090, New Delhi)
- *   --tz=HOURS            offset east of UTC    (default 5.5, IST)
+ *   --date=YYYY-MM-DD     birth date            (default 1980-12-01)
+ *   --time=HH:MM          birth time, local     (default 12:31)
+ *   --lat=VALUE           latitude              (default 30N48'00, Moga)
+ *   --lon=VALUE           longitude             (default 75E10'00, Moga)
+ *   --tz=VALUE            offset east of UTC    (default 5:30, IST)
+ *
+ * Latitude/longitude accept EITHER decimal degrees OR degrees-minutes-seconds
+ * with a direction letter, e.g. all of these are accepted:
+ *     --lat=30.9467        --lat="30N56'48"     --lat=30:56:48N
+ *     --lon=75.1389        --lon="75E08'20"     --lon=75:08:20E
+ * (Wrap any value containing an apostrophe in double quotes for the shell.)
+ *
+ * Timezone accepts decimal hours (5.5) or H:M[:S] (5:30) — EAST IS POSITIVE.
+ * India = +5:30 (enter 5.5 or 5:30). NOTE: some astrology software displays the
+ * timezone with the OPPOSITE sign (e.g. "-5:30" for India, meaning "subtract to
+ * reach GMT"); for this tool always use the east-positive value (+5:30).
  *   --ayanamsa=NAME       lahiri|raman|kp|...   (default lahiri)
  *   --year=YYYY           Varshaphal year       (default current year)
  *   --gochar=YYYY-MM-DD   transit date or 'today'(default today)
@@ -39,11 +50,14 @@ use AutoBusiness\Astro\Time\JulianDay;
 
 // --- Parse CLI arguments ----------------------------------------------------
 $opts = getopt('', ['date::', 'time::', 'lat::', 'lon::', 'tz::', 'ayanamsa::', 'year::', 'gochar::']);
-$date = $opts['date'] ?? '1990-01-01';
-$time = $opts['time'] ?? '12:00';
-$lat = (float) ($opts['lat'] ?? 28.6139);
-$lon = (float) ($opts['lon'] ?? 77.2090);
-$tz = (float) ($opts['tz'] ?? 5.5);
+// Defaults = the reference birth used for verification:
+//   Moga, Punjab, India — 1 Dec 1980, 12:31:00, IST (no DST).
+//   Longitude 75E10'00 = 75.1667, Latitude 30N48'00 = 30.8, TZ +5:30.
+$date = $opts['date'] ?? '1980-12-01';
+$time = $opts['time'] ?? '12:31';
+$lat = parseAngle((string) ($opts['lat'] ?? "30N48'00"), 'lat');
+$lon = parseAngle((string) ($opts['lon'] ?? "75E10'00"), 'lon');
+$tz = parseTz((string) ($opts['tz'] ?? '5:30'));
 $ayanamsa = (string) ($opts['ayanamsa'] ?? 'lahiri');
 $forYear = (int) ($opts['year'] ?? (int) date('Y'));
 $gochar = $opts['gochar'] ?? 'today';
@@ -162,6 +176,67 @@ echo "Done. Compare the D1/D9 positions, dasha dates, and ascendant against your
 echo "reference astrology software (use the SAME ayanamsa). Sub-arcminute matches\n";
 echo "require Swiss Ephemeris (set SWETEST_PATH); the pure-PHP provider is ~1-2'.\n";
 line('=', 72);
+
+// --- input parsing helpers --------------------------------------------------
+
+/**
+ * Parse a latitude/longitude given as either decimal degrees ("30.9467",
+ * "-122.85") or DMS with a direction letter ("30N56'48", "75:08:20E"). North
+ * and East are positive; South and West negative.
+ */
+function parseAngle(string $s, string $type): float
+{
+    $s = trim($s);
+
+    // Direction letter (N/S/E/W), anywhere in the string.
+    $dir = '';
+    if (preg_match('/[NSEWnsew]/', $s, $m)) {
+        $dir = strtoupper($m[0]);
+    }
+    // Replace the direction letter with a SPACE (it may sit between the degree
+    // and minute digits, e.g. "30N56'48"), so the numbers don't get merged.
+    $clean = trim(preg_replace('/[NSEWnsew]/', ' ', $s) ?? $s);
+
+    if (preg_match('/^[-+]?\d+(\.\d+)?$/', $clean)) {
+        $val = (float) $clean;                 // plain decimal
+    } else {
+        // DMS: pull the numeric groups in order (deg, min, sec).
+        preg_match_all('/\d+(?:\.\d+)?/', $clean, $mm);
+        $p = $mm[0];
+        $deg = (float) ($p[0] ?? 0);
+        $min = (float) ($p[1] ?? 0);
+        $sec = (float) ($p[2] ?? 0);
+        $val = $deg + $min / 60.0 + $sec / 3600.0;
+        if (str_starts_with($clean, '-')) {
+            $val = -$val;
+        }
+    }
+
+    if ($dir === 'S' || $dir === 'W') {
+        $val = -abs($val);
+    } elseif ($dir === 'N' || $dir === 'E') {
+        $val = abs($val);
+    }
+    return $val;
+}
+
+/**
+ * Parse a timezone offset as decimal hours ("5.5", "-8") or H:M[:S] ("5:30").
+ * East of UTC is positive.
+ */
+function parseTz(string $s): float
+{
+    $s = trim($s);
+    if (preg_match('/^[-+]?\d+(\.\d+)?$/', $s)) {
+        return (float) $s;
+    }
+    $sign = str_starts_with($s, '-') ? -1.0 : 1.0;
+    $p = explode(':', ltrim($s, '+-'));
+    $h = (float) ($p[0] ?? 0);
+    $m = (float) ($p[1] ?? 0);
+    $sec = (float) ($p[2] ?? 0);
+    return $sign * ($h + $m / 60.0 + $sec / 3600.0);
+}
 
 // --- formatting helpers -----------------------------------------------------
 function line(string $ch, int $n): void
