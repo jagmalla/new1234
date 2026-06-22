@@ -23,16 +23,22 @@ namespace AutoBusiness\Astro\Ephemeris;
  */
 final class SwissEphemeris implements EphemerisProviderInterface
 {
-    /** swetest planet selectors -> our body names. 'm' = mean lunar node (Rahu). */
-    private const BODY_MAP = [
+    /** swetest planet selectors -> our body names. Node selector set per nodeType. */
+    private const BASE_BODIES = [
         '0' => 'Sun', '1' => 'Moon', '2' => 'Mercury', '3' => 'Venus',
-        '4' => 'Mars', '5' => 'Jupiter', '6' => 'Saturn', 'm' => 'Rahu',
+        '4' => 'Mars', '5' => 'Jupiter', '6' => 'Saturn',
     ];
+
+    /** @var array<string,string> */
+    private array $bodyMap;
 
     public function __construct(
         private readonly string $binaryPath,
-        private readonly ?string $ephePath = null
+        private readonly ?string $ephePath = null,
+        string $nodeType = 'true'
     ) {
+        // swetest: 't' = true node, 'm' = mean node.
+        $this->bodyMap = self::BASE_BODIES + [($nodeType === 'mean' ? 'm' : 't') => 'Rahu'];
     }
 
     public function name(): string
@@ -52,7 +58,7 @@ final class SwissEphemeris implements EphemerisProviderInterface
 
     public function positions(float $jdUt): array
     {
-        $selectors = implode('', array_keys(self::BODY_MAP));
+        $selectors = implode('', array_keys($this->bodyMap));
 
         // -bj<jd>  : begin date as Julian Day (UT)
         // -p...    : bodies; -fPls : fields = name, longitude, speed
@@ -116,7 +122,7 @@ final class SwissEphemeris implements EphemerisProviderInterface
 
     private function matchBody(string $label): ?string
     {
-        foreach (self::BODY_MAP as $name) {
+        foreach ($this->bodyMap as $name) {
             if (stripos($label, $name) === 0) {
                 return $name;
             }

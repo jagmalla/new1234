@@ -142,9 +142,19 @@ final class CalculationEngine
             ];
         }
 
+        // Transit Ascendant for the requested moment + place (so the gochar
+        // chart has its own rising sign, like mainstream software).
+        [$ascTrop] = $this->ascendantMc($atJdUt, $lat, $lonEast);
+        $ascSid = Charts::norm($ascTrop - $ayan);
+
         return [
             'jd_ut' => $atJdUt,
             'location' => ['latitude' => $lat, 'longitude_east' => $lonEast],
+            'ascendant' => [
+                'sidereal_lon' => round($ascSid, 4),
+                'sign' => Charts::signName($ascSid),
+                'formatted' => Charts::format($ascSid),
+            ],
             'transits' => $transits,
         ];
     }

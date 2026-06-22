@@ -23,6 +23,14 @@ use AutoBusiness\Astro\Time\JulianDay;
  */
 final class AnalyticEphemeris implements EphemerisProviderInterface
 {
+    /**
+     * @param string $nodeType 'true' (osculating, matches most modern software
+     *               incl. Parashara's Light) or 'mean'.
+     */
+    public function __construct(private readonly string $nodeType = 'true')
+    {
+    }
+
     public function name(): string
     {
         return 'Analytic (Schlyter, pure-PHP)';
@@ -71,47 +79,8 @@ final class AnalyticEphemeris implements EphemerisProviderInterface
         $result = ['Sun' => ['lon' => $sunLon, 'lat' => 0.0]];
 
         // --- Moon (geocentric, with perturbations) ------------------------
-        $Nm = 125.1228 - 0.0529538083 * $d;
-        $im = 5.1454;
-        $wm = 318.0634 + 0.1643573223 * $d;
-        $am = 60.2666;
-        $em = 0.054900;
-        $Mm = $this->normalize(115.3654 + 13.0649929509 * $d);
-        $moon = $this->solveBody($Nm, $im, $wm, $am, $em, $Mm);
-
-        // Geocentric ecliptic rectangular for the Moon.
-        $vw = $moon['v'] + $wm;
-        $xh = $moon['r'] * ($this->cos($Nm) * $this->cos($vw) - $this->sin($Nm) * $this->sin($vw) * $this->cos($im));
-        $yh = $moon['r'] * ($this->sin($Nm) * $this->cos($vw) + $this->cos($Nm) * $this->sin($vw) * $this->cos($im));
-        $zh = $moon['r'] * ($this->sin($vw) * $this->sin($im));
-        $moonLon = $this->normalize($this->atan2($yh, $xh));
-        $moonLat = $this->atan2($zh, sqrt($xh * $xh + $yh * $yh));
-
-        // Principal perturbations (Schlyter).
-        $Lm = $this->normalize($Mm + $wm + $Nm); // Moon mean longitude
-        $Dm = $this->normalize($Lm - $Ls);       // mean elongation
-        $Fm = $this->normalize($Lm - $Nm);       // argument of latitude
-
-        $moonLon += -1.274 * $this->sin($Mm - 2 * $Dm)
-            + 0.658 * $this->sin(2 * $Dm)
-            - 0.186 * $this->sin($Ms)
-            - 0.059 * $this->sin(2 * $Mm - 2 * $Dm)
-            - 0.057 * $this->sin($Mm - 2 * $Dm + $Ms)
-            + 0.053 * $this->sin($Mm + 2 * $Dm)
-            + 0.046 * $this->sin(2 * $Dm - $Ms)
-            + 0.041 * $this->sin($Mm - $Ms)
-            - 0.035 * $this->sin($Dm)
-            - 0.031 * $this->sin($Mm + $Ms)
-            - 0.015 * $this->sin(2 * $Fm - 2 * $Dm)
-            + 0.011 * $this->sin($Mm - 4 * $Dm);
-
-        $moonLat += -0.173 * $this->sin($Fm - 2 * $Dm)
-            - 0.055 * $this->sin($Mm - $Fm - 2 * $Dm)
-            - 0.046 * $this->sin($Mm + $Fm - 2 * $Dm)
-            + 0.033 * $this->sin($Fm + 2 * $Dm)
-            + 0.017 * $this->sin(2 * $Mm + $Fm);
-
-        $result['Moon'] = ['lon' => $this->normalize($moonLon), 'lat' => $moonLat];
+        $moonPos = $this->moonLonLat($d);
+        $result['Moon'] = ['lon' => $moonPos['lon'], 'lat' => $moonPos['lat']];
 
         // --- Planets (heliocentric -> geocentric) -------------------------
         $planets = $this->planetElements($d);
@@ -160,12 +129,101 @@ final class AnalyticEphemeris implements EphemerisProviderInterface
             ];
         }
 
-        // --- Lunar nodes: Rahu (mean ascending node) & Ketu ---------------
-        $rahu = $this->normalize($Nm); // mean node, retrograde
+        // --- Lunar nodes: Rahu (ascending node) & Ketu --------------------
+        $rahu = $this->nodeType === 'mean'
+            ? $this->normalize(125.1228 - 0.0529538083 * $d) // mean node
+            : $this->trueNode($d);                           // true (osculating) node
         $result['Rahu'] = ['lon' => $rahu, 'lat' => 0.0];
         $result['Ketu'] = ['lon' => $this->normalize($rahu + 180.0), 'lat' => 0.0];
 
         return $result;
+    }
+
+    /**
+     * Geocentric ecliptic longitude/latitude of the Moon (degrees), including
+     * the principal Schlyter perturbations.
+     *
+     * @return array{lon: float, lat: float}
+     */
+    private function moonLonLat(float $d): array
+    {
+        $Nm = 125.1228 - 0.0529538083 * $d;
+        $im = 5.1454;
+        $wm = 318.0634 + 0.1643573223 * $d;
+        $am = 60.2666;
+        $em = 0.054900;
+        $Mm = $this->normalize(115.3654 + 13.0649929509 * $d);
+        $moon = $this->solveBody($Nm, $im, $wm, $am, $em, $Mm);
+
+        $vw = $moon['v'] + $wm;
+        $xh = $moon['r'] * ($this->cos($Nm) * $this->cos($vw) - $this->sin($Nm) * $this->sin($vw) * $this->cos($im));
+        $yh = $moon['r'] * ($this->sin($Nm) * $this->cos($vw) + $this->cos($Nm) * $this->sin($vw) * $this->cos($im));
+        $zh = $moon['r'] * ($this->sin($vw) * $this->sin($im));
+        $moonLon = $this->normalize($this->atan2($yh, $xh));
+        $moonLat = $this->atan2($zh, sqrt($xh * $xh + $yh * $yh));
+
+        // Sun mean longitude for the perturbation arguments.
+        $Ms = $this->normalize(356.0470 + 0.9856002585 * $d);
+        $ws = 282.9404 + 4.70935e-5 * $d;
+        $Ls = $this->normalize($Ms + $ws);
+
+        $Lm = $this->normalize($Mm + $wm + $Nm);
+        $Dm = $this->normalize($Lm - $Ls);
+        $Fm = $this->normalize($Lm - $Nm);
+
+        $moonLon += -1.274 * $this->sin($Mm - 2 * $Dm)
+            + 0.658 * $this->sin(2 * $Dm)
+            - 0.186 * $this->sin($Ms)
+            - 0.059 * $this->sin(2 * $Mm - 2 * $Dm)
+            - 0.057 * $this->sin($Mm - 2 * $Dm + $Ms)
+            + 0.053 * $this->sin($Mm + 2 * $Dm)
+            + 0.046 * $this->sin(2 * $Dm - $Ms)
+            + 0.041 * $this->sin($Mm - $Ms)
+            - 0.035 * $this->sin($Dm)
+            - 0.031 * $this->sin($Mm + $Ms)
+            - 0.015 * $this->sin(2 * $Fm - 2 * $Dm)
+            + 0.011 * $this->sin($Mm - 4 * $Dm);
+
+        $moonLat += -0.173 * $this->sin($Fm - 2 * $Dm)
+            - 0.055 * $this->sin($Mm - $Fm - 2 * $Dm)
+            - 0.046 * $this->sin($Mm + $Fm - 2 * $Dm)
+            + 0.033 * $this->sin($Fm + 2 * $Dm)
+            + 0.017 * $this->sin(2 * $Mm + $Fm);
+
+        return ['lon' => $this->normalize($moonLon), 'lat' => $moonLat];
+    }
+
+    /**
+     * True (osculating) lunar ascending node: the longitude where the Moon's
+     * instantaneous orbital plane crosses the ecliptic. Computed from the Moon's
+     * position and (finite-difference) velocity — the orbit normal h = r x v,
+     * and the node line = z_hat x h. This naturally includes the perturbations
+     * carried in moonLonLat(), matching true-node software (e.g. Parashara's
+     * Light) to within ~1 arc-minute.
+     */
+    private function trueNode(float $d): float
+    {
+        // Central difference for a more accurate instantaneous velocity.
+        $dt = 0.05; // days
+        $r = $this->moonUnitVector($d);
+        $back = $this->moonUnitVector($d - $dt);
+        $fwd = $this->moonUnitVector($d + $dt);
+        $v = [($fwd[0] - $back[0]) / 2.0, ($fwd[1] - $back[1]) / 2.0, ($fwd[2] - $back[2]) / 2.0];
+
+        // Orbit normal h = r x v (use the central position r at d).
+        $hx = $r[1] * $v[2] - $r[2] * $v[1];
+        $hy = $r[2] * $v[0] - $r[0] * $v[2];
+
+        // Ascending-node line = z_hat x h = (-hy, hx, 0); longitude = atan2(hx, -hy).
+        return $this->normalize($this->atan2($hx, -$hy));
+    }
+
+    /** Unit vector of the Moon's geocentric ecliptic direction at day-number d. */
+    private function moonUnitVector(float $d): array
+    {
+        $m = $this->moonLonLat($d);
+        $cb = $this->cos($m['lat']);
+        return [$cb * $this->cos($m['lon']), $cb * $this->sin($m['lon']), $this->sin($m['lat'])];
     }
 
     /**

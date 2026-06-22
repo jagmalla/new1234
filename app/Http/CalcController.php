@@ -31,7 +31,9 @@ final class CalcController
         $tzIn = (string) ($_GET['tz'] ?? '5:30');
         $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
         $forYear = (int) ($_GET['year'] ?? (int) date('Y'));
+        // Gochar defaults to NOW (current date + time); both are adjustable.
         $gocharIn = (string) ($_GET['gochar'] ?? date('Y-m-d'));
+        $gocharTimeIn = (string) ($_GET['gochar_time'] ?? date('H:i'));
 
         $error = null;
         $chart = $vp = $gochar = null;
@@ -50,7 +52,8 @@ final class CalcController
             $vp = Varshaphal::compute($engine, $chart, $Y, $Mo, $D, $H, $Mi, $tz, $lat, $lon, $forYear);
 
             [$gy, $gm, $gd] = array_map('intval', explode('-', $gocharIn));
-            $jdG = JulianDay::fromGregorian($gy, $gm, $gd, 12, 0, 0.0, $tz);
+            [$gH, $gMi] = array_map('intval', array_pad(explode(':', $gocharTimeIn), 2, '0'));
+            $jdG = JulianDay::fromGregorian($gy, $gm, $gd, $gH, $gMi, 0.0, $tz);
             $gochar = $engine->gochar($chart, $jdG, $lat, $lon);
 
             $meta = ['lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'jd' => $jd];
@@ -60,7 +63,7 @@ final class CalcController
 
         // Expose for the view.
         $view = [
-            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'ayanamsa', 'forYear', 'gocharIn'),
+            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'ayanamsa', 'forYear', 'gocharIn', 'gocharTimeIn'),
             'error' => $error,
             'chart' => $chart,
             'vp' => $vp,

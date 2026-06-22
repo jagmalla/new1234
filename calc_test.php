@@ -49,7 +49,7 @@ use AutoBusiness\Astro\Ephemeris\EphemerisFactory;
 use AutoBusiness\Astro\Time\JulianDay;
 
 // --- Parse CLI arguments ----------------------------------------------------
-$opts = getopt('', ['date::', 'time::', 'lat::', 'lon::', 'tz::', 'ayanamsa::', 'year::', 'gochar::']);
+$opts = getopt('', ['date::', 'time::', 'lat::', 'lon::', 'tz::', 'ayanamsa::', 'year::', 'gochar::', 'gochar-time::']);
 // Defaults = the reference birth used for verification:
 //   Moga, Punjab, India — 1 Dec 1980, 12:31:00, IST (no DST).
 //   Longitude 75E10'00 = 75.1667, Latitude 30N48'00 = 30.8, TZ +5:30.
@@ -156,13 +156,16 @@ foreach ($vp['mudda_dasha'] as $md) {
         $md['lord'], jdDate($md['start_jd']), jdDate($md['end_jd']), $md['days']);
 }
 
-// --- Gochar (transits) ------------------------------------------------------
-$gocharDate = $gochar === 'today' ? date('Y-m-d') : $gochar;
+// --- Gochar (transits) — defaults to the current date AND time --------------
+$gocharDate = ($gochar === 'today' || $gochar === 'now') ? date('Y-m-d') : $gochar;
+$gocharTime = (string) ($opts['gochar-time'] ?? date('H:i'));
 [$gy, $gm, $gd] = array_map('intval', explode('-', $gocharDate));
-$jdGochar = JulianDay::fromGregorian($gy, $gm, $gd, 12, 0, 0.0, $tz);
+[$gH, $gMi] = array_map('intval', array_pad(explode(':', $gocharTime), 2, '0'));
+$jdGochar = JulianDay::fromGregorian($gy, $gm, $gd, $gH, $gMi, 0.0, $tz);
 $gocharData = $engine->gochar($chart, $jdGochar, $lat, $lon);
 
-section("GOCHAR (TRANSITS) — {$gocharDate} 12:00 (birth location)");
+section("GOCHAR (TRANSITS) — {$gocharDate} {$gocharTime} (birth location)");
+echo "Transit Lagna: " . $gocharData['ascendant']['formatted'] . "\n\n";
 printf("%-9s %-16s %-4s %-16s %-16s\n", 'Planet', 'Transit', 'R', 'House/Lagna', 'House/Moon');
 line('-', 64);
 foreach ($gocharData['transits'] as $name => $t) {

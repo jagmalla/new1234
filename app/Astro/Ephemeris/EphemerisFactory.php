@@ -19,10 +19,14 @@ final class EphemerisFactory
 {
     public static function create(): EphemerisProviderInterface
     {
+        // Node type: 'true' (osculating, matches most modern software incl.
+        // Parashara's Light) by default; admin-overridable via .env NODE_TYPE.
+        $nodeType = strtolower(Env::get('NODE_TYPE', 'true') ?? 'true') === 'mean' ? 'mean' : 'true';
+
         $binary = Env::get('SWETEST_PATH');
         if (SwissEphemeris::isAvailable($binary)) {
-            return new SwissEphemeris((string) $binary, Env::get('SWEPH_PATH'));
+            return new SwissEphemeris((string) $binary, Env::get('SWEPH_PATH'), $nodeType);
         }
-        return new AnalyticEphemeris();
+        return new AnalyticEphemeris($nodeType);
     }
 }

@@ -43,6 +43,8 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
             <input name="year" value="<?= $h($in['forYear']) ?>" class="border rounded px-2 py-1"></label>
         <label class="flex flex-col">Gochar date
             <input name="gochar" value="<?= $h($in['gocharIn']) ?>" class="border rounded px-2 py-1"></label>
+        <label class="flex flex-col">Gochar time (HH:MM)
+            <input name="gochar_time" value="<?= $h($in['gocharTimeIn']) ?>" class="border rounded px-2 py-1"></label>
         <div class="col-span-2 md:col-span-4">
             <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold">Calculate</button>
             <span class="text-xs text-gray-500 ml-2">Lat/Lon accept decimal or DMS (e.g. 30N48'00). India timezone = 5:30.</span>
@@ -161,7 +163,10 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
     <!-- Gochar -->
     <?php if ($gochar !== null): ?>
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn']) ?></h2>
+        <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
+        <?php if (isset($gochar['ascendant'])): ?>
+            <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
+        <?php endif; ?>
         <table class="w-full">
             <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
             <tbody>
