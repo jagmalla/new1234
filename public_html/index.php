@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/bootstrap.php';
 
+use AutoBusiness\Http\CalcController;
 use AutoBusiness\Http\CanvasController;
 use AutoBusiness\Http\WebhookController;
 
@@ -22,6 +23,10 @@ try {
     switch ("{$method} {$route}") {
         case 'GET canvas':
             require dirname(__DIR__) . '/app/Http/views/canvas.php';
+            break;
+
+        case 'GET calc':
+            (new CalcController())->show();
             break;
 
         case 'POST api/workflow/save':
