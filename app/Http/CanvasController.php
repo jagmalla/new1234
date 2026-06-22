@@ -38,15 +38,25 @@ final class CanvasController
         $graphJson = json_encode($graph, JSON_THROW_ON_ERROR);
         $pdo = Database::pdo();
 
+        // The per-workflow webhook HMAC secret lives in its own column. If the
+        // graph has a webhook trigger and no secret is set yet, generate one and
+        // return it so the caller can configure the sender.
+        $hasWebhook = self::graphHasWebhook($graph);
+        $generatedSecret = null;
+
         if ($id === null || $id === '') {
             $id = Uuid::v4();
             // user_id is the staff member acting as owner until Module 8 formalises
             // ownership; staff_id 1 in dev. Stored as the workflow owner.
             $ownerId = (int) ($_SESSION['staff_id'] ?? 1);
+            $generatedSecret = $hasWebhook ? bin2hex(random_bytes(24)) : null;
             $pdo->prepare(
-                'INSERT INTO workflows (id, user_id, name, workflow_graph_json)
-                 VALUES (:id, :uid, :name, :graph)'
-            )->execute([':id' => $id, ':uid' => $ownerId, ':name' => $name, ':graph' => $graphJson]);
+                'INSERT INTO workflows (id, user_id, name, workflow_graph_json, webhook_secret)
+                 VALUES (:id, :uid, :name, :graph, :secret)'
+            )->execute([
+                ':id' => $id, ':uid' => $ownerId, ':name' => $name,
+                ':graph' => $graphJson, ':secret' => $generatedSecret,
+            ]);
         } else {
             $stmt = $pdo->prepare(
                 'UPDATE workflows SET name = :name, workflow_graph_json = :graph WHERE id = :id'
@@ -56,9 +66,34 @@ final class CanvasController
                 self::json(['error' => 'workflow not found'], 404);
                 return;
             }
+            // Backfill a secret for a webhook added to an existing workflow.
+            if ($hasWebhook) {
+                $cur = $pdo->prepare('SELECT webhook_secret FROM workflows WHERE id = :id');
+                $cur->execute([':id' => $id]);
+                if (($cur->fetchColumn() ?: '') === '') {
+                    $generatedSecret = bin2hex(random_bytes(24));
+                    $pdo->prepare('UPDATE workflows SET webhook_secret = :s WHERE id = :id')
+                        ->execute([':s' => $generatedSecret, ':id' => $id]);
+                }
+            }
         }
 
-        self::json(['id' => $id, 'saved' => true]);
+        $response = ['id' => $id, 'saved' => true];
+        if ($generatedSecret !== null) {
+            $response['webhook_secret'] = $generatedSecret;
+        }
+        self::json($response);
+    }
+
+    /** @param array<string,mixed> $graph */
+    private static function graphHasWebhook(array $graph): bool
+    {
+        foreach (($graph['nodes'] ?? []) as $node) {
+            if (($node['type'] ?? '') === 'webhook') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** GET /api/workflow/load?id=... — return a stored graph for editing. */

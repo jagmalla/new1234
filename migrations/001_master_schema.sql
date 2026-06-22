@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS workflows (
     is_active           TINYINT(1)      NOT NULL DEFAULT 1,
     schedule_cron       VARCHAR(120)    NULL,
     next_run_at         DATETIME        NULL,
+    webhook_secret      VARCHAR(128)    NULL,  -- per-workflow HMAC secret for inbound webhooks
     created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),

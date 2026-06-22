@@ -19,7 +19,7 @@
   // Per-type port layout. If/Else exposes two output handles (true/false);
   // everything else has a single "output". Triggers have no input.
   const TYPES = {
-    webhook:   { title: 'Webhook Trigger', inputs: 0, outputs: ['output'],          data: { secret: '' } },
+    webhook:   { title: 'Webhook Trigger', inputs: 0, outputs: ['output'],          data: {} },
     cron:      { title: 'Cron Trigger',    inputs: 0, outputs: ['output'],          data: {} },
     if:        { title: 'If / Else',       inputs: 1, outputs: ['true', 'false'],   data: { left: '', operator: '==', right: '' } },
     transform: { title: 'Transform',       inputs: 1, outputs: ['output'],          data: { steps: [] } },
@@ -137,6 +137,10 @@
       if (res.ok) {
         document.getElementById('wf-id').value = json.id;
         status.textContent = 'Saved ✓';
+        // Server-generated webhook HMAC secret is shown once so the sender can be configured.
+        if (json.webhook_secret) {
+          window.alert('Webhook secret (store it now, shown once):\n\n' + json.webhook_secret);
+        }
       } else {
         status.textContent = 'Error: ' + (json.error || res.status);
       }

@@ -11,17 +11,16 @@ use AutoBusiness\Queue\JobQueue;
  *   - Triggers NEVER run inline: this enqueues a job and returns HTTP 202.
  *   - Webhooks authenticate with a per-workflow HMAC secret (not a CSRF token).
  *
- * The secret lives in the workflow's webhook trigger node (workflow_graph_json),
- * so no extra schema is needed: data.secret on the node with type "webhook".
- * Signature = hex HMAC-SHA256 of the raw request body, sent in X-Signature
- * (an optional "sha256=" prefix is tolerated).
+ * The secret lives in workflows.webhook_secret (a dedicated column). Signature =
+ * hex HMAC-SHA256 of the raw request body, sent in X-Signature (an optional
+ * "sha256=" prefix is tolerated).
  */
 final class WebhookController
 {
     public function handle(string $workflowId): void
     {
         $stmt = Database::pdo()->prepare(
-            'SELECT id, workflow_graph_json, is_active FROM workflows WHERE id = :id'
+            'SELECT id, webhook_secret, is_active FROM workflows WHERE id = :id'
         );
         $stmt->execute([':id' => $workflowId]);
         $row = $stmt->fetch();
@@ -31,10 +30,9 @@ final class WebhookController
             return;
         }
 
-        $graph = json_decode((string) $row['workflow_graph_json'], true);
-        $secret = self::webhookSecret(is_array($graph) ? $graph : []);
-        if ($secret === null) {
-            self::respond(400, ['error' => 'workflow has no webhook trigger']);
+        $secret = $row['webhook_secret'] ?? null;
+        if (!is_string($secret) || $secret === '') {
+            self::respond(400, ['error' => 'workflow has no webhook secret configured']);
             return;
         }
 
@@ -55,20 +53,6 @@ final class WebhookController
 
         // Enqueue-and-return: the runner executes it on the next cron tick.
         self::respond(202, ['accepted' => true, 'job_id' => $jobId]);
-    }
-
-    /** @param array<string,mixed> $graph */
-    private static function webhookSecret(array $graph): ?string
-    {
-        foreach (($graph['nodes'] ?? []) as $node) {
-            if (($node['type'] ?? '') === 'webhook') {
-                $secret = $node['data']['secret'] ?? null;
-                if (is_string($secret) && $secret !== '') {
-                    return $secret;
-                }
-            }
-        }
-        return null;
     }
 
     private static function verifySignature(string $body, string $secret): bool
