@@ -1,0 +1,19 @@
+# Auto Business — public webroot rewrite (Apache / A2 hosting)
+# Clean paths map onto the ?r= front-controller routes.
+
+RewriteEngine On
+
+# /canvas                  -> index.php?r=canvas
+# /api/workflow/save       -> index.php?r=api/workflow/save
+# /webhook/<workflow-id>   -> index.php?r=webhook&wf=<workflow-id>
+RewriteRule ^webhook/([A-Za-z0-9-]+)/?$ index.php?r=webhook&wf=$1 [QSA,L]
+
+# Generic: anything not a real file/dir is handled by the front controller.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+)$ index.php?r=$1 [QSA,L]
+
+# Defensive: never serve dotfiles (e.g. a stray .env) from the web.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

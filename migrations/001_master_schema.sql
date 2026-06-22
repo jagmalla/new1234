@@ -290,6 +290,14 @@ INSERT INTO app_settings (setting_key, setting_value) VALUES
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);
 
 -- -----------------------------------------------------------------------------
+-- REMINDER FOR MODULE 3c: the two time-based Gochar agents are intentionally
+-- NOT seeded here — their books are uploaded later via Module 7. When Module 3c
+-- is built it MUST still create the two agent rows so the time-based logic has
+-- agents to attach to, even with empty book content:
+--   * Daily Gochar Agent  (Moon-based)  -> prediction_type = 'daily'   grounding_mode = 'grounded'
+--   * Monthly Gochar Agent (Sun-based)  -> prediction_type = 'monthly' grounding_mode = 'grounded'
+-- (Tajik Neelkanthi already covers 'yearly' and IS seeded below.)
+--
 -- astro_agents seed — Agent 1 (Calculation Engine) + the 19 book agents.
 -- The calculator has no book and is not grounded-text driven; the book agents
 -- default to grounding_mode = 'grounded' (strict single-book isolation). The

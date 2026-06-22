@@ -1,0 +1,11 @@
+# Secrets — the real .env stays OUT of version control (lives outside webroot)
+.env
+
+# PHP
+/vendor/
+*.log
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
