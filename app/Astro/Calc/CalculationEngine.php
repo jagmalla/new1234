@@ -203,6 +203,37 @@ final class CalculationEngine
     }
 
     /**
+     * North-Indian render payload for a single chart (D1-style): ascendant sign
+     * + each planet's sign/degree/retro. Reused by the divisional D1 and by the
+     * annual (Varshaphal) chart so the front-end renderer stays uniform.
+     *
+     * @return array{asc_sign:int, asc_deg:int, planets:list<array{abbr:string,sign:int,deg:int,retro:bool}>}
+     */
+    public function northPayload(array $chart): array
+    {
+        $abbr = [
+            'Sun' => 'Su', 'Moon' => 'Mo', 'Mars' => 'Ma', 'Mercury' => 'Me',
+            'Jupiter' => 'Ju', 'Venus' => 'Ve', 'Saturn' => 'Sa', 'Rahu' => 'Ra', 'Ketu' => 'Ke',
+        ];
+        $ascLon = (float) $chart['ascendant']['sidereal_lon'];
+        $planets = [];
+        foreach (($chart['planets'] ?? []) as $name => $p) {
+            $lon = (float) $p['sidereal_lon'];
+            $planets[] = [
+                'abbr' => $abbr[$name] ?? substr((string) $name, 0, 2),
+                'sign' => Charts::signIndex($lon),
+                'deg' => (int) floor(Charts::degInSign($lon)),
+                'retro' => (bool) ($p['retro'] ?? false),
+            ];
+        }
+        return [
+            'asc_sign' => Charts::signIndex($ascLon),
+            'asc_deg' => (int) floor(Charts::degInSign($ascLon)),
+            'planets' => $planets,
+        ];
+    }
+
+    /**
      * Sidereal positions only (helper for Find My Rashi / lightweight callers).
      *
      * @return array{moon:float, sun:float, ascendant:float}

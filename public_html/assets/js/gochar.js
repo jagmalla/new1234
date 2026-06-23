@@ -1,19 +1,28 @@
 /* Auto Business — interactive Gochar (transit) panel (reusable component).
  *
- * Renders Date / Time / Country / State / City inputs (plus lat/lon/tz that the
- * city picker fills, and which stay editable). On load it defaults to the
- * current date+time and the viewer's location (browser geolocation, falling
- * back to the page default), then fetches transits from the calc/gochar JSON
- * endpoint and draws a North-Indian transit chart + a positions table.
+ * Renders Date / Time / Country / State / City inputs into one container and the
+ * transit result (North-Indian chart + positions table) into another, so the
+ * dashboard can place the inputs and the chart in different rows. On load it
+ * defaults to the current date+time and the viewer's IP-based location, then
+ * fetches transits from the calc/gochar JSON endpoint and draws them.
  *
  * Depends on: northchart.js (ABChart), cities.js (window.AB_CITIES).
  *
- * Usage: ABGochar.init('#gochar-panel', {birth:{...}, fallback:{lat,lon,tz}});
- *   birth = {date,time,lat,lon,tz,ayanamsa}  (to rebuild the natal chart so the
- *   house-from-lagna / house-from-moon columns stay meaningful)
+ * Usage:
+ *   ABGochar.init({
+ *     inputs: '#gochar-inputs', output: '#gochar-output',
+ *     birth: {date,time,lat,lon,tz,ayanamsa}, fallback:{lat,lon,tz}
+ *   });
  */
 (function (global) {
   'use strict';
+
+  // Per-planet colours by full name (matches the Dasha + chart palette).
+  var PCOL = {
+    Sun:'#dc2626', Moon:'#0891b2', Mars:'#ea580c', Mercury:'#16a34a', Jupiter:'#b45309',
+    Venus:'#db2777', Saturn:'#1d4ed8', Rahu:'#6b7280', Ketu:'#6b7280'
+  };
+  var ABBR = { Sun:'Su', Moon:'Mo', Mars:'Ma', Mercury:'Me', Jupiter:'Ju', Venus:'Ve', Saturn:'Sa', Rahu:'Ra', Ketu:'Ke' };
 
   function h(tag, cls, html) {
     var e = document.createElement(tag);
@@ -22,22 +31,22 @@
     return e;
   }
   function opt(v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t || v; return o; }
+  function sel(x) { return (typeof x === 'string') ? document.querySelector(x) : x; }
 
-  function init(sel, cfg) {
+  function init(cfg) {
     cfg = cfg || {};
-    var root = (typeof sel === 'string') ? document.querySelector(sel) : sel;
-    if (!root) return;
+    var inRoot = sel(cfg.inputs), outRoot = sel(cfg.output);
+    if (!inRoot || !outRoot) return;
     var birth = cfg.birth || {};
     var fallback = cfg.fallback || { lat: 28.61, lon: 77.21, tz: 5.5 };
     var CITIES = global.AB_CITIES || {};
 
-    root.innerHTML = '';
+    inRoot.innerHTML = '';
     var now = new Date();
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
     var today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
     var hhmm = pad(now.getHours()) + ':' + pad(now.getMinutes());
 
-    // --- Controls -------------------------------------------------------
     var form = h('div', 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm');
     var fDate = h('input'); fDate.type = 'date'; fDate.value = today;
     var fTime = h('input'); fTime.type = 'time'; fTime.value = hhmm;
@@ -79,19 +88,20 @@
     form.appendChild(lab('Latitude (N+)', fLat));
     form.appendChild(lab('Longitude (E+)', fLon));
     form.appendChild(lab('Timezone (hrs E+)', fTz));
-    root.appendChild(form);
+    inRoot.appendChild(form);
 
-    var btn = h('button', 'mt-3 bg-blue-600 text-white rounded px-4 py-2 text-sm font-semibold', 'Show transit');
-    root.appendChild(btn);
-    var status = h('span', 'text-xs text-gray-500 ml-3'); root.appendChild(status);
+    var bar = h('div', 'mt-3 flex items-center gap-3');
+    var btn = h('button', 'bg-blue-600 text-white rounded px-4 py-2 text-sm font-semibold', 'Show transit');
+    var status = h('span', 'text-xs text-gray-500');
+    bar.appendChild(btn); bar.appendChild(status);
+    inRoot.appendChild(bar);
 
-    var out = h('div', 'grid grid-cols-1 md:grid-cols-2 gap-4 mt-4');
-    var chartBox = h('div', 'bg-white rounded-lg shadow p-3');
-    var tableBox = h('div', 'bg-white rounded-lg shadow p-3 overflow-x-auto');
-    out.appendChild(chartBox); out.appendChild(tableBox);
-    root.appendChild(out);
-
-    var ABBR = { Sun:'Su', Moon:'Mo', Mars:'Ma', Mercury:'Me', Jupiter:'Ju', Venus:'Ve', Saturn:'Sa', Rahu:'Ra', Ketu:'Ke' };
+    // Output: chart + table.
+    outRoot.innerHTML = '';
+    var title = h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Gochar (Transit)');
+    var chartBox = h('div', 'max-w-xs mx-auto');
+    var tableBox = h('div', 'mt-3 overflow-x-auto');
+    outRoot.appendChild(title); outRoot.appendChild(chartBox); outRoot.appendChild(tableBox);
 
     function fetchGochar() {
       status.textContent = 'calculating…';
@@ -113,22 +123,20 @@
     }
 
     function renderResult(g) {
-      // Transit chart: ascendant sign + each planet's sign.
       var planets = [];
       Object.keys(g.transits).forEach(function (name) {
         var t = g.transits[name];
         planets.push({ abbr: ABBR[name] || name.slice(0, 2), sign: t.sign_index, retro: !!t.retro });
       });
       ABChart.renderNorth(chartBox, { asc_sign: g.ascendant.sign_index, planets: planets },
-        { title: 'Gochar (Transit) — ' + g.label });
+        { title: g.label });
 
-      // Positions table.
       var rows = ['<table class="w-full text-sm"><thead><tr class="text-left border-b">'
         + '<th class="py-1 pr-2">Planet</th><th class="pr-2">Transit</th><th class="pr-2">Sign</th>'
         + '<th class="pr-2">H/Lagna</th><th>H/Moon</th></tr></thead><tbody>'];
       Object.keys(g.transits).forEach(function (name) {
         var t = g.transits[name];
-        rows.push('<tr class="border-b border-gray-100"><td class="py-1 pr-2 font-medium">' + name
+        rows.push('<tr class="border-b border-gray-100"><td class="py-1 pr-2 font-semibold" style="color:' + (PCOL[name] || '#111') + '">' + name
           + (t.retro ? ' <span class="text-red-600">R</span>' : '') + '</td>'
           + '<td class="pr-2">' + t.formatted + '</td><td class="pr-2">' + t.sign + '</td>'
           + '<td class="pr-2">' + t.house_from_lagna + '</td><td>' + t.house_from_moon + '</td></tr>');
@@ -140,17 +148,23 @@
 
     btn.addEventListener('click', fetchGochar);
 
-    // Default to viewer's geolocation, then auto-calculate.
-    function go() { fetchGochar(); }
-    if (global.navigator && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function (pos) {
-        fLat.value = pos.coords.latitude.toFixed(2);
-        fLon.value = pos.coords.longitude.toFixed(2);
-        fTz.value = (-new Date().getTimezoneOffset() / 60);
-        go();
-      }, function () { go(); }, { timeout: 4000 });
-    } else { go(); }
+    // Default location from the viewer's IP (no permission prompt), then compute.
+    status.textContent = 'locating…';
+    fetch('https://ipapi.co/json/')
+      .then(function (r) { return r.json(); })
+      .then(function (loc) {
+        if (loc && loc.latitude != null) {
+          fLat.value = (+loc.latitude).toFixed(2);
+          fLon.value = (+loc.longitude).toFixed(2);
+          if (loc.utc_offset) { // e.g. "+0530"
+            var s = loc.utc_offset, sign = s[0] === '-' ? -1 : 1;
+            fTz.value = sign * (parseInt(s.substr(1, 2), 10) + parseInt(s.substr(3, 2), 10) / 60);
+          }
+        }
+      })
+      .catch(function () { /* keep fallback */ })
+      .then(function () { fetchGochar(); });
   }
 
-  global.ABGochar = { init: init };
+  global.ABGochar = { init: init, PCOL: PCOL, ABBR: ABBR };
 })(window);

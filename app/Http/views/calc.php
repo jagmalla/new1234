@@ -25,30 +25,43 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
 
     <h1 class="text-2xl font-bold">Calculation Engine — Chart Test</h1>
 
-    <!-- Birth details form (GET) -->
-    <form method="get" action="/calc" class="bg-white rounded-lg shadow p-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <label class="flex flex-col">Date (YYYY-MM-DD)
-            <input name="date" value="<?= $h($in['date']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Time (HH:MM)
-            <input name="time" value="<?= $h($in['time']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Latitude
-            <input name="lat" value="<?= $h($in['latIn']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Longitude
-            <input name="lon" value="<?= $h($in['lonIn']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Timezone (east +)
-            <input name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Ayanamsa
-            <input name="ayanamsa" value="<?= $h($in['ayanamsa']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Varshaphal year
-            <input name="year" value="<?= $h($in['forYear']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Gochar date
-            <input name="gochar" value="<?= $h($in['gocharIn']) ?>" class="border rounded px-2 py-1"></label>
-        <label class="flex flex-col">Gochar time (HH:MM)
-            <input name="gochar_time" value="<?= $h($in['gocharTimeIn']) ?>" class="border rounded px-2 py-1"></label>
-        <div class="col-span-2 md:col-span-4">
-            <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold">Calculate</button>
-            <span class="text-xs text-gray-500 ml-2">Lat/Lon accept decimal or DMS (e.g. 30N48'00). India timezone = 5:30.</span>
+    <!-- ROW 1 — Chart (birth) details -->
+    <form method="get" action="/calc" class="bg-white rounded-lg shadow p-4 text-sm">
+        <h2 class="font-semibold mb-3 text-gray-700">Chart Calculation Details</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Name</span>
+                <input name="name" value="<?= $h($in['name']) ?>" class="border rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Gender</span>
+                <select name="gender" class="border rounded px-2 py-1 bg-white">
+                    <?php foreach (['' => '—', 'Male' => 'Male', 'Female' => 'Female', 'Other' => 'Other'] as $gv => $gl): ?>
+                        <option value="<?= $h($gv) ?>" <?= $in['gender'] === $gv ? 'selected' : '' ?>><?= $h($gl) ?></option>
+                    <?php endforeach; ?>
+                </select></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Date (YYYY-MM-DD)</span>
+                <input name="date" value="<?= $h($in['date']) ?>" class="border rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Time (HH:MM)</span>
+                <input name="time" value="<?= $h($in['time']) ?>" class="border rounded px-2 py-1"></label>
+
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Country</span>
+                <select id="b-country" class="border rounded px-2 py-1 bg-white"></select></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">State / Province</span>
+                <select id="b-state" class="border rounded px-2 py-1 bg-white"></select></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">City (fills lat/lon/tz)</span>
+                <select id="b-city" class="border rounded px-2 py-1 bg-white"></select></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Ayanamsa</span>
+                <input name="ayanamsa" value="<?= $h($in['ayanamsa']) ?>" class="border rounded px-2 py-1"></label>
+
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Latitude</span>
+                <input id="b-lat" name="lat" value="<?= $h($in['latIn']) ?>" class="border rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Longitude</span>
+                <input id="b-lon" name="lon" value="<?= $h($in['lonIn']) ?>" class="border rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Timezone (east +)</span>
+                <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
+            <div class="flex items-end">
+                <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold w-full">Calculate</button>
+            </div>
         </div>
+        <p class="text-xs text-gray-500 mt-2">City picker fills lat/lon/timezone (full city search arrives in Module 5c); lat/lon also accept DMS, e.g. 30N48'00.</p>
     </form>
 
     <?php if ($view['error'] !== null): ?>
@@ -63,64 +76,80 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
         <button id="btn-details" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white">View Details</button>
     </div>
 
-    <!-- CHARTS VIEW (North-Indian divisional charts, Shadbala, dashas, gochar) -->
+    <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="hidden space-y-6">
 
-        <!-- D1 (primary) — rendered larger -->
+        <!-- ROW 2 — Gochar calculation details (defaults to now + IP location) -->
         <div class="bg-white rounded-lg shadow p-4">
-            <div class="max-w-md mx-auto" data-varga="D1"></div>
+            <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details</h2>
+            <div id="gochar-inputs"></div>
         </div>
 
-        <!-- Other divisional charts -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
-            <?php foreach (($vargas ?? []) as $vkey => $vinfo): if ($vkey === 'D1') { continue; } ?>
-                <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
-            <?php endforeach; ?>
-        </div>
-        <p class="text-xs text-gray-400">North-Indian style: house 1 is top-centre (As = Ascendant); bold orange = rotating sign number, faint Hn = fixed house; planets colour-coded, D1 shows degrees, R = retrograde.</p>
-
-        <!-- Shadbala strength bars -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-1">Shadbala — Strength Ratio (Total ÷ minimum required)</h2>
-            <p class="text-xs text-gray-500 mb-3">Green ≥ 100% (strong); red &lt; 100% (weak). The dashed mark is the 100% threshold.</p>
-            <div class="space-y-2">
-                <?php foreach (($chart['shadbala'] ?? []) as $name => $b):
-                    $ratio = (float) $b['ratio'];
-                    $pct = $ratio * 100.0;
-                    $barW = max(2.0, min(100.0, $ratio / 1.6 * 100.0)); // 160% fills the track
-                    $col = $ratio >= 1.0 ? 'bg-green-500' : 'bg-red-500';
-                ?>
-                <div class="flex items-center gap-2 text-sm">
-                    <div class="w-20 shrink-0 font-medium"><?= $h($name) ?></div>
-                    <div class="relative flex-1 bg-gray-100 rounded h-5">
-                        <div class="absolute inset-y-0 left-[62.5%] w-px bg-gray-400" style="border-left:1px dashed #9ca3af"></div>
-                        <div class="<?= $col ?> h-5 rounded flex items-center justify-end pr-2 text-white text-xs font-semibold" style="width: <?= sprintf('%.1f', $barW) ?>%">
-                            <?= sprintf('%.0f%%', $pct) ?>
-                        </div>
-                    </div>
-                    <div class="w-16 shrink-0 text-right text-gray-500"><?= sprintf('%.2f', (float) $b['total_rupa']) ?> R</div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <!-- Vimshottari + Mudda dasha (expandable to 5 levels) -->
+        <!-- ROW 3 — D1 chart (large) + Gochar chart -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="bg-white rounded-lg shadow p-4">
-                <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(click + to drill 5 levels)</span></h2>
-                <div id="vim-dasha" class="text-sm"></div>
+                <div class="max-w-md mx-auto" data-varga="D1"></div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
-                <h2 class="font-semibold mb-2">Mudda (Annual) Dasha <span class="text-xs text-gray-400 font-normal">— year <?= (int) $in['forYear'] ?></span></h2>
-                <div id="mudda-dasha" class="text-sm"></div>
+                <div id="gochar-output"></div>
             </div>
         </div>
 
-        <!-- Interactive Gochar -->
+        <!-- ROW 4 — Vimshottari Dasha | Shadbala (vertical) | D9 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
+                <div id="vim-dasha" class="text-sm"></div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-1">Shadbala</h2>
+                <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required. Dashed line = 100%; % shows red when below.</p>
+                <?php
+                    $pcol = ['Sun' => '#dc2626','Moon' => '#0891b2','Mars' => '#ea580c','Mercury' => '#16a34a',
+                        'Jupiter' => '#b45309','Venus' => '#db2777','Saturn' => '#1d4ed8','Rahu' => '#6b7280','Ketu' => '#6b7280'];
+                ?>
+                <div class="relative" style="height:170px">
+                    <!-- 100% threshold line (160% fills the 150px track => 100% sits at 62.5%) -->
+                    <div class="absolute left-0 right-0" style="bottom:calc(20px + 150px * 0.625); border-top:1px dashed #9ca3af"></div>
+                    <div class="flex items-end justify-between gap-1 absolute inset-x-0 bottom-0" style="height:170px">
+                        <?php foreach (($chart['shadbala'] ?? []) as $name => $b):
+                            $ratio = (float) $b['ratio'];
+                            $pct = $ratio * 100.0;
+                            $hpx = max(3.0, min(150.0, $ratio / 1.6 * 150.0));
+                            $abbr = substr((string) $name, 0, 2);
+                        ?>
+                        <div class="flex flex-col items-center justify-end" style="height:170px; flex:1">
+                            <div class="text-[10px] font-semibold <?= $ratio < 1.0 ? 'text-red-600' : 'text-gray-600' ?>"><?= sprintf('%.0f%%', $pct) ?></div>
+                            <div class="w-full rounded-t" style="height:<?= sprintf('%.1f', $hpx) ?>px; background:<?= $pcol[$name] ?? '#1d4ed8' ?>"></div>
+                            <div class="text-[10px] mt-1 font-medium" style="color:<?= $pcol[$name] ?? '#111' ?>"><?= $h($abbr) ?></div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="max-w-xs mx-auto" data-varga="D9"></div>
+            </div>
+        </div>
+
+        <!-- ROW 5 — Varshaphal question box -> Varsha chart + Mudda dasha -->
         <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-2">Gochar (Transits) — interactive</h2>
-            <p class="text-xs text-gray-500 mb-3">Defaults to now + your location; change date, time and place to check any transit. City fills lat/lon/timezone (full city search arrives in Module 5c).</p>
-            <div id="gochar-panel"></div>
+            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
+            <div id="vp-box" class="mb-4"></div>
+            <div id="vp-output"></div>
+        </div>
+
+        <!-- Remaining divisional charts -->
+        <div>
+            <h2 class="font-semibold mb-2 text-gray-700">Divisional Charts</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <?php foreach (($vargas ?? []) as $vkey => $vinfo): if ($vkey === 'D1' || $vkey === 'D9') { continue; } ?>
+                    <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
+                <?php endforeach; ?>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">North-Indian style: house 1 top-centre (As = Ascendant); bold orange = rotating sign number, faint Hn = fixed house; planets colour-coded, R = retrograde.</p>
         </div>
 
     </div>
@@ -273,13 +302,40 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
   window.AB_MUDDA  = <?= json_encode($vp['mudda_dasha'] ?? [], JSON_UNESCAPED_UNICODE) ?>;
   window.AB_BIRTH  = <?= json_encode($birthJs ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
   window.AB_TZ     = <?= json_encode((float) ($meta['tz'] ?? 0)) ?>;
+  window.AB_YEAR   = <?= json_encode((int) $in['forYear']) ?>;
 </script>
 <script src="/assets/js/northchart.js"></script>
 <script src="/assets/js/dasha.js"></script>
 <script src="/assets/js/cities.js"></script>
 <script src="/assets/js/gochar.js"></script>
+<script src="/assets/js/varshaphal.js"></script>
 <script>
 (function () {
+  // Birth-form city picker -> fills lat/lon/tz (same gazetteer as gochar).
+  (function bindBirthCity() {
+    var CITIES = window.AB_CITIES || {};
+    var co = document.getElementById('b-country'), st = document.getElementById('b-state'),
+        ci = document.getElementById('b-city'),
+        la = document.getElementById('b-lat'), lo = document.getElementById('b-lon'), tz = document.getElementById('b-tz');
+    if (!co) return;
+    function opt(v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t || v; return o; }
+    co.appendChild(opt('', '— country —'));
+    Object.keys(CITIES).forEach(function (c) { co.appendChild(opt(c)); });
+    st.appendChild(opt('', '— state —')); ci.appendChild(opt('', '— city —'));
+    co.addEventListener('change', function () {
+      st.innerHTML = ''; ci.innerHTML = ''; st.appendChild(opt('', '— state —'));
+      Object.keys(CITIES[co.value] || {}).forEach(function (s) { st.appendChild(opt(s)); });
+    });
+    st.addEventListener('change', function () {
+      ci.innerHTML = ''; ci.appendChild(opt('', '— city —'));
+      Object.keys((CITIES[co.value] || {})[st.value] || {}).forEach(function (c) { ci.appendChild(opt(c)); });
+    });
+    ci.addEventListener('change', function () {
+      var rec = ((CITIES[co.value] || {})[st.value] || {})[ci.value];
+      if (rec) { la.value = rec.lat; lo.value = rec.lon; tz.value = rec.tz; }
+    });
+  })();
+
   var charts = document.getElementById('charts-view');
   var details = document.getElementById('details-view');
   var bC = document.getElementById('btn-charts');
@@ -296,12 +352,18 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
     if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); }
     if (window.ABDasha) {
       ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ });
-      ABDasha.render(document.getElementById('mudda-dasha'), window.AB_MUDDA, { tz: window.AB_TZ });
     }
     if (window.ABGochar) {
-      ABGochar.init('#gochar-panel', {
+      ABGochar.init({
+        inputs: '#gochar-inputs', output: '#gochar-output',
         birth: window.AB_BIRTH,
         fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ }
+      });
+    }
+    if (window.ABVarsha) {
+      ABVarsha.init({
+        box: '#vp-box', output: '#vp-output',
+        birth: window.AB_BIRTH, tz: window.AB_TZ, year: window.AB_YEAR
       });
     }
   }

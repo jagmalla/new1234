@@ -33,6 +33,10 @@ try {
             (new CalcController())->gocharJson();
             break;
 
+        case 'GET calc/varshaphal':
+            (new CalcController())->varshaphalJson();
+            break;
+
         case 'POST api/workflow/save':
             (new CanvasController())->save();
             break;

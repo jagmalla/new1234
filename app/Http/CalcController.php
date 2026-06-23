@@ -30,6 +30,8 @@ final class CalcController
         $lonIn = (string) ($_GET['lon'] ?? "75E10'00");
         $tzIn = (string) ($_GET['tz'] ?? '5:30');
         $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
+        $name = (string) ($_GET['name'] ?? '');
+        $gender = (string) ($_GET['gender'] ?? '');
         $forYear = (int) ($_GET['year'] ?? (int) date('Y'));
         // Gochar defaults to NOW (current date + time); both are adjustable.
         $gocharIn = (string) ($_GET['gochar'] ?? date('Y-m-d'));
@@ -70,7 +72,7 @@ final class CalcController
 
         // Expose for the view.
         $view = [
-            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'ayanamsa', 'forYear', 'gocharIn', 'gocharTimeIn'),
+            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'ayanamsa', 'name', 'gender', 'forYear', 'gocharIn', 'gocharTimeIn'),
             'error' => $error,
             'chart' => $chart,
             'vp' => $vp,
@@ -116,6 +118,45 @@ final class CalcController
             $gochar['label'] = sprintf('%04d-%02d-%02d %02d:%02d', $gy, $gm, $gd, $gH, $gMi);
 
             echo json_encode($gochar, JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(400);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * JSON endpoint for the Varshaphal question box: rebuilds the natal chart
+     * from the birth params, computes the annual (solar-return) chart + Mudda
+     * dasha for the requested year, and returns a render-ready payload.
+     */
+    public function varshaphalJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+
+        try {
+            $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
+            $lat = self::parseAngle((string) ($_GET['blat'] ?? '0'));
+            $lon = self::parseAngle((string) ($_GET['blon'] ?? '0'));
+            $tz = self::parseTz((string) ($_GET['btz'] ?? '0'));
+            [$bY, $bMo, $bD] = array_map('intval', explode('-', (string) ($_GET['bdate'] ?? date('Y-m-d'))));
+            [$bH, $bMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['btime'] ?? '12:00')), 2, '0'));
+            $forYear = (int) ($_GET['year'] ?? (int) date('Y'));
+
+            $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
+            $natalJd = JulianDay::fromGregorian($bY, $bMo, $bD, $bH, $bMi, 0.0, $tz);
+            $natal = $engine->computeChart($natalJd, $lat, $lon);
+            $vp = Varshaphal::compute($engine, $natal, $bY, $bMo, $bD, $bH, $bMi, $tz, $lat, $lon, $forYear);
+
+            echo json_encode([
+                'year' => $forYear,
+                'age_completed' => $vp['age_completed'],
+                'varsha_lagna' => $vp['varsha_lagna'],
+                'muntha' => $vp['muntha'],
+                'chart' => $engine->northPayload($vp['varsha_chart']),
+                'ascendant_formatted' => $vp['varsha_chart']['ascendant']['formatted'],
+                'mudda_dasha' => $vp['mudda_dasha'],
+            ], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(400);
             echo json_encode(['error' => $e->getMessage()]);
