@@ -123,18 +123,22 @@ foreach ($chart['dasha']['mahadashas'] as $md) {
 }
 
 // --- Shadbala ---------------------------------------------------------------
-section('SHADBALA  (PARTIAL — Uccha + Dig + Kendra + Naisargika; see note)');
-printf("%-9s %-7s %-7s %-7s %-10s %-12s %-7s\n",
-    'Planet', 'Uccha', 'Dig', 'Kendra', 'Naisargika', 'Total(virupa)', 'Rupa');
-line('-', 64);
+section('SHADBALA (SIX-FOLD STRENGTH) — Parashara\'s Light rules');
+printf("%-9s %-9s %-7s %-7s %-7s %-10s %-7s %-9s\n",
+    'Planet', '1.Sthana', '2.Dig', '3.Kaala', '4.Chesta', '5.Naisarg', '6.Drig', 'Subtotal');
+line('-', 72);
 foreach ($chart['shadbala'] as $name => $b) {
-    printf("%-9s %-7.2f %-7.2f %-7.2f %-10.2f %-12.2f %-7.2f\n",
-        $name, $b['uccha'], $b['dig'], $b['kendra'], $b['naisargika'],
-        $b['total_virupa'], $b['total_rupa']);
+    printf("%-9s %-9.2f %-7.2f %-7s %-7s %-10.2f %-7s %-9.2f\n",
+        $name, $b['sthana']['total'], $b['dig'],
+        $b['kaala'] === null ? '—' : number_format((float) $b['kaala'], 2),
+        $b['chesta'] === null ? '—' : number_format((float) $b['chesta'], 2),
+        $b['naisargika'],
+        $b['drig'] === null ? '—' : number_format((float) $b['drig'], 2),
+        $b['computed_subtotal']);
 }
-echo "\nNote: this is a PARTIAL Shadbala (4 of the 6 balas). Cheshta-bala and the\n";
-echo "full Kala-bala breakdown are a documented TODO before 1:1 comparison with\n";
-echo "full-Parashari software totals.\n";
+echo "\nSthana, Dig and Naisargika Bala are validated against Parashara's Light (±0.01).\n";
+echo "Kaala, Chesta and Drig Bala are in progress; the Total/Rupas/Ratio appear once\n";
+echo "all six balas are complete.\n";
 
 // --- Varshaphal -------------------------------------------------------------
 section("VARSHAPHAL (ANNUAL CHART) — year {$forYear}");

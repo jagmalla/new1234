@@ -121,24 +121,30 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
 
     <!-- Shadbala -->
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-1">Shadbala <span class="text-xs text-amber-700">(PARTIAL — Uccha + Dig + Kendra + Naisargika)</span></h2>
-        <p class="text-xs text-gray-500 mb-2">This total is 4 of the 6 balas; Cheshta &amp; full Kala-bala are pending — don't expect a 1:1 match with full-Parashari software yet.</p>
+        <h2 class="font-semibold mb-1">Shadbala (Six-fold Strength)</h2>
+        <p class="text-xs text-gray-500 mb-2">Sthana, Dig and Naisargika Bala are validated against Parashara's Light (±0.01). Kaala, Chesta and Drig Bala are in progress — the Total/Rupas/Ratio will appear once all six are in.</p>
         <table class="w-full">
-            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Uccha</th><th class="pr-3">Dig</th><th class="pr-3">Kendra</th><th class="pr-3">Naisargika</th><th class="pr-3">Total(virupa)</th><th>Rupa</th></tr></thead>
+            <thead><tr class="text-left border-b">
+                <th class="py-1 pr-3">Planet</th><th class="pr-3">1. Sthana</th><th class="pr-3">2. Dig</th>
+                <th class="pr-3">3. Kaala</th><th class="pr-3">4. Chesta</th><th class="pr-3">5. Naisargika</th><th class="pr-3">6. Drig</th>
+                <th>Subtotal</th>
+            </tr></thead>
             <tbody>
             <?php foreach ($chart['shadbala'] as $name => $b): ?>
                 <tr class="border-b border-gray-100">
                     <td class="py-1 pr-3 font-medium"><?= $h($name) ?></td>
-                    <td class="pr-3"><?= $h($b['uccha']) ?></td>
-                    <td class="pr-3"><?= $h($b['dig']) ?></td>
-                    <td class="pr-3"><?= $h($b['kendra']) ?></td>
-                    <td class="pr-3"><?= $h($b['naisargika']) ?></td>
-                    <td class="pr-3"><?= $h($b['total_virupa']) ?></td>
-                    <td><?= $h($b['total_rupa']) ?></td>
+                    <td class="pr-3"><?= $h(number_format((float) $b['sthana']['total'], 2)) ?></td>
+                    <td class="pr-3"><?= $h(number_format((float) $b['dig'], 2)) ?></td>
+                    <td class="pr-3 text-gray-400"><?= $b['kaala'] === null ? '—' : $h($b['kaala']) ?></td>
+                    <td class="pr-3 text-gray-400"><?= $b['chesta'] === null ? '—' : $h($b['chesta']) ?></td>
+                    <td class="pr-3"><?= $h(number_format((float) $b['naisargika'], 2)) ?></td>
+                    <td class="pr-3 text-gray-400"><?= $b['drig'] === null ? '—' : $h($b['drig']) ?></td>
+                    <td><?= $h(number_format((float) $b['computed_subtotal'], 2)) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
+        <p class="text-xs text-gray-400 mt-2">Sthana = Uchcha + Saptavargaja + Ojha-Yugma + Kendradi + Drekkana (all validated vs PL).</p>
     </div>
 
     <!-- Varshaphal -->
