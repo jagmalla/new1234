@@ -124,21 +124,18 @@ foreach ($chart['dasha']['mahadashas'] as $md) {
 
 // --- Shadbala ---------------------------------------------------------------
 section('SHADBALA (SIX-FOLD STRENGTH) — Parashara\'s Light rules');
-printf("%-9s %-9s %-7s %-7s %-7s %-10s %-7s %-9s\n",
-    'Planet', '1.Sthana', '2.Dig', '3.Kaala', '4.Chesta', '5.Naisarg', '6.Drig', 'Subtotal');
-line('-', 72);
+printf("%-8s %7s %6s %7s %7s %7s %6s | %7s %6s %5s %6s %6s\n",
+    'Planet', 'Sthana', 'Dig', 'Kaala', 'Chesta', 'Naisrg', 'Drig', 'Total', 'Rupas', 'Ratio', 'Ishta', 'Kashta');
+line('-', 92);
 foreach ($chart['shadbala'] as $name => $b) {
-    printf("%-9s %-9.2f %-7.2f %-7s %-7s %-10.2f %-7s %-9.2f\n",
-        $name, $b['sthana']['total'], $b['dig'],
-        $b['kaala'] === null ? '—' : number_format((float) $b['kaala'], 2),
-        $b['chesta'] === null ? '—' : number_format((float) $b['chesta'], 2),
-        $b['naisargika'],
-        $b['drig'] === null ? '—' : number_format((float) $b['drig'], 2),
-        $b['computed_subtotal']);
+    printf("%-8s %7.1f %6.1f %7.1f %7.1f %7.1f %6.1f | %7.1f %6.2f %5.2f %6.1f %6.1f\n",
+        $name, $b['sthana']['total'], $b['dig'], $b['kaala'], $b['chesta'],
+        $b['naisargika'], $b['drig'],
+        $b['total_virupa'], $b['total_rupa'], $b['ratio'], $b['ishta'], $b['kashta']);
 }
-echo "\nSthana, Dig and Naisargika Bala are validated against Parashara's Light (±0.01).\n";
-echo "Kaala, Chesta and Drig Bala are in progress; the Total/Rupas/Ratio appear once\n";
-echo "all six balas are complete.\n";
+echo "\nSthana, Dig, Naisargika match Parashara's Light to +/-0.01. Kaala/Chesta/Drig\n";
+echo "follow PL's method; Total/Rupas/Ratio are close to PL (Chesta & Drig are the\n";
+echo "most program-specific components).\n";
 
 // --- Varshaphal -------------------------------------------------------------
 section("VARSHAPHAL (ANNUAL CHART) — year {$forYear}");

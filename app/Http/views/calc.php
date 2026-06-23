@@ -141,29 +141,33 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
     <!-- Shadbala -->
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-1">Shadbala (Six-fold Strength)</h2>
-        <p class="text-xs text-gray-500 mb-2">Sthana, Dig and Naisargika Bala are validated against Parashara's Light (±0.01). Kaala, Chesta and Drig Bala are in progress — the Total/Rupas/Ratio will appear once all six are in.</p>
+        <p class="text-xs text-gray-500 mb-2">Sthana, Dig and Naisargika match Parashara's Light to ±0.01. Kaala, Chesta and Drig follow PL's method (Chesta/Drig are the most program-specific components); the per-planet Total/Rupas/Ratio are close to PL.</p>
         <table class="w-full">
             <thead><tr class="text-left border-b">
-                <th class="py-1 pr-3">Planet</th><th class="pr-3">1. Sthana</th><th class="pr-3">2. Dig</th>
-                <th class="pr-3">3. Kaala</th><th class="pr-3">4. Chesta</th><th class="pr-3">5. Naisargika</th><th class="pr-3">6. Drig</th>
-                <th>Subtotal</th>
+                <th class="py-1 pr-2">Planet</th><th class="pr-2">Sthana</th><th class="pr-2">Dig</th>
+                <th class="pr-2">Kaala</th><th class="pr-2">Chesta</th><th class="pr-2">Naisarg</th><th class="pr-2">Drig</th>
+                <th class="pr-2">Total</th><th class="pr-2 font-semibold">Rupas</th><th class="pr-2">Ratio</th><th class="pr-2">Ishta</th><th>Kashta</th>
             </tr></thead>
             <tbody>
             <?php foreach ($chart['shadbala'] as $name => $b): ?>
                 <tr class="border-b border-gray-100">
-                    <td class="py-1 pr-3 font-medium"><?= $h($name) ?></td>
-                    <td class="pr-3"><?= $h(number_format((float) $b['sthana']['total'], 2)) ?></td>
-                    <td class="pr-3"><?= $h(number_format((float) $b['dig'], 2)) ?></td>
-                    <td class="pr-3 text-gray-400"><?= $b['kaala'] === null ? '—' : $h($b['kaala']) ?></td>
-                    <td class="pr-3 text-gray-400"><?= $b['chesta'] === null ? '—' : $h($b['chesta']) ?></td>
-                    <td class="pr-3"><?= $h(number_format((float) $b['naisargika'], 2)) ?></td>
-                    <td class="pr-3 text-gray-400"><?= $b['drig'] === null ? '—' : $h($b['drig']) ?></td>
-                    <td><?= $h(number_format((float) $b['computed_subtotal'], 2)) ?></td>
+                    <td class="py-1 pr-2 font-medium"><?= $h($name) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['sthana']['total'], 1)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['dig'], 1)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['kaala'], 1)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['chesta'], 1)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['naisargika'], 1)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['drig'], 1)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['total_virupa'], 1)) ?></td>
+                    <td class="pr-2 font-semibold"><?= $h(number_format((float) $b['total_rupa'], 2)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['ratio'], 2)) ?></td>
+                    <td class="pr-2"><?= $h(number_format((float) $b['ishta'], 1)) ?></td>
+                    <td><?= $h(number_format((float) $b['kashta'], 1)) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="text-xs text-gray-400 mt-2">Sthana = Uchcha + Saptavargaja + Ojha-Yugma + Kendradi + Drekkana (all validated vs PL).</p>
+        <p class="text-xs text-gray-400 mt-2">Total = sum of all six balas (virupas); Rupas = Total ÷ 60; Ratio = Total ÷ minimum required. Ishta = √(Uchcha × Chesta), Kashta = √((60−Uchcha) × (60−Chesta)).</p>
     </div>
 
     <!-- Varshaphal -->

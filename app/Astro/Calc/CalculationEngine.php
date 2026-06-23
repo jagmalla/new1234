@@ -47,10 +47,12 @@ final class CalculationEngine
 
         // Sidereal planet longitudes + per-planet derived fields.
         $sidereal = [];
+        $speeds = [];
         $planets = [];
         foreach ($positions as $name => $p) {
             $sid = Charts::norm($p['lon'] - $ayan);
             $sidereal[$name] = $sid;
+            $speeds[$name] = $p['speed'];
         }
 
         // Ascendant + MC (sidereal).
@@ -79,7 +81,7 @@ final class CalculationEngine
         // Dasha + Shadbala.
         $dasha = VimshottariDasha::sequence($sidereal['Moon'], $jdUt);
         $running = VimshottariDasha::running($sidereal['Moon'], $jdUt, $jdUt);
-        $shadbala = Shadbala::compute($sidereal, $ascSid, $mcSid);
+        $shadbala = Shadbala::compute($sidereal, $speeds, $ascSid, $mcSid, $jdUt, $lat, $lonEast, $ayan);
 
         return [
             'meta' => [
