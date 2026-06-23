@@ -29,6 +29,10 @@ try {
             (new CalcController())->show();
             break;
 
+        case 'GET calc/gochar':
+            (new CalcController())->gocharJson();
+            break;
+
         case 'POST api/workflow/save':
             (new CanvasController())->save();
             break;

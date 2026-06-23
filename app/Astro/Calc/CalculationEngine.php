@@ -138,6 +138,7 @@ final class CalculationEngine
             $transits[$name] = [
                 'formatted' => Charts::format($sid),
                 'sign' => Charts::signName($sid),
+                'sign_index' => Charts::signIndex($sid),
                 'retro' => $p['retro'],
                 'house_from_lagna' => Charts::houseFromAsc($sid, $natalAscSign),
                 'house_from_moon' => Charts::houseFromAsc($sid, $natalMoonSign),
@@ -155,6 +156,7 @@ final class CalculationEngine
             'ascendant' => [
                 'sidereal_lon' => round($ascSid, 4),
                 'sign' => Charts::signName($ascSid),
+                'sign_index' => Charts::signIndex($ascSid),
                 'formatted' => Charts::format($ascSid),
             ],
             'transits' => $transits,
@@ -193,6 +195,7 @@ final class CalculationEngine
             $out[$v] = [
                 'label' => $label,
                 'asc_sign' => Varga::sign($v, $ascLon),
+                'asc_deg' => (int) floor(Charts::degInSign($ascLon)),
                 'planets' => $planets,
             ];
         }

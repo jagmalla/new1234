@@ -58,6 +58,12 @@ final class CalcController
 
             $vargas = $engine->vargaCharts($chart);
             $meta = ['lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'jd' => $jd];
+            // Birth params handed to the browser so the interactive gochar panel
+            // can rebuild the natal chart for any transit instant/place.
+            $birthJs = [
+                'date' => $date, 'time' => $time,
+                'lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'ayanamsa' => $ayanamsa,
+            ];
         } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
@@ -71,8 +77,49 @@ final class CalcController
             'gochar' => $gochar,
             'vargas' => $vargas ?? null,
             'meta' => $meta,
+            'birthJs' => $birthJs ?? null,
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';
+    }
+
+    /**
+     * JSON endpoint for the interactive gochar panel: rebuilds the natal chart
+     * from the birth params, then returns transits for the requested instant and
+     * place. Read-only, AdminGuard-gated like show().
+     */
+    public function gocharJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+
+        try {
+            $tz = self::parseTz((string) ($_GET['tz'] ?? '0'));
+            $lat = self::parseAngle((string) ($_GET['lat'] ?? '0'));
+            $lon = self::parseAngle((string) ($_GET['lon'] ?? '0'));
+            [$gy, $gm, $gd] = array_map('intval', explode('-', (string) ($_GET['date'] ?? date('Y-m-d'))));
+            [$gH, $gMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['time'] ?? '00:00')), 2, '0'));
+
+            // Birth params (to rebuild the natal chart for house-from references).
+            $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
+            $bLat = self::parseAngle((string) ($_GET['blat'] ?? (string) $lat));
+            $bLon = self::parseAngle((string) ($_GET['blon'] ?? (string) $lon));
+            $bTz = self::parseTz((string) ($_GET['btz'] ?? (string) $tz));
+            [$bY, $bMo, $bD] = array_map('intval', explode('-', (string) ($_GET['bdate'] ?? date('Y-m-d'))));
+            [$bH, $bMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['btime'] ?? '12:00')), 2, '0'));
+
+            $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
+            $natalJd = JulianDay::fromGregorian($bY, $bMo, $bD, $bH, $bMi, 0.0, $bTz);
+            $natal = $engine->computeChart($natalJd, $bLat, $bLon);
+
+            $jdG = JulianDay::fromGregorian($gy, $gm, $gd, $gH, $gMi, 0.0, $tz);
+            $gochar = $engine->gochar($natal, $jdG, $lat, $lon);
+            $gochar['label'] = sprintf('%04d-%02d-%02d %02d:%02d', $gy, $gm, $gd, $gH, $gMi);
+
+            echo json_encode($gochar, JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(400);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
     }
 
     /** Decimal or DMS-with-direction-letter angle -> signed decimal degrees. */

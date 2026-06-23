@@ -63,14 +63,66 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
         <button id="btn-details" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white">View Details</button>
     </div>
 
-    <!-- CHARTS VIEW (North-Indian divisional charts) -->
-    <div id="charts-view" class="hidden">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <?php foreach (($vargas ?? []) as $vkey => $vinfo): ?>
+    <!-- CHARTS VIEW (North-Indian divisional charts, Shadbala, dashas, gochar) -->
+    <div id="charts-view" class="hidden space-y-6">
+
+        <!-- D1 (primary) — rendered larger -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="max-w-md mx-auto" data-varga="D1"></div>
+        </div>
+
+        <!-- Other divisional charts -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
+            <?php foreach (($vargas ?? []) as $vkey => $vinfo): if ($vkey === 'D1') { continue; } ?>
                 <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
             <?php endforeach; ?>
         </div>
-        <p class="text-xs text-gray-400 mt-2">North-Indian charts: house 1 (top centre) holds the Lagna sign; faint label = sign number + abbreviation; blue = planets (D1 shows degree).</p>
+        <p class="text-xs text-gray-400">North-Indian style: house 1 is top-centre (As = Ascendant); bold orange = rotating sign number, faint Hn = fixed house; planets colour-coded, D1 shows degrees, R = retrograde.</p>
+
+        <!-- Shadbala strength bars -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="font-semibold mb-1">Shadbala — Strength Ratio (Total ÷ minimum required)</h2>
+            <p class="text-xs text-gray-500 mb-3">Green ≥ 100% (strong); red &lt; 100% (weak). The dashed mark is the 100% threshold.</p>
+            <div class="space-y-2">
+                <?php foreach (($chart['shadbala'] ?? []) as $name => $b):
+                    $ratio = (float) $b['ratio'];
+                    $pct = $ratio * 100.0;
+                    $barW = max(2.0, min(100.0, $ratio / 1.6 * 100.0)); // 160% fills the track
+                    $col = $ratio >= 1.0 ? 'bg-green-500' : 'bg-red-500';
+                ?>
+                <div class="flex items-center gap-2 text-sm">
+                    <div class="w-20 shrink-0 font-medium"><?= $h($name) ?></div>
+                    <div class="relative flex-1 bg-gray-100 rounded h-5">
+                        <div class="absolute inset-y-0 left-[62.5%] w-px bg-gray-400" style="border-left:1px dashed #9ca3af"></div>
+                        <div class="<?= $col ?> h-5 rounded flex items-center justify-end pr-2 text-white text-xs font-semibold" style="width: <?= sprintf('%.1f', $barW) ?>%">
+                            <?= sprintf('%.0f%%', $pct) ?>
+                        </div>
+                    </div>
+                    <div class="w-16 shrink-0 text-right text-gray-500"><?= sprintf('%.2f', (float) $b['total_rupa']) ?> R</div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- Vimshottari + Mudda dasha (expandable to 5 levels) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(click + to drill 5 levels)</span></h2>
+                <div id="vim-dasha" class="text-sm"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-2">Mudda (Annual) Dasha <span class="text-xs text-gray-400 font-normal">— year <?= (int) $in['forYear'] ?></span></h2>
+                <div id="mudda-dasha" class="text-sm"></div>
+            </div>
+        </div>
+
+        <!-- Interactive Gochar -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="font-semibold mb-2">Gochar (Transits) — interactive</h2>
+            <p class="text-xs text-gray-500 mb-3">Defaults to now + your location; change date, time and place to check any transit. City fills lat/lon/timezone (full city search arrives in Module 5c).</p>
+            <div id="gochar-panel"></div>
+        </div>
+
     </div>
 
     <!-- DETAILS VIEW (text tables) -->
@@ -215,8 +267,17 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
 </div>
 
 <?php if ($chart !== null): ?>
-<script>window.AB_VARGAS = <?= json_encode($vargas ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;</script>
+<script>
+  window.AB_VARGAS = <?= json_encode($vargas ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_DASHA  = <?= json_encode($chart['dasha']['mahadashas'] ?? [], JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_MUDDA  = <?= json_encode($vp['mudda_dasha'] ?? [], JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_BIRTH  = <?= json_encode($birthJs ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_TZ     = <?= json_encode((float) ($meta['tz'] ?? 0)) ?>;
+</script>
 <script src="/assets/js/northchart.js"></script>
+<script src="/assets/js/dasha.js"></script>
+<script src="/assets/js/cities.js"></script>
+<script src="/assets/js/gochar.js"></script>
 <script>
 (function () {
   var charts = document.getElementById('charts-view');
@@ -229,8 +290,23 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
     btn.classList.toggle('text-white', on);
     btn.classList.toggle('bg-gray-200', !on);
   }
+  function buildCharts() {
+    if (rendered) return;
+    rendered = true;
+    if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); }
+    if (window.ABDasha) {
+      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ });
+      ABDasha.render(document.getElementById('mudda-dasha'), window.AB_MUDDA, { tz: window.AB_TZ });
+    }
+    if (window.ABGochar) {
+      ABGochar.init('#gochar-panel', {
+        birth: window.AB_BIRTH,
+        fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ }
+      });
+    }
+  }
   function showCharts() {
-    if (!rendered && window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); rendered = true; }
+    buildCharts();
     charts.classList.remove('hidden'); details.classList.add('hidden');
     activate(bC, true); activate(bD, false);
   }
