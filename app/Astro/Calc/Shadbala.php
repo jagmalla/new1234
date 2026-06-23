@@ -425,7 +425,21 @@ final class Shadbala
         if ($c <= 180.0) {
             return ($c - 120.0) / 2.0 + 30.0;    // 30 -> 60 (7th = full)
         }
-        return self::baseDrishti(360.0 - $c);     // mirror past the 7th
+        // The graded curve is NOT symmetric about the 7th: the back houses
+        // descend 60 -> 45 -> 30 -> 15 -> 0 (8th=45, 9th=30, 10th=15, 12th=0),
+        // matching the special-aspect pairs (3rd/10th = 1/4, 4th/8th = 3/4,
+        // 5th/9th = 1/2). Mirroring baseDrishti(360-c) would over-count the
+        // 10th-house region (e.g. 270 deg -> 45 instead of 15).
+        if ($c <= 240.0) {
+            return 60.0 - ($c - 180.0) / 2.0;    // 60 -> 30 (8th = 45, 9th = 30)
+        }
+        if ($c <= 270.0) {
+            return 30.0 - ($c - 240.0) / 2.0;    // 30 -> 15 (10th = 15)
+        }
+        if ($c <= 330.0) {
+            return 15.0 - ($c - 270.0) / 4.0;    // 15 -> 0  (11th = 7.5, 12th = 0)
+        }
+        return 0.0;
     }
 
     // =====================================================================
