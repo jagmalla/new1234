@@ -56,6 +56,7 @@ final class CalcController
             $jdG = JulianDay::fromGregorian($gy, $gm, $gd, $gH, $gMi, 0.0, $tz);
             $gochar = $engine->gochar($chart, $jdG, $lat, $lon);
 
+            $vargas = $engine->vargaCharts($chart);
             $meta = ['lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'jd' => $jd];
         } catch (\Throwable $e) {
             $error = $e->getMessage();
@@ -68,6 +69,7 @@ final class CalcController
             'chart' => $chart,
             'vp' => $vp,
             'gochar' => $gochar,
+            'vargas' => $vargas ?? null,
             'meta' => $meta,
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';

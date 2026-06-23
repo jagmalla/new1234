@@ -160,6 +160,44 @@ final class CalculationEngine
     }
 
     /**
+     * Build the divisional (varga) charts for the chart view — each as a
+     * lagna sign + the sign each planet occupies in that division. Computed from
+     * the already-built natal chart's sidereal longitudes (no recomputation).
+     *
+     * @param array<string,mixed> $chart
+     * @return array<string,array{label:string, asc_sign:int, planets:list<array<string,mixed>>}>
+     */
+    public function vargaCharts(array $chart): array
+    {
+        $abbr = [
+            'Sun' => 'Su', 'Moon' => 'Mo', 'Mars' => 'Ma', 'Mercury' => 'Me',
+            'Jupiter' => 'Ju', 'Venus' => 'Ve', 'Saturn' => 'Sa', 'Rahu' => 'Ra', 'Ketu' => 'Ke',
+        ];
+        $ascLon = (float) $chart['ascendant']['sidereal_lon'];
+
+        $out = [];
+        foreach (Varga::CHARTS as $v => $label) {
+            $planets = [];
+            foreach (($chart['planets'] ?? []) as $name => $p) {
+                $lon = (float) $p['sidereal_lon'];
+                $planets[] = [
+                    'name' => $name,
+                    'abbr' => $abbr[$name] ?? substr((string) $name, 0, 2),
+                    'sign' => Varga::sign($v, $lon),
+                    'deg' => (int) floor(Charts::degInSign($lon)), // D1 whole degree, for labels
+                    'retro' => (bool) ($p['retro'] ?? false),
+                ];
+            }
+            $out[$v] = [
+                'label' => $label,
+                'asc_sign' => Varga::sign($v, $ascLon),
+                'planets' => $planets,
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * Sidereal positions only (helper for Find My Rashi / lightweight callers).
      *
      * @return array{moon:float, sun:float, ascendant:float}

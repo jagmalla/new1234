@@ -56,6 +56,25 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
     <?php endif; ?>
 
     <?php if ($chart !== null): ?>
+
+    <!-- View toggle (Charts / Details) — reusable pattern for Module 5d -->
+    <div class="flex gap-2">
+        <button id="btn-charts" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-gray-200">View Charts</button>
+        <button id="btn-details" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white">View Details</button>
+    </div>
+
+    <!-- CHARTS VIEW (North-Indian divisional charts) -->
+    <div id="charts-view" class="hidden">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <?php foreach (($vargas ?? []) as $vkey => $vinfo): ?>
+                <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
+            <?php endforeach; ?>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">North-Indian charts: house 1 (top centre) holds the Lagna sign; faint label = sign number + abbreviation; blue = planets (D1 shows degree).</p>
+    </div>
+
+    <!-- DETAILS VIEW (text tables) -->
+    <div id="details-view">
     <!-- Header -->
     <div class="bg-white rounded-lg shadow p-4 text-sm grid grid-cols-2 md:grid-cols-3 gap-2">
         <div><span class="text-gray-500">Birth:</span> <?= $h($in['date'] . ' ' . $in['time']) ?> (UTC<?= sprintf('%+.2f', $meta['tz']) ?>)</div>
@@ -185,9 +204,40 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
     </div>
     <?php endif; ?>
 
+    </div><!-- /details-view -->
     <?php endif; ?>
 
     <p class="text-xs text-gray-400">Auto Business — Calculation Engine test page. For arc-second accuracy set SWETEST_PATH (Swiss Ephemeris).</p>
 </div>
+
+<?php if ($chart !== null): ?>
+<script>window.AB_VARGAS = <?= json_encode($vargas ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;</script>
+<script src="/assets/js/northchart.js"></script>
+<script>
+(function () {
+  var charts = document.getElementById('charts-view');
+  var details = document.getElementById('details-view');
+  var bC = document.getElementById('btn-charts');
+  var bD = document.getElementById('btn-details');
+  var rendered = false;
+  function activate(btn, on) {
+    btn.classList.toggle('bg-blue-600', on);
+    btn.classList.toggle('text-white', on);
+    btn.classList.toggle('bg-gray-200', !on);
+  }
+  function showCharts() {
+    if (!rendered && window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); rendered = true; }
+    charts.classList.remove('hidden'); details.classList.add('hidden');
+    activate(bC, true); activate(bD, false);
+  }
+  function showDetails() {
+    charts.classList.add('hidden'); details.classList.remove('hidden');
+    activate(bD, true); activate(bC, false);
+  }
+  bC.addEventListener('click', showCharts);
+  bD.addEventListener('click', showDetails);
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
