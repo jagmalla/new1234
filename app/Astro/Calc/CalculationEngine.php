@@ -139,6 +139,7 @@ final class CalculationEngine
                 'formatted' => Charts::format($sid),
                 'sign' => Charts::signName($sid),
                 'sign_index' => Charts::signIndex($sid),
+                'deg' => (int) floor(Charts::degInSign($sid)),
                 'retro' => $p['retro'],
                 'house_from_lagna' => Charts::houseFromAsc($sid, $natalAscSign),
                 'house_from_moon' => Charts::houseFromAsc($sid, $natalMoonSign),

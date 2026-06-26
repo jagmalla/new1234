@@ -24,11 +24,19 @@
     Ve:'#db2777', Sa:'#1d4ed8', Ra:'#6b7280', Ke:'#6b7280', As:'#111827'
   };
 
+  // Exaltation (ex) and debilitation (de) sign index per planet (0=Aries…11=Pi).
+  // ↑ shown when a planet sits in its exalted sign, ↓ when debilitated.
+  var DIGN = {
+    Su:{ex:0, de:6},  Mo:{ex:1, de:7},  Ma:{ex:9, de:3},  Me:{ex:5, de:11},
+    Ju:{ex:3, de:9},  Ve:{ex:11, de:5}, Sa:{ex:6, de:0},
+    Ra:{ex:1, de:7},  Ke:{ex:7, de:1}
+  };
+
   // House label centroids in a 100x100 viewBox (North-Indian fixed houses):
   // planet abbreviations sit here, toward the outer body of each house.
   var C = {
-    1:[50,25], 2:[25,12], 3:[12,25], 4:[25,50], 5:[12,75], 6:[25,88],
-    7:[50,75], 8:[75,88], 9:[88,75], 10:[75,50], 11:[88,25], 12:[75,12]
+    1:[50,25], 2:[25,12], 3:[10,25], 4:[25,50], 5:[10,75], 6:[25,88],
+    7:[50,75], 8:[75,88], 9:[90,75], 10:[75,50], 11:[90,25], 12:[75,12]
   };
   // Rashi (sign) number anchors — each tucked just inside its own house, against
   // the inner vertex, with a clear margin from every dividing line so the number
@@ -36,10 +44,10 @@
   // just off the centre (50,50); the 8 triangles sit just off their corner.
   var INNER = {
     1:[50,44], 4:[44,50], 7:[50,56], 10:[56,50],     // diamonds, around centre
-    2:[25,22], 3:[22,25],                            // top-left corner (25,25)
-    12:[75,22], 11:[78,25],                          // top-right corner (75,25)
-    5:[22,75], 6:[25,78],                            // bottom-left corner (25,75)
-    9:[78,75], 8:[75,78]                             // bottom-right corner (75,75)
+    2:[25,20], 3:[20,25],                            // top-left corner (25,25)
+    12:[75,20], 11:[80,25],                          // top-right corner (75,25)
+    5:[20,75], 6:[25,80],                            // bottom-left corner (25,75)
+    9:[80,75], 8:[75,80]                             // bottom-right corner (75,75)
   };
 
   function el(tag, attrs, text) {
@@ -90,7 +98,9 @@
 
     (data.planets || []).forEach(function (p) {
       var house = (((p.sign - ascSign) % 12) + 12) % 12 + 1;
-      var txt = p.abbr
+      var d = DIGN[p.abbr];
+      var mark = d ? (p.sign === d.ex ? '↑' : (p.sign === d.de ? '↓' : '')) : '';
+      var txt = p.abbr + mark
         + (opts.showDeg && p.deg != null ? ' ' + p.deg + '°' : '')
         + (p.retro ? ' R' : '');
       byHouse[house].push({ abbr: p.abbr, txt: txt });
@@ -102,8 +112,8 @@
 
       // Rashi (sign) number only — black, tucked at the house's inner corner.
       svg.appendChild(el('text', {
-        x: INNER[hh][0], y: INNER[hh][1] + 1.3, 'text-anchor':'middle',
-        'font-size':3.8, fill:'#000000', 'font-weight':'700'
+        x: INNER[hh][0], y: INNER[hh][1] + 1.2, 'text-anchor':'middle',
+        'font-size':3.5, fill:'#000000', 'font-weight':'700'
       }, String(signNum + 1)));
 
       // Planets centred in the house body, colour-coded (Dasha palette).
@@ -129,7 +139,7 @@
       if (vargas[key]) {
         renderNorth(elm, vargas[key], {
           title: vargas[key].label,
-          showDeg: key === 'D1',
+          showDeg: true,
           big: key === 'D1'
         });
       }

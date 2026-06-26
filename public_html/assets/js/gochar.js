@@ -126,10 +126,10 @@
       var planets = [];
       Object.keys(g.transits).forEach(function (name) {
         var t = g.transits[name];
-        planets.push({ abbr: ABBR[name] || name.slice(0, 2), sign: t.sign_index, retro: !!t.retro });
+        planets.push({ abbr: ABBR[name] || name.slice(0, 2), sign: t.sign_index, deg: t.deg, retro: !!t.retro });
       });
       ABChart.renderNorth(chartBox, { asc_sign: g.ascendant.sign_index, planets: planets },
-        { title: g.label });
+        { title: g.label, showDeg: true });
 
       var rows = ['<table class="w-full text-sm"><thead><tr class="text-left border-b">'
         + '<th class="py-1 pr-2">Planet</th><th class="pr-2">Transit</th><th class="pr-2">Sign</th>'
