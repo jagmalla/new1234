@@ -175,11 +175,29 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
     </div>
 
     <!-- D1 -->
+    <?php
+        // "Lord" column: the house number(s), counted from the Ascendant, of the
+        // Rashi(s) each planet rules. (Sign indexes 0=Aries … 11=Pisces.)
+        $lordSigns = [
+            'Sun' => [4], 'Moon' => [3], 'Mars' => [0, 7], 'Mercury' => [2, 5],
+            'Jupiter' => [8, 11], 'Venus' => [1, 6], 'Saturn' => [9, 10],
+            'Rahu' => [], 'Ketu' => [],
+        ];
+        $ascSignIdx = (int) $chart['ascendant']['sign_index'];
+        $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): string {
+            $houses = [];
+            foreach ($lordSigns[$planet] ?? [] as $sign) {
+                $houses[] = (($sign - $ascSignIdx) % 12 + 12) % 12 + 1;
+            }
+            sort($houses);
+            return implode(', ', $houses);
+        };
+    ?>
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <h2 class="font-semibold mb-2">D1 (Rasi) — Planetary Positions</h2>
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b">
-                <th class="py-1 pr-3">Planet</th><th class="pr-3">Position</th><th class="pr-3">House</th>
+                <th class="py-1 pr-3">Planet</th><th class="pr-3">Position</th><th class="pr-3">Placement</th><th class="pr-3">Lord</th>
                 <th class="pr-3">Nakshatra (pada)</th><th class="pr-3">Navamsa</th><th>Retro</th>
             </tr></thead>
             <tbody>
@@ -188,6 +206,7 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
                     <td class="py-1 pr-3 font-medium"><?= $h($name) ?></td>
                     <td class="pr-3"><?= $h($p['formatted']) ?></td>
                     <td class="pr-3"><?= (int) $p['house'] ?></td>
+                    <td class="pr-3"><?= $h($lordHouses((string) $name)) ?></td>
                     <td class="pr-3"><?= $h($p['nakshatra']['name']) ?> (<?= (int) $p['nakshatra']['pada'] ?>)</td>
                     <td class="pr-3"><?= $h($p['navamsa_sign']) ?></td>
                     <td><?= $p['retro'] ? 'R' : '' ?></td>

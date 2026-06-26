@@ -36,10 +36,10 @@
   // just off the centre (50,50); the 8 triangles sit just off their corner.
   var INNER = {
     1:[50,44], 4:[44,50], 7:[50,56], 10:[56,50],     // diamonds, around centre
-    2:[25,19], 3:[19,25],                            // top-left corner (25,25)
-    12:[75,19], 11:[81,25],                          // top-right corner (75,25)
-    5:[19,75], 6:[25,81],                            // bottom-left corner (25,75)
-    9:[81,75], 8:[75,81]                             // bottom-right corner (75,75)
+    2:[25,22], 3:[22,25],                            // top-left corner (25,25)
+    12:[75,22], 11:[78,25],                          // top-right corner (75,25)
+    5:[22,75], 6:[25,78],                            // bottom-left corner (25,75)
+    9:[78,75], 8:[75,78]                             // bottom-right corner (75,75)
   };
 
   function el(tag, attrs, text) {
