@@ -62,7 +62,7 @@
     return out;
   }
 
-  function row(period, level, tz) {
+  function row(period, level, tz, inline) {
     var wrap = document.createElement('div');
     var head = document.createElement('div');
     head.className = 'flex items-center gap-2 py-1 cursor-pointer select-none hover:bg-gray-50 rounded';
@@ -91,7 +91,9 @@
     head.appendChild(lvl);
 
     var dates = document.createElement('span');
-    dates.className = 'text-xs text-gray-600 ml-auto whitespace-nowrap';
+    // Default: push dates to the right edge. inline: keep them next to the name
+    // (used in the wide Detail view so the dates aren't far from the planet).
+    dates.className = 'text-xs text-gray-600 whitespace-nowrap ' + (inline ? 'ml-3' : 'ml-auto');
     dates.textContent = jdToDMY(period.start_jd, tz) + '  →  ' + jdToDMY(period.end_jd, tz);
     head.appendChild(dates);
 
@@ -103,7 +105,7 @@
       var built = false;
       head.addEventListener('click', function () {
         if (!built) {
-          children(period).forEach(function (c) { kids.appendChild(row(c, level + 1, tz)); });
+          children(period).forEach(function (c) { kids.appendChild(row(c, level + 1, tz, inline)); });
           built = true;
         }
         var open = kids.classList.toggle('hidden') === false;
@@ -118,7 +120,7 @@
     opts = opts || {};
     container.innerHTML = '';
     (topPeriods || []).forEach(function (p) {
-      container.appendChild(row({ lord: p.lord, start_jd: p.start_jd, end_jd: p.end_jd }, 0, opts.tz || 0));
+      container.appendChild(row({ lord: p.lord, start_jd: p.start_jd, end_jd: p.end_jd }, 0, opts.tz || 0, !!opts.datesInline));
     });
   }
 

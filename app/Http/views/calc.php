@@ -38,8 +38,18 @@ $shadColor = static function (float $ratio): string {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Auto Business — Chart Calculator (test)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Soft page background so the white cards don't look flat. */
+        body { background: linear-gradient(160deg, #eef2ff 0%, #f5f7fb 45%, #fdf2f8 100%); background-attachment: fixed; }
+        /* Detail-view cards: gentle tint + definition; headers get a colour accent. */
+        #details-view > div { background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%); border: 1px solid #e6edf6; }
+        #details-view h2 {
+            background: linear-gradient(90deg, #dbeafe 0%, #eff5ff 55%, rgba(255,255,255,0) 100%);
+            border-left: 4px solid #2563eb; padding: 5px 10px; border-radius: 4px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 text-gray-900 p-4 md:p-8">
+<body class="text-gray-900 p-4 md:p-8">
 <div class="max-w-5xl mx-auto space-y-6">
 
     <h1 class="text-2xl font-bold">Calculation Engine — Chart Test</h1>
@@ -367,7 +377,7 @@ $shadColor = static function (float $ratio): string {
   // Vimshottari tree as the Chart view.
   if (window.ABDasha) {
     var vdd = document.getElementById('vim-dasha-detail');
-    if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ });
+    if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true });
   }
 
   var rendered = false;
