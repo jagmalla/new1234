@@ -377,7 +377,7 @@ $shadColor = static function (float $ratio): string {
   // Vimshottari tree as the Chart view.
   if (window.ABDasha) {
     var vdd = document.getElementById('vim-dasha-detail');
-    if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true });
+    if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
   }
 
   var rendered = false;

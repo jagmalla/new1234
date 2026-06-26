@@ -115,9 +115,11 @@
     var dates = document.createElement('span');
     // inline (Detail): dates begin just past the fixed name-column edge.
     // Otherwise (Chart view): pushed to the right edge.
-    dates.className = 'text-xs text-gray-600 whitespace-nowrap ' + (inline ? 'pl-3' : 'ml-auto');
+    dates.className = 'text-xs whitespace-nowrap ' + (inline ? 'pl-3' : 'ml-auto');
     dates.style.display = 'flex';
     dates.style.alignItems = 'center';
+    dates.style.color = '#000000';      // date text: dark black …
+    dates.style.fontWeight = '700';     // … and bold
     if (inline) { dates.style.paddingLeft = '0.75rem'; }
     dates.textContent = jdToDMY(period.start_jd, tz) + '  →  ' + jdToDMY(period.end_jd, tz);
     head.appendChild(dates);
@@ -147,6 +149,22 @@
     (topPeriods || []).forEach(function (p) {
       container.appendChild(row({ lord: p.lord, start_jd: p.start_jd, end_jd: p.end_jd }, 0, opts.tz || 0, !!opts.datesInline));
     });
+
+    // Fixed-height scroll window: show ~maxRows rows; the rest scrolls inside the
+    // box instead of expanding the section. Row height is measured live (after a
+    // tick, so utility-class styling/padding is applied first) so the window
+    // matches the real row height.
+    if (opts.maxRows) {
+      var applyScroll = function () {
+        var firstHead = container.firstChild ? container.firstChild.firstChild : null;
+        var rh = firstHead ? firstHead.getBoundingClientRect().height : 0;
+        if (!rh) { rh = 30; }   // fallback if container not laid out (hidden tab)
+        container.style.maxHeight = Math.round(opts.maxRows * rh) + 'px';
+        container.style.overflowY = 'auto';
+        container.style.overflowX = 'hidden';
+      };
+      setTimeout(applyScroll, 120);
+    }
   }
 
   global.ABDasha = { render: render, jdToDMY: jdToDMY };
