@@ -23,8 +23,8 @@
   // Same per-planet colours as the chart renderer, if present.
   var COLOR = (global.ABChart && global.ABChart.COLOR) || {};
   var PCOL = {
-    Ketu:'#6b7280', Venus:'#db2777', Sun:'#dc2626', Moon:'#0891b2', Mars:'#ea580c',
-    Rahu:'#6b7280', Jupiter:'#b45309', Saturn:'#1d4ed8', Mercury:'#16a34a'
+    Ketu:'#3d4554', Venus:'#db2777', Sun:'#dc2626', Moon:'#0891b2', Mars:'#ea580c',
+    Rahu:'#3d4554', Jupiter:'#b45309', Saturn:'#1d4ed8', Mercury:'#16a34a'
   };
 
   function jdToDMY(jd, tz) {

@@ -20,7 +20,7 @@
   // Per-planet colours by full name (matches the Dasha + chart palette).
   var PCOL = {
     Sun:'#dc2626', Moon:'#0891b2', Mars:'#ea580c', Mercury:'#16a34a', Jupiter:'#b45309',
-    Venus:'#db2777', Saturn:'#1d4ed8', Rahu:'#6b7280', Ketu:'#6b7280'
+    Venus:'#db2777', Saturn:'#1d4ed8', Rahu:'#3d4554', Ketu:'#3d4554'
   };
   var ABBR = { Sun:'Su', Moon:'Mo', Mars:'Ma', Mercury:'Me', Jupiter:'Ju', Venus:'Ve', Saturn:'Sa', Rahu:'Ra', Ketu:'Ke' };
 

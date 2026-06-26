@@ -16,7 +16,7 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
 $planetColors = [
     'Sun' => '#dc2626', 'Moon' => '#0891b2', 'Mars' => '#ea580c', 'Mercury' => '#16a34a',
     'Jupiter' => '#b45309', 'Venus' => '#db2777', 'Saturn' => '#1d4ed8',
-    'Rahu' => '#6b7280', 'Ketu' => '#6b7280',
+    'Rahu' => '#3d4554', 'Ketu' => '#3d4554',
 ];
 $pcolor = static fn($name) => $planetColors[$name] ?? '#111827';
 

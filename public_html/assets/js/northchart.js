@@ -21,7 +21,7 @@
   // Planet abbreviation -> colour (matches the Dasha palette / legend exactly).
   var COLOR = {
     Su:'#dc2626', Mo:'#0891b2', Ma:'#ea580c', Me:'#16a34a', Ju:'#b45309',
-    Ve:'#db2777', Sa:'#1d4ed8', Ra:'#6b7280', Ke:'#6b7280', As:'#111827'
+    Ve:'#db2777', Sa:'#1d4ed8', Ra:'#3d4554', Ke:'#3d4554', As:'#111827'
   };
 
   // Exaltation (ex) and debilitation (de) sign index per planet (0=Aries…11=Pi).
