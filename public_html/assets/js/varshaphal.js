@@ -69,7 +69,7 @@
             + '</b> (lord ' + v.varsha_lagna.lord + ') · Muntha ' + v.muntha.sign
             + ' (lord ' + v.muntha.lord + ') · age ' + v.age_completed;
           ABChart.renderNorth(chartBox, v.chart, { title: v.ascendant_formatted, showDeg: true, big: true });
-          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz });
+          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, maxRows: 10 });
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }
