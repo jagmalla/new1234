@@ -18,23 +18,26 @@
 (function (global) {
   'use strict';
 
-  var SIGNS = ['Ar','Ta','Ge','Cn','Le','Vi','Li','Sc','Sg','Cp','Aq','Pi'];
-
-  // Planet abbreviation -> colour (Parashara's Light-like palette).
+  // Planet abbreviation -> colour (matches the Dasha palette / legend exactly).
   var COLOR = {
     Su:'#dc2626', Mo:'#0891b2', Ma:'#ea580c', Me:'#16a34a', Ju:'#b45309',
     Ve:'#db2777', Sa:'#1d4ed8', Ra:'#6b7280', Ke:'#6b7280', As:'#111827'
   };
 
-  // House label centroids in a 100x100 viewBox (North-Indian fixed houses).
+  // House label centroids in a 100x100 viewBox (North-Indian fixed houses):
+  // planet abbreviations sit here, toward the outer body of each house.
   var C = {
     1:[50,25], 2:[25,12], 3:[12,25], 4:[25,50], 5:[12,75], 6:[25,88],
     7:[50,75], 8:[75,88], 9:[88,75], 10:[75,50], 11:[88,25], 12:[75,12]
   };
-  // Where to tuck the small fixed house number inside each house region.
-  var HN = {
-    1:[50,40], 2:[15,5], 3:[5,15], 4:[40,50], 5:[5,85], 6:[15,95],
-    7:[50,60], 8:[85,95], 9:[95,85], 10:[60,50], 11:[95,15], 12:[85,5]
+  // Rashi (sign) number anchors — tucked close to each house's INNER corner
+  // (the vertex pointing toward the centre), where the number is drawn in black.
+  var INNER = {
+    1:[50,41], 4:[41,50], 7:[50,60], 10:[60,50],   // central diamond houses
+    2:[33,19], 3:[19,33],                            // top-left corner (25,25)
+    12:[67,19], 11:[81,33],                          // top-right corner (75,25)
+    5:[19,67], 6:[33,81],                            // bottom-left corner (25,75)
+    9:[81,67], 8:[67,81]                             // bottom-right corner (75,75)
   };
 
   function el(tag, attrs, text) {
@@ -93,27 +96,22 @@
       var cx = C[hh][0], cy = C[hh][1];
       var signNum = ((ascSign + (hh - 1)) % 12);
 
-      // Rotating sign number (prominent, as in Parashara's Light) + faint abbr.
+      // Rashi (sign) number only — black, tucked at the house's inner corner.
       svg.appendChild(el('text', {
-        x: cx, y: cy - 5, 'text-anchor':'middle', 'font-size':4.2,
-        fill:'#b45309', 'font-weight':'700'
+        x: INNER[hh][0], y: INNER[hh][1] + 1.3, 'text-anchor':'middle',
+        'font-size':3.8, fill:'#000000', 'font-weight':'700'
       }, String(signNum + 1)));
 
-      // Fixed house number, small and faint, tucked toward the centre.
-      svg.appendChild(el('text', {
-        x: HN[hh][0], y: HN[hh][1], 'text-anchor':'middle', 'font-size':2.6,
-        fill:'#cbd5e1'
-      }, 'H' + hh));
-
-      // Planets stacked under the sign number, colour-coded.
+      // Planets centred in the house body, colour-coded (Dasha palette).
       var items = byHouse[hh];
       var n = items.length;
-      var startY = cy - 0.5 - ((n - 1) * 4) / 2 + 4;
+      var lineH = 4.2;
+      var startY = cy - ((n - 1) * lineH) / 2 + 1.3;
       for (var j = 0; j < n; j++) {
         svg.appendChild(el('text', {
-          x: cx, y: startY + j * 4, 'text-anchor':'middle',
-          'font-size': opts.big ? 4.0 : 3.7,
-          fill: COLOR[items[j].abbr] || '#1d4ed8', 'font-weight':'600'
+          x: cx, y: startY + j * lineH, 'text-anchor':'middle',
+          'font-size': opts.big ? 4.2 : 3.8,
+          fill: COLOR[items[j].abbr] || '#111827', 'font-weight':'600'
         }, items[j].txt));
       }
     }

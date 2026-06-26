@@ -149,7 +149,7 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
                     <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
                 <?php endforeach; ?>
             </div>
-            <p class="text-xs text-gray-400 mt-2">North-Indian style: house 1 top-centre (As = Ascendant); bold orange = rotating sign number, faint Hn = fixed house; planets colour-coded, R = retrograde.</p>
+            <p class="text-xs text-gray-400 mt-2">North-Indian style: house 1 top-centre (As = Ascendant); black number at each inner corner = Rashi (sign) number; planet abbreviations colour-coded (Dasha palette), R = retrograde.</p>
         </div>
 
     </div>
