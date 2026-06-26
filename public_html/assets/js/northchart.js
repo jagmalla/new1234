@@ -30,14 +30,16 @@
     1:[50,25], 2:[25,12], 3:[12,25], 4:[25,50], 5:[12,75], 6:[25,88],
     7:[50,75], 8:[75,88], 9:[88,75], 10:[75,50], 11:[88,25], 12:[75,12]
   };
-  // Rashi (sign) number anchors — tucked close to each house's INNER corner
-  // (the vertex pointing toward the centre), where the number is drawn in black.
+  // Rashi (sign) number anchors — each tucked just inside its own house, against
+  // the inner vertex, with a clear margin from every dividing line so the number
+  // never spills into the neighbouring house. The 4 central diamond houses sit
+  // just off the centre (50,50); the 8 triangles sit just off their corner.
   var INNER = {
-    1:[50,41], 4:[41,50], 7:[50,60], 10:[60,50],   // central diamond houses
-    2:[33,19], 3:[19,33],                            // top-left corner (25,25)
-    12:[67,19], 11:[81,33],                          // top-right corner (75,25)
-    5:[19,67], 6:[33,81],                            // bottom-left corner (25,75)
-    9:[81,67], 8:[67,81]                             // bottom-right corner (75,75)
+    1:[50,44], 4:[44,50], 7:[50,56], 10:[56,50],     // diamonds, around centre
+    2:[25,19], 3:[19,25],                            // top-left corner (25,25)
+    12:[75,19], 11:[81,25],                          // top-right corner (75,25)
+    5:[19,75], 6:[25,81],                            // bottom-left corner (25,75)
+    9:[81,75], 8:[75,81]                             // bottom-right corner (75,75)
   };
 
   function el(tag, attrs, text) {
@@ -59,9 +61,11 @@
     }
 
     var svg = el('svg', {
-      viewBox: '0 0 100 100', width: '100%', height: 'auto',
-      'class': 'bg-amber-50 rounded'
+      viewBox: '0 0 100 100', width: '100%', height: 'auto', 'class': 'rounded'
     });
+
+    // Chart background fill (rendered as part of the SVG so it shows everywhere).
+    svg.appendChild(el('rect', {x:0, y:0, width:100, height:100, fill:'#f0f9ff'}));
 
     // Frame: outer square, both diagonals, inner diamond.
     var line = function (x1,y1,x2,y2) {
