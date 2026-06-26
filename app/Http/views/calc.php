@@ -11,6 +11,14 @@ $gochar = $view['gochar'];
 $meta = $view['meta'];
 
 $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
+
+// Planet name -> colour (same palette as the Chart view / Dasha legend).
+$planetColors = [
+    'Sun' => '#dc2626', 'Moon' => '#0891b2', 'Mars' => '#ea580c', 'Mercury' => '#16a34a',
+    'Jupiter' => '#b45309', 'Venus' => '#db2777', 'Saturn' => '#1d4ed8',
+    'Rahu' => '#6b7280', 'Ketu' => '#6b7280',
+];
+$pcolor = static fn($name) => $planetColors[$name] ?? '#111827';
 ?>
 <!doctype html>
 <html lang="en">
@@ -203,7 +211,7 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
             <tbody>
             <?php foreach ($chart['planets'] as $name => $p): ?>
                 <tr class="border-b border-gray-100">
-                    <td class="py-1 pr-3 font-medium"><?= $h($name) ?></td>
+                    <td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
                     <td class="pr-3"><?= $h($p['formatted']) ?></td>
                     <td class="pr-3"><?= (int) $p['house'] ?></td>
                     <td class="pr-3"><?= $h($lordHouses((string) $name)) ?></td>
@@ -216,26 +224,14 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
         </table>
     </div>
 
-    <!-- Vimshottari -->
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Vimshottari Dasha</h2>
-        <div class="mb-2">Birth balance: <b><?= $h($chart['dasha']['balance']['lord']) ?></b>
+    <!-- Vimshottari — same expandable, colour-coded tree as the Chart view -->
+    <div class="bg-white rounded-lg shadow p-4 text-sm">
+        <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
+        <div class="mb-2">Birth balance: <b style="color: <?= $pcolor($chart['dasha']['balance']['lord']) ?>"><?= $h($chart['dasha']['balance']['lord']) ?></b>
             for <?= sprintf('%.2f', $chart['dasha']['balance']['years']) ?> years.
             Running (at birth): <?= $h($chart['dasha']['running']['maha'] ?? '-') ?> /
             <?= $h($chart['dasha']['running']['antar'] ?? '-') ?></div>
-        <table class="w-full">
-            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Maha</th><th class="pr-3">Start (JD)</th><th class="pr-3">End (JD)</th><th>Years</th></tr></thead>
-            <tbody>
-            <?php foreach ($chart['dasha']['mahadashas'] as $md): ?>
-                <tr class="border-b border-gray-100">
-                    <td class="py-1 pr-3"><?= $h($md['lord']) ?></td>
-                    <td class="pr-3"><?= sprintf('%.2f', $md['start_jd']) ?></td>
-                    <td class="pr-3"><?= sprintf('%.2f', $md['end_jd']) ?></td>
-                    <td><?= sprintf('%.2f', $md['years']) ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
+        <div id="vim-dasha-detail"></div>
     </div>
 
     <!-- Shadbala -->
@@ -251,7 +247,7 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
             <tbody>
             <?php foreach ($chart['shadbala'] as $name => $b): ?>
                 <tr class="border-b border-gray-100">
-                    <td class="py-1 pr-2 font-medium"><?= $h($name) ?></td>
+                    <td class="py-1 pr-2 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
                     <td class="pr-2"><?= $h(number_format((float) $b['sthana']['total'], 1)) ?></td>
                     <td class="pr-2"><?= $h(number_format((float) $b['dig'], 1)) ?></td>
                     <td class="pr-2"><?= $h(number_format((float) $b['kaala'], 1)) ?></td>
@@ -359,6 +355,14 @@ $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
   var details = document.getElementById('details-view');
   var bC = document.getElementById('btn-charts');
   var bD = document.getElementById('btn-details');
+
+  // Detail view (visible by default) shows the same expandable, colour-coded
+  // Vimshottari tree as the Chart view.
+  if (window.ABDasha) {
+    var vdd = document.getElementById('vim-dasha-detail');
+    if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ });
+  }
+
   var rendered = false;
   function activate(btn, on) {
     btn.classList.toggle('bg-blue-600', on);
