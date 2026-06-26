@@ -65,35 +65,60 @@
   function row(period, level, tz, inline) {
     var wrap = document.createElement('div');
     var head = document.createElement('div');
-    head.className = 'flex items-center gap-2 py-1 cursor-pointer select-none hover:bg-gray-50 rounded';
-    head.style.paddingLeft = (level * 18 + 4) + 'px';
+    head.className = 'py-1 cursor-pointer select-none hover:bg-gray-50';
+    head.style.display = 'flex';
+    head.style.alignItems = 'stretch';
+    // Thin separator line between every dasha period.
+    head.style.borderBottom = '1px solid #e8ecf3';
+
+    // Name column: in the wide Detail view (inline) it is a fixed width so the
+    // date column always starts at the same x for all five levels. The width is
+    // sized for the widest content — deepest indent + "Mercury" + the longest
+    // level label ("Pratyantardasha"). The narrow Chart-view column keeps auto
+    // width with right-aligned dates.
+    var nameCell = document.createElement('div');
+    nameCell.className = 'whitespace-nowrap';
+    nameCell.style.display = 'flex';
+    nameCell.style.alignItems = 'center';
+    nameCell.style.gap = '0.5rem';
+    nameCell.style.boxSizing = 'border-box';
+    if (inline) {
+      nameCell.style.flex = '0 0 18rem';   // fixed name column so dates align
+      nameCell.style.width = '18rem';
+      nameCell.style.borderRight = '1px solid #e8ecf3';
+    }
+    nameCell.style.paddingLeft = (level * 18 + 4) + 'px';
 
     var canExpand = level < 4;
     var tw = document.createElement('span');
     tw.className = 'inline-block w-4 text-center text-gray-400 font-mono text-xs';
     tw.textContent = canExpand ? '+' : '·';
-    head.appendChild(tw);
+    nameCell.appendChild(tw);
 
     var dot = document.createElement('span');
-    dot.className = 'inline-block w-2 h-2 rounded-full';
+    dot.className = 'inline-block w-2 h-2 rounded-full shrink-0';
     dot.style.background = PCOL[period.lord] || '#6b7280';
-    head.appendChild(dot);
+    nameCell.appendChild(dot);
 
     var name = document.createElement('span');
     name.className = 'font-medium';
     name.style.color = PCOL[period.lord] || '#111827';
     name.textContent = period.lord;
-    head.appendChild(name);
+    nameCell.appendChild(name);
 
     var lvl = document.createElement('span');
     lvl.className = 'text-xs text-gray-400';
     lvl.textContent = LEVEL[level];
-    head.appendChild(lvl);
+    nameCell.appendChild(lvl);
+    head.appendChild(nameCell);
 
     var dates = document.createElement('span');
-    // Default: push dates to the right edge. inline: keep them next to the name
-    // (used in the wide Detail view so the dates aren't far from the planet).
-    dates.className = 'text-xs text-gray-600 whitespace-nowrap ' + (inline ? 'ml-3' : 'ml-auto');
+    // inline (Detail): dates begin just past the fixed name-column edge.
+    // Otherwise (Chart view): pushed to the right edge.
+    dates.className = 'text-xs text-gray-600 whitespace-nowrap ' + (inline ? 'pl-3' : 'ml-auto');
+    dates.style.display = 'flex';
+    dates.style.alignItems = 'center';
+    if (inline) { dates.style.paddingLeft = '0.75rem'; }
     dates.textContent = jdToDMY(period.start_jd, tz) + '  →  ' + jdToDMY(period.end_jd, tz);
     head.appendChild(dates);
 
