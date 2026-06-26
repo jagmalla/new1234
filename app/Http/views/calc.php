@@ -19,6 +19,17 @@ $planetColors = [
     'Rahu' => '#6b7280', 'Ketu' => '#6b7280',
 ];
 $pcolor = static fn($name) => $planetColors[$name] ?? '#111827';
+
+// Shadbala strength colour band: red < 0.95, green > 1.01, orange in between.
+$shadColor = static function (float $ratio): string {
+    if ($ratio < 0.95) {
+        return '#dc2626'; // red
+    }
+    if ($ratio > 1.01) {
+        return '#16a34a'; // green
+    }
+    return '#f97316';     // orange (0.95–1.01 inclusive)
+};
 ?>
 <!doctype html>
 <html lang="en">
@@ -112,25 +123,21 @@ $pcolor = static fn($name) => $planetColors[$name] ?? '#111827';
 
             <div class="bg-white rounded-lg shadow p-4">
                 <h2 class="font-semibold mb-1">Shadbala</h2>
-                <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required. Dashed line = 100%; % shows red when below.</p>
-                <?php
-                    $pcol = ['Sun' => '#dc2626','Moon' => '#0891b2','Mars' => '#ea580c','Mercury' => '#16a34a',
-                        'Jupiter' => '#b45309','Venus' => '#db2777','Saturn' => '#1d4ed8','Rahu' => '#6b7280','Ketu' => '#6b7280'];
-                ?>
+                <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
                 <div class="relative" style="height:170px">
-                    <!-- 100% threshold line (160% fills the 150px track => 100% sits at 62.5%) -->
+                    <!-- 1.00 threshold line (1.60 fills the 150px track => 1.00 sits at 62.5%) -->
                     <div class="absolute left-0 right-0" style="bottom:calc(20px + 150px * 0.625); border-top:1px dashed #9ca3af"></div>
                     <div class="flex items-end justify-between gap-1 absolute inset-x-0 bottom-0" style="height:170px">
                         <?php foreach (($chart['shadbala'] ?? []) as $name => $b):
                             $ratio = (float) $b['ratio'];
-                            $pct = $ratio * 100.0;
                             $hpx = max(3.0, min(150.0, $ratio / 1.6 * 150.0));
                             $abbr = substr((string) $name, 0, 2);
+                            $band = $shadColor($ratio);
                         ?>
                         <div class="flex flex-col items-center justify-end" style="height:170px; flex:1">
-                            <div class="text-[10px] font-semibold <?= $ratio < 1.0 ? 'text-red-600' : 'text-gray-600' ?>"><?= sprintf('%.0f%%', $pct) ?></div>
-                            <div class="w-full rounded-t" style="height:<?= sprintf('%.1f', $hpx) ?>px; background:<?= $pcol[$name] ?? '#1d4ed8' ?>"></div>
-                            <div class="text-[10px] mt-1 font-medium" style="color:<?= $pcol[$name] ?? '#111' ?>"><?= $h($abbr) ?></div>
+                            <div class="text-[10px] font-semibold" style="color:<?= $band ?>"><?= sprintf('%.2f', $ratio) ?></div>
+                            <div class="w-full rounded-t" style="height:<?= sprintf('%.1f', $hpx) ?>px; background:<?= $band ?>"></div>
+                            <div class="text-[10px] mt-1 font-medium" style="color:<?= $pcolor($name) ?>"><?= $h($abbr) ?></div>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -256,7 +263,7 @@ $pcolor = static fn($name) => $planetColors[$name] ?? '#111827';
                     <td class="pr-2"><?= $h(number_format((float) $b['drig'], 1)) ?></td>
                     <td class="pr-2"><?= $h(number_format((float) $b['total_virupa'], 1)) ?></td>
                     <td class="pr-2 font-semibold"><?= $h(number_format((float) $b['total_rupa'], 2)) ?></td>
-                    <td class="pr-2"><?= $h(number_format((float) $b['ratio'], 2)) ?></td>
+                    <td class="pr-2 font-semibold" style="color: <?= $shadColor((float) $b['ratio']) ?>"><?= $h(number_format((float) $b['ratio'], 2)) ?></td>
                     <td class="pr-2"><?= $h(number_format((float) $b['ishta'], 1)) ?></td>
                     <td><?= $h(number_format((float) $b['kashta'], 1)) ?></td>
                 </tr>
