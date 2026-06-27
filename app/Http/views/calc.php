@@ -124,13 +124,14 @@ $shadColor = static function (float $ratio): string {
             </div>
         </div>
 
-        <!-- ROW 4 — Vimshottari Dasha | Shadbala (vertical) | D9 -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div class="bg-white rounded-lg shadow p-4">
-                <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
-                <div id="vim-dasha" class="text-sm"></div>
-            </div>
+        <!-- ROW 4 — Vimshottari Dasha (full width for the two-column layout) -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
+            <div id="vim-dasha" class="text-sm"></div>
+        </div>
 
+        <!-- ROW 4b — Shadbala (vertical) | D9 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="bg-white rounded-lg shadow p-4">
                 <h2 class="font-semibold mb-1">Shadbala</h2>
                 <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
@@ -294,11 +295,14 @@ $shadColor = static function (float $ratio): string {
             <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Annual position</th><th>House</th></tr></thead>
             <tbody>
             <?php foreach ($vp['varsha_chart']['planets'] as $name => $p): ?>
-                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?></td>
+                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
                     <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' R' : '' ?></td></tr>
             <?php endforeach; ?>
             </tbody>
         </table>
+
+        <h3 class="font-semibold mt-4 mb-2">Mudda (Annual) Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h3>
+        <div id="mudda-dasha-detail"></div>
     </div>
     <?php endif; ?>
 
@@ -378,6 +382,8 @@ $shadColor = static function (float $ratio): string {
   if (window.ABDasha) {
     var vdd = document.getElementById('vim-dasha-detail');
     if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
+    var mdd = document.getElementById('mudda-dasha-detail');
+    if (mdd && window.AB_MUDDA) ABDasha.render(mdd, window.AB_MUDDA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
   }
 
   var rendered = false;
@@ -391,7 +397,7 @@ $shadColor = static function (float $ratio): string {
     rendered = true;
     if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); }
     if (window.ABDasha) {
-      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, maxRows: 10 });
+      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
     }
     if (window.ABGochar) {
       ABGochar.init({

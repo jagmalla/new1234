@@ -40,7 +40,9 @@
     // Output scaffold: summary, then chart | mudda dasha.
     outRoot.innerHTML = '';
     var summary = h('div', 'text-sm mb-3');
-    var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4');
+    // Stack vertically: small annual chart on top, then the Mudda dasha full
+    // width so its two-column (name | date) layout has room.
+    var stack = h('div', 'space-y-4');
     var chartCell = h('div', 'bg-white rounded-lg shadow p-3');
     var chartBox = h('div', 'max-w-xs mx-auto');
     chartCell.appendChild(h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Varsha (Annual) Chart'));
@@ -49,8 +51,8 @@
     dashaCell.appendChild(h('h3', 'font-semibold mb-2 text-sm', 'Mudda Dasha — drill 5 levels'));
     var dashaBox = h('div', 'text-sm');
     dashaCell.appendChild(dashaBox);
-    grid.appendChild(chartCell); grid.appendChild(dashaCell);
-    outRoot.appendChild(summary); outRoot.appendChild(grid);
+    stack.appendChild(chartCell); stack.appendChild(dashaCell);
+    outRoot.appendChild(summary); outRoot.appendChild(stack);
 
     function fetchVp() {
       status.textContent = 'calculating…';
@@ -69,7 +71,7 @@
             + '</b> (lord ' + v.varsha_lagna.lord + ') · Muntha ' + v.muntha.sign
             + ' (lord ' + v.muntha.lord + ') · age ' + v.age_completed;
           ABChart.renderNorth(chartBox, v.chart, { title: v.ascendant_formatted, showDeg: true, big: true });
-          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, maxRows: 10 });
+          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, maxRows: 10 });
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }
