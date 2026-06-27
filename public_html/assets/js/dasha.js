@@ -74,7 +74,7 @@
     // Highlight the period that contains "now" (today) — at every level — so the
     // currently-running dasha is obvious at a glance.
     var isCurrent = (now != null && period.start_jd <= now && now < period.end_jd);
-    if (isCurrent) { head.style.background = '#f0f9ff'; }
+    if (isCurrent) { head.style.background = '#dceffc'; }
 
     // Name column: in the wide Detail view (inline) it is a fixed width so the
     // date column always starts at the same x for all five levels. The width is
