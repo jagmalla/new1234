@@ -126,14 +126,32 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="space-y-6">
 
-        <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (scrolls) -->
+        <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (scrolls, height = D1) -->
         <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-start">
-            <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
+            <div id="d1-card" class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
                 <div class="w-full max-w-xl mx-auto" data-varga="D1" data-ring="1"></div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
+            <div id="vim-card" class="bg-white rounded-lg shadow p-4 flex flex-col" style="display:flex; flex-direction:column">
                 <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
-                <div id="vim-dasha" class="text-sm"></div>
+                <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
+                    $tzc = (float) ($meta['tz'] ?? 0);
+                    $cd = static fn(array $p): string =>
+                        \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzc)
+                        . ' – ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzc);
+                    $cdLine = static function (string $label, ?array $p) use ($pcolor, $cd, $h): string {
+                        if (empty($p)) { return ''; }
+                        return '<div><span class="text-gray-600 font-semibold">' . $label . ':</span> '
+                            . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
+                            . '<span class="text-gray-500">(' . $cd($p) . ')</span></div>';
+                    };
+                ?>
+                <div class="mb-2 pb-2 border-b text-sm leading-snug space-y-0.5">
+                    <?= $cdLine('MahaDasha', $dashaNow['maha']) ?>
+                    <?= $cdLine('AntarDasha', $dashaNow['antar']) ?>
+                    <?= $cdLine('Pratyantar', $dashaNow['pratyantar']) ?>
+                </div>
+                <?php endif; ?>
+                <div id="vim-dasha" class="text-sm flex-1 min-h-0 overflow-y-auto" style="flex:1 1 auto; min-height:0; overflow-y:auto"></div>
             </div>
         </div>
 
@@ -437,13 +455,37 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     btn.classList.toggle('text-white', on);
     btn.classList.toggle('bg-gray-200', !on);
   }
+
+  // Make the Vimshottari Dasha card exactly as tall as the D1 chart card so the
+  // two cells in row 1 line up; the dasha list (flex-1) then scrolls inside it.
+  // Measured after layout (and on resize) because the chart SVG is height:auto.
+  function syncDashaHeight() {
+    var d1 = document.getElementById('d1-card');
+    var vc = document.getElementById('vim-card');
+    if (!d1 || !vc) { return; }
+    // Only match heights in the side-by-side (lg) layout; stacked on narrow screens.
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      vc.style.height = d1.getBoundingClientRect().height + 'px';
+    } else {
+      vc.style.height = '';
+    }
+  }
+  var resizeT;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(syncDashaHeight, 150);
+  });
   function buildCharts() {
     if (chartsBuilt) return;
     chartsBuilt = true;
     if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS, window.AB_HOUSES); }
     if (window.ABDasha) {
-      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 12 });
+      // No maxRows here: the Vimshottari card height is synced to the D1 chart
+      // (syncDashaHeight) and the list scrolls inside that fixed height.
+      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true });
     }
+    // Defer so the D1 chart SVG (height:auto) has laid out before we measure it.
+    setTimeout(syncDashaHeight, 160);
     if (window.ABGochar) {
       ABGochar.init({
         inputs: '#gochar-inputs', output: '#gochar-output',
@@ -474,6 +516,8 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     buildCharts();
     charts.classList.remove('hidden'); details.classList.add('hidden');
     activate(bC, true); activate(bD, false);
+    // Re-measure once visible (a hidden tab reports zero height).
+    setTimeout(syncDashaHeight, 60);
   }
   function showDetails() {
     buildDetails();
