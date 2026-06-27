@@ -77,18 +77,17 @@
       var v = ring[hh] || ring[String(hh)];
       if (!v) { continue; }
       var x = OUT[hh][0], y = OUT[hh][1];
+      // Ashtakavarga (bindus) above, Bhava Bala (virupas) below — each labelled.
+      var bb = (v.bb_virupa != null) ? Math.round(v.bb_virupa) : v.bb;
       svg.appendChild(el('text', {
-        x:x, y:y - 1.4, 'text-anchor':'middle', 'font-size':3.6,
+        x:x, y:y - 1.4, 'text-anchor':'middle', 'font-size':3.3,
         fill:AV_COLOR, 'font-weight':'700'
-      }, String(v.av)));
+      }, 'AV ' + v.av));
       svg.appendChild(el('text', {
-        x:x, y:y + 3.0, 'text-anchor':'middle', 'font-size':3.6,
+        x:x, y:y + 3.0, 'text-anchor':'middle', 'font-size':3.3,
         fill:BB_COLOR, 'font-weight':'700'
-      }, String(v.bb)));
+      }, 'BB ' + bb));
     }
-    // Legend in the free top-left outer corner (AV above, BB below).
-    svg.appendChild(el('text', {x:-11, y:-6.5, 'font-size':3.4, fill:AV_COLOR, 'font-weight':'700'}, 'AV'));
-    svg.appendChild(el('text', {x:-11, y:-1.8, 'font-size':3.4, fill:BB_COLOR, 'font-weight':'700'}, 'BB'));
   }
 
   function renderNorth(container, data, opts) {

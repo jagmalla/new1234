@@ -231,7 +231,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b">
                 <th class="py-1 pr-3">House</th><th class="pr-3">Planet(s) in house</th><th class="pr-3">Rashi</th>
-                <th class="pr-3">Ashtakavarga</th><th class="pr-3">Bhava Bala</th><th>Lord</th>
+                <th class="pr-3">Ashtakavarga (AV)</th><th class="pr-3">Bhava Bala (BB, virupa)</th><th>Lord</th>
             </tr></thead>
             <tbody>
             <?php foreach (($chart['houses'] ?? []) as $hh => $H): ?>
@@ -248,14 +248,14 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                     </td>
                     <td class="pr-3"><?= (int) $H['rashi_num'] ?> <?= $h($H['sign']) ?></td>
                     <td class="pr-3 font-semibold" style="color:#1d4ed8"><?= (int) $H['av'] ?></td>
-                    <td class="pr-3 font-semibold" style="color:#15803d"><?= $h(number_format((float) $H['bb'], 2)) ?></td>
+                    <td class="pr-3 font-semibold" style="color:#15803d"><?= $h(number_format((float) ($H['bb_virupa'] ?? $H['bb'] * 60), 2)) ?></td>
                     <td><span style="color:<?= $pcolor($H['lord']) ?>" class="font-semibold"><?= $h($H['lord']) ?></span>
                         <?php $llh = $lordHouses((string) $H['lord']); ?><?= $llh !== '' ? '<span class="text-xs text-gray-400">(' . $h($llh) . ')</span>' : '' ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="text-xs text-gray-400 mt-2">Ashtakavarga = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala in Rupas (Bhavadhipati + Drishti). "Lord of …" = houses, counted from the Lagna, that the planet rules.</p>
+        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). BB = Bhava Bala in virupas (Bhavadhipati + Drishti). "Lord of …" = houses, counted from the Lagna, that the planet rules.</p>
     </div>
 
     <!-- D1 -->

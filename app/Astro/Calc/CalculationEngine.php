@@ -103,6 +103,7 @@ final class CalculationEngine
                 'lord' => Charts::signLord($hsign),
                 'av' => $ashtakavarga['sav'][$hsign],
                 'bb' => $bhavaBala[$hh]['rupa'],
+                'bb_virupa' => $bhavaBala[$hh]['total_virupa'],
                 'planets' => [],
             ];
         }
