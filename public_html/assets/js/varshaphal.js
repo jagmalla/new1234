@@ -73,10 +73,11 @@
           if (v.error) { status.textContent = 'Error: ' + v.error; return; }
           status.textContent = '';
           summary.innerHTML =
-              '<div>Year <b>' + v.year + '</b></div>'
-            + '<div>Varsha Lagna <b>' + v.varsha_lagna.sign + '</b> (lord ' + v.varsha_lagna.lord + ')</div>'
-            + '<div>Muntha <b>' + v.muntha.sign + '</b> (lord ' + v.muntha.lord + ')</div>'
-            + '<div>Age <b>' + v.age_completed + '</b></div>';
+              '<div><b>Year</b> ' + v.year + '</div>'
+            + '<div><b>Varsha Lagna</b> ' + v.varsha_lagna.sign + ' (lord ' + v.varsha_lagna.lord + ')</div>'
+            + '<div><b>Muntha</b> ' + v.muntha.sign + ' (lord ' + v.muntha.lord + ')</div>'
+            + '<div><b>Age</b> ' + v.age_completed + '</div>'
+            + '<div><b>Varshaphal Date</b>: ' + (v.varsha_start || '—') + '</div>';
           // Show the Muntha as a "MUN" marker in its house on the Varsha chart.
           var chart = v.chart;
           if (v.muntha_sign_index != null) {

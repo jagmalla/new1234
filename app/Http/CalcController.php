@@ -170,6 +170,8 @@ final class CalcController
                 'varsha_lagna' => $vp['varsha_lagna'],
                 'muntha' => $vp['muntha'],
                 'muntha_sign_index' => $munthaSignIndex,
+                // Varsha Pravesh (solar-return) start date, DD-MM-YYYY at birth tz.
+                'varsha_start' => JulianDay::toDmy((float) $vp['solar_return_jd'], $tz),
                 'chart' => $engine->northPayload($vp['varsha_chart']),
                 'ascendant_formatted' => $vp['varsha_chart']['ascendant']['formatted'],
                 'mudda_dasha' => $vp['mudda_dasha'],
