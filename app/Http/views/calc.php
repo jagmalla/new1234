@@ -71,12 +71,9 @@ $shadColor = static function (float $ratio): string {
             <label class="flex flex-col gap-1"><span class="text-gray-500">Time (HH:MM)</span>
                 <input name="time" value="<?= $h($in['time']) ?>" class="border rounded px-2 py-1"></label>
 
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Country</span>
-                <select id="b-country" class="border rounded px-2 py-1 bg-white"></select></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">State / Province</span>
-                <select id="b-state" class="border rounded px-2 py-1 bg-white"></select></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">City (fills lat/lon/tz)</span>
-                <select id="b-city" class="border rounded px-2 py-1 bg-white"></select></label>
+            <label class="flex flex-col gap-1 relative col-span-2 md:col-span-3"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
+                <input id="b-place" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
+                <div id="b-place-results" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border rounded shadow max-h-60 overflow-y-auto hidden"></div></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Ayanamsa</span>
                 <input name="ayanamsa" value="<?= $h($in['ayanamsa']) ?>" class="border rounded px-2 py-1"></label>
 
@@ -90,7 +87,7 @@ $shadColor = static function (float $ratio): string {
                 <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold w-full">Calculate</button>
             </div>
         </div>
-        <p class="text-xs text-gray-500 mt-2">City picker fills lat/lon/timezone (full city search arrives in Module 5c); lat/lon also accept DMS, e.g. 30N48'00.</p>
+        <p class="text-xs text-gray-500 mt-2">Search any city worldwide to fill lat/lon/timezone, or type lat/lon directly (also accept DMS, e.g. 30N48'00). Timezone is the place's offset on the birth date.</p>
     </form>
 
     <?php if ($view['error'] !== null): ?>
@@ -348,35 +345,25 @@ $shadColor = static function (float $ratio): string {
 </script>
 <script src="/assets/js/northchart.js"></script>
 <script src="/assets/js/dasha.js"></script>
-<script src="/assets/js/cities.js"></script>
+<script src="/assets/js/citysearch.js"></script>
 <script src="/assets/js/gochar.js"></script>
 <script src="/assets/js/varshaphal.js"></script>
 <script>
 (function () {
-  // Birth-form city picker -> fills lat/lon/tz (same gazetteer as gochar).
-  (function bindBirthCity() {
-    var CITIES = window.AB_CITIES || {};
-    var co = document.getElementById('b-country'), st = document.getElementById('b-state'),
-        ci = document.getElementById('b-city'),
-        la = document.getElementById('b-lat'), lo = document.getElementById('b-lon'), tz = document.getElementById('b-tz');
-    if (!co) return;
-    function opt(v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t || v; return o; }
-    co.appendChild(opt('', '— country —'));
-    Object.keys(CITIES).forEach(function (c) { co.appendChild(opt(c)); });
-    st.appendChild(opt('', '— state —')); ci.appendChild(opt('', '— city —'));
-    co.addEventListener('change', function () {
-      st.innerHTML = ''; ci.innerHTML = ''; st.appendChild(opt('', '— state —'));
-      Object.keys(CITIES[co.value] || {}).forEach(function (s) { st.appendChild(opt(s)); });
+  // Birth-form city search -> fills lat/lon/tz (worldwide, Open-Meteo).
+  if (window.ABCitySearch) {
+    ABCitySearch.init({
+      input: '#b-place', results: '#b-place-results',
+      lat: '#b-lat', lon: '#b-lon', tz: '#b-tz',
+      // Compute the place's timezone offset on the entered birth date.
+      getDate: function () {
+        var d = (document.querySelector('[name="date"]') || {}).value;
+        var t = (document.querySelector('[name="time"]') || {}).value || '12:00';
+        var dt = d ? new Date(d + 'T' + (t.length === 5 ? t : '12:00') + ':00') : new Date();
+        return isNaN(dt) ? new Date() : dt;
+      }
     });
-    st.addEventListener('change', function () {
-      ci.innerHTML = ''; ci.appendChild(opt('', '— city —'));
-      Object.keys((CITIES[co.value] || {})[st.value] || {}).forEach(function (c) { ci.appendChild(opt(c)); });
-    });
-    ci.addEventListener('change', function () {
-      var rec = ((CITIES[co.value] || {})[st.value] || {})[ci.value];
-      if (rec) { la.value = rec.lat; lo.value = rec.lon; tz.value = rec.tz; }
-    });
-  })();
+  }
 
   var charts = document.getElementById('charts-view');
   var details = document.getElementById('details-view');

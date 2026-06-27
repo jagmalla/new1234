@@ -148,11 +148,16 @@ final class CalcController
             $natal = $engine->computeChart($natalJd, $lat, $lon);
             $vp = Varshaphal::compute($engine, $natal, $bY, $bMo, $bD, $bH, $bMi, $tz, $lat, $lon, $forYear);
 
+            // Muntha sign index = natal Lagna sign advanced one sign per year.
+            $natalAscSign = (int) $natal['ascendant']['sign_index'];
+            $munthaSignIndex = (($natalAscSign + (int) $vp['age_completed']) % 12 + 12) % 12;
+
             echo json_encode([
                 'year' => $forYear,
                 'age_completed' => $vp['age_completed'],
                 'varsha_lagna' => $vp['varsha_lagna'],
                 'muntha' => $vp['muntha'],
+                'muntha_sign_index' => $munthaSignIndex,
                 'chart' => $engine->northPayload($vp['varsha_chart']),
                 'ascendant_formatted' => $vp['varsha_chart']['ascendant']['formatted'],
                 'mudda_dasha' => $vp['mudda_dasha'],

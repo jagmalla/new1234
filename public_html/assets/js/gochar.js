@@ -6,7 +6,7 @@
  * defaults to the current date+time and the viewer's IP-based location, then
  * fetches transits from the calc/gochar JSON endpoint and draws them.
  *
- * Depends on: northchart.js (ABChart), cities.js (window.AB_CITIES).
+ * Depends on: northchart.js (ABChart), citysearch.js (ABCitySearch).
  *
  * Usage:
  *   ABGochar.init({
@@ -39,7 +39,6 @@
     if (!inRoot || !outRoot) return;
     var birth = cfg.birth || {};
     var fallback = cfg.fallback || { lat: 28.61, lon: 77.21, tz: 5.5 };
-    var CITIES = global.AB_CITIES || {};
 
     inRoot.innerHTML = '';
     var now = new Date();
@@ -50,45 +49,40 @@
     var form = h('div', 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm');
     var fDate = h('input'); fDate.type = 'date'; fDate.value = today;
     var fTime = h('input'); fTime.type = 'time'; fTime.value = hhmm;
-    var fCountry = h('select'); var fState = h('select'); var fCity = h('select');
     [fDate, fTime].forEach(function (i) { i.className = 'border rounded px-2 py-1'; });
-    [fCountry, fState, fCity].forEach(function (s) { s.className = 'border rounded px-2 py-1 bg-white'; });
+    var fPlace = h('input', 'border rounded px-2 py-1'); fPlace.type = 'text';
+    fPlace.placeholder = 'Type a city…'; fPlace.autocomplete = 'off';
+    var fResults = h('div', 'absolute z-20 left-0 right-0 top-full mt-1 bg-white border rounded shadow max-h-60 overflow-y-auto hidden');
     var fLat = h('input', 'border rounded px-2 py-1');
     var fLon = h('input', 'border rounded px-2 py-1');
     var fTz = h('input', 'border rounded px-2 py-1');
     fLat.value = fallback.lat; fLon.value = fallback.lon; fTz.value = fallback.tz;
 
-    function lab(text, node) { var l = h('label', 'flex flex-col gap-1'); l.appendChild(h('span', 'text-gray-500', text)); l.appendChild(node); return l; }
-
-    fCountry.appendChild(opt('', '— country —'));
-    Object.keys(CITIES).forEach(function (c) { fCountry.appendChild(opt(c)); });
-    fCountry.addEventListener('change', function () {
-      fState.innerHTML = ''; fCity.innerHTML = '';
-      fState.appendChild(opt('', '— state —'));
-      var st = CITIES[fCountry.value] || {};
-      Object.keys(st).forEach(function (s) { fState.appendChild(opt(s)); });
-    });
-    fState.addEventListener('change', function () {
-      fCity.innerHTML = ''; fCity.appendChild(opt('', '— city —'));
-      var ci = (CITIES[fCountry.value] || {})[fState.value] || {};
-      Object.keys(ci).forEach(function (c) { fCity.appendChild(opt(c)); });
-    });
-    fCity.addEventListener('change', function () {
-      var rec = ((CITIES[fCountry.value] || {})[fState.value] || {})[fCity.value];
-      if (rec) { fLat.value = rec.lat; fLon.value = rec.lon; fTz.value = rec.tz; }
-    });
-    fState.appendChild(opt('', '— state —'));
-    fCity.appendChild(opt('', '— city —'));
+    function lab(text, node, extra) {
+      var l = h('label', 'flex flex-col gap-1 ' + (extra || ''));
+      l.appendChild(h('span', 'text-gray-500', text)); l.appendChild(node); return l;
+    }
 
     form.appendChild(lab('Date', fDate));
     form.appendChild(lab('Time', fTime));
-    form.appendChild(lab('Country', fCountry));
-    form.appendChild(lab('State / Province', fState));
-    form.appendChild(lab('City', fCity));
+    var placeCell = lab('Place (search city)', fPlace, 'relative col-span-2');
+    placeCell.appendChild(fResults);
+    form.appendChild(placeCell);
     form.appendChild(lab('Latitude (N+)', fLat));
     form.appendChild(lab('Longitude (E+)', fLon));
     form.appendChild(lab('Timezone (hrs E+)', fTz));
     inRoot.appendChild(form);
+
+    // Worldwide city search fills lat/lon/tz (tz offset at the gochar date).
+    if (global.ABCitySearch) {
+      global.ABCitySearch.init({
+        input: fPlace, results: fResults, lat: fLat, lon: fLon, tz: fTz,
+        getDate: function () {
+          var dt = new Date(fDate.value + 'T' + (fTime.value || '12:00') + ':00');
+          return isNaN(dt) ? new Date() : dt;
+        }
+      });
+    }
 
     var bar = h('div', 'mt-3 flex items-center gap-3');
     var btn = h('button', 'bg-blue-600 text-white rounded px-4 py-2 text-sm font-semibold', 'Show transit');
@@ -148,7 +142,8 @@
 
     btn.addEventListener('click', fetchGochar);
 
-    // Default location from the viewer's IP (no permission prompt), then compute.
+    // Default to the viewer's IP location — city, state, country + lat/lon/tz —
+    // and the current date/time, then compute (no permission prompt).
     status.textContent = 'locating…';
     fetch('https://ipapi.co/json/')
       .then(function (r) { return r.json(); })
@@ -160,6 +155,8 @@
             var s = loc.utc_offset, sign = s[0] === '-' ? -1 : 1;
             fTz.value = sign * (parseInt(s.substr(1, 2), 10) + parseInt(s.substr(3, 2), 10) / 60);
           }
+          var label = [loc.city, loc.region, loc.country_name].filter(Boolean).join(', ');
+          if (label) { fPlace.value = label; }
         }
       })
       .catch(function () { /* keep fallback */ })

@@ -68,9 +68,15 @@
           if (v.error) { status.textContent = 'Error: ' + v.error; return; }
           status.textContent = '';
           summary.innerHTML = 'Year <b>' + v.year + '</b> · Varsha Lagna <b>' + v.varsha_lagna.sign
-            + '</b> (lord ' + v.varsha_lagna.lord + ') · Muntha ' + v.muntha.sign
-            + ' (lord ' + v.muntha.lord + ') · age ' + v.age_completed;
-          ABChart.renderNorth(chartBox, v.chart, { title: v.ascendant_formatted, showDeg: true, big: true });
+            + '</b> (lord ' + v.varsha_lagna.lord + ') · Muntha <b>' + v.muntha.sign
+            + '</b> (lord ' + v.muntha.lord + ') · age ' + v.age_completed;
+          // Show the Muntha as a "MUN" marker in its house on the Varsha chart.
+          var chart = v.chart;
+          if (v.muntha_sign_index != null) {
+            chart = { asc_sign: v.chart.asc_sign, asc_deg: v.chart.asc_deg, planets: v.chart.planets.slice() };
+            chart.planets.push({ abbr: 'MUN', sign: v.muntha_sign_index, retro: false });
+          }
+          ABChart.renderNorth(chartBox, chart, { title: v.ascendant_formatted, showDeg: true, big: true });
           ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, maxRows: 10 });
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
