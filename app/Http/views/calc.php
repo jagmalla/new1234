@@ -105,23 +105,23 @@ $shadColor = static function (float $ratio): string {
     <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="space-y-6">
 
-        <!-- ROW 1 — D1 (Rasi) chart + Vimshottari Dasha -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="bg-white rounded-lg shadow p-4">
-                <div class="max-w-md mx-auto" data-varga="D1"></div>
+        <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (fills column height) -->
+        <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-stretch">
+            <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
+                <div class="w-full max-w-xl mx-auto" data-varga="D1"></div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
+            <div class="bg-white rounded-lg shadow p-4 flex flex-col">
                 <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
-                <div id="vim-dasha" class="text-sm"></div>
+                <div id="vim-dasha" class="flex-1 min-h-0 overflow-y-auto text-sm"></div>
             </div>
         </div>
 
-        <!-- ROW 2 — Navamsa (D9) + Shadbala -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="bg-white rounded-lg shadow p-4">
-                <div class="max-w-xs mx-auto" data-varga="D9"></div>
+        <!-- ROW 2 — Navamsa (D9, 60%) + Shadbala (40%) -->
+        <div class="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 items-stretch">
+            <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
+                <div class="w-full max-w-lg mx-auto" data-varga="D9"></div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
+            <div class="bg-white rounded-lg shadow p-4 flex flex-col justify-center">
                 <h2 class="font-semibold mb-1">Shadbala</h2>
                 <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
                 <div class="relative" style="height:205px">
@@ -151,23 +151,24 @@ $shadColor = static function (float $ratio): string {
             <div id="gochar-inputs"></div>
         </div>
 
-        <!-- ROW 4 — D1 (Rasi) chart + current Gochar -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="bg-white rounded-lg shadow p-4">
-                <div class="max-w-xs mx-auto" data-varga="D1"></div>
+        <!-- ROW 4 — D1 (Rasi) chart + current Gochar (chart only) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+            <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
+                <div class="w-full max-w-sm mx-auto" data-varga="D1"></div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4">
-                <div id="gochar-output"></div>
+            <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
+                <div id="gochar-output" class="w-full"></div>
             </div>
         </div>
 
-        <!-- ROW 5 — Varshaphal year selection -->
+        <!-- ROW 5 — Varshaphal year selection + summary details -->
         <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal — year</h2>
-            <div id="vp-box"></div>
+            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
+            <div id="vp-box" class="mb-3"></div>
+            <div id="vp-summary" class="text-sm"></div>
         </div>
 
-        <!-- ROW 6 — Varshaphal chart + Varshesh lord detail + Mudda dasha -->
+        <!-- ROW 6 — Varsha chart + Mudda dasha, side by side -->
         <div id="vp-output"></div>
 
         <!-- Remaining divisional charts — 2 per row -->
@@ -381,7 +382,8 @@ $shadColor = static function (float $ratio): string {
     chartsBuilt = true;
     if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); }
     if (window.ABDasha) {
-      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
+      // No maxRows: the container fills its column height (= D1 chart) and scrolls.
+      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true });
     }
     if (window.ABGochar) {
       ABGochar.init({
@@ -392,7 +394,7 @@ $shadColor = static function (float $ratio): string {
     }
     if (window.ABVarsha) {
       ABVarsha.init({
-        box: '#vp-box', output: '#vp-output',
+        box: '#vp-box', summary: '#vp-summary', output: '#vp-output',
         birth: window.AB_BIRTH, tz: window.AB_TZ, year: window.AB_YEAR
       });
     }

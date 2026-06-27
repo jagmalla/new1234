@@ -90,12 +90,11 @@
     bar.appendChild(btn); bar.appendChild(status);
     inRoot.appendChild(bar);
 
-    // Output: chart + table.
+    // Output: the transit chart only (positions table removed for a cleaner look).
     outRoot.innerHTML = '';
     var title = h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Gochar (Transit)');
-    var chartBox = h('div', 'max-w-xs mx-auto');
-    var tableBox = h('div', 'mt-3 overflow-x-auto');
-    outRoot.appendChild(title); outRoot.appendChild(chartBox); outRoot.appendChild(tableBox);
+    var chartBox = h('div', 'w-full max-w-sm mx-auto');
+    outRoot.appendChild(title); outRoot.appendChild(chartBox);
 
     function fetchGochar() {
       status.textContent = 'calculating…';
@@ -124,20 +123,6 @@
       });
       ABChart.renderNorth(chartBox, { asc_sign: g.ascendant.sign_index, planets: planets },
         { title: g.label, showDeg: true });
-
-      var rows = ['<table class="w-full text-sm"><thead><tr class="text-left border-b">'
-        + '<th class="py-1 pr-2">Planet</th><th class="pr-2">Transit</th><th class="pr-2">Sign</th>'
-        + '<th class="pr-2">H/Lagna</th><th>H/Moon</th></tr></thead><tbody>'];
-      Object.keys(g.transits).forEach(function (name) {
-        var t = g.transits[name];
-        rows.push('<tr class="border-b border-gray-100"><td class="py-1 pr-2 font-semibold" style="color:' + (PCOL[name] || '#111') + '">' + name
-          + (t.retro ? ' <span class="text-red-600">R</span>' : '') + '</td>'
-          + '<td class="pr-2">' + t.formatted + '</td><td class="pr-2">' + t.sign + '</td>'
-          + '<td class="pr-2">' + t.house_from_lagna + '</td><td>' + t.house_from_moon + '</td></tr>');
-      });
-      rows.push('</tbody></table>');
-      var lg = g.ascendant ? '<div class="text-sm mb-2">Transit Lagna: <b>' + g.ascendant.formatted + '</b></div>' : '';
-      tableBox.innerHTML = lg + rows.join('');
     }
 
     btn.addEventListener('click', fetchGochar);

@@ -21,6 +21,7 @@
     cfg = cfg || {};
     var boxRoot = sel(cfg.box), outRoot = sel(cfg.output);
     if (!boxRoot || !outRoot) return;
+    var summaryRoot = sel(cfg.summary) || null;
     var birth = cfg.birth || {};
     var tz = cfg.tz || 0;
 
@@ -37,22 +38,26 @@
     var status = h('span', 'text-xs text-gray-500'); row.appendChild(status);
     boxRoot.appendChild(row);
 
-    // Output scaffold: summary, then chart | mudda dasha.
+    // Summary (Varsha Lagna / Muntha / Varshesh / age) renders in the year row
+    // when a summary target is given; otherwise it sits above the output.
+    var summary = h('div', 'text-sm');
+    if (summaryRoot) { summaryRoot.innerHTML = ''; summaryRoot.appendChild(summary); }
+
+    // Output: Varsha chart | Mudda dasha side by side; the dasha fills the chart
+    // height and scrolls.
     outRoot.innerHTML = '';
-    var summary = h('div', 'text-sm mb-3');
-    // Stack vertically: small annual chart on top, then the Mudda dasha full
-    // width so its two-column (name | date) layout has room.
-    var stack = h('div', 'space-y-4');
-    var chartCell = h('div', 'bg-white rounded-lg shadow p-3');
-    var chartBox = h('div', 'max-w-xs mx-auto');
+    var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch');
+    var chartCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
     chartCell.appendChild(h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Varsha (Annual) Chart'));
+    var chartBox = h('div', 'w-full max-w-md mx-auto');
     chartCell.appendChild(chartBox);
-    var dashaCell = h('div', 'bg-white rounded-lg shadow p-3');
-    dashaCell.appendChild(h('h3', 'font-semibold mb-2 text-sm', 'Mudda Dasha — drill 5 levels'));
-    var dashaBox = h('div', 'text-sm');
+    var dashaCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
+    dashaCell.appendChild(h('h3', 'font-semibold mb-2 text-sm shrink-0', 'Mudda Dasha — drill 5 levels'));
+    var dashaBox = h('div', 'flex-1 min-h-0 overflow-y-auto text-sm');
     dashaCell.appendChild(dashaBox);
-    stack.appendChild(chartCell); stack.appendChild(dashaCell);
-    outRoot.appendChild(summary); outRoot.appendChild(stack);
+    grid.appendChild(chartCell); grid.appendChild(dashaCell);
+    if (!summaryRoot) { outRoot.appendChild(summary); }
+    outRoot.appendChild(grid);
 
     function fetchVp() {
       status.textContent = 'calculating…';
@@ -77,7 +82,7 @@
             chart.planets.push({ abbr: 'MUN', sign: v.muntha_sign_index, retro: false });
           }
           ABChart.renderNorth(chartBox, chart, { title: v.ascendant_formatted, showDeg: true, big: true });
-          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, maxRows: 10 });
+          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true });
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }

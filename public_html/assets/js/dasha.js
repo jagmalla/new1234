@@ -115,9 +115,11 @@
     var dates = document.createElement('span');
     // inline (Detail): dates begin just past the fixed name-column edge.
     // Otherwise (Chart view): pushed to the right edge.
-    dates.className = 'text-xs whitespace-nowrap ' + (inline ? 'pl-3' : 'ml-auto');
-    dates.style.display = 'flex';
-    dates.style.alignItems = 'center';
+    // Stay on one line where there is room; wrap within the date column when a
+    // narrow panel (e.g. a half-width Chart-view cell) is too tight for one line.
+    dates.className = 'text-xs ' + (inline ? 'pl-3' : 'ml-auto whitespace-nowrap');
+    dates.style.alignSelf = 'center';   // vertical-centre within the row
+    dates.style.minWidth = '0';         // allow the date text to wrap when tight
     dates.style.color = '#000000';      // date text: dark black …
     dates.style.fontWeight = '700';     // … and bold
     if (inline) { dates.style.paddingLeft = '0.75rem'; }
