@@ -138,17 +138,21 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                     $cd = static fn(array $p): string =>
                         \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzc)
                         . ' – ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzc);
-                    $cdLine = static function (string $label, ?array $p) use ($pcolor, $cd, $h): string {
+                    // $depth indents each level so AntarDasha nests under
+                    // MahaDasha and Pratyantar under AntarDasha (with a ↳ marker).
+                    $cdLine = static function (string $label, ?array $p, int $depth) use ($pcolor, $cd, $h): string {
                         if (empty($p)) { return ''; }
-                        return '<div><span class="text-gray-600 font-semibold">' . $label . ':</span> '
+                        $arrow = $depth > 0 ? '<span class="text-gray-400">↳</span> ' : '';
+                        return '<div style="padding-left:' . ($depth * 1.6) . 'rem">' . $arrow
+                            . '<span class="text-gray-600 font-semibold">' . $label . ':</span> '
                             . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
                             . '<span class="text-gray-500">(' . $cd($p) . ')</span></div>';
                     };
                 ?>
                 <div class="mb-2 pb-2 border-b text-sm leading-snug space-y-0.5">
-                    <?= $cdLine('MahaDasha', $dashaNow['maha']) ?>
-                    <?= $cdLine('AntarDasha', $dashaNow['antar']) ?>
-                    <?= $cdLine('Pratyantar', $dashaNow['pratyantar']) ?>
+                    <?= $cdLine('MahaDasha', $dashaNow['maha'], 0) ?>
+                    <?= $cdLine('AntarDasha', $dashaNow['antar'], 1) ?>
+                    <?= $cdLine('Pratyantar', $dashaNow['pratyantar'], 2) ?>
                 </div>
                 <?php endif; ?>
                 <div id="vim-dasha" class="text-sm flex-1 min-h-0 overflow-y-auto" style="flex:1 1 auto; min-height:0; overflow-y:auto"></div>
