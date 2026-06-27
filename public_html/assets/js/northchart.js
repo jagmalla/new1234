@@ -57,36 +57,52 @@
     return e;
   }
 
-  // Anchor for each house's AV/BB label, just outside the chart border.
-  var OUT = {
-    1:[50,-9], 2:[25,-9], 12:[75,-9],          // top edge
-    3:[-9,25], 4:[-9,50], 5:[-9,75],           // left edge
-    6:[25,109], 7:[50,109], 8:[75,109],        // bottom edge
-    11:[109,25], 10:[109,50], 9:[109,75]       // right edge
-  };
   var AV_COLOR = '#1d4ed8';  // Ashtakavarga (bindus)
-  var BB_COLOR = '#15803d';  // Bhava Bala (rupas)
+  var BB_COLOR = '#15803d';  // Bhava Bala (virupas)
+  var ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
-  // Draw the outer rectangle + per-house "AV" / "BB" figures + a small legend.
-  function drawOuterRing(svg, ring, ascSign) {
-    svg.appendChild(el('rect', {
-      x:-13, y:-13, width:126, height:126, fill:'none',
-      stroke:'#9ca3af', 'stroke-width':0.6, rx:2
-    }));
+  // One-line "<Roman>=AV:<n>, BB:<n>" anchor + rotation per house: top & bottom
+  // read horizontally, the two sides are rotated so the ring stays thin.
+  var POS = {
+    2:[16.5,-4.4,0], 1:[50,-4.4,0], 12:[83.5,-4.4,0],            // top
+    6:[16.5,107.5,0], 7:[50,107.5,0], 8:[83.5,107.5,0],          // bottom
+    3:[-5.2,16.5,-90], 4:[-5.2,50,-90], 5:[-5.2,83.5,-90],       // left (rotated)
+    11:[105.2,16.5,90], 10:[105.2,50,90], 9:[105.2,83.5,90]      // right (rotated)
+  };
+
+  // Draw the (thin) outer ring: rectangle + per-house separator lines + a single
+  // colour-coded "<Roman>=AV:.., BB:.." line in each house segment.
+  function drawOuterRing(svg, ring) {
+    var M = 11;
+    var sep = function (x1,y1,x2,y2) {
+      svg.appendChild(el('line', {x1:x1,y1:y1,x2:x2,y2:y2, stroke:'#cbd5e1', 'stroke-width':0.4}));
+    };
+    svg.appendChild(el('rect', {x:-M, y:-M, width:100 + 2 * M, height:100 + 2 * M, fill:'none', stroke:'#9ca3af', 'stroke-width':0.6, rx:1}));
+    // corner diagonals
+    sep(0,0,-M,-M); sep(100,0,100+M,-M); sep(100,100,100+M,100+M); sep(0,100,-M,100+M);
+    // edge separators at the 1/3 and 2/3 points (3 segments per edge)
+    [33,67].forEach(function (t) {
+      sep(t,0,t,-M); sep(t,100,t,100+M);   // top, bottom
+      sep(0,t,-M,t); sep(100,t,100+M,t);   // left, right
+    });
+
+    function label(x, y, rot, roman, av, bb) {
+      var t = el('text', {x:x, y:y, 'text-anchor':'middle', 'font-size':2.5, 'font-weight':'700'});
+      if (rot) { t.setAttribute('transform', 'rotate(' + rot + ',' + x + ',' + y + ')'); }
+      var span = function (txt, fill) { var s = el('tspan', {fill:fill}); s.textContent = txt; t.appendChild(s); };
+      span(roman + '=', '#111827');
+      span('AV:' + av, AV_COLOR);
+      span(', ', '#111827');
+      span('BB:' + bb, BB_COLOR);
+      svg.appendChild(t);
+    }
+
     for (var hh = 1; hh <= 12; hh++) {
       var v = ring[hh] || ring[String(hh)];
       if (!v) { continue; }
-      var x = OUT[hh][0], y = OUT[hh][1];
-      // Ashtakavarga (bindus) above, Bhava Bala (virupas) below — each labelled.
+      var p = POS[hh];
       var bb = (v.bb_virupa != null) ? Math.round(v.bb_virupa) : v.bb;
-      svg.appendChild(el('text', {
-        x:x, y:y - 1.4, 'text-anchor':'middle', 'font-size':3.3,
-        fill:AV_COLOR, 'font-weight':'700'
-      }, 'AV ' + v.av));
-      svg.appendChild(el('text', {
-        x:x, y:y + 3.0, 'text-anchor':'middle', 'font-size':3.3,
-        fill:BB_COLOR, 'font-weight':'700'
-      }, 'BB ' + bb));
+      label(p[0], p[1], p[2], ROMAN[hh], v.av, bb);
     }
   }
 
@@ -105,11 +121,11 @@
     // house just outside the chart; it widens the viewBox to make room.
     var ring = opts.outer || null;
     var svg = el('svg', {
-      viewBox: ring ? '-17 -17 134 134' : '0 0 100 100',
+      viewBox: ring ? '-13 -13 126 126' : '0 0 100 100',
       width: '100%', height: 'auto', 'class': 'rounded'
     });
 
-    if (ring) { drawOuterRing(svg, ring, ((data.asc_sign % 12) + 12) % 12); }
+    if (ring) { drawOuterRing(svg, ring); }
 
     // Chart background fill (rendered as part of the SVG so it shows everywhere).
     svg.appendChild(el('rect', {x:0, y:0, width:100, height:100, fill:'#f0f9ff'}));
