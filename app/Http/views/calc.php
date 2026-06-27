@@ -126,14 +126,14 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="space-y-6">
 
-        <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (fills column height) -->
-        <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-stretch">
+        <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (scrolls) -->
+        <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-start">
             <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
                 <div class="w-full max-w-xl mx-auto" data-varga="D1" data-ring="1"></div>
             </div>
-            <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+            <div class="bg-white rounded-lg shadow p-4">
                 <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
-                <div id="vim-dasha" class="flex-1 min-h-0 overflow-y-auto text-sm"></div>
+                <div id="vim-dasha" class="text-sm"></div>
             </div>
         </div>
 
@@ -145,17 +145,17 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <div class="bg-white rounded-lg shadow p-4 flex flex-col justify-center">
                 <h2 class="font-semibold mb-1">Shadbala</h2>
                 <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
-                <div class="relative" style="height:205px">
-                    <!-- 1.00 threshold line (1.60 fills the 150px track => 1.00 sits at 62.5%) -->
-                    <div class="absolute left-0 right-0" style="bottom:calc(28px + 150px * 0.625); border-top:1px dashed #9ca3af"></div>
-                    <div class="flex items-end justify-between gap-1 absolute inset-x-0 bottom-0" style="height:205px">
+                <div class="relative" style="height:330px">
+                    <!-- 1.00 threshold line (1.60 fills the 270px track => 1.00 sits at 62.5%) -->
+                    <div class="absolute left-0 right-0" style="bottom:calc(30px + 270px * 0.625); border-top:1px dashed #9ca3af"></div>
+                    <div class="flex items-end justify-between gap-1 absolute inset-x-0 bottom-0" style="height:330px">
                         <?php foreach (($chart['shadbala'] ?? []) as $name => $b):
                             $ratio = (float) $b['ratio'];
-                            $hpx = max(3.0, min(150.0, $ratio / 1.6 * 150.0));
+                            $hpx = max(3.0, min(270.0, $ratio / 1.6 * 270.0));
                             $abbr = substr((string) $name, 0, 2);
                             $band = $shadColor($ratio);
                         ?>
-                        <div class="flex flex-col items-center justify-end" style="height:205px; flex:1">
+                        <div class="flex flex-col items-center justify-end" style="height:330px; flex:1">
                             <div class="text-[16px] font-bold leading-tight" style="color:<?= $band ?>"><?= sprintf('%.2f', $ratio) ?></div>
                             <div class="w-full rounded-t" style="height:<?= sprintf('%.1f', $hpx) ?>px; background:<?= $band ?>"></div>
                             <div class="text-[16px] mt-1 font-bold leading-tight" style="color:<?= $pcolor($name) ?>"><?= $h($abbr) ?></div>
@@ -442,8 +442,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     chartsBuilt = true;
     if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS, window.AB_HOUSES); }
     if (window.ABDasha) {
-      // No maxRows: the container fills its column height (= D1 chart) and scrolls.
-      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true });
+      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 12 });
     }
     if (window.ABGochar) {
       ABGochar.init({

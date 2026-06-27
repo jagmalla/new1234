@@ -46,14 +46,14 @@
     // Output: Varsha chart | Mudda dasha side by side; the dasha fills the chart
     // height and scrolls.
     outRoot.innerHTML = '';
-    var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch');
+    var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start');
     var chartCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
     chartCell.appendChild(h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Varsha (Annual) Chart'));
     var chartBox = h('div', 'w-full max-w-md mx-auto');
     chartCell.appendChild(chartBox);
-    var dashaCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
-    dashaCell.appendChild(h('h3', 'font-semibold mb-2 text-sm shrink-0', 'Mudda Dasha — drill 5 levels'));
-    var dashaBox = h('div', 'flex-1 min-h-0 overflow-y-auto text-sm');
+    var dashaCell = h('div', 'bg-white rounded-lg shadow p-3');
+    dashaCell.appendChild(h('h3', 'font-semibold mb-2 text-sm', 'Mudda Dasha — drill 5 levels'));
+    var dashaBox = h('div', 'text-sm');
     dashaCell.appendChild(dashaBox);
     grid.appendChild(chartCell); grid.appendChild(dashaCell);
     if (!summaryRoot) { outRoot.appendChild(summary); }
@@ -72,9 +72,11 @@
         .then(function (v) {
           if (v.error) { status.textContent = 'Error: ' + v.error; return; }
           status.textContent = '';
-          summary.innerHTML = 'Year <b>' + v.year + '</b> · Varsha Lagna <b>' + v.varsha_lagna.sign
-            + '</b> (lord ' + v.varsha_lagna.lord + ') · Muntha <b>' + v.muntha.sign
-            + '</b> (lord ' + v.muntha.lord + ') · age ' + v.age_completed;
+          summary.innerHTML =
+              '<div>Year <b>' + v.year + '</b></div>'
+            + '<div>Varsha Lagna <b>' + v.varsha_lagna.sign + '</b> (lord ' + v.varsha_lagna.lord + ')</div>'
+            + '<div>Muntha <b>' + v.muntha.sign + '</b> (lord ' + v.muntha.lord + ')</div>'
+            + '<div>Age <b>' + v.age_completed + '</b></div>';
           // Show the Muntha as a "MUN" marker in its house on the Varsha chart.
           var chart = v.chart;
           if (v.muntha_sign_index != null) {
@@ -82,7 +84,7 @@
             chart.planets.push({ abbr: 'MUN', sign: v.muntha_sign_index, retro: false });
           }
           ABChart.renderNorth(chartBox, chart, { title: v.ascendant_formatted, showDeg: true, big: true });
-          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true });
+          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, maxRows: 12 });
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }

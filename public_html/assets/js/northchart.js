@@ -64,16 +64,16 @@
   // One-line "<Roman>=AV:<n>, BB:<n>" anchor + rotation per house: top & bottom
   // read horizontally, the two sides are rotated so the ring stays thin.
   var POS = {
-    2:[16.5,-4.4,0], 1:[50,-4.4,0], 12:[83.5,-4.4,0],            // top
-    6:[16.5,107.5,0], 7:[50,107.5,0], 8:[83.5,107.5,0],          // bottom
-    3:[-5.2,16.5,-90], 4:[-5.2,50,-90], 5:[-5.2,83.5,-90],       // left (rotated)
-    11:[105.2,16.5,90], 10:[105.2,50,90], 9:[105.2,83.5,90]      // right (rotated)
+    2:[16.5,-3.0,0], 1:[50,-3.0,0], 12:[83.5,-3.0,0],            // top
+    6:[16.5,104.2,0], 7:[50,104.2,0], 8:[83.5,104.2,0],          // bottom
+    3:[-3.7,16.5,-90], 4:[-3.7,50,-90], 5:[-3.7,83.5,-90],       // left (rotated)
+    11:[103.7,16.5,90], 10:[103.7,50,90], 9:[103.7,83.5,90]      // right (rotated)
   };
 
   // Draw the (thin) outer ring: rectangle + per-house separator lines + a single
   // colour-coded "<Roman>=AV:.., BB:.." line in each house segment.
   function drawOuterRing(svg, ring) {
-    var M = 11;
+    var M = 7.5;
     var sep = function (x1,y1,x2,y2) {
       svg.appendChild(el('line', {x1:x1,y1:y1,x2:x2,y2:y2, stroke:'#cbd5e1', 'stroke-width':0.4}));
     };
@@ -121,7 +121,7 @@
     // house just outside the chart; it widens the viewBox to make room.
     var ring = opts.outer || null;
     var svg = el('svg', {
-      viewBox: ring ? '-13 -13 126 126' : '0 0 100 100',
+      viewBox: ring ? '-9 -9 118 118' : '0 0 100 100',
       width: '100%', height: 'auto', 'class': 'rounded'
     });
 
