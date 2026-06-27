@@ -9,3 +9,6 @@
 .DS_Store
 Thumbs.db
 *.swp
+
+# Build artifacts (generated update bundles)
+auto_business_update.zip
