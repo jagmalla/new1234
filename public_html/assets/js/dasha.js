@@ -152,8 +152,10 @@
         setOpen(kids.classList.contains('hidden'));   // toggle
       });
       wrap.appendChild(kids);
-      // Auto-open the current path so every level's current period is visible.
-      if (isCurrent) { build(); setOpen(true); }
+      // Auto-open only the current Mahadasha so Mahadasha → Antardasha are
+      // visible by default; deeper levels stay collapsed for the client to
+      // expand with the + button. (Current rows are still highlighted.)
+      if (isCurrent && level === 0) { build(); setOpen(true); }
     }
     return wrap;
   }
