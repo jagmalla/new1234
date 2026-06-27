@@ -107,4 +107,62 @@ final class VimshottariDasha
         }
         return $out;
     }
+
+    /**
+     * Sub-periods of any [start,end] span led by $lord (same proportional rule),
+     * used for pratyantardashas inside an antardasha.
+     *
+     * @return list<array{lord:string, start_jd:float, end_jd:float}>
+     */
+    public static function subPeriods(string $lord, float $start, float $end): array
+    {
+        $startIdx = array_search($lord, self::LORDS, true);
+        $span = $end - $start;
+        $out = [];
+        $cursor = $start;
+        for ($k = 0; $k < 9; $k++) {
+            $l = self::LORDS[($startIdx + $k) % 9];
+            $e = $cursor + $span * (self::YEARS[$l] / 120.0);
+            $out[] = ['lord' => $l, 'start_jd' => $cursor, 'end_jd' => $e];
+            $cursor = $e;
+        }
+        return $out;
+    }
+
+    /**
+     * Running Mahadasha / Antardasha / Pratyantardasha at $atJdUt, plus the next
+     * Antardasha (with start/end JDs).
+     *
+     * @return array{maha:?array, antar:?array, next_antar:?array, pratyantar:?array}
+     */
+    public static function runningChain(float $moonSiderealLon, float $birthJdUt, float $atJdUt): array
+    {
+        $seq = self::sequence($moonSiderealLon, $birthJdUt);
+        $mds = $seq['mahadashas'];
+        foreach ($mds as $mi => $md) {
+            if ($atJdUt >= $md['end_jd']) {
+                continue;
+            }
+            $antars = self::antardashas($md);
+            foreach ($antars as $ai => $ad) {
+                if ($atJdUt >= $ad['end_jd']) {
+                    continue;
+                }
+                $next = $antars[$ai + 1] ?? null;
+                if ($next === null && isset($mds[$mi + 1])) {
+                    $next = self::antardashas($mds[$mi + 1])[0] ?? null;
+                }
+                $prats = self::subPeriods($ad['lord'], $ad['start_jd'], $ad['end_jd']);
+                $curPrat = null;
+                foreach ($prats as $pd) {
+                    if ($atJdUt < $pd['end_jd']) {
+                        $curPrat = $pd;
+                        break;
+                    }
+                }
+                return ['maha' => $md, 'antar' => $ad, 'next_antar' => $next, 'pratyantar' => $curPrat];
+            }
+        }
+        return ['maha' => null, 'antar' => null, 'next_antar' => null, 'pratyantar' => null];
+    }
 }

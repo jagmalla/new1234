@@ -24,7 +24,8 @@ final class CalcController
         AdminGuard::require();
 
         // Defaults = the Moga reference birth (matches calc_test.php).
-        $date = (string) ($_GET['date'] ?? '1980-12-01');
+        // Birth date is entered DD-MM-YYYY.
+        $date = (string) ($_GET['date'] ?? '01-12-1980');
         $time = (string) ($_GET['time'] ?? '12:31');
         $latIn = (string) ($_GET['lat'] ?? "30N48'00");
         $lonIn = (string) ($_GET['lon'] ?? "75E10'00");
@@ -45,12 +46,21 @@ final class CalcController
             $lat = self::parseAngle($latIn);
             $lon = self::parseAngle($lonIn);
             $tz = self::parseTz($tzIn);
-            [$Y, $Mo, $D] = array_map('intval', explode('-', $date));
+            [$Y, $Mo, $D] = self::parseDate($date);   // accepts DD-MM-YYYY or YYYY-MM-DD
             [$H, $Mi] = array_map('intval', array_pad(explode(':', $time), 2, '0'));
 
             $jd = JulianDay::fromGregorian($Y, $Mo, $D, $H, $Mi, 0.0, $tz);
             $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
             $chart = $engine->computeChart($jd, $lat, $lon);
+
+            // Live dasha chain (running Maha/Antar/Pratyantar + next Antar) at now.
+            $nowJd = JulianDay::fromGregorian(
+                (int) date('Y'), (int) date('m'), (int) date('d'),
+                (int) date('H'), (int) date('i'), 0.0, $tz
+            );
+            $dashaNow = \AutoBusiness\Astro\Calc\VimshottariDasha::runningChain(
+                (float) $chart['planets']['Moon']['sidereal_lon'], $jd, $nowJd
+            );
             $vp = Varshaphal::compute($engine, $chart, $Y, $Mo, $D, $H, $Mi, $tz, $lat, $lon, $forYear);
 
             [$gy, $gm, $gd] = array_map('intval', explode('-', $gocharIn));
@@ -63,7 +73,8 @@ final class CalcController
             // Birth params handed to the browser so the interactive gochar panel
             // can rebuild the natal chart for any transit instant/place.
             $birthJs = [
-                'date' => $date, 'time' => $time,
+                'date' => sprintf('%04d-%02d-%02d', $Y, $Mo, $D), // ISO for JS endpoints
+                'time' => $time,
                 'lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'ayanamsa' => $ayanamsa,
             ];
         } catch (\Throwable $e) {
@@ -80,6 +91,7 @@ final class CalcController
             'vargas' => $vargas ?? null,
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
+            'dashaNow' => $dashaNow ?? null,
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';
     }
@@ -166,6 +178,23 @@ final class CalcController
             http_response_code(400);
             echo json_encode(['error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Parse a date entered as DD-MM-YYYY (preferred) or YYYY-MM-DD into
+     * [year, month, day]. Separators -, / or . are accepted.
+     *
+     * @return array{0:int,1:int,2:int}
+     */
+    public static function parseDate(string $s): array
+    {
+        $parts = preg_split('/[-\/.]/', trim($s)) ?: [];
+        if (count($parts) !== 3) {
+            return [(int) date('Y'), 1, 1];
+        }
+        [$a, $b, $c] = array_map('intval', $parts);
+        // A 4-digit first field means YYYY-MM-DD; otherwise DD-MM-YYYY.
+        return $a > 31 ? [$a, $b, $c] : [$c, $b, $a];
     }
 
     /** Decimal or DMS-with-direction-letter angle -> signed decimal degrees. */

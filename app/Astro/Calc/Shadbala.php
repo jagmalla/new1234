@@ -384,6 +384,23 @@ final class Shadbala
         return $sum / 4.0;
     }
 
+    /**
+     * Net benefic-minus-malefic Sphuta Drishti (virupa) cast by the seven planets
+     * on an arbitrary point — used for the Bhava Drishti Bala of a house cusp.
+     *
+     * @param array<string,float> $siderealLon
+     */
+    public static function netDrishtiOnPoint(float $point, array $siderealLon): float
+    {
+        $benefics = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+        $sum = 0.0;
+        foreach (self::PLANETS as $aspecting) {
+            $v = self::sphutaDrishti($aspecting, $siderealLon[$aspecting], $point);
+            $sum += (in_array($aspecting, $benefics, true) ? 1.0 : -1.0) * $v;
+        }
+        return $sum;
+    }
+
     /** Sphuta Drishti (virupa) of one planet on a point, incl. special aspects. */
     private static function sphutaDrishti(string $aspecting, float $from, float $to): float
     {

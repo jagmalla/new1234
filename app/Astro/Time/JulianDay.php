@@ -58,4 +58,34 @@ final class JulianDay
     {
         return ($jdUt - 2451545.0) / 36525.0;
     }
+
+    /**
+     * JD (UT) -> calendar date at the given timezone (hours east +).
+     *
+     * @return array{0:int,1:int,2:int}  [year, month, day]
+     */
+    public static function toGregorian(float $jdUt, float $tzHours = 0.0): array
+    {
+        $z = (int) floor($jdUt + 0.5 + $tzHours / 24.0);
+        $a = $z;
+        if ($z >= 2299161) {
+            $alpha = (int) floor(($z - 1867216.25) / 36524.25);
+            $a = $z + 1 + $alpha - (int) floor($alpha / 4);
+        }
+        $b = $a + 1524;
+        $c = (int) floor(($b - 122.1) / 365.25);
+        $d = (int) floor(365.25 * $c);
+        $e = (int) floor(($b - $d) / 30.6001);
+        $day = $b - $d - (int) floor(30.6001 * $e);
+        $month = $e < 14 ? $e - 1 : $e - 13;
+        $year = $month > 2 ? $c - 4716 : $c - 4715;
+        return [$year, $month, $day];
+    }
+
+    /** JD (UT) -> "DD-MM-YYYY" at the given timezone. */
+    public static function toDmy(float $jdUt, float $tzHours = 0.0): string
+    {
+        [$y, $m, $d] = self::toGregorian($jdUt, $tzHours);
+        return sprintf('%02d-%02d-%04d', $d, $m, $y);
+    }
 }

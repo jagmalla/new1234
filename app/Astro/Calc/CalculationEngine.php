@@ -83,6 +83,35 @@ final class CalculationEngine
         $running = VimshottariDasha::running($sidereal['Moon'], $jdUt, $jdUt);
         $shadbala = Shadbala::compute($sidereal, $speeds, $ascSid, $mcSid, $jdUt, $lat, $lonEast, $ayan);
 
+        // Ashtakavarga (SAV per sign) + Bhava Bala (per house).
+        $avSigns = ['Lagna' => $ascSign];
+        foreach (['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'] as $pl) {
+            $avSigns[$pl] = Charts::signIndex($sidereal[$pl]);
+        }
+        $ashtakavarga = Ashtakavarga::compute($avSigns);
+        $bhavaBala = BhavaBala::compute($ascSid, $ascSign, $shadbala, $sidereal);
+
+        // Per-house summary (house no, sign, planets, lord, AV bindus, Bhava Bala).
+        $houses = [];
+        for ($hh = 1; $hh <= 12; $hh++) {
+            $hsign = (($ascSign + $hh - 1) % 12 + 12) % 12;
+            $houses[$hh] = [
+                'house' => $hh,
+                'sign_index' => $hsign,
+                'sign' => Charts::SIGNS[$hsign],
+                'rashi_num' => $hsign + 1,
+                'lord' => Charts::signLord($hsign),
+                'av' => $ashtakavarga['sav'][$hsign],
+                'bb' => $bhavaBala[$hh]['rupa'],
+                'planets' => [],
+            ];
+        }
+        foreach ($planets as $pname => $pp) {
+            if (isset($houses[$pp['house']])) {
+                $houses[$pp['house']]['planets'][] = $pname;
+            }
+        }
+
         return [
             'meta' => [
                 'jd_ut' => $jdUt,
@@ -112,6 +141,9 @@ final class CalculationEngine
                 'running' => $running,
             ],
             'shadbala' => $shadbala,
+            'ashtakavarga' => $ashtakavarga,
+            'bhava_bala' => $bhavaBala,
+            'houses' => $houses,
         ];
     }
 

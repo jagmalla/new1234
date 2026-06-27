@@ -9,6 +9,7 @@ $chart = $view['chart'];
 $vp = $view['vp'];
 $gochar = $view['gochar'];
 $meta = $view['meta'];
+$dashaNow = $view['dashaNow'] ?? null;
 
 $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
 
@@ -29,6 +30,22 @@ $shadColor = static function (float $ratio): string {
         return '#16a34a'; // green
     }
     return '#f97316';     // orange (0.95–1.01 inclusive)
+};
+
+// "Lord" helper: the house number(s) from the Ascendant of the Rashi(s) a planet
+// rules (Sign indexes 0=Aries … 11=Pisces). Used by the D1 and house tables.
+$lordSigns = [
+    'Sun' => [4], 'Moon' => [3], 'Mars' => [0, 7], 'Mercury' => [2, 5],
+    'Jupiter' => [8, 11], 'Venus' => [1, 6], 'Saturn' => [9, 10], 'Rahu' => [], 'Ketu' => [],
+];
+$ascSignIdx = $chart !== null ? (int) $chart['ascendant']['sign_index'] : 0;
+$lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): string {
+    $houses = [];
+    foreach ($lordSigns[$planet] ?? [] as $sign) {
+        $houses[] = (($sign - $ascSignIdx) % 12 + 12) % 12 + 1;
+    }
+    sort($houses);
+    return implode(', ', $houses);
 };
 ?>
 <!doctype html>
@@ -66,8 +83,8 @@ $shadColor = static function (float $ratio): string {
                         <option value="<?= $h($gv) ?>" <?= $in['gender'] === $gv ? 'selected' : '' ?>><?= $h($gl) ?></option>
                     <?php endforeach; ?>
                 </select></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Date (YYYY-MM-DD)</span>
-                <input name="date" value="<?= $h($in['date']) ?>" class="border rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1"><span class="text-gray-500">Date (DD-MM-YYYY)</span>
+                <input name="date" value="<?= $h($in['date']) ?>" placeholder="DD-MM-YYYY" class="border rounded px-2 py-1"></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Time (HH:MM)</span>
                 <input name="time" value="<?= $h($in['time']) ?>" class="border rounded px-2 py-1"></label>
 
@@ -75,7 +92,11 @@ $shadColor = static function (float $ratio): string {
                 <input id="b-place" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
                 <div id="b-place-results" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border rounded shadow max-h-60 overflow-y-auto hidden"></div></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Ayanamsa</span>
-                <input name="ayanamsa" value="<?= $h($in['ayanamsa']) ?>" class="border rounded px-2 py-1"></label>
+                <select name="ayanamsa" class="border rounded px-2 py-1 bg-white">
+                    <?php foreach (['lahiri' => 'Lahiri (Chitrapaksha)', 'raman' => 'B.V. Raman', 'kp' => 'KP (Krishnamurti)', 'fagan_bradley' => 'Fagan-Bradley'] as $av => $al): ?>
+                        <option value="<?= $h($av) ?>" <?= $in['ayanamsa'] === $av ? 'selected' : '' ?>><?= $h($al) ?></option>
+                    <?php endforeach; ?>
+                </select></label>
 
             <label class="flex flex-col gap-1"><span class="text-gray-500">Latitude</span>
                 <input id="b-lat" name="lat" value="<?= $h($in['latIn']) ?>" class="border rounded px-2 py-1"></label>
@@ -108,7 +129,7 @@ $shadColor = static function (float $ratio): string {
         <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (fills column height) -->
         <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-stretch">
             <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
-                <div class="w-full max-w-xl mx-auto" data-varga="D1"></div>
+                <div class="w-full max-w-xl mx-auto" data-varga="D1" data-ring="1"></div>
             </div>
             <div class="bg-white rounded-lg shadow p-4 flex flex-col">
                 <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
@@ -204,25 +225,40 @@ $shadColor = static function (float $ratio): string {
         <div>MC: <?= $h($chart['mc']['formatted']) ?></div>
     </div>
 
+    <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala (BB), lords -->
+    <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+        <h2 class="font-semibold mb-2">House Details — Ashtakavarga &amp; Bhava Bala</h2>
+        <table class="w-full text-sm">
+            <thead><tr class="text-left border-b">
+                <th class="py-1 pr-3">House</th><th class="pr-3">Planet(s) in house</th><th class="pr-3">Rashi</th>
+                <th class="pr-3">Ashtakavarga</th><th class="pr-3">Bhava Bala</th><th>Lord</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach (($chart['houses'] ?? []) as $hh => $H): ?>
+                <tr class="border-b border-gray-100">
+                    <td class="py-1 pr-3 font-semibold"><?= (int) $H['house'] ?></td>
+                    <td class="pr-3">
+                        <?php $occ = [];
+                        foreach ($H['planets'] as $pn) {
+                            $lh = $lordHouses((string) $pn);
+                            $occ[] = '<span style="color:' . $pcolor($pn) . '" class="font-semibold">' . $h($pn) . '</span>'
+                                . ($lh !== '' ? ' <span class="text-xs text-gray-400">(lord of ' . $h($lh) . ')</span>' : '');
+                        }
+                        echo implode(', ', $occ); ?>
+                    </td>
+                    <td class="pr-3"><?= (int) $H['rashi_num'] ?> <?= $h($H['sign']) ?></td>
+                    <td class="pr-3 font-semibold" style="color:#1d4ed8"><?= (int) $H['av'] ?></td>
+                    <td class="pr-3 font-semibold" style="color:#15803d"><?= $h(number_format((float) $H['bb'], 2)) ?></td>
+                    <td><span style="color:<?= $pcolor($H['lord']) ?>" class="font-semibold"><?= $h($H['lord']) ?></span>
+                        <?php $llh = $lordHouses((string) $H['lord']); ?><?= $llh !== '' ? '<span class="text-xs text-gray-400">(' . $h($llh) . ')</span>' : '' ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <p class="text-xs text-gray-400 mt-2">Ashtakavarga = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala in Rupas (Bhavadhipati + Drishti). "Lord of …" = houses, counted from the Lagna, that the planet rules.</p>
+    </div>
+
     <!-- D1 -->
-    <?php
-        // "Lord" column: the house number(s), counted from the Ascendant, of the
-        // Rashi(s) each planet rules. (Sign indexes 0=Aries … 11=Pisces.)
-        $lordSigns = [
-            'Sun' => [4], 'Moon' => [3], 'Mars' => [0, 7], 'Mercury' => [2, 5],
-            'Jupiter' => [8, 11], 'Venus' => [1, 6], 'Saturn' => [9, 10],
-            'Rahu' => [], 'Ketu' => [],
-        ];
-        $ascSignIdx = (int) $chart['ascendant']['sign_index'];
-        $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): string {
-            $houses = [];
-            foreach ($lordSigns[$planet] ?? [] as $sign) {
-                $houses[] = (($sign - $ascSignIdx) % 12 + 12) % 12 + 1;
-            }
-            sort($houses);
-            return implode(', ', $houses);
-        };
-    ?>
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <h2 class="font-semibold mb-2">D1 (Rasi) — Planetary Positions</h2>
         <table class="w-full text-sm">
@@ -329,6 +365,29 @@ $shadColor = static function (float $ratio): string {
     </div>
     <?php endif; ?>
 
+    <!-- Current dasha chain (today) -->
+    <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
+        $tzv = (float) ($meta['tz'] ?? 0);
+        $fmt = static fn($p) => \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzv)
+            . ' → ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzv);
+        $line = function (string $label, ?array $p) use ($pcolor, $fmt, $h): string {
+            if ($p === null) { return ''; }
+            return '<div><span class="text-gray-500">' . $label . ':</span> '
+                . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
+                . '<span class="text-gray-700">(' . $fmt($p) . ')</span></div>';
+        };
+    ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm">
+        <h2 class="font-semibold mb-2">Current Dasha — today (<?= $h(date('d-m-Y')) ?>)</h2>
+        <div class="space-y-1">
+            <?= $line('Running Mahadasha', $dashaNow['maha']) ?>
+            <?= $line('Current Antardasha', $dashaNow['antar']) ?>
+            <?= $line('Next Antardasha', $dashaNow['next_antar']) ?>
+            <?= $line('Current Pratyantardasha', $dashaNow['pratyantar']) ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     </div><!-- /details-view -->
     <?php endif; ?>
 
@@ -343,6 +402,7 @@ $shadColor = static function (float $ratio): string {
   window.AB_BIRTH  = <?= json_encode($birthJs ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
   window.AB_TZ     = <?= json_encode((float) ($meta['tz'] ?? 0)) ?>;
   window.AB_YEAR   = <?= json_encode((int) $in['forYear']) ?>;
+  window.AB_HOUSES = <?= json_encode($chart['houses'] ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <script src="/assets/js/northchart.js"></script>
 <script src="/assets/js/dasha.js"></script>
@@ -380,7 +440,7 @@ $shadColor = static function (float $ratio): string {
   function buildCharts() {
     if (chartsBuilt) return;
     chartsBuilt = true;
-    if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); }
+    if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS, window.AB_HOUSES); }
     if (window.ABDasha) {
       // No maxRows: the container fills its column height (= D1 chart) and scrolls.
       ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true });

@@ -57,6 +57,40 @@
     return e;
   }
 
+  // Anchor for each house's AV/BB label, just outside the chart border.
+  var OUT = {
+    1:[50,-9], 2:[25,-9], 12:[75,-9],          // top edge
+    3:[-9,25], 4:[-9,50], 5:[-9,75],           // left edge
+    6:[25,109], 7:[50,109], 8:[75,109],        // bottom edge
+    11:[109,25], 10:[109,50], 9:[109,75]       // right edge
+  };
+  var AV_COLOR = '#1d4ed8';  // Ashtakavarga (bindus)
+  var BB_COLOR = '#15803d';  // Bhava Bala (rupas)
+
+  // Draw the outer rectangle + per-house "AV" / "BB" figures + a small legend.
+  function drawOuterRing(svg, ring, ascSign) {
+    svg.appendChild(el('rect', {
+      x:-13, y:-13, width:126, height:126, fill:'none',
+      stroke:'#9ca3af', 'stroke-width':0.6, rx:2
+    }));
+    for (var hh = 1; hh <= 12; hh++) {
+      var v = ring[hh] || ring[String(hh)];
+      if (!v) { continue; }
+      var x = OUT[hh][0], y = OUT[hh][1];
+      svg.appendChild(el('text', {
+        x:x, y:y - 1.4, 'text-anchor':'middle', 'font-size':3.6,
+        fill:AV_COLOR, 'font-weight':'700'
+      }, String(v.av)));
+      svg.appendChild(el('text', {
+        x:x, y:y + 3.0, 'text-anchor':'middle', 'font-size':3.6,
+        fill:BB_COLOR, 'font-weight':'700'
+      }, String(v.bb)));
+    }
+    // Legend in the free top-left outer corner (AV above, BB below).
+    svg.appendChild(el('text', {x:-11, y:-6.5, 'font-size':3.4, fill:AV_COLOR, 'font-weight':'700'}, 'AV'));
+    svg.appendChild(el('text', {x:-11, y:-1.8, 'font-size':3.4, fill:BB_COLOR, 'font-weight':'700'}, 'BB'));
+  }
+
   function renderNorth(container, data, opts) {
     opts = opts || {};
     container.innerHTML = '';
@@ -68,9 +102,15 @@
       container.appendChild(h);
     }
 
+    // An optional outer ring shows Ashtakavarga (AV) and Bhava Bala (BB) per
+    // house just outside the chart; it widens the viewBox to make room.
+    var ring = opts.outer || null;
     var svg = el('svg', {
-      viewBox: '0 0 100 100', width: '100%', height: 'auto', 'class': 'rounded'
+      viewBox: ring ? '-17 -17 134 134' : '0 0 100 100',
+      width: '100%', height: 'auto', 'class': 'rounded'
     });
+
+    if (ring) { drawOuterRing(svg, ring, ((data.asc_sign % 12) + 12) % 12); }
 
     // Chart background fill (rendered as part of the SVG so it shows everywhere).
     svg.appendChild(el('rect', {x:0, y:0, width:100, height:100, fill:'#f0f9ff'}));
@@ -133,14 +173,16 @@
     container.appendChild(svg);
   }
 
-  function renderAll(vargas) {
+  function renderAll(vargas, houses) {
     document.querySelectorAll('[data-varga]').forEach(function (elm) {
       var key = elm.getAttribute('data-varga');
       if (vargas[key]) {
         renderNorth(elm, vargas[key], {
           title: vargas[key].label,
           showDeg: true,
-          big: key === 'D1'
+          big: key === 'D1',
+          // Outer AV/BB ring only on a D1 container marked with data-ring.
+          outer: (houses && elm.getAttribute('data-ring')) ? houses : null
         });
       }
     });
