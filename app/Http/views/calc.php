@@ -101,37 +101,29 @@ $shadColor = static function (float $ratio): string {
 
     <!-- View toggle (Charts / Details) — reusable pattern for Module 5d -->
     <div class="flex gap-2">
-        <button id="btn-charts" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-gray-200">View Charts</button>
-        <button id="btn-details" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white">View Details</button>
+        <button id="btn-charts" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white">View Charts</button>
+        <button id="btn-details" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-gray-200">View Details</button>
     </div>
 
     <!-- CHARTS VIEW (dashboard rows) -->
-    <div id="charts-view" class="hidden space-y-6">
+    <div id="charts-view" class="space-y-6">
 
-        <!-- ROW 2 — Gochar calculation details (defaults to now + IP location) -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details</h2>
-            <div id="gochar-inputs"></div>
-        </div>
-
-        <!-- ROW 3 — D1 chart (large) + Gochar chart -->
+        <!-- ROW 1 — D1 (Rasi) chart + Vimshottari Dasha -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="bg-white rounded-lg shadow p-4">
                 <div class="max-w-md mx-auto" data-varga="D1"></div>
             </div>
             <div class="bg-white rounded-lg shadow p-4">
-                <div id="gochar-output"></div>
+                <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
+                <div id="vim-dasha" class="text-sm"></div>
             </div>
         </div>
 
-        <!-- ROW 4 — Vimshottari Dasha (full width for the two-column layout) -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
-            <div id="vim-dasha" class="text-sm"></div>
-        </div>
-
-        <!-- ROW 4b — Shadbala (vertical) | D9 -->
+        <!-- ROW 2 — Navamsa (D9) + Shadbala -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="max-w-xs mx-auto" data-varga="D9"></div>
+            </div>
             <div class="bg-white rounded-lg shadow p-4">
                 <h2 class="font-semibold mb-1">Shadbala</h2>
                 <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
@@ -154,23 +146,37 @@ $shadColor = static function (float $ratio): string {
                     </div>
                 </div>
             </div>
+        </div>
 
+        <!-- ROW 3 — Gochar calculation details (defaults to now + IP location) -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details</h2>
+            <div id="gochar-inputs"></div>
+        </div>
+
+        <!-- ROW 4 — D1 (Rasi) chart + current Gochar -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div class="bg-white rounded-lg shadow p-4">
-                <div class="max-w-xs mx-auto" data-varga="D9"></div>
+                <div class="max-w-xs mx-auto" data-varga="D1"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div id="gochar-output"></div>
             </div>
         </div>
 
-        <!-- ROW 5 — Varshaphal question box -> Varsha chart + Mudda dasha -->
+        <!-- ROW 5 — Varshaphal year selection -->
         <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
-            <div id="vp-box" class="mb-4"></div>
-            <div id="vp-output"></div>
+            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal — year</h2>
+            <div id="vp-box"></div>
         </div>
 
-        <!-- Remaining divisional charts -->
+        <!-- ROW 6 — Varshaphal chart + Varshesh lord detail + Mudda dasha -->
+        <div id="vp-output"></div>
+
+        <!-- Remaining divisional charts — 2 per row -->
         <div>
             <h2 class="font-semibold mb-2 text-gray-700">Divisional Charts</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <?php foreach (($vargas ?? []) as $vkey => $vinfo): if ($vkey === 'D1' || $vkey === 'D9') { continue; } ?>
                     <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
                 <?php endforeach; ?>
@@ -181,7 +187,7 @@ $shadColor = static function (float $ratio): string {
     </div>
 
     <!-- DETAILS VIEW (text tables) -->
-    <div id="details-view">
+    <div id="details-view" class="hidden">
     <!-- Header -->
     <div class="bg-white rounded-lg shadow p-4 text-sm grid grid-cols-2 md:grid-cols-3 gap-2">
         <div><span class="text-gray-500">Birth:</span> <?= $h($in['date'] . ' ' . $in['time']) ?> (UTC<?= sprintf('%+.2f', $meta['tz']) ?>)</div>
@@ -377,24 +383,15 @@ $shadColor = static function (float $ratio): string {
   var bC = document.getElementById('btn-charts');
   var bD = document.getElementById('btn-details');
 
-  // Detail view (visible by default) shows the same expandable, colour-coded
-  // Vimshottari tree as the Chart view.
-  if (window.ABDasha) {
-    var vdd = document.getElementById('vim-dasha-detail');
-    if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
-    var mdd = document.getElementById('mudda-dasha-detail');
-    if (mdd && window.AB_MUDDA) ABDasha.render(mdd, window.AB_MUDDA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
-  }
-
-  var rendered = false;
+  var chartsBuilt = false, detailsBuilt = false;
   function activate(btn, on) {
     btn.classList.toggle('bg-blue-600', on);
     btn.classList.toggle('text-white', on);
     btn.classList.toggle('bg-gray-200', !on);
   }
   function buildCharts() {
-    if (rendered) return;
-    rendered = true;
+    if (chartsBuilt) return;
+    chartsBuilt = true;
     if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS); }
     if (window.ABDasha) {
       ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
@@ -413,17 +410,33 @@ $shadColor = static function (float $ratio): string {
       });
     }
   }
+  // Detail view shows the same colour-coded Vimshottari + Mudda trees. Built
+  // lazily (when first opened) so row heights are measured while visible.
+  function buildDetails() {
+    if (detailsBuilt) return;
+    detailsBuilt = true;
+    if (window.ABDasha) {
+      var vdd = document.getElementById('vim-dasha-detail');
+      if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
+      var mdd = document.getElementById('mudda-dasha-detail');
+      if (mdd && window.AB_MUDDA) ABDasha.render(mdd, window.AB_MUDDA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
+    }
+  }
   function showCharts() {
     buildCharts();
     charts.classList.remove('hidden'); details.classList.add('hidden');
     activate(bC, true); activate(bD, false);
   }
   function showDetails() {
+    buildDetails();
     charts.classList.add('hidden'); details.classList.remove('hidden');
     activate(bD, true); activate(bC, false);
   }
   bC.addEventListener('click', showCharts);
   bD.addEventListener('click', showDetails);
+
+  // Default view when the page opens = Charts.
+  showCharts();
 })();
 </script>
 <?php endif; ?>
