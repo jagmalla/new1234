@@ -62,6 +62,23 @@
     return out;
   }
 
+  // The running chain (period containing "now") drilled `depth` levels deep,
+  // e.g. [Maha, Antar, Pratyantar]. Returns [] when now is outside topPeriods.
+  function runningChain(topPeriods, now, depth) {
+    depth = depth || 3;
+    var chain = [], periods = topPeriods || [];
+    for (var d = 0; d < depth; d++) {
+      var found = null;
+      for (var i = 0; i < periods.length; i++) {
+        if (periods[i].start_jd <= now && now < periods[i].end_jd) { found = periods[i]; break; }
+      }
+      if (!found) { break; }
+      chain.push({ lord: found.lord, start_jd: found.start_jd, end_jd: found.end_jd, level: d });
+      periods = children(found);
+    }
+    return chain;
+  }
+
   function row(period, level, tz, inline, now) {
     var wrap = document.createElement('div');
     var head = document.createElement('div');
@@ -200,5 +217,5 @@
     }
   }
 
-  global.ABDasha = { render: render, jdToDMY: jdToDMY };
+  global.ABDasha = { render: render, jdToDMY: jdToDMY, runningChain: runningChain, PCOL: PCOL };
 })(window);

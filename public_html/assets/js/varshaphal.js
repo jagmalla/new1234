@@ -43,21 +43,56 @@
     var summary = h('div', 'text-sm');
     if (summaryRoot) { summaryRoot.innerHTML = ''; summaryRoot.appendChild(summary); }
 
-    // Output: Varsha chart | Mudda dasha side by side; the dasha fills the chart
-    // height and scrolls.
+    // Output: Varsha chart | Mudda dasha side by side. The dasha column height is
+    // synced to the Varsha chart and the list scrolls inside it.
     outRoot.innerHTML = '';
     var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start');
     var chartCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
     chartCell.appendChild(h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Varsha (Annual) Chart'));
     var chartBox = h('div', 'w-full max-w-md mx-auto');
     chartCell.appendChild(chartBox);
-    var dashaCell = h('div', 'bg-white rounded-lg shadow p-3');
+
+    var dashaCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
+    dashaCell.style.display = 'flex'; dashaCell.style.flexDirection = 'column';
     dashaCell.appendChild(h('h3', 'font-semibold mb-2 text-sm', 'Mudda Dasha — drill 5 levels'));
+    // Current-dasha header (Maha/Antar/Pratyantar at today's date).
+    var dashaHdr = h('div', 'mb-2 pb-2 border-b text-sm leading-snug space-y-0.5');
+    dashaCell.appendChild(dashaHdr);
     var dashaBox = h('div', 'text-sm');
+    dashaBox.style.flex = '1 1 auto'; dashaBox.style.minHeight = '0'; dashaBox.style.overflowY = 'auto';
     dashaCell.appendChild(dashaBox);
+
     grid.appendChild(chartCell); grid.appendChild(dashaCell);
     if (!summaryRoot) { outRoot.appendChild(summary); }
     outRoot.appendChild(grid);
+
+    // Match the Mudda dasha column height to the Varsha chart card (lg layout).
+    function syncMuddaHeight() {
+      if (global.matchMedia('(min-width: 1024px)').matches) {
+        dashaCell.style.height = chartCell.getBoundingClientRect().height + 'px';
+      } else {
+        dashaCell.style.height = '';
+      }
+    }
+    var rT;
+    global.addEventListener('resize', function () { clearTimeout(rT); rT = setTimeout(syncMuddaHeight, 150); });
+
+    // Build the three current-dasha header lines for the Mudda chain at "now".
+    var LEVLAB = ['MahaDasha', 'AntarDasha', 'Pratyantar'];
+    function muddaHeader(top, nowJd) {
+      var chain = (global.ABDasha && ABDasha.runningChain) ? ABDasha.runningChain(top, nowJd, 3) : [];
+      if (!chain.length) {
+        return '<div class="text-xs text-gray-400">Today is outside this Varsha year — no running Mudda period.</div>';
+      }
+      var pcol = (global.ABDasha && ABDasha.PCOL) || {};
+      return chain.map(function (c) {
+        var arrow = c.level > 0 ? '<span style="color:#9ca3af">↳</span> ' : '';
+        return '<div style="padding-left:' + (c.level * 1.6) + 'rem">' + arrow
+          + '<span style="color:#4b5563;font-weight:600">' + LEVLAB[c.level] + ':</span> '
+          + '<b style="color:' + (pcol[c.lord] || '#111827') + '">' + c.lord + '</b> '
+          + '<span style="color:#6b7280">(' + ABDasha.jdToDMY(c.start_jd, tz) + ' – ' + ABDasha.jdToDMY(c.end_jd, tz) + ')</span></div>';
+      }).join('');
+    }
 
     function fetchVp() {
       status.textContent = 'calculating…';
@@ -85,7 +120,12 @@
             chart.planets.push({ abbr: 'MUN', sign: v.muntha_sign_index, retro: false });
           }
           ABChart.renderNorth(chartBox, chart, { title: v.ascendant_formatted, showDeg: true, big: true });
-          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, maxRows: 12 });
+          var nowJd = Date.now() / 86400000 + 2440587.5;
+          dashaHdr.innerHTML = muddaHeader(v.mudda_dasha, nowJd);
+          // No maxRows: the column height is synced to the chart and scrolls;
+          // the current period is highlighted and its Mahadasha auto-expands.
+          ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, now: nowJd });
+          setTimeout(syncMuddaHeight, 160);
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }
