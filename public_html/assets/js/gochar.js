@@ -93,7 +93,7 @@
     // Output: the transit chart only (positions table removed for a cleaner look).
     outRoot.innerHTML = '';
     var title = h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Gochar (Transit)');
-    var chartBox = h('div', 'w-full max-w-sm mx-auto');
+    var chartBox = h('div', 'w-full');
     outRoot.appendChild(title); outRoot.appendChild(chartBox);
 
     function fetchGochar() {
