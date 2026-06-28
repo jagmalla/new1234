@@ -137,7 +137,10 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <?= $field('Gender', $in['gender']) ?>
             <?= $field('Date of Birth', $in['date']) ?>
             <?= $field('Time of Birth', $in['time']) ?>
-            <?= $field('Place of Birth', $pob) ?>
+            <div>
+                <div class="text-xs text-gray-500">Place of Birth</div>
+                <div class="font-semibold text-gray-800" id="pob-value" data-place="<?= $h($in['place']) ?>"><?= $pob !== '' ? $h($pob) : '—' ?></div>
+            </div>
         </div>
         <div class="border-t border-gray-100 my-3"></div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
@@ -479,6 +482,22 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
       }
     });
   }
+
+  // Place of Birth: if no city name was searched (the field is showing lat/lon),
+  // reverse-geocode the birth coordinates to "City, State, Country" for display.
+  (function () {
+    var el = document.getElementById('pob-value');
+    if (!el || (el.getAttribute('data-place') || '').trim()) { return; }
+    var b = window.AB_BIRTH || {};
+    if (b.lat == null || b.lon == null) { return; }
+    fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + b.lat + '&longitude=' + b.lon + '&localityLanguage=en')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var parts = [d.city || d.locality, d.principalSubdivision, d.countryName].filter(Boolean);
+        if (parts.length) { el.textContent = parts.join(', '); }
+      })
+      .catch(function () { /* keep the lat/lon fallback */ });
+  })();
 
   var charts = document.getElementById('charts-view');
   var details = document.getElementById('details-view');
