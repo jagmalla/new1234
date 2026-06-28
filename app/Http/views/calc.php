@@ -265,6 +265,35 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     <!-- DETAILS VIEW (text tables) -->
     <div id="details-view" class="hidden">
 
+    <!-- Current dasha chain (today) — shown first -->
+    <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
+        $tzv = (float) ($meta['tz'] ?? 0);
+        // $depth indents each level (↳); $sep is the date-range separator.
+        $cdRow = function (string $label, ?array $p, int $depth, string $sep) use ($pcolor, $h, $tzv): string {
+            if (empty($p)) { return ''; }
+            $dates = \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzv)
+                . ' ' . $sep . ' ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzv);
+            $arrow = $depth > 0 ? '<span class="text-gray-400">↳</span> ' : '';
+            return '<div style="padding-left:' . ($depth * 1.6) . 'rem">' . $arrow
+                . '<span class="text-gray-600 font-semibold">' . $label . ':</span> '
+                . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
+                . '<span class="text-gray-500">(' . $dates . ')</span></div>';
+        };
+    ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm">
+        <h2 class="font-semibold mb-2">Current Dasha — today (<?= $h(date('d-m-Y')) ?>)</h2>
+        <div class="space-y-1 leading-snug">
+            <?= $cdRow('MahaDasha', $dashaNow['maha'], 0, '–') ?>
+            <?= $cdRow('AntarDasha', $dashaNow['antar'], 1, '–') ?>
+            <?= $cdRow('Pratyantar', $dashaNow['pratyantar'], 2, '–') ?>
+        </div>
+        <div class="border-t border-gray-200 my-2"></div>
+        <div class="leading-snug">
+            <?= $cdRow('Next Antardasha', $dashaNow['next_antar'], 1, '→') ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala (BB), lords -->
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <h2 class="font-semibold mb-2">House Details — Ashtakavarga &amp; Bhava Bala</h2>
@@ -402,29 +431,6 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
-    <?php endif; ?>
-
-    <!-- Current dasha chain (today) -->
-    <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
-        $tzv = (float) ($meta['tz'] ?? 0);
-        $fmt = static fn($p) => \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzv)
-            . ' → ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzv);
-        $line = function (string $label, ?array $p) use ($pcolor, $fmt, $h): string {
-            if ($p === null) { return ''; }
-            return '<div><span class="text-gray-500">' . $label . ':</span> '
-                . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
-                . '<span class="text-gray-700">(' . $fmt($p) . ')</span></div>';
-        };
-    ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm">
-        <h2 class="font-semibold mb-2">Current Dasha — today (<?= $h(date('d-m-Y')) ?>)</h2>
-        <div class="space-y-1">
-            <?= $line('Running Mahadasha', $dashaNow['maha']) ?>
-            <?= $line('Current Antardasha', $dashaNow['antar']) ?>
-            <?= $line('Next Antardasha', $dashaNow['next_antar']) ?>
-            <?= $line('Current Pratyantardasha', $dashaNow['pratyantar']) ?>
-        </div>
     </div>
     <?php endif; ?>
 
