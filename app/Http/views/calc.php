@@ -264,23 +264,6 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
 
     <!-- DETAILS VIEW (text tables) -->
     <div id="details-view" class="hidden">
-    <!-- Header -->
-    <div class="bg-white rounded-lg shadow p-4 text-sm grid grid-cols-2 md:grid-cols-3 gap-2">
-        <div><span class="text-gray-500">Birth:</span> <?= $h($in['date'] . ' ' . $in['time']) ?> (UTC<?= sprintf('%+.2f', $meta['tz']) ?>)</div>
-        <div><span class="text-gray-500">Place:</span> lat <?= sprintf('%.4f', $meta['lat']) ?>, lon <?= sprintf('%.4f', $meta['lon']) ?></div>
-        <div><span class="text-gray-500">Ephemeris:</span> <?= $h($chart['meta']['ephemeris']) ?></div>
-        <div><span class="text-gray-500">Ayanamsa:</span> <?= $h($chart['meta']['ayanamsa_name']) ?> = <?= sprintf('%.4f°', $chart['meta']['ayanamsa_deg']) ?></div>
-        <div><span class="text-gray-500">JD (UT):</span> <?= sprintf('%.5f', $meta['jd']) ?></div>
-    </div>
-
-    <!-- Ascendant -->
-    <div class="bg-white rounded-lg shadow p-4 text-sm">
-        <h2 class="font-semibold mb-2">Ascendant (Lagna) &amp; MC</h2>
-        <div>Lagna: <b><?= $h($chart['ascendant']['formatted']) ?></b>
-            — <?= $h($chart['ascendant']['nakshatra']['name']) ?> (pada <?= (int) $chart['ascendant']['nakshatra']['pada'] ?>),
-            Navamsa Lagna <?= $h($chart['ascendant']['navamsa_sign']) ?></div>
-        <div>MC: <?= $h($chart['mc']['formatted']) ?></div>
-    </div>
 
     <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala (BB), lords -->
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
