@@ -32,6 +32,8 @@
   }
   function opt(v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t || v; return o; }
   function sel(x) { return (typeof x === 'string') ? document.querySelector(x) : x; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
   function init(cfg) {
     cfg = cfg || {};
@@ -90,11 +92,13 @@
     bar.appendChild(btn); bar.appendChild(status);
     inRoot.appendChild(bar);
 
-    // Output: the transit chart only (positions table removed for a cleaner look).
+    // Output: a header row (Gochar (Transit) + date / time / place) then the
+    // transit chart. The header matches the natal D1 header so the two cards
+    // in the row line up.
     outRoot.innerHTML = '';
-    var title = h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Gochar (Transit)');
+    var header = h('div', 'flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700');
     var chartBox = h('div', 'w-full');
-    outRoot.appendChild(title); outRoot.appendChild(chartBox);
+    outRoot.appendChild(header); outRoot.appendChild(chartBox);
 
     function fetchGochar() {
       status.textContent = 'calculating…';
@@ -121,8 +125,16 @@
         var t = g.transits[name];
         planets.push({ abbr: ABBR[name] || name.slice(0, 2), sign: t.sign_index, deg: t.deg, retro: !!t.retro });
       });
+      var place = (fPlace.value || '').trim();
+      header.innerHTML =
+          '<span class="font-semibold text-gray-800">Gochar (Transit)</span>'
+        + '<span class="ml-auto flex flex-wrap items-center gap-x-4">'
+        +   '<span>' + esc(fDate.value) + '</span>'
+        +   '<span>' + esc(fTime.value) + '</span>'
+        +   (place ? '<span class="font-semibold text-gray-800">' + esc(place) + '</span>' : '')
+        + '</span>';
       ABChart.renderNorth(chartBox, { asc_sign: g.ascendant.sign_index, planets: planets },
-        { title: g.label, showDeg: true });
+        { showDeg: true });
     }
 
     btn.addEventListener('click', fetchGochar);

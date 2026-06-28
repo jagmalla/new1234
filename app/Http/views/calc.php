@@ -194,13 +194,20 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <div id="gochar-inputs"></div>
         </div>
 
-        <!-- ROW 4 — D1 (Rasi) chart + current Gochar (chart only); sized to match
-             the divisional charts (fill the card, p-2 padding). -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
-            <div class="bg-white rounded-lg shadow p-2 flex items-center justify-center">
-                <div class="w-full" data-varga="D1"></div>
+        <!-- ROW 4 — natal D1 (Rasi) vs current Gochar (transit). Both cards carry
+             a matching header (title + date/time/place) so the charts line up. -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
+                    <span class="font-semibold text-gray-800">Rasi (D1)</span>
+                    <span class="ml-auto flex flex-wrap items-center gap-x-4">
+                        <span><?= $h($in['date']) ?></span>
+                        <span><?= $h($in['time']) ?></span>
+                    </span>
+                </div>
+                <div class="w-full" data-varga="D1" data-notitle="1"></div>
             </div>
-            <div class="bg-white rounded-lg shadow p-2 flex items-center justify-center">
+            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
                 <div id="gochar-output" class="w-full"></div>
             </div>
         </div>

@@ -193,7 +193,8 @@
       var key = elm.getAttribute('data-varga');
       if (vargas[key]) {
         renderNorth(elm, vargas[key], {
-          title: vargas[key].label,
+          // Skip the built-in title when the container supplies its own header.
+          title: elm.hasAttribute('data-notitle') ? null : vargas[key].label,
           showDeg: true,
           big: key === 'D1',
           // Outer AV/BB ring only on a D1 container marked with data-ring.
