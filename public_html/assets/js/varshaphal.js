@@ -49,7 +49,8 @@
     var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start');
     var chartCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
     chartCell.appendChild(h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Varsha (Annual) Chart'));
-    var chartBox = h('div', 'w-full max-w-md mx-auto');
+    // Chart fills the column width (no max-width cap) for a fuller, professional look.
+    var chartBox = h('div', 'w-full');
     chartCell.appendChild(chartBox);
 
     var dashaCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
@@ -119,7 +120,8 @@
             chart = { asc_sign: v.chart.asc_sign, asc_deg: v.chart.asc_deg, planets: v.chart.planets.slice() };
             chart.planets.push({ abbr: 'MUN', sign: v.muntha_sign_index, retro: false });
           }
-          ABChart.renderNorth(chartBox, chart, { title: v.ascendant_formatted, showDeg: true, big: true });
+          // No internal title (the Varsha ascendant subtitle) — keep the card clean.
+          ABChart.renderNorth(chartBox, chart, { showDeg: true, big: true });
           var nowJd = Date.now() / 86400000 + 2440587.5;
           dashaHdr.innerHTML = muddaHeader(v.mudda_dasha, nowJd);
           // No maxRows: the column height is synced to the chart and scrolls;
