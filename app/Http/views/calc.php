@@ -303,6 +303,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                 <th class="pr-3">AV</th>
                 <th class="pr-2 text-right">From&nbsp;Lord</th><th class="pr-2 text-right">Dig&nbsp;Bala</th>
                 <th class="pr-2 text-right">Drishti</th><th class="pr-2 text-right">Planets&nbsp;in</th>
+                <th class="pr-2 text-right">Day-Night</th>
                 <th class="pr-3 text-right">Bhava&nbsp;Bala</th><th>Lord</th>
             </tr></thead>
             <tbody>
@@ -325,6 +326,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                     <td class="pr-2 text-right"><?= $num($H['bb_digbala'] ?? 0) ?></td>
                     <td class="pr-2 text-right"><?= $num($H['bb_drishti'] ?? 0) ?></td>
                     <td class="pr-2 text-right"><?= $num($H['bb_planets_in'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_day_night'] ?? 0) ?></td>
                     <td class="pr-3 text-right font-semibold" style="color:#15803d"><?= $num($H['bb_virupa'] ?? $H['bb'] * 60) ?></td>
                     <td><span style="color:<?= $pcolor($H['lord']) ?>" class="font-semibold"><?= $h($H['lord']) ?></span>
                         <?php $llh = $lordHouses((string) $H['lord']); ?><?= $llh !== '' ? '<span class="text-xs text-gray-400">(' . $h($llh) . ')</span>' : '' ?></td>
@@ -332,7 +334,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti (net aspect on the cusp) + Planets&nbsp;in (benefic/malefic occupants). From&nbsp;Lord and Planets&nbsp;in follow Parashara's Light; Dig&nbsp;Bala and Drishti use the standard BPHS formulas.</p>
+        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti (net aspect on the cusp) + Planets&nbsp;in (benefic/malefic occupants) + Day-Night (Bhava Kaala). From&nbsp;Lord, Planets&nbsp;in and Day-Night match Parashara's Light; Dig&nbsp;Bala and Drishti use the standard BPHS formulas.</p>
     </div>
 
     <!-- D1 -->

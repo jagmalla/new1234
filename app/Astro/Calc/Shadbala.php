@@ -401,6 +401,28 @@ final class Shadbala
         return $sum;
     }
 
+    /** Whether the birth instant is by day (Sun above the horizon). Used by the
+     *  Bhava Kaala (day/night) Bala. */
+    public static function isDayBirth(float $jdUt, float $lat, float $lonEast, float $sunTropical, float $sunDecl): bool
+    {
+        $S = static fn($d) => sin(deg2rad($d));
+        $C = static fn($d) => cos(deg2rad($d));
+        $T = static fn($d) => tan(deg2rad($d));
+        $eps = 23.4423;
+        $H0 = rad2deg(acos(max(-1.0, min(1.0, -$T($lat) * $T($sunDecl)))));
+        $raSun = Charts::norm(rad2deg(atan2($S($sunTropical) * $C($eps), $C($sunTropical))));
+        $t = ($jdUt - 2451545.0) / 36525.0;
+        $gmst = Charts::norm(280.46061837 + 360.98564736629 * ($jdUt - 2451545.0) + 0.000387933 * $t * $t);
+        $haBirth = Charts::norm($gmst + $lonEast - $raSun);
+        if ($haBirth > 180.0) {
+            $haBirth -= 360.0;
+        }
+        $birthClock = self::localClockHour($jdUt, $lonEast);
+        $transit = $birthClock - $haBirth / 15.0;
+        $half = $H0 / 15.0;
+        return $birthClock >= ($transit - $half) && $birthClock < ($transit + $half);
+    }
+
     /** Public accessor: Sphuta Drishti (virupa) of one planet on an arbitrary
      *  point — used by the Bhava Drishti Bala (per-planet, occupant-aware). */
     public static function drishtiOnPoint(string $aspecting, float $from, float $to): float

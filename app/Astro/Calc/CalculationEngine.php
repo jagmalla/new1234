@@ -96,7 +96,10 @@ final class CalculationEngine
                 $occupants[$pp['house']][] = $pname;
             }
         }
-        $bhavaBala = BhavaBala::compute($ascSid, $ascSign, $shadbala, $sidereal, $occupants);
+        $sunTrop = Charts::norm($sidereal['Sun'] + $ayan);
+        $sunDecl = rad2deg(asin(sin(deg2rad(23.4423)) * sin(deg2rad($sunTrop))));
+        $isDay = Shadbala::isDayBirth($jdUt, $lat, $lonEast, $sunTrop, $sunDecl);
+        $bhavaBala = BhavaBala::compute($ascSid, $ascSign, $shadbala, $sidereal, $occupants, $isDay);
 
         // Per-house summary (house no, sign, planets, lord, AV bindus, Bhava Bala).
         $houses = [];
@@ -115,6 +118,7 @@ final class CalculationEngine
                 'bb_digbala' => $bhavaBala[$hh]['digbala'],
                 'bb_drishti' => $bhavaBala[$hh]['drishti'],
                 'bb_planets_in' => $bhavaBala[$hh]['planets_in'],
+                'bb_day_night' => $bhavaBala[$hh]['day_night'],
                 'planets' => [],
             ];
         }

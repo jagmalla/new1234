@@ -28,6 +28,9 @@ final class BhavaBala
     private const CLASSICAL = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
     private const BENEFIC   = ['Jupiter', 'Venus', 'Mercury'];   // for occupants + drishti
     private const MALEFIC   = ['Sun', 'Mars', 'Saturn'];         // for occupants
+    // Sirshodaya (head-rising) signs are strong by day; the rest by night.
+    // Day/night (Bhava Kaala) Bala gives the bhava +15 when its sign matches.
+    private const SIRSHODAYA = [2, 4, 5, 6, 7, 10]; // Gemini, Leo, Virgo, Libra, Scorpio, Aquarius
 
     /**
      * @param array<string, array<string,mixed>> $shadbala     planet => shadbala row
@@ -37,13 +40,18 @@ final class BhavaBala
      *               digbala:float, drishti:float, planets_in:float,
      *               total_virupa:float, rupa:float}>
      */
-    public static function compute(float $ascLon, int $ascSign, array $shadbala, array $siderealLon, array $occupants = []): array
+    public static function compute(float $ascLon, int $ascSign, array $shadbala, array $siderealLon, array $occupants = [], bool $isDay = true): array
     {
         $out = [];
         for ($h = 1; $h <= 12; $h++) {
             $sign = (($ascSign + $h - 1) % 12 + 12) % 12;
             $lord = Charts::signLord($sign);
             $adhipati = (float) ($shadbala[$lord]['total_virupa'] ?? 0.0);
+
+            // Day/night (Bhava Kaala) Bala: +15 to day-strong bhavas by day,
+            // night-strong bhavas by night.
+            $dayStrong = in_array($sign, self::SIRSHODAYA, true);
+            $dayNight = ($dayStrong === $isDay) ? 15.0 : 0.0;
 
             // Bhava madhya (equal-house cusp from the Lagna degree).
             $cusp = Charts::norm($ascLon + ($h - 1) * 30.0);
@@ -80,7 +88,7 @@ final class BhavaBala
             }
             $planetsIn = $net > 0 ? 60.0 : ($net < 0 ? -60.0 : 0.0);
 
-            $total = $adhipati + $digbala + $drishti + $planetsIn;
+            $total = $adhipati + $digbala + $drishti + $planetsIn + $dayNight;
             $out[$h] = [
                 'house' => $h,
                 'sign' => $sign,
@@ -89,6 +97,7 @@ final class BhavaBala
                 'digbala' => round($digbala, 1),
                 'drishti' => round($drishti, 1),
                 'planets_in' => round($planetsIn, 1),
+                'day_night' => round($dayNight, 1),
                 'total_virupa' => round($total, 1),
                 'rupa' => round($total / 60.0, 2),
             ];
