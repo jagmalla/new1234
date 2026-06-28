@@ -33,6 +33,10 @@ final class CalcController
         $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
         $name = (string) ($_GET['name'] ?? '');
         $gender = (string) ($_GET['gender'] ?? '');
+        // When no year is given, default to the *currently running* annual chart
+        // (computed from the birth date below) so today's running Mudda dasha is
+        // meaningful; an explicit ?year= always overrides.
+        $hasYear = isset($_GET['year']);
         $forYear = (int) ($_GET['year'] ?? (int) date('Y'));
         // Gochar defaults to NOW (current date + time); both are adjustable.
         $gocharIn = (string) ($_GET['gochar'] ?? date('Y-m-d'));
@@ -48,6 +52,15 @@ final class CalcController
             $tz = self::parseTz($tzIn);
             [$Y, $Mo, $D] = self::parseDate($date);   // accepts DD-MM-YYYY or YYYY-MM-DD
             [$H, $Mi] = array_map('intval', array_pad(explode(':', $time), 2, '0'));
+
+            // Active Varsha year = the annual chart whose Varsha Pravesh (≈ the
+            // birthday) contains today. Before this year's birthday it is last year.
+            if (!$hasYear) {
+                $ty = (int) date('Y');
+                $tm = (int) date('n');
+                $td = (int) date('j');
+                $forYear = ($tm < $Mo || ($tm === $Mo && $td < $D)) ? $ty - 1 : $ty;
+            }
 
             $jd = JulianDay::fromGregorian($Y, $Mo, $D, $H, $Mi, 0.0, $tz);
             $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
