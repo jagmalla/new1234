@@ -48,7 +48,12 @@
     outRoot.innerHTML = '';
     var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start');
     var chartCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
-    chartCell.appendChild(h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Varsha (Annual) Chart'));
+    // Header: title on the left, Varshaphal (Varsha Pravesh) date on the right.
+    var chartHdr = h('div', 'flex flex-wrap items-center gap-x-3 gap-y-1 mb-2 text-sm');
+    chartHdr.appendChild(h('span', 'font-semibold text-gray-700', 'Varsha (Annual) Chart'));
+    var chartDate = h('span', 'text-gray-800 ml-auto');
+    chartHdr.appendChild(chartDate);
+    chartCell.appendChild(chartHdr);
     // Chart fills the column width (no max-width cap) for a fuller, professional look.
     var chartBox = h('div', 'w-full');
     chartCell.appendChild(chartBox);
@@ -121,6 +126,7 @@
             chart.planets.push({ abbr: 'MUN', sign: v.muntha_sign_index, retro: false });
           }
           // No internal title (the Varsha ascendant subtitle) — keep the card clean.
+          chartDate.innerHTML = '<b>Varshaphal Date</b>: ' + (v.varsha_start || '—');
           ABChart.renderNorth(chartBox, chart, { showDeg: true, big: true });
           var nowJd = Date.now() / 86400000 + 2440587.5;
           dashaHdr.innerHTML = muddaHeader(v.mudda_dasha, nowJd);
