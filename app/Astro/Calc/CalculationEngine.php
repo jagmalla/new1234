@@ -89,7 +89,14 @@ final class CalculationEngine
             $avSigns[$pl] = Charts::signIndex($sidereal[$pl]);
         }
         $ashtakavarga = Ashtakavarga::compute($avSigns);
-        $bhavaBala = BhavaBala::compute($ascSid, $ascSign, $shadbala, $sidereal);
+        // House occupants (incl. nodes) feed the Bhava Bala "Planets-in" component.
+        $occupants = array_fill(1, 12, []);
+        foreach ($planets as $pname => $pp) {
+            if (isset($occupants[$pp['house']])) {
+                $occupants[$pp['house']][] = $pname;
+            }
+        }
+        $bhavaBala = BhavaBala::compute($ascSid, $ascSign, $shadbala, $sidereal, $occupants);
 
         // Per-house summary (house no, sign, planets, lord, AV bindus, Bhava Bala).
         $houses = [];
@@ -104,6 +111,10 @@ final class CalculationEngine
                 'av' => $ashtakavarga['sav'][$hsign],
                 'bb' => $bhavaBala[$hh]['rupa'],
                 'bb_virupa' => $bhavaBala[$hh]['total_virupa'],
+                'bb_adhipati' => $bhavaBala[$hh]['adhipati'],
+                'bb_digbala' => $bhavaBala[$hh]['digbala'],
+                'bb_drishti' => $bhavaBala[$hh]['drishti'],
+                'bb_planets_in' => $bhavaBala[$hh]['planets_in'],
                 'planets' => [],
             ];
         }

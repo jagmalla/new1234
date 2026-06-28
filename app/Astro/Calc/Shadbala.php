@@ -401,6 +401,13 @@ final class Shadbala
         return $sum;
     }
 
+    /** Public accessor: Sphuta Drishti (virupa) of one planet on an arbitrary
+     *  point — used by the Bhava Drishti Bala (per-planet, occupant-aware). */
+    public static function drishtiOnPoint(string $aspecting, float $from, float $to): float
+    {
+        return self::sphutaDrishti($aspecting, $from, $to);
+    }
+
     /** Sphuta Drishti (virupa) of one planet on a point, incl. special aspects. */
     private static function sphutaDrishti(string $aspecting, float $from, float $to): float
     {
