@@ -89,7 +89,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                 <input name="time" value="<?= $h($in['time']) ?>" class="border rounded px-2 py-1"></label>
 
             <label class="flex flex-col gap-1 relative col-span-2 md:col-span-3"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
-                <input id="b-place" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
+                <input id="b-place" name="place" value="<?= $h($in['place']) ?>" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
                 <div id="b-place-results" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border rounded shadow max-h-60 overflow-y-auto hidden"></div></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Ayanamsa</span>
                 <select name="ayanamsa" class="border rounded px-2 py-1 bg-white">
@@ -121,6 +121,30 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     <div class="flex gap-2">
         <button id="btn-charts" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white">View Charts</button>
         <button id="btn-details" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-gray-200">View Details</button>
+    </div>
+
+    <!-- Native (birth) summary: shown in both views, below the toggle buttons. -->
+    <?php
+        $pob = $in['place'] !== '' ? $in['place'] : ($in['latIn'] . ', ' . $in['lonIn']);
+        $field = static function (string $label, string $value) use ($h): string {
+            return '<div><div class="text-xs text-gray-500">' . $h($label) . '</div>'
+                . '<div class="font-semibold text-gray-800">' . ($value !== '' ? $h($value) : '—') . '</div></div>';
+        };
+    ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
+            <?= $field('Name', $in['name']) ?>
+            <?= $field('Gender', $in['gender']) ?>
+            <?= $field('Date of Birth', $in['date']) ?>
+            <?= $field('Time of Birth', $in['time']) ?>
+            <?= $field('Place of Birth', $pob) ?>
+        </div>
+        <div class="border-t border-gray-100 my-3"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
+            <?= $field('Ascendant / Lagna Rashi', (string) ($chart['ascendant']['sign'] ?? '')) ?>
+            <?= $field('Moon Sign Rashi', (string) ($chart['planets']['Moon']['sign'] ?? '')) ?>
+            <?= $field('Sun Sign Rashi', (string) ($chart['planets']['Sun']['sign'] ?? '')) ?>
+        </div>
     </div>
 
     <!-- CHARTS VIEW (dashboard rows) -->

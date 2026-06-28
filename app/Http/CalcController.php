@@ -33,6 +33,7 @@ final class CalcController
         $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
         $name = (string) ($_GET['name'] ?? '');
         $gender = (string) ($_GET['gender'] ?? '');
+        $place = (string) ($_GET['place'] ?? '');   // birth place name (for display)
         // When no year is given, default to the *currently running* annual chart
         // (computed from the birth date below) so today's running Mudda dasha is
         // meaningful; an explicit ?year= always overrides.
@@ -96,7 +97,7 @@ final class CalcController
 
         // Expose for the view.
         $view = [
-            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'ayanamsa', 'name', 'gender', 'forYear', 'gocharIn', 'gocharTimeIn'),
+            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'ayanamsa', 'name', 'gender', 'place', 'forYear', 'gocharIn', 'gocharTimeIn'),
             'error' => $error,
             'chart' => $chart,
             'vp' => $vp,
