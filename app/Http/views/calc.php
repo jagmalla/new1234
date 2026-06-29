@@ -67,6 +67,11 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         /* Prediction body text +20% (over text-sm) for readability. */
         #phala-pos, #phala-neg, #phala-rem,
         #planet-phala-card .whitespace-pre-line { font-size: 1.05rem; line-height: 1.6; }
+        /* Planet Prediction headings — bold + larger so they read as headings. */
+        #planet-phala-card .planet-pick { font-size: 1.1rem; font-weight: 600; }
+        #planet-phala-card .pp-name { font-size: 1.3rem;  font-weight: 700; }
+        #planet-phala-card .pp-sec  { font-size: 1.15rem; font-weight: 700; }
+        #planet-phala-card .pp-sub  { font-size: 1.1rem;  font-weight: 700; }
     </style>
 </head>
 <body class="text-gray-900 p-4 md:p-8">
@@ -251,7 +256,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                         $rules = array_map(static fn($e) => (int) $e['ruled_house'], $row['lord_entries']);
                     ?>
                     <div class="planet-detail<?= $i === 0 ? '' : ' hidden' ?>" data-planet="<?= $h($pl) ?>">
-                        <div class="font-semibold text-gray-800 mb-1">
+                        <div class="pp-name text-gray-800 mb-1">
                             <span style="color:<?= $pcolor($pl) ?>"><?= $h($pl) ?></span>
                             <span class="text-gray-400 font-normal">(<?= $h($ppHi[$pl] ?? '') ?>)</span>
                             <span class="text-xs text-gray-500 font-normal">
@@ -261,7 +266,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                         </div>
                         <!-- (A) As House-Lord -->
                         <div class="mb-2">
-                            <div class="text-xs font-semibold text-indigo-700 mb-0.5">(A) As House-Lord — Bhavesh Phal</div>
+                            <div class="pp-sec text-indigo-700 mb-0.5">(A) As House-Lord — Bhavesh Phal</div>
                             <?php if (!$row['lord_entries']): ?>
                                 <div class="text-gray-500 italic">Not applicable — <?= $h($pl) ?> does not own a house.</div>
                             <?php else: foreach ($row['lord_entries'] as $e): ?>
@@ -277,14 +282,14 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                         </div>
                         <!-- (B) As Placement -->
                         <div>
-                            <div class="text-xs font-semibold text-teal-700 mb-0.5">(B) As Placement — Graha in Bhava <span class="text-gray-400 font-normal">(in <?= $ord2($placed) ?> house)</span></div>
+                            <div class="pp-sec text-teal-700 mb-0.5">(B) As Placement — Graha in Bhava <span class="text-gray-400 font-normal text-sm">(in <?= $ord2($placed) ?> house)</span></div>
                             <?php $plc = $row['placement']; if ($plc !== null && (($plc['positive_text'] ?? '') !== '' || ($plc['negative_text'] ?? '') !== '')): ?>
                                 <div class="mb-1">
-                                    <span class="text-xs font-semibold text-green-700">शुभ फल (Positive):</span>
+                                    <span class="pp-sub text-green-700">शुभ फल (Positive):</span>
                                     <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['positive_text'] ?? '')) ?></div>
                                 </div>
                                 <div>
-                                    <span class="text-xs font-semibold text-red-700">अशुभ फल (Negative):</span>
+                                    <span class="pp-sub text-red-700">अशुभ फल (Negative):</span>
                                     <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['negative_text'] ?? '')) ?></div>
                                 </div>
                             <?php else: ?>
