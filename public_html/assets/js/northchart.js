@@ -24,6 +24,13 @@
     Ve:'#db2777', Sa:'#1d4ed8', Ra:'#3d4554', Ke:'#3d4554', As:'#111827', MUN:'#7c3aed'
   };
 
+  // Own-rashi (rulership) sign indices per planet (0=Aries…11=Pisces). When a
+  // planet sits in a sign it rules, it (and that house's rashi number) is
+  // underlined. Rahu/Ketu own no sign.
+  var OWN = {
+    Su:[4], Mo:[3], Ma:[0,7], Me:[2,5], Ju:[8,11], Ve:[1,6], Sa:[9,10]
+  };
+
   // Exaltation (ex) and debilitation (de) sign index per planet (0=Aries…11=Pi).
   // ↑ shown when a planet sits in its exalted sign, ↓ when debilitated.
   var DIGN = {
@@ -157,30 +164,39 @@
       var mark = d ? (p.sign === d.ex ? '↑' : (p.sign === d.de ? '↓' : '')) : '';
       var txt = p.abbr + mark
         + (opts.showDeg && p.deg != null ? ' ' + p.deg + '°' : '');
-      byHouse[house].push({ abbr: p.abbr, txt: txt, retro: !!p.retro });
+      // Own rashi = the planet's sign in THIS chart is one it rules.
+      var own = !!(OWN[p.abbr] && OWN[p.abbr].indexOf(p.sign) >= 0);
+      byHouse[house].push({ abbr: p.abbr, txt: txt, retro: !!p.retro, own: own });
     });
 
     for (var hh = 1; hh <= 12; hh++) {
       var cx = C[hh][0], cy = C[hh][1];
       var signNum = ((ascSign + (hh - 1)) % 12);
 
-      // Rashi (sign) number only — black, tucked at the house's inner corner.
-      svg.appendChild(el('text', {
-        x: INNER[hh][0], y: INNER[hh][1] + 1.2, 'text-anchor':'middle',
-        'font-size':3.5, fill:'#000000', 'font-weight':'700'
-      }, String(signNum + 1)));
-
-      // Planets centred in the house body, colour-coded (Dasha palette).
       var items = byHouse[hh];
       var n = items.length;
+      // Underline the rashi number when an occupant rules this sign (own rashi).
+      var houseOwn = items.some(function (it) { return it.own; });
+
+      // Rashi (sign) number only — black, tucked at the house's inner corner.
+      var rnAttrs = {
+        x: INNER[hh][0], y: INNER[hh][1] + 1.2, 'text-anchor':'middle',
+        'font-size':3.5, fill:'#000000', 'font-weight':'700'
+      };
+      if (houseOwn) { rnAttrs['text-decoration'] = 'underline'; }
+      svg.appendChild(el('text', rnAttrs, String(signNum + 1)));
+
+      // Planets centred in the house body, colour-coded (Dasha palette).
       var lineH = 4.2;
       var startY = cy - ((n - 1) * lineH) / 2 + 1.3;
       for (var j = 0; j < n; j++) {
         var fs = opts.big ? 4.2 : 3.8;
-        var pt = el('text', {
+        var ptAttrs = {
           x: cx, y: startY + j * lineH, 'text-anchor':'middle',
           'font-size': fs, fill: COLOR[items[j].abbr] || '#111827', 'font-weight':'600'
-        }, items[j].txt);
+        };
+        if (items[j].own) { ptAttrs['text-decoration'] = 'underline'; }
+        var pt = el('text', ptAttrs, items[j].txt);
         // Retrograde: a small raised superscript "R" after the planet.
         if (items[j].retro) {
           var sup = el('tspan', {
