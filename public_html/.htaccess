@@ -17,3 +17,29 @@ RewriteRule ^(.+)$ index.php?r=$1 [QSA,L]
 <FilesMatch "^\.">
     Require all denied
 </FilesMatch>
+
+# --- Cache-busting -----------------------------------------------------------
+# Static assets carry a ?v=<mtime> query (see AutoBusiness\Core\Asset::url), so
+# their URL changes whenever the file changes — they can be cached aggressively.
+# HTML/PHP pages must always be revalidated so a new ?v is picked up at once.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(php|html?)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+</IfModule>
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css                "access plus 1 year"
+    ExpiresByType application/javascript  "access plus 1 year"
+    ExpiresByType text/javascript         "access plus 1 year"
+    ExpiresByType image/png               "access plus 1 year"
+    ExpiresByType image/jpeg              "access plus 1 year"
+    ExpiresByType image/svg+xml           "access plus 1 year"
+    ExpiresByType image/x-icon            "access plus 1 year"
+    ExpiresByType image/webp              "access plus 1 year"
+    ExpiresByType text/html               "access plus 0 seconds"
+</IfModule>

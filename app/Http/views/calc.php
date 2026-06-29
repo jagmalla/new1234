@@ -460,11 +460,12 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
   window.AB_YEAR   = <?= json_encode((int) $in['forYear']) ?>;
   window.AB_HOUSES = <?= json_encode($chart['houses'] ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
 </script>
-<script src="/assets/js/northchart.js"></script>
-<script src="/assets/js/dasha.js"></script>
-<script src="/assets/js/citysearch.js"></script>
-<script src="/assets/js/gochar.js"></script>
-<script src="/assets/js/varshaphal.js"></script>
+<?php $asset = static fn(string $p): string => \AutoBusiness\Core\Asset::url($p); ?>
+<script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/gochar.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/varshaphal.js')) ?>"></script>
 <script>
 (function () {
   // Birth-form city search -> fills lat/lon/tz (worldwide, Open-Meteo).

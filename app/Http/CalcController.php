@@ -22,6 +22,7 @@ final class CalcController
     public function show(): void
     {
         AdminGuard::require();
+        \AutoBusiness\Core\Asset::noCacheHtml(); // HTML always revalidated (cache-busting)
 
         // Defaults = the Moga reference birth (matches calc_test.php).
         // Birth date is entered DD-MM-YYYY.
