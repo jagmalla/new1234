@@ -199,6 +199,77 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         <?php endif; ?>
     </div>
 
+    <!-- Planet Prediction: (A) as house-lord (Bhavesh Phal) and (B) as placement
+         (Graha-in-Bhava). Built from the chart's ruled/placed houses. Both views. -->
+    <?php
+        $pp = $view['planetPhala'] ?? null;
+        $ppHi = \AutoBusiness\Astro\Phala\DashaPhalaRepository::LORDS_HI;
+        $ord2 = static function (int $n): string {
+            $s = ['th','st','nd','rd'];
+            $v = $n % 100;
+            return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
+        };
+    ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm" id="planet-phala-card">
+        <div class="flex flex-wrap items-end gap-x-6 gap-y-2 mb-3">
+            <h2 class="font-semibold">Planet Prediction <span class="text-xs text-gray-400 font-normal">(ग्रह फल)</span></h2>
+            <span class="text-xs text-gray-400">(A) as House-Lord — Bhavesh Phal &nbsp;·&nbsp; (B) as Placement — Graha in Bhava</span>
+        </div>
+        <?php if ($pp === null): ?>
+            <div class="text-gray-500 italic">Chart not available.</div>
+        <?php else: ?>
+            <?php if (!empty($pp['error'])): ?>
+            <div class="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                Database not reachable — staff note: <?= $h((string) $pp['error']) ?>.
+                Check <code>.env</code> DB settings and that <code>migrations/004_planet_phala.sql</code> is imported.
+            </div>
+            <?php endif; ?>
+            <div class="space-y-4">
+            <?php foreach ($pp['planets'] as $row):
+                $pl = $row['planet'];
+                $placed = (int) $row['placed_house'];
+                $rules = array_map(static fn($e) => (int) $e['ruled_house'], $row['lord_entries']);
+            ?>
+                <div class="border-t pt-3 first:border-t-0 first:pt-0">
+                    <div class="font-semibold text-gray-800 mb-1">
+                        <span style="color:<?= $pcolor($pl) ?>"><?= $h($pl) ?></span>
+                        <span class="text-gray-400 font-normal">(<?= $h($ppHi[$pl] ?? '') ?>)</span>
+                        <span class="text-xs text-gray-500 font-normal">
+                            — placed in <b><?= $ord2($placed) ?></b> house<?php
+                            echo $rules ? ', rules ' . implode(', ', array_map($ord2, $rules)) . ' house' . (count($rules) > 1 ? 's' : '') : ', rules no house (node)'; ?>
+                        </span>
+                    </div>
+                    <!-- (A) As House-Lord -->
+                    <div class="mb-1">
+                        <div class="text-xs font-semibold text-indigo-700 mb-0.5">(A) As House-Lord — Bhavesh Phal</div>
+                        <?php if (!$row['lord_entries']): ?>
+                            <div class="text-gray-500 italic text-sm">Not applicable — <?= $h($pl) ?> does not own a house.</div>
+                        <?php else: foreach ($row['lord_entries'] as $e): ?>
+                            <div class="mb-1">
+                                <span class="text-xs text-gray-500">Lord of <b><?= $ord2((int) $e['ruled_house']) ?></b> house, placed in <b><?= $ord2((int) $e['placed_house']) ?></b> house:</span>
+                                <?php if ($e['text'] !== null && $e['text'] !== ''): ?>
+                                    <div class="whitespace-pre-line text-gray-800"><?= $h((string) $e['text']) ?></div>
+                                <?php else: ?>
+                                    <div class="text-gray-500 italic">Summary not available yet for this combination.</div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <!-- (B) As Placement -->
+                    <div>
+                        <div class="text-xs font-semibold text-teal-700 mb-0.5">(B) As Placement — Graha in Bhava</div>
+                        <?php if ($row['placement_text'] !== null && $row['placement_text'] !== ''): ?>
+                            <div class="whitespace-pre-line text-gray-800"><?= $h((string) $row['placement_text']) ?></div>
+                        <?php else: ?>
+                            <div class="text-gray-500 italic">Coming soon — placement predictions not added yet.</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="space-y-6">
 

@@ -123,8 +123,69 @@ final class CalcController
                 // silent "not available" placeholder.
                 'error' => \AutoBusiness\Astro\Phala\DashaPhalaRepository::lastError(),
             ],
+            // Planet Prediction: per-planet (A) Bhavesh Phal (as house-lord) and
+            // (B) Graha-in-Bhava (as placement). Built from the chart's own
+            // ruled-house + placed-house knowledge.
+            'planetPhala' => $this->planetPhala($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';
+    }
+
+    /**
+     * Build the Planet Prediction payload: for each planet, the house(s) it
+     * rules (with the Bhavesh Phal text for "lord of that house placed in its
+     * current house") and its placement (Graha-in-Bhava, populated later).
+     *
+     * @return array{lang:string, error:?string, planets:array<int,array<string,mixed>>}|null
+     */
+    private function planetPhala(?array $chart, string $lang): ?array
+    {
+        if ($chart === null) {
+            return null;
+        }
+
+        $repo = \AutoBusiness\Astro\Phala\BhavPhalaRepository::class;
+        $order = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+        $houses = $chart['houses'] ?? [];
+
+        $out = [];
+        foreach ($order as $pl) {
+            if (!isset($chart['planets'][$pl])) {
+                continue;
+            }
+            $placed = (int) ($chart['planets'][$pl]['house'] ?? 0);
+
+            // Houses this planet rules = houses whose sign-lord is this planet.
+            $ruled = [];
+            foreach ($houses as $hn => $H) {
+                if (($H['lord'] ?? null) === $pl) {
+                    $ruled[] = (int) $hn;
+                }
+            }
+            sort($ruled);
+
+            $lordEntries = [];
+            foreach ($ruled as $rh) {
+                $lordEntries[] = [
+                    'ruled_house' => $rh,
+                    'placed_house' => $placed,
+                    'text' => $repo::bhavesh($rh, $placed, $lang),
+                ];
+            }
+
+            $out[] = [
+                'planet' => $pl,
+                'placed_house' => $placed,
+                'lord_entries' => $lordEntries,           // (A) Bhavesh Phal
+                'placement_text' => $repo::grahaBhava($pl, $placed, $lang), // (B) — null for now
+            ];
+        }
+
+        return [
+            'lang' => $lang,
+            'error' => \AutoBusiness\Astro\Phala\BhavPhalaRepository::lastError(),
+            'planets' => $out,
+        ];
     }
 
     /**
