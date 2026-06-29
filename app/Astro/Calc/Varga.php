@@ -54,6 +54,49 @@ final class Varga
     }
 
     /**
+     * Divisional degree (0..30) of a longitude *within its divisional sign* —
+     * the position the planet would show on the divisional chart, following PL's
+     * convention. A planet sits at the same fractional position inside its
+     * divisional part as it does inside that part in D1, expanded to a full sign:
+     * a planet 1/3 of the way through its navamsa part shows ~10° in D9.
+     *
+     * For the equal-part divisions this is fmod(deg, 30/N) / (30/N) * 30. D30
+     * (Trimsamsa) uses unequal portions, handled explicitly so the degree maps
+     * onto the same portion that {@see sign()} picks.
+     */
+    public static function degree(string $varga, float $lon): float
+    {
+        $lon = Charts::norm($lon);
+        $deg = fmod($lon, 30.0);
+
+        // Equal-part divisions: number of parts per sign.
+        $n = match ($varga) {
+            'D1' => 1, 'D3' => 3, 'D4' => 4, 'D7' => 7, 'D9' => 9,
+            'D10' => 10, 'D12' => 12, 'D20' => 20, 'D40' => 40,
+            default => 0,
+        };
+        if ($n > 0) {
+            $w = 30.0 / $n;
+            return fmod($deg, $w) / $w * 30.0;
+        }
+
+        if ($varga === 'D30') {
+            $signNum = ((int) floor($lon / 30.0) % 12) + 1; // 1-indexed
+            // Cumulative portion boundaries (odd vs even sign) — mirror trimsamsa().
+            $bounds = ($signNum % 2 === 1) ? [0, 5, 10, 18, 25, 30] : [0, 5, 12, 20, 25, 30];
+            for ($i = 0; $i < 5; $i++) {
+                if ($deg < $bounds[$i + 1] || $i === 4) {
+                    $start = (float) $bounds[$i];
+                    $width = (float) ($bounds[$i + 1] - $bounds[$i]);
+                    return ($deg - $start) / $width * 30.0;
+                }
+            }
+        }
+
+        return $deg;
+    }
+
+    /**
      * Start sign by modality (movable/fixed/dual) + part offset.
      * @param array{int,int,int} $starts [movable, fixed, dual] start signs
      */

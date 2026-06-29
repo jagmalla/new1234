@@ -237,14 +237,14 @@ final class CalculationEngine
                     'name' => $name,
                     'abbr' => $abbr[$name] ?? substr((string) $name, 0, 2),
                     'sign' => Varga::sign($v, $lon),
-                    'deg' => (int) floor(Charts::degInSign($lon)), // D1 whole degree, for labels
+                    'deg' => (int) floor(Varga::degree($v, $lon)), // degree within the divisional sign
                     'retro' => (bool) ($p['retro'] ?? false),
                 ];
             }
             $out[$v] = [
                 'label' => $label,
                 'asc_sign' => Varga::sign($v, $ascLon),
-                'asc_deg' => (int) floor(Charts::degInSign($ascLon)),
+                'asc_deg' => (int) floor(Varga::degree($v, $ascLon)),
                 'planets' => $planets,
             ];
         }
