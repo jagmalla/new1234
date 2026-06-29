@@ -334,7 +334,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti (net aspect on the cusp) + Planets&nbsp;in (benefic/malefic occupants) + Day-Night (Bhava Kaala). From&nbsp;Lord, Planets&nbsp;in and Day-Night match Parashara's Light; Dig&nbsp;Bala and Drishti use the standard BPHS formulas.</p>
+        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti + Planets&nbsp;in (benefic/malefic occupants) + Day-Night (Bhava Kaala). Drishti follows Parashara's Light (Sphuta-drishti curve at the whole-sign cusp, each planet weighted by benefic/malefic and Ishta/Kashta; nodes excluded). From&nbsp;Lord, Planets&nbsp;in, Day-Night and Drishti track Parashara's Light; Dig&nbsp;Bala uses the standard BPHS directional figure.</p>
     </div>
 
     <!-- D1 -->
