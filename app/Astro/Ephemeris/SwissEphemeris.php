@@ -97,10 +97,11 @@ final class SwissEphemeris implements EphemerisProviderInterface
             }
             $lon = (float) $parts[1];
             $speed = isset($parts[2]) ? (float) $parts[2] : 0.0;
-            // Sun & Moon never retrograde; Rahu (node) is always retrograde;
-            // the five star planets are retrograde when speed is negative.
-            $retro = ($name === 'Sun' || $name === 'Moon') ? false
-                : (($name === 'Rahu') ? true : $speed < 0.0);
+            // Sun & Moon never retrograde; Rahu/Ketu (nodes) move backwards by
+            // nature — their normal state — so it is NOT labelled retrograde (no
+            // "R"). The five star planets are retrograde when speed is negative.
+            $retro = ($name === 'Sun' || $name === 'Moon' || $name === 'Rahu')
+                ? false : $speed < 0.0;
             $byName[$name] = [
                 'lon' => $this->norm($lon),
                 'lat' => 0.0,
@@ -113,12 +114,13 @@ final class SwissEphemeris implements EphemerisProviderInterface
             throw new \RuntimeException('swetest output could not be parsed.');
         }
 
-        // Ketu is exactly opposite Rahu and shares its (retrograde) motion.
+        // Ketu is exactly opposite Rahu and shares its motion (node reverse
+        // motion is normal, so no retrograde marker).
         $byName['Ketu'] = [
             'lon' => $this->norm($byName['Rahu']['lon'] + 180.0),
             'lat' => 0.0,
             'speed' => $byName['Rahu']['speed'],
-            'retro' => true,
+            'retro' => false,
         ];
 
         return $byName;

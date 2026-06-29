@@ -49,15 +49,16 @@ final class AnalyticEphemeris implements EphemerisProviderInterface
         foreach ($bodies as $name => $b) {
             $delta = $this->normalizeSigned($next[$name]['lon'] - $b['lon']);
             $speed = $delta / $dt;
-            // Retrograde (Vakri) rules per body group:
+            // Retrograde (Vakri) DISPLAY flag per body group:
             //   • Sun & Moon are never retrograde.
             //   • Mars, Mercury, Jupiter, Venus, Saturn: retrograde when the
             //     apparent geocentric longitudinal velocity is negative.
-            //   • Rahu & Ketu (lunar nodes) are always retrograde (mean node).
-            if ($name === 'Sun' || $name === 'Moon') {
+            //   • Rahu & Ketu (lunar nodes) move backwards by nature — that is
+            //     their NORMAL state, so it is not labelled retrograde (no "R").
+            //     (Speed is still computed/placed correctly; only the marker is
+            //     suppressed. On the mean node they are reverse year-round.)
+            if ($name === 'Sun' || $name === 'Moon' || $name === 'Rahu' || $name === 'Ketu') {
                 $retro = false;
-            } elseif ($name === 'Rahu' || $name === 'Ketu') {
-                $retro = true;
             } else {
                 $retro = $speed < 0.0;
             }
