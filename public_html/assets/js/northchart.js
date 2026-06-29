@@ -156,9 +156,8 @@
       var d = DIGN[p.abbr];
       var mark = d ? (p.sign === d.ex ? '↑' : (p.sign === d.de ? '↓' : '')) : '';
       var txt = p.abbr + mark
-        + (opts.showDeg && p.deg != null ? ' ' + p.deg + '°' : '')
-        + (p.retro ? ' R' : '');
-      byHouse[house].push({ abbr: p.abbr, txt: txt });
+        + (opts.showDeg && p.deg != null ? ' ' + p.deg + '°' : '');
+      byHouse[house].push({ abbr: p.abbr, txt: txt, retro: !!p.retro });
     });
 
     for (var hh = 1; hh <= 12; hh++) {
@@ -177,11 +176,20 @@
       var lineH = 4.2;
       var startY = cy - ((n - 1) * lineH) / 2 + 1.3;
       for (var j = 0; j < n; j++) {
-        svg.appendChild(el('text', {
+        var fs = opts.big ? 4.2 : 3.8;
+        var pt = el('text', {
           x: cx, y: startY + j * lineH, 'text-anchor':'middle',
-          'font-size': opts.big ? 4.2 : 3.8,
-          fill: COLOR[items[j].abbr] || '#111827', 'font-weight':'600'
-        }, items[j].txt));
+          'font-size': fs, fill: COLOR[items[j].abbr] || '#111827', 'font-weight':'600'
+        }, items[j].txt);
+        // Retrograde: a small raised superscript "R" after the planet.
+        if (items[j].retro) {
+          var sup = el('tspan', {
+            'font-size': (fs * 0.6).toFixed(2), 'baseline-shift': 'super', fill: '#b91c1c'
+          });
+          sup.textContent = 'R';
+          pt.appendChild(sup);
+        }
+        svg.appendChild(pt);
       }
     }
 

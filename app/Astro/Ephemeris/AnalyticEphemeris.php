@@ -24,10 +24,11 @@ use AutoBusiness\Astro\Time\JulianDay;
 final class AnalyticEphemeris implements EphemerisProviderInterface
 {
     /**
-     * @param string $nodeType 'true' (osculating, matches most modern software
-     *               incl. Parashara's Light) or 'mean'.
+     * @param string $nodeType 'mean' (default; Rahu/Ketu always retrograde,
+     *               matching classical BPHS / Parashara's Light) or 'true'
+     *               (osculating).
      */
-    public function __construct(private readonly string $nodeType = 'true')
+    public function __construct(private readonly string $nodeType = 'mean')
     {
     }
 
@@ -48,11 +49,23 @@ final class AnalyticEphemeris implements EphemerisProviderInterface
         foreach ($bodies as $name => $b) {
             $delta = $this->normalizeSigned($next[$name]['lon'] - $b['lon']);
             $speed = $delta / $dt;
+            // Retrograde (Vakri) rules per body group:
+            //   • Sun & Moon are never retrograde.
+            //   • Mars, Mercury, Jupiter, Venus, Saturn: retrograde when the
+            //     apparent geocentric longitudinal velocity is negative.
+            //   • Rahu & Ketu (lunar nodes) are always retrograde (mean node).
+            if ($name === 'Sun' || $name === 'Moon') {
+                $retro = false;
+            } elseif ($name === 'Rahu' || $name === 'Ketu') {
+                $retro = true;
+            } else {
+                $retro = $speed < 0.0;
+            }
             $out[$name] = [
                 'lon'   => $this->normalize($b['lon']),
                 'lat'   => $b['lat'],
                 'speed' => $speed,
-                'retro' => $speed < 0.0,
+                'retro' => $retro,
             ];
         }
         return $out;

@@ -19,9 +19,10 @@ final class EphemerisFactory
 {
     public static function create(): EphemerisProviderInterface
     {
-        // Node type: 'true' (osculating, matches most modern software incl.
-        // Parashara's Light) by default; admin-overridable via .env NODE_TYPE.
-        $nodeType = strtolower(Env::get('NODE_TYPE', 'true') ?? 'true') === 'mean' ? 'mean' : 'true';
+        // Node type: 'mean' by default — Rahu/Ketu are then always retrograde,
+        // matching classical BPHS software and Parashara's Light. Admin-overridable
+        // via .env NODE_TYPE=true (osculating).
+        $nodeType = strtolower(Env::get('NODE_TYPE', 'mean') ?? 'mean') === 'true' ? 'true' : 'mean';
 
         $binary = Env::get('SWETEST_PATH');
         if (SwissEphemeris::isAvailable($binary)) {
