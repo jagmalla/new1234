@@ -37,6 +37,10 @@ try {
             (new CalcController())->varshaphalJson();
             break;
 
+        case 'GET calc/dashaPhala':
+            (new CalcController())->dashaPhalaJson();
+            break;
+
         case 'POST api/workflow/save':
             (new CanvasController())->save();
             break;

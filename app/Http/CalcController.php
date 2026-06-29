@@ -108,8 +108,47 @@ final class CalcController
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
+            // Dasha Prediction: dropdowns default to the running Maha/Antar; the
+            // matching phala text (if seeded) is pre-rendered so it shows at once.
+            'phala' => [
+                'lang' => (string) ($_GET['phala_lang'] ?? 'hi'),
+                'maha' => $dashaNow['maha']['lord'] ?? 'Sun',
+                'antar' => $dashaNow['antar']['lord'] ?? 'Sun',
+                'text' => \AutoBusiness\Astro\Phala\DashaPhalaRepository::find(
+                    $dashaNow['maha']['lord'] ?? 'Sun',
+                    $dashaNow['antar']['lord'] ?? 'Sun',
+                    (string) ($_GET['phala_lang'] ?? 'hi')
+                ),
+            ],
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';
+    }
+
+    /**
+     * JSON endpoint for the Dasha Prediction dropdowns: returns the Positive /
+     * Negative / Remedy summary for a Maha/Antar combination in the requested
+     * language, or available=false when that combination has no text yet.
+     */
+    public function dashaPhalaJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $maha  = (string) ($_GET['maha'] ?? '');
+        $antar = (string) ($_GET['antar'] ?? '');
+        $lang  = (string) ($_GET['lang'] ?? 'hi');
+
+        $row = \AutoBusiness\Astro\Phala\DashaPhalaRepository::find($maha, $antar, $lang);
+
+        echo json_encode([
+            'available' => $row !== null,
+            'maha'      => $maha,
+            'antar'     => $antar,
+            'language'  => $lang,
+            'positive'  => $row['positive_text'] ?? null,
+            'negative'  => $row['negative_text'] ?? null,
+            'remedy'    => $row['remedy_text'] ?? null,
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     /**

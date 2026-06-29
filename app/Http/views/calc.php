@@ -150,6 +150,49 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         </div>
     </div>
 
+    <!-- Dasha Prediction (दशा फल): Maha/Antar dropdowns default to the running
+         dasha; text comes from the editable dasha_phala table. Shown in both views. -->
+    <?php
+        $phala = $view['phala'] ?? ['lang' => 'hi', 'maha' => 'Sun', 'antar' => 'Sun', 'text' => null];
+        $pLords = \AutoBusiness\Astro\Phala\DashaPhalaRepository::LORDS;
+        $pHi    = \AutoBusiness\Astro\Phala\DashaPhalaRepository::LORDS_HI;
+        $pOpt = static function (string $selected) use ($pLords, $pHi, $h): string {
+            $out = '';
+            foreach ($pLords as $L) {
+                $out .= '<option value="' . $h($L) . '"' . ($L === $selected ? ' selected' : '') . '>'
+                      . $h($L) . ' / ' . $h($pHi[$L] ?? '') . '</option>';
+            }
+            return $out;
+        };
+        $pText = $phala['text'];
+    ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm" id="dasha-phala-card"
+         data-lang="<?= $h((string) $phala['lang']) ?>">
+        <div class="flex flex-wrap items-end gap-x-6 gap-y-3 mb-3">
+            <h2 class="font-semibold">Dasha Prediction <span class="text-xs text-gray-400 font-normal">(दशा फल)</span></h2>
+            <label class="flex flex-col gap-1"><span class="text-xs text-gray-500">Mahadasha</span>
+                <select id="phala-maha" class="border rounded px-2 py-1"><?= $pOpt((string) $phala['maha']) ?></select></label>
+            <label class="flex flex-col gap-1"><span class="text-xs text-gray-500">Antardasha</span>
+                <select id="phala-antar" class="border rounded px-2 py-1"><?= $pOpt((string) $phala['antar']) ?></select></label>
+            <span class="text-xs text-gray-400">Running now: <b><?= $h((string) $phala['maha']) ?></b> / <b><?= $h((string) $phala['antar']) ?></b></span>
+        </div>
+        <div id="phala-sections" class="grid grid-cols-1 md:grid-cols-3 gap-4<?= $pText ? '' : ' hidden' ?>">
+            <div>
+                <div class="font-semibold text-green-700 mb-1">सकारात्मक फल <span class="text-gray-400 font-normal">(Positive)</span></div>
+                <div id="phala-pos" class="whitespace-pre-line text-gray-800"><?= $h((string) ($pText['positive_text'] ?? '')) ?></div>
+            </div>
+            <div>
+                <div class="font-semibold text-red-700 mb-1">नकारात्मक फल <span class="text-gray-400 font-normal">(Negative)</span></div>
+                <div id="phala-neg" class="whitespace-pre-line text-gray-800"><?= $h((string) ($pText['negative_text'] ?? '')) ?></div>
+            </div>
+            <div>
+                <div class="font-semibold text-blue-700 mb-1">उपाय <span class="text-gray-400 font-normal">(Remedy)</span></div>
+                <div id="phala-rem" class="whitespace-pre-line text-gray-800"><?= $h((string) ($pText['remedy_text'] ?? '')) ?></div>
+            </div>
+        </div>
+        <div id="phala-empty" class="text-gray-500 italic<?= $pText ? ' hidden' : '' ?>">Summary not available yet for this combination.</div>
+    </div>
+
     <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="space-y-6">
 
@@ -558,6 +601,43 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
   };
   bindFmt('[name="date"]', normDate);
   bindFmt('[name="time"]', normTime);
+
+  // Dasha Prediction: reload the Positive/Negative/Remedy summary when either
+  // dropdown changes. Defaults are server-rendered to the running Maha/Antar.
+  (function () {
+    var card = document.getElementById('dasha-phala-card');
+    if (!card) { return; }
+    var mSel = document.getElementById('phala-maha');
+    var aSel = document.getElementById('phala-antar');
+    var sec = document.getElementById('phala-sections');
+    var empty = document.getElementById('phala-empty');
+    var pos = document.getElementById('phala-pos');
+    var neg = document.getElementById('phala-neg');
+    var rem = document.getElementById('phala-rem');
+    var lang = card.getAttribute('data-lang') || 'hi';
+    var load = function () {
+      var q = '?maha=' + encodeURIComponent(mSel.value) +
+              '&antar=' + encodeURIComponent(aSel.value) +
+              '&lang=' + encodeURIComponent(lang);
+      fetch('/calc/dashaPhala' + q, { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.available) {
+            pos.textContent = d.positive || '';
+            neg.textContent = d.negative || '';
+            rem.textContent = d.remedy || '';
+            sec.classList.remove('hidden');
+            empty.classList.add('hidden');
+          } else {
+            sec.classList.add('hidden');
+            empty.classList.remove('hidden');
+          }
+        })
+        .catch(function () { sec.classList.add('hidden'); empty.classList.remove('hidden'); });
+    };
+    mSel.addEventListener('change', load);
+    aSel.addEventListener('change', load);
+  })();
 
   // Birth-form city search -> fills lat/lon/tz (worldwide, Open-Meteo).
   if (window.ABCitySearch) {
