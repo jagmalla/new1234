@@ -319,7 +319,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                 $line .= 'Planet is ' . implode(', ', $ps) . ', ';
             }
             $line .= 'Rashi is ' . $H['sign'] . ' (' . (int) $H['rashi_num'] . '), ';
-            $line .= 'Bhav Swami is ' . $H['lord'] . ', ';
+            $line .= 'House Lord is ' . $H['lord'] . ', ';
             $line .= 'Ashtakvarga score is ' . (int) $H['av'] . ', ';
             $line .= 'Bhav Bal is ' . number_format((float) ($H['bb_virupa'] ?? $H['bb'] * 60), 0) . '.';
             $copyLines[] = $line;
