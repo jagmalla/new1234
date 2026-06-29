@@ -51,8 +51,13 @@ final class BhavPhalaRepository
         }
     }
 
-    /** Graha-in-Bhava: prediction for $planet placed in $placedHouse (empty for now). */
-    public static function grahaBhava(string $planet, int $placedHouse, string $language = 'hi'): ?string
+    /**
+     * Graha-in-Bhava: Positive/Negative prediction for $planet placed in
+     * $placedHouse. Returns null if absent / DB unreachable.
+     *
+     * @return array{positive_text:?string, negative_text:?string}|null
+     */
+    public static function grahaBhava(string $planet, int $placedHouse, string $language = 'hi'): ?array
     {
         if ($placedHouse < 1 || $placedHouse > 12) {
             return null;
@@ -60,13 +65,13 @@ final class BhavPhalaRepository
 
         try {
             $stmt = Database::pdo()->prepare(
-                'SELECT prediction_text FROM graha_bhava_phal
+                'SELECT positive_text, negative_text FROM graha_bhava_phal
                   WHERE planet = ? AND placed_house = ? AND language = ? LIMIT 1'
             );
             $stmt->execute([$planet, $placedHouse, $language]);
-            $val = $stmt->fetchColumn();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            return $val === false ? null : (string) $val;
+            return is_array($row) ? $row : null;
         } catch (Throwable $e) {
             self::$lastError = $e->getMessage();
             error_log('BhavPhala grahaBhava lookup failed: ' . $e->getMessage());

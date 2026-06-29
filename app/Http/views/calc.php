@@ -257,11 +257,18 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                     </div>
                     <!-- (B) As Placement -->
                     <div>
-                        <div class="text-xs font-semibold text-teal-700 mb-0.5">(B) As Placement — Graha in Bhava</div>
-                        <?php if ($row['placement_text'] !== null && $row['placement_text'] !== ''): ?>
-                            <div class="whitespace-pre-line text-gray-800"><?= $h((string) $row['placement_text']) ?></div>
+                        <div class="text-xs font-semibold text-teal-700 mb-0.5">(B) As Placement — Graha in Bhava <span class="text-gray-400 font-normal">(in <?= $ord2($placed) ?> house)</span></div>
+                        <?php $plc = $row['placement']; if ($plc !== null && (($plc['positive_text'] ?? '') !== '' || ($plc['negative_text'] ?? '') !== '')): ?>
+                            <div class="mb-1">
+                                <span class="text-xs font-semibold text-green-700">शुभ फल (Positive):</span>
+                                <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['positive_text'] ?? '')) ?></div>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-red-700">अशुभ फल (Negative):</span>
+                                <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['negative_text'] ?? '')) ?></div>
+                            </div>
                         <?php else: ?>
-                            <div class="text-gray-500 italic">Coming soon — placement predictions not added yet.</div>
+                            <div class="text-gray-500 italic">Summary not available yet for this placement.</div>
                         <?php endif; ?>
                     </div>
                 </div>

@@ -176,8 +176,8 @@ final class CalcController
             $out[] = [
                 'planet' => $pl,
                 'placed_house' => $placed,
-                'lord_entries' => $lordEntries,           // (A) Bhavesh Phal
-                'placement_text' => $repo::grahaBhava($pl, $placed, $lang), // (B) — null for now
+                'lord_entries' => $lordEntries,            // (A) Bhavesh Phal
+                'placement' => $repo::grahaBhava($pl, $placed, $lang), // (B) Graha-in-Bhava {positive,negative}|null
             ];
         }
 
