@@ -19,10 +19,12 @@ final class EphemerisFactory
 {
     public static function create(): EphemerisProviderInterface
     {
-        // Node type: 'mean' by default — Rahu/Ketu are then always retrograde,
-        // matching classical BPHS software and Parashara's Light. Admin-overridable
-        // via .env NODE_TYPE=true (osculating).
-        $nodeType = strtolower(Env::get('NODE_TYPE', 'mean') ?? 'mean') === 'true' ? 'true' : 'mean';
+        // Node type: 'true' (osculating) by default — matches Parashara's Light,
+        // whose Rahu/Ketu sit on the true node (e.g. the reference D9 places Rahu
+        // with the Lagna and Ketu with Mercury). The retrograde "(R)" marker stays
+        // suppressed for the nodes either way. Admin-overridable via .env
+        // NODE_TYPE=mean (classical mean node, reverse year-round).
+        $nodeType = strtolower(Env::get('NODE_TYPE', 'true') ?? 'true') === 'mean' ? 'mean' : 'true';
 
         $binary = Env::get('SWETEST_PATH');
         if (SwissEphemeris::isAvailable($binary)) {
