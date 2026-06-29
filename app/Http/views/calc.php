@@ -64,6 +64,9 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             background: linear-gradient(90deg, #dbeafe 0%, #eff5ff 55%, rgba(255,255,255,0) 100%);
             border-left: 4px solid #2563eb; padding: 5px 10px; border-radius: 4px;
         }
+        /* Prediction body text +20% (over text-sm) for readability. */
+        #phala-pos, #phala-neg, #phala-rem,
+        #planet-phala-card .whitespace-pre-line { font-size: 1.05rem; line-height: 1.6; }
     </style>
 </head>
 <body class="text-gray-900 p-4 md:p-8">
@@ -175,7 +178,9 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <label class="flex flex-col gap-1"><span class="text-xs text-gray-500">Antardasha</span>
                 <select id="phala-antar" class="border rounded px-2 py-1"><?= $pOpt((string) $phala['antar']) ?></select></label>
             <span class="text-xs text-gray-400">Running now: <b><?= $h((string) $phala['maha']) ?></b> / <b><?= $h((string) $phala['antar']) ?></b></span>
+            <button type="button" class="phala-toggle ml-auto text-xs bg-gray-100 hover:bg-gray-200 border rounded px-2 py-1 font-semibold" data-target="dasha-body" aria-expanded="true">Collapse ▴</button>
         </div>
+        <div id="dasha-body">
         <div id="phala-sections" class="grid grid-cols-1 md:grid-cols-3 gap-4<?= $pText ? '' : ' hidden' ?>">
             <div>
                 <div class="font-semibold text-green-700 mb-1">सकारात्मक फल <span class="text-gray-400 font-normal">(Positive)</span></div>
@@ -197,6 +202,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             Check the <code>.env</code> DB settings (DB_HOST / DB_NAME / DB_USER / DB_PASS) match the database you imported into.
         </div>
         <?php endif; ?>
+        </div><!-- /#dasha-body -->
     </div>
 
     <!-- Planet Prediction: (A) as house-lord (Bhavesh Phal) and (B) as placement
@@ -214,66 +220,82 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         <div class="flex flex-wrap items-end gap-x-6 gap-y-2 mb-3">
             <h2 class="font-semibold">Planet Prediction <span class="text-xs text-gray-400 font-normal">(ग्रह फल)</span></h2>
             <span class="text-xs text-gray-400">(A) as House-Lord — Bhavesh Phal &nbsp;·&nbsp; (B) as Placement — Graha in Bhava</span>
+            <button type="button" class="phala-toggle ml-auto text-xs bg-gray-100 hover:bg-gray-200 border rounded px-2 py-1 font-semibold" data-target="planet-body" aria-expanded="true">Collapse ▴</button>
         </div>
         <?php if ($pp === null): ?>
             <div class="text-gray-500 italic">Chart not available.</div>
         <?php else: ?>
+            <div id="planet-body">
             <?php if (!empty($pp['error'])): ?>
             <div class="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                 Database not reachable — staff note: <?= $h((string) $pp['error']) ?>.
                 Check <code>.env</code> DB settings and that <code>migrations/004_planet_phala.sql</code> is imported.
             </div>
             <?php endif; ?>
-            <div class="space-y-4">
-            <?php foreach ($pp['planets'] as $row):
-                $pl = $row['planet'];
-                $placed = (int) $row['placed_house'];
-                $rules = array_map(static fn($e) => (int) $e['ruled_house'], $row['lord_entries']);
-            ?>
-                <div class="border-t pt-3 first:border-t-0 first:pt-0">
-                    <div class="font-semibold text-gray-800 mb-1">
-                        <span style="color:<?= $pcolor($pl) ?>"><?= $h($pl) ?></span>
-                        <span class="text-gray-400 font-normal">(<?= $h($ppHi[$pl] ?? '') ?>)</span>
-                        <span class="text-xs text-gray-500 font-normal">
-                            — placed in <b><?= $ord2($placed) ?></b> house<?php
-                            echo $rules ? ', rules ' . implode(', ', array_map($ord2, $rules)) . ' house' . (count($rules) > 1 ? 's' : '') : ', rules no house (node)'; ?>
-                        </span>
-                    </div>
-                    <!-- (A) As House-Lord -->
-                    <div class="mb-1">
-                        <div class="text-xs font-semibold text-indigo-700 mb-0.5">(A) As House-Lord — Bhavesh Phal</div>
-                        <?php if (!$row['lord_entries']): ?>
-                            <div class="text-gray-500 italic text-sm">Not applicable — <?= $h($pl) ?> does not own a house.</div>
-                        <?php else: foreach ($row['lord_entries'] as $e): ?>
-                            <div class="mb-1">
-                                <span class="text-xs text-gray-500">Lord of <b><?= $ord2((int) $e['ruled_house']) ?></b> house, placed in <b><?= $ord2((int) $e['placed_house']) ?></b> house:</span>
-                                <?php if ($e['text'] !== null && $e['text'] !== ''): ?>
-                                    <div class="whitespace-pre-line text-gray-800"><?= $h((string) $e['text']) ?></div>
-                                <?php else: ?>
-                                    <div class="text-gray-500 italic">Summary not available yet for this combination.</div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; endif; ?>
-                    </div>
-                    <!-- (B) As Placement -->
-                    <div>
-                        <div class="text-xs font-semibold text-teal-700 mb-0.5">(B) As Placement — Graha in Bhava <span class="text-gray-400 font-normal">(in <?= $ord2($placed) ?> house)</span></div>
-                        <?php $plc = $row['placement']; if ($plc !== null && (($plc['positive_text'] ?? '') !== '' || ($plc['negative_text'] ?? '') !== '')): ?>
-                            <div class="mb-1">
-                                <span class="text-xs font-semibold text-green-700">शुभ फल (Positive):</span>
-                                <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['positive_text'] ?? '')) ?></div>
-                            </div>
-                            <div>
-                                <span class="text-xs font-semibold text-red-700">अशुभ फल (Negative):</span>
-                                <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['negative_text'] ?? '')) ?></div>
-                            </div>
-                        <?php else: ?>
-                            <div class="text-gray-500 italic">Summary not available yet for this placement.</div>
-                        <?php endif; ?>
+            <!-- Two columns: pick a planet (left) -> its prediction (right, scrolls). -->
+            <div class="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-4" id="planet-grid">
+                <div class="sm:border-r sm:pr-2 overflow-y-auto" style="max-height:460px">
+                    <div class="flex sm:flex-col flex-wrap gap-1">
+                    <?php foreach ($pp['planets'] as $i => $row): $pl = $row['planet']; ?>
+                        <button type="button" class="planet-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100 <?= $i === 0 ? 'bg-blue-50 border-blue-200 font-semibold' : '' ?>" data-planet="<?= $h($pl) ?>">
+                            <span style="color:<?= $pcolor($pl) ?>"><?= $h($pl) ?></span>
+                            <span class="text-gray-400 text-xs">(<?= $h($ppHi[$pl] ?? '') ?>)</span>
+                        </button>
+                    <?php endforeach; ?>
                     </div>
                 </div>
-            <?php endforeach; ?>
+                <div class="overflow-y-auto pr-1" style="max-height:460px" id="planet-detail-pane">
+                    <?php foreach ($pp['planets'] as $i => $row):
+                        $pl = $row['planet'];
+                        $placed = (int) $row['placed_house'];
+                        $rules = array_map(static fn($e) => (int) $e['ruled_house'], $row['lord_entries']);
+                    ?>
+                    <div class="planet-detail<?= $i === 0 ? '' : ' hidden' ?>" data-planet="<?= $h($pl) ?>">
+                        <div class="font-semibold text-gray-800 mb-1">
+                            <span style="color:<?= $pcolor($pl) ?>"><?= $h($pl) ?></span>
+                            <span class="text-gray-400 font-normal">(<?= $h($ppHi[$pl] ?? '') ?>)</span>
+                            <span class="text-xs text-gray-500 font-normal">
+                                — placed in <b><?= $ord2($placed) ?></b> house<?php
+                                echo $rules ? ', rules ' . implode(', ', array_map($ord2, $rules)) . ' house' . (count($rules) > 1 ? 's' : '') : ', rules no house (node)'; ?>
+                            </span>
+                        </div>
+                        <!-- (A) As House-Lord -->
+                        <div class="mb-2">
+                            <div class="text-xs font-semibold text-indigo-700 mb-0.5">(A) As House-Lord — Bhavesh Phal</div>
+                            <?php if (!$row['lord_entries']): ?>
+                                <div class="text-gray-500 italic">Not applicable — <?= $h($pl) ?> does not own a house.</div>
+                            <?php else: foreach ($row['lord_entries'] as $e): ?>
+                                <div class="mb-1">
+                                    <span class="text-xs text-gray-500">Lord of <b><?= $ord2((int) $e['ruled_house']) ?></b> house, placed in <b><?= $ord2((int) $e['placed_house']) ?></b> house:</span>
+                                    <?php if ($e['text'] !== null && $e['text'] !== ''): ?>
+                                        <div class="whitespace-pre-line text-gray-800"><?= $h((string) $e['text']) ?></div>
+                                    <?php else: ?>
+                                        <div class="text-gray-500 italic">Summary not available yet for this combination.</div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; endif; ?>
+                        </div>
+                        <!-- (B) As Placement -->
+                        <div>
+                            <div class="text-xs font-semibold text-teal-700 mb-0.5">(B) As Placement — Graha in Bhava <span class="text-gray-400 font-normal">(in <?= $ord2($placed) ?> house)</span></div>
+                            <?php $plc = $row['placement']; if ($plc !== null && (($plc['positive_text'] ?? '') !== '' || ($plc['negative_text'] ?? '') !== '')): ?>
+                                <div class="mb-1">
+                                    <span class="text-xs font-semibold text-green-700">शुभ फल (Positive):</span>
+                                    <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['positive_text'] ?? '')) ?></div>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-red-700">अशुभ फल (Negative):</span>
+                                    <div class="whitespace-pre-line text-gray-800"><?= $h((string) ($plc['negative_text'] ?? '')) ?></div>
+                                </div>
+                            <?php else: ?>
+                                <div class="text-gray-500 italic">Summary not available yet for this placement.</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
+            </div><!-- /#planet-body -->
         <?php endif; ?>
     </div>
 
@@ -721,6 +743,43 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     };
     mSel.addEventListener('change', load);
     aSel.addEventListener('change', load);
+  })();
+
+  // Collapse / expand the prediction cards (Dasha & Planet rows).
+  (function () {
+    document.querySelectorAll('.phala-toggle').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var body = document.getElementById(btn.getAttribute('data-target'));
+        if (!body) { return; }
+        var open = body.classList.toggle('hidden') === false;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? 'Collapse ▴' : 'Expand ▾';
+      });
+    });
+  })();
+
+  // Planet Prediction: pick a planet (left) -> show only its detail (right).
+  (function () {
+    var card = document.getElementById('planet-phala-card');
+    if (!card) { return; }
+    var picks = card.querySelectorAll('.planet-pick');
+    var details = card.querySelectorAll('.planet-detail');
+    var pane = document.getElementById('planet-detail-pane');
+    picks.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pl = btn.getAttribute('data-planet');
+        details.forEach(function (d) {
+          d.classList.toggle('hidden', d.getAttribute('data-planet') !== pl);
+        });
+        picks.forEach(function (b) {
+          var on = b === btn;
+          b.classList.toggle('bg-blue-50', on);
+          b.classList.toggle('border-blue-200', on);
+          b.classList.toggle('font-semibold', on);
+        });
+        if (pane) { pane.scrollTop = 0; }
+      });
+    });
   })();
 
   // Birth-form city search -> fills lat/lon/tz (worldwide, Open-Meteo).
