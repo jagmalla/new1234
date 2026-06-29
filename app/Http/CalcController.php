@@ -53,7 +53,7 @@ final class CalcController
             $lon = self::parseAngle($lonIn);
             $tz = self::parseTz($tzIn);
             [$Y, $Mo, $D] = self::parseDate($date);   // accepts DD-MM-YYYY or YYYY-MM-DD
-            [$H, $Mi] = array_map('intval', array_pad(explode(':', $time), 2, '0'));
+            [$H, $Mi] = self::parseTime($time);       // accepts HH:MM or HH MM
 
             // Active Varsha year = the annual chart whose Varsha Pravesh (≈ the
             // birthday) contains today. Before this year's birthday it is last year.
@@ -89,7 +89,8 @@ final class CalcController
             // can rebuild the natal chart for any transit instant/place.
             $birthJs = [
                 'date' => sprintf('%04d-%02d-%02d', $Y, $Mo, $D), // ISO for JS endpoints
-                'time' => $time,
+                'time' => sprintf('%02d:%02d', $H, $Mi),          // normalised HH:MM
+
                 'lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'ayanamsa' => $ayanamsa,
             ];
         } catch (\Throwable $e) {
@@ -205,13 +206,28 @@ final class CalcController
      */
     public static function parseDate(string $s): array
     {
-        $parts = preg_split('/[-\/.]/', trim($s)) ?: [];
+        // Separators: dash, slash, dot or whitespace (e.g. 01-12-1980 or 1 12 1980).
+        $parts = preg_split('/[-\/.\s]+/', trim($s), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         if (count($parts) !== 3) {
             return [(int) date('Y'), 1, 1];
         }
         [$a, $b, $c] = array_map('intval', $parts);
         // A 4-digit first field means YYYY-MM-DD; otherwise DD-MM-YYYY.
         return $a > 31 ? [$a, $b, $c] : [$c, $b, $a];
+    }
+
+    /**
+     * Parse a time entered as HH:MM (preferred) or HH MM into [hour, minute].
+     * Colon or whitespace separators are accepted.
+     *
+     * @return array{0:int,1:int}
+     */
+    public static function parseTime(string $s): array
+    {
+        $parts = preg_split('/[:\s.]+/', trim($s), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $h = (int) ($parts[0] ?? 0);
+        $m = (int) ($parts[1] ?? 0);
+        return [$h, $m];
     }
 
     /** Decimal or DMS-with-direction-letter angle -> signed decimal degrees. */

@@ -84,9 +84,9 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                     <?php endforeach; ?>
                 </select></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Date (DD-MM-YYYY)</span>
-                <input name="date" value="<?= $h($in['date']) ?>" placeholder="DD-MM-YYYY" class="border rounded px-2 py-1"></label>
+                <input name="date" value="<?= $h($in['date']) ?>" placeholder="DD-MM-YYYY or DD MM YYYY" class="border rounded px-2 py-1"></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Time (HH:MM)</span>
-                <input name="time" value="<?= $h($in['time']) ?>" class="border rounded px-2 py-1"></label>
+                <input name="time" value="<?= $h($in['time']) ?>" placeholder="HH:MM or HH MM" class="border rounded px-2 py-1"></label>
 
             <label class="flex flex-col gap-1 relative col-span-2 md:col-span-3"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
                 <input id="b-place" name="place" value="<?= $h($in['place']) ?>" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
