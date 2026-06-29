@@ -73,14 +73,24 @@ final class DashaPhalaRepository
      */
     public static function diagnostics(string $maha, string $antar, string $language = 'hi'): array
     {
+        // Reveal exactly what the app loaded from .env so credential typos /
+        // truncation / hidden characters are easy to spot. The password itself
+        // is never returned — only its length and whether trailing spaces exist.
+        $env = static fn(string $k, string $def = '') => (string) (\AutoBusiness\Core\Env::get($k, $def) ?? $def);
+        $pass = $env('DB_PASS');
         $d = [
-            'db_connected' => false,
-            'db_name'      => (string) (\AutoBusiness\Core\Env::get('DB_NAME', '') ?? ''),
-            'db_host'      => (string) (\AutoBusiness\Core\Env::get('DB_HOST', '127.0.0.1') ?? '127.0.0.1'),
-            'table_exists' => false,
-            'row_count'    => 0,
-            'row_found'    => false,
-            'error'        => null,
+            'db_connected'   => false,
+            'env_db_host'    => $env('DB_HOST', '127.0.0.1'),
+            'env_db_port'    => $env('DB_PORT', '3306'),
+            'env_db_name'    => $env('DB_NAME'),
+            'env_db_user'    => $env('DB_USER'),
+            'env_db_user_len'=> strlen($env('DB_USER')),
+            'env_pass_len'   => strlen($pass),
+            'env_pass_has_edge_space' => $pass !== '' && ($pass[0] === ' ' || $pass[-1] === ' '),
+            'table_exists'   => false,
+            'row_count'      => 0,
+            'row_found'      => false,
+            'error'          => null,
         ];
 
         try {
