@@ -525,6 +525,40 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
 <script src="<?= $h($asset('/assets/js/varshaphal.js')) ?>"></script>
 <script>
 (function () {
+  // Auto-correct the date/time fields to canonical form when the user leaves
+  // the box (blur). Accepts dash/slash/dot/space separators for the date and
+  // colon/space for the time; e.g. "1 12 1980" -> "01-12-1980", "12 31" -> "12:31".
+  var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+
+  var normDate = function (raw) {
+    var p = String(raw).trim().split(/[-\/.\s]+/).filter(Boolean);
+    if (p.length !== 3 || p.some(function (x) { return !/^\d+$/.test(x); })) { return raw; }
+    var a = parseInt(p[0], 10), b = parseInt(p[1], 10), c = parseInt(p[2], 10);
+    // 4-digit (>31) first field means YYYY-MM-DD; otherwise DD-MM-YYYY.
+    var d, m, y;
+    if (a > 31) { y = a; m = b; d = c; } else { d = a; m = b; y = c; }
+    if (d < 1 || d > 31 || m < 1 || m > 12) { return raw; }
+    return pad2(d) + '-' + pad2(m) + '-' + y;
+  };
+
+  var normTime = function (raw) {
+    var p = String(raw).trim().split(/[:\s.]+/).filter(Boolean);
+    if (!p.length || p.some(function (x) { return !/^\d+$/.test(x); })) { return raw; }
+    var h = parseInt(p[0], 10), mi = parseInt(p[1] || '0', 10);
+    if (h > 23 || mi > 59) { return raw; }
+    return pad2(h) + ':' + pad2(mi);
+  };
+
+  var bindFmt = function (sel, fn) {
+    var el = document.querySelector(sel);
+    if (!el) { return; }
+    el.addEventListener('blur', function () {
+      if (el.value.trim()) { el.value = fn(el.value); }
+    });
+  };
+  bindFmt('[name="date"]', normDate);
+  bindFmt('[name="time"]', normTime);
+
   // Birth-form city search -> fills lat/lon/tz (worldwide, Open-Meteo).
   if (window.ABCitySearch) {
     ABCitySearch.init({
