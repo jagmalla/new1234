@@ -294,11 +294,46 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     </div>
     <?php endif; ?>
 
-    <?php $num = static fn($v) => $h(number_format((float) $v, 0)); ?>
+    <?php $num = static fn($v) => $h(number_format((float) $v, 0));
+        // Ordinal (1->1st, 2->2nd, …) and a plain-text summary of every house,
+        // used by the "Copy" button.
+        $ord = static function (int $n): string {
+            $v = $n % 100;
+            $suf = ($v >= 11 && $v <= 13) ? 'th' : (['1' => 'st', '2' => 'nd', '3' => 'rd'][(string) ($n % 10)] ?? 'th');
+            return $n . $suf;
+        };
+        $copyLines = [];
+        foreach (($chart['houses'] ?? []) as $H) {
+            $line = 'In ' . $ord((int) $H['house']) . ' House, ';
+            if (!empty($H['planets'])) {
+                $ps = [];
+                foreach ($H['planets'] as $pn) {
+                    $lhStr = $lordHouses((string) $pn);
+                    if ($lhStr !== '') {
+                        $ords = array_map(static fn($x) => $ord((int) $x), explode(', ', $lhStr));
+                        $ps[] = $pn . ' (lord of ' . implode(', ', $ords) . ' house)';
+                    } else {
+                        $ps[] = $pn;
+                    }
+                }
+                $line .= 'Planet is ' . implode(', ', $ps) . ', ';
+            }
+            $line .= 'Rashi is ' . $H['sign'] . ' (' . (int) $H['rashi_num'] . '), ';
+            $line .= 'Bhav Swami is ' . $H['lord'] . ', ';
+            $line .= 'Ashtakvarga score is ' . (int) $H['av'] . ', ';
+            $line .= 'Bhav Bal is ' . number_format((float) ($H['bb_virupa'] ?? $H['bb'] * 60), 0) . '.';
+            $copyLines[] = $line;
+        }
+        $copyText = implode("\n", $copyLines);
+    ?>
 
     <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala total, lord -->
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
-        <h2 class="font-semibold mb-2">House Details — Ashtakavarga &amp; Bhava Bala</h2>
+        <div class="flex items-center justify-between mb-2">
+            <h2 class="font-semibold">House Details</h2>
+            <button id="hd-copy" type="button" class="text-xs bg-gray-100 hover:bg-gray-200 border rounded px-3 py-1 font-semibold">Copy</button>
+        </div>
+        <pre id="hd-copy-text" class="hidden"><?= $h($copyText) ?></pre>
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b align-bottom">
                 <th class="py-1 pr-3">House</th><th class="pr-3">Planet(s) in house</th><th class="pr-3">Rashi</th>
@@ -327,7 +362,6 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala (virupas) is the house strength — see the Bhava Bala table below for its component breakdown.</p>
     </div>
 
     <!-- Bhava Bala — component breakdown per house -->
@@ -604,6 +638,26 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
   }
   bC.addEventListener('click', showCharts);
   bD.addEventListener('click', showDetails);
+
+  // House Details "Copy" button → copies the plain-text summary of all houses.
+  var hdCopy = document.getElementById('hd-copy');
+  if (hdCopy) {
+    hdCopy.addEventListener('click', function () {
+      var src = document.getElementById('hd-copy-text');
+      var text = src ? src.textContent : '';
+      var done = function () { hdCopy.textContent = 'Copied!'; setTimeout(function () { hdCopy.textContent = 'Copy'; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+      } else { fallbackCopy(text); done(); }
+    });
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
 
   // Default view when the page opens = Charts.
   showCharts();
