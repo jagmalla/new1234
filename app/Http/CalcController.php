@@ -119,6 +119,9 @@ final class CalcController
                     $dashaNow['antar']['lord'] ?? 'Sun',
                     (string) ($_GET['phala_lang'] ?? 'hi')
                 ),
+                // DB error (if any) so staff see the real reason, not just a
+                // silent "not available" placeholder.
+                'error' => \AutoBusiness\Astro\Phala\DashaPhalaRepository::lastError(),
             ],
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';
@@ -140,7 +143,7 @@ final class CalcController
 
         $row = \AutoBusiness\Astro\Phala\DashaPhalaRepository::find($maha, $antar, $lang);
 
-        echo json_encode([
+        $payload = [
             'available' => $row !== null,
             'maha'      => $maha,
             'antar'     => $antar,
@@ -148,7 +151,14 @@ final class CalcController
             'positive'  => $row['positive_text'] ?? null,
             'negative'  => $row['negative_text'] ?? null,
             'remedy'    => $row['remedy_text'] ?? null,
-        ], JSON_UNESCAPED_UNICODE);
+            'error'     => \AutoBusiness\Astro\Phala\DashaPhalaRepository::lastError(),
+        ];
+        // ?debug=1 adds connection/table/row diagnostics (staff-only route).
+        if (($_GET['debug'] ?? '') === '1') {
+            $payload['diagnostics'] = \AutoBusiness\Astro\Phala\DashaPhalaRepository::diagnostics($maha, $antar, $lang);
+        }
+
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
     }
 
     /**

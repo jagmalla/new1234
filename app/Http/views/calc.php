@@ -191,6 +191,12 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             </div>
         </div>
         <div id="phala-empty" class="text-gray-500 italic<?= $pText ? ' hidden' : '' ?>">Summary not available yet for this combination.</div>
+        <?php if (!$pText && !empty($phala['error'])): ?>
+        <div id="phala-dberr" class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+            Database not reachable for predictions — staff note: <?= $h((string) $phala['error']) ?>.
+            Check the <code>.env</code> DB settings (DB_HOST / DB_NAME / DB_USER / DB_PASS) match the database you imported into.
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- CHARTS VIEW (dashboard rows) -->
