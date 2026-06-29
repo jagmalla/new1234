@@ -294,21 +294,19 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     </div>
     <?php endif; ?>
 
-    <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala (BB), lords -->
+    <?php $num = static fn($v) => $h(number_format((float) $v, 0)); ?>
+
+    <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala total, lord -->
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <h2 class="font-semibold mb-2">House Details — Ashtakavarga &amp; Bhava Bala</h2>
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b align-bottom">
                 <th class="py-1 pr-3">House</th><th class="pr-3">Planet(s) in house</th><th class="pr-3">Rashi</th>
                 <th class="pr-3">AV</th>
-                <th class="pr-2 text-right">From&nbsp;Lord</th><th class="pr-2 text-right">Dig&nbsp;Bala</th>
-                <th class="pr-2 text-right">Drishti</th><th class="pr-2 text-right">Planets&nbsp;in</th>
-                <th class="pr-2 text-right">Day-Night</th>
                 <th class="pr-3 text-right">Bhava&nbsp;Bala</th><th>Lord</th>
             </tr></thead>
             <tbody>
-            <?php foreach (($chart['houses'] ?? []) as $hh => $H):
-                $num = static fn($v) => $h(number_format((float) $v, 0)); ?>
+            <?php foreach (($chart['houses'] ?? []) as $hh => $H): ?>
                 <tr class="border-b border-gray-100">
                     <td class="py-1 pr-3 font-semibold"><?= (int) $H['house'] ?></td>
                     <td class="pr-3">
@@ -322,11 +320,6 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                     </td>
                     <td class="pr-3"><?= (int) $H['rashi_num'] ?> <?= $h($H['sign']) ?></td>
                     <td class="pr-3 font-semibold" style="color:#1d4ed8"><?= (int) $H['av'] ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_adhipati'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_digbala'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_drishti'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_planets_in'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_day_night'] ?? 0) ?></td>
                     <td class="pr-3 text-right font-semibold" style="color:#15803d"><?= $num($H['bb_virupa'] ?? $H['bb'] * 60) ?></td>
                     <td><span style="color:<?= $pcolor($H['lord']) ?>" class="font-semibold"><?= $h($H['lord']) ?></span>
                         <?php $llh = $lordHouses((string) $H['lord']); ?><?= $llh !== '' ? '<span class="text-xs text-gray-400">(' . $h($llh) . ')</span>' : '' ?></td>
@@ -334,7 +327,37 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti + Planets&nbsp;in (benefic/malefic occupants) + Day-Night (Bhava Kaala). Drishti follows Parashara's Light (Sphuta-drishti curve at the whole-sign cusp, each planet weighted by benefic/malefic and Ishta/Kashta; nodes excluded). From&nbsp;Lord, Planets&nbsp;in, Day-Night and Drishti track Parashara's Light; Dig&nbsp;Bala uses the standard BPHS directional figure.</p>
+        <p class="text-xs text-gray-400 mt-2">AV = Sarvashtakavarga bindus for the sign (total 337). Bhava Bala (virupas) is the house strength — see the Bhava Bala table below for its component breakdown.</p>
+    </div>
+
+    <!-- Bhava Bala — component breakdown per house -->
+    <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+        <h2 class="font-semibold mb-2">Bhava Bala</h2>
+        <table class="w-full text-sm">
+            <thead><tr class="text-left border-b align-bottom">
+                <th class="py-1 pr-3">House</th><th class="pr-3">Rashi</th><th class="pr-3">Lord</th>
+                <th class="pr-2 text-right">From&nbsp;Lord</th><th class="pr-2 text-right">Dig&nbsp;Bala</th>
+                <th class="pr-2 text-right">Drishti</th><th class="pr-2 text-right">Planets&nbsp;in</th>
+                <th class="pr-2 text-right">Day-Night</th>
+                <th class="pr-3 text-right">Bhava&nbsp;Bala</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach (($chart['houses'] ?? []) as $hh => $H): ?>
+                <tr class="border-b border-gray-100">
+                    <td class="py-1 pr-3 font-semibold"><?= (int) $H['house'] ?></td>
+                    <td class="pr-3"><?= (int) $H['rashi_num'] ?> <?= $h($H['sign']) ?></td>
+                    <td class="pr-3"><span style="color:<?= $pcolor($H['lord']) ?>" class="font-semibold"><?= $h($H['lord']) ?></span></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_adhipati'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_digbala'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_drishti'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_planets_in'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_day_night'] ?? 0) ?></td>
+                    <td class="pr-3 text-right font-semibold" style="color:#15803d"><?= $num($H['bb_virupa'] ?? $H['bb'] * 60) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <p class="text-xs text-gray-400 mt-2">Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti + Planets&nbsp;in (benefic/malefic occupants) + Day-Night (Bhava Kaala). Drishti follows Parashara's Light (Sphuta-drishti curve at the whole-sign cusp, each planet weighted by benefic/malefic and Ishta/Kashta; nodes excluded). From&nbsp;Lord, Planets&nbsp;in, Day-Night and Drishti track Parashara's Light; Dig&nbsp;Bala uses the standard BPHS directional figure.</p>
     </div>
 
     <!-- D1 -->
