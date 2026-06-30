@@ -24,6 +24,11 @@ final class Varga
         'D20' => 'Vimsamsa (D20)',
         'D30' => 'Trimsamsa (D30)',
         'D40' => 'Khavedamsa (D40)',
+        'D2' => 'Hora (D2)',
+        'D16' => 'Shodashamsha (D16)',
+        'D24' => 'Siddhamsha (D24)',
+        'D27' => 'Bhamsha (D27)',
+        'D60' => 'Shashtiamsha (D60)',
     ];
 
     /** Sign index (0..11) of a sidereal longitude in the given divisional chart. */
@@ -36,6 +41,11 @@ final class Varga
 
         return match ($varga) {
             'D1' => $s,
+            // D2 Hora: odd sign 1st half -> Leo (Sun), 2nd half -> Cancer (Moon);
+            // even sign 1st half -> Cancer, 2nd half -> Leo.
+            'D2' => ($deg < 15.0)
+                ? ($n % 2 === 1 ? 4 : 3)
+                : ($n % 2 === 1 ? 3 : 4),
             'D3' => ($s + 4 * (int) floor($deg / 10.0)) % 12,
             'D4' => ($s + 3 * (int) floor($deg / 7.5)) % 12,
             'D7' => ($n % 2 === 1)
@@ -49,6 +59,14 @@ final class Varga
             'D20' => self::cyclicByModality($s, (int) floor($deg / 1.5), [0, 8, 4]),
             'D30' => self::trimsamsa($n, $deg),
             'D40' => (($n % 2 === 1 ? 0 : 6) + (int) floor($deg / 0.75)) % 12,
+            // D16 Shodashamsha: movable from Aries, fixed from Leo, dual from Sagittarius.
+            'D16' => self::cyclicByModality($s, (int) floor($deg / (30.0 / 16.0)), [0, 4, 8]),
+            // D24 Siddhamsha: odd signs start from Leo, even signs from Cancer.
+            'D24' => (($n % 2 === 1 ? 4 : 3) + (int) floor($deg / (30.0 / 24.0))) % 12,
+            // D27 Bhamsha: start by element — fire/earth/air/water from Aries/Cancer/Libra/Capricorn.
+            'D27' => ([0, 3, 6, 9][$s % 4] + (int) floor($deg / (30.0 / 27.0))) % 12,
+            // D60 Shashtiamsha: count floor(deg*2) signs forward from the natal sign.
+            'D60' => ($s + (int) floor($deg * 2.0)) % 12,
             default => $s,
         };
     }
@@ -71,8 +89,9 @@ final class Varga
 
         // Equal-part divisions: number of parts per sign.
         $n = match ($varga) {
-            'D1' => 1, 'D3' => 3, 'D4' => 4, 'D7' => 7, 'D9' => 9,
-            'D10' => 10, 'D12' => 12, 'D20' => 20, 'D40' => 40,
+            'D1' => 1, 'D2' => 2, 'D3' => 3, 'D4' => 4, 'D7' => 7, 'D9' => 9,
+            'D10' => 10, 'D12' => 12, 'D16' => 16, 'D20' => 20, 'D24' => 24,
+            'D27' => 27, 'D40' => 40, 'D60' => 60,
             default => 0,
         };
         if ($n > 0) {
