@@ -4,7 +4,7 @@
  * (diamond) chart for any divisional or transit chart, given the lagna sign and
  * each planet's sign. Ascendant sits in house 1 (top-centre); houses are fixed,
  * signs rotate. Planet abbreviations are colour-coded (Parashara's Light style),
- * degrees shown on request, retrograde marked with R.
+ * degrees shown on request, retrograde marked with a circled-R (®).
  *
  * Designed for reuse by the client/astrologer screens (Module 5d) and the gochar
  * panel as well as the /calc test page.
@@ -223,12 +223,13 @@
         };
         if (items[j].own) { ptAttrs['text-decoration'] = 'underline'; }
         var pt = el('text', ptAttrs, items[j].txt);
-        // Retrograde: a small raised superscript "R" after the planet.
+        // Retrograde: a raised circled-R (®) after the planet — slightly smaller
+        // than the planet text, nudged right so it never touches the degree.
         if (items[j].retro) {
           var sup = el('tspan', {
-            'font-size': (fs * 0.6).toFixed(2), 'baseline-shift': 'super', fill: '#b91c1c'
+            'font-size': (fs * 0.78).toFixed(2), 'baseline-shift': 'super', fill: '#b91c1c', dx: 0.4
           });
-          sup.textContent = 'R';
+          sup.textContent = '®';
           pt.appendChild(sup);
         }
         svg.appendChild(pt);
