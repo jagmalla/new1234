@@ -456,6 +456,23 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             $suf = ($v >= 11 && $v <= 13) ? 'th' : (['1' => 'st', '2' => 'nd', '3' => 'rd'][(string) ($n % 10)] ?? 'th');
             return $n . $suf;
         };
+        // Drishti renderers (share the one computed list on each house):
+        //  - HTML: short abbrs, colour-coded (chart ring + table use short names).
+        //  - Full: full planet names for the Copy sentences.
+        $drishtiHtml = static function (array $abbrs) use ($h, $pcolor): string {
+            $parts = [];
+            foreach ($abbrs as $ab) {
+                $full = \AutoBusiness\Astro\Calc\Drishti::FULL[$ab] ?? $ab;
+                $parts[] = '<span style="color:' . $pcolor($full) . '" class="font-semibold">' . $h($ab) . '</span>';
+            }
+            return implode(', ', $parts);
+        };
+        $drishtiFull = static function (array $abbrs): string {
+            return implode(', ', array_map(
+                static fn($ab) => \AutoBusiness\Astro\Calc\Drishti::FULL[$ab] ?? $ab,
+                $abbrs
+            ));
+        };
         $copyLines = [];
         foreach (($chart['houses'] ?? []) as $H) {
             $line = 'In ' . $ord((int) $H['house']) . ' House, ';
@@ -475,7 +492,13 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             $line .= 'Rashi is ' . $H['sign'] . ' (' . (int) $H['rashi_num'] . '), ';
             $line .= 'House Lord is ' . $H['lord'] . ', ';
             $line .= 'Ashtakvarga score is ' . (int) $H['av'] . ', ';
-            $line .= 'Bhav Bal is ' . number_format((float) ($H['bb_virupa'] ?? $H['bb'] * 60), 0) . '.';
+            $line .= 'Bhav Bal is ' . number_format((float) ($H['bb_virupa'] ?? $H['bb'] * 60), 0);
+            $dr = $H['drishti'] ?? [];
+            if (!empty($dr)) {
+                $line .= ', Drishti of ' . $drishtiFull($dr) . ' on ' . $ord((int) $H['house']) . ' house.';
+            } else {
+                $line .= '.';
+            }
             $copyLines[] = $line;
         }
         $copyText = implode("\n", $copyLines);
@@ -490,7 +513,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         <pre id="hd-copy-text" class="hidden"><?= $h($copyText) ?></pre>
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b align-bottom">
-                <th class="py-1 pr-3">House</th><th class="pr-3">Planet(s) in house</th><th class="pr-3">Rashi</th>
+                <th class="py-1 pr-3">House</th><th class="pr-3">Planet(s) in house</th><th class="pr-3">Drishti</th><th class="pr-3">Rashi</th>
                 <th class="pr-3">AV</th>
                 <th class="pr-3 text-right">Bhava&nbsp;Bala</th><th>Lord</th>
             </tr></thead>
@@ -507,6 +530,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                         }
                         echo implode(', ', $occ); ?>
                     </td>
+                    <td class="pr-3"><?= $drishtiHtml($H['drishti'] ?? []) ?: '<span class="text-gray-300">—</span>' ?></td>
                     <td class="pr-3"><?= (int) $H['rashi_num'] ?> <?= $h($H['sign']) ?></td>
                     <td class="pr-3 font-semibold" style="color:#1d4ed8"><?= (int) $H['av'] ?></td>
                     <td class="pr-3 text-right font-semibold" style="color:#15803d"><?= $num($H['bb_virupa'] ?? $H['bb'] * 60) ?></td>

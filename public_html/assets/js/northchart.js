@@ -68,48 +68,73 @@
   var BB_COLOR = '#15803d';  // Bhava Bala (virupas)
   var ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
-  // One-line "<Roman>=AV:<n>, BB:<n>" anchor + rotation per house: top & bottom
-  // read horizontally, the two sides are rotated so the ring stays thin.
-  var POS = {
-    2:[16.5,-1.7,0], 1:[50,-1.7,0], 12:[83.5,-1.7,0],            // top
-    6:[16.5,102.6,0], 7:[50,102.6,0], 8:[83.5,102.6,0],          // bottom
-    3:[-2.3,16.5,-90], 4:[-2.3,50,-90], 5:[-2.3,83.5,-90],       // left (rotated)
-    11:[102.3,16.5,90], 10:[102.3,50,90], 9:[102.3,83.5,90]      // right (rotated)
+  // Edge + segment-centre per house (3 segments/edge at 16.5/50/83.5).
+  // side: t=top, b=bottom, l=left (rotate -90), r=right (rotate 90).
+  var EDGE = {
+    1:['t',50], 2:['t',16.5], 12:['t',83.5],
+    7:['b',50], 6:['b',16.5], 8:['b',83.5],
+    4:['l',50], 3:['l',16.5], 5:['l',83.5],
+    10:['r',50], 11:['r',16.5], 9:['r',83.5]
   };
+  // Label anchor [x, y, rotation] centred `mid` units outside the chart edge.
+  function bandPos(hh, mid) {
+    var e = EDGE[hh], s = e[1];
+    switch (e[0]) {
+      case 't': return [s, -mid, 0];
+      case 'b': return [s, 100 + mid, 0];
+      case 'l': return [-mid, s, -90];
+      default:  return [100 + mid, s, 90];
+    }
+  }
 
-  // Draw the (thin) outer ring: rectangle + per-house separator lines + a single
-  // colour-coded "<Roman>=AV:.., BB:.." line in each house segment.
+  // Draw the outer ring(s): a Drishti band (graha aspects) just outside the
+  // chart, then the AV/BB band outside that. Nesting inside-out: (1) chart,
+  // (2) Drishti, (3) AV/BB.
   function drawOuterRing(svg, ring) {
-    var M = 5;
+    var DR = 9, O = 14;  // band outer offsets: Drishti 0..9, AV/BB 9..14
     var sep = function (x1,y1,x2,y2) {
       svg.appendChild(el('line', {x1:x1,y1:y1,x2:x2,y2:y2, stroke:'#cbd5e1', 'stroke-width':0.4}));
     };
-    svg.appendChild(el('rect', {x:-M, y:-M, width:100 + 2 * M, height:100 + 2 * M, fill:'none', stroke:'#9ca3af', 'stroke-width':0.6, rx:1}));
-    // corner diagonals
-    sep(0,0,-M,-M); sep(100,0,100+M,-M); sep(100,100,100+M,100+M); sep(0,100,-M,100+M);
-    // edge separators at the 1/3 and 2/3 points (3 segments per edge)
+    // rectangles: outer (AV/BB) and the Drishti / AV boundary
+    svg.appendChild(el('rect', {x:-O, y:-O, width:100 + 2 * O, height:100 + 2 * O, fill:'none', stroke:'#9ca3af', 'stroke-width':0.6, rx:1}));
+    svg.appendChild(el('rect', {x:-DR, y:-DR, width:100 + 2 * DR, height:100 + 2 * DR, fill:'none', stroke:'#cbd5e1', 'stroke-width':0.5, rx:1}));
+    // radial separators from the chart edge out to the outer rectangle
+    sep(0,0,-O,-O); sep(100,0,100+O,-O); sep(100,100,100+O,100+O); sep(0,100,-O,100+O);
     [33,67].forEach(function (t) {
-      sep(t,0,t,-M); sep(t,100,t,100+M);   // top, bottom
-      sep(0,t,-M,t); sep(100,t,100+M,t);   // left, right
+      sep(t,0,t,-O); sep(t,100,t,100+O);   // top, bottom
+      sep(0,t,-O,t); sep(100,t,100+O,t);   // left, right
     });
 
-    function label(x, y, rot, roman, av, bb) {
-      var t = el('text', {x:x, y:y, 'text-anchor':'middle', 'font-size':2.5, 'font-weight':'700'});
-      if (rot) { t.setAttribute('transform', 'rotate(' + rot + ',' + x + ',' + y + ')'); }
-      var span = function (txt, fill) { var s = el('tspan', {fill:fill}); s.textContent = txt; t.appendChild(s); };
-      span(roman + '=', '#111827');
-      span('AV:' + av, AV_COLOR);
-      span(', ', '#111827');
-      span('BB:' + bb, BB_COLOR);
-      svg.appendChild(t);
+    function placed(p, fontSize) {
+      var t = el('text', {x:p[0], y:p[1], 'text-anchor':'middle', 'font-size':fontSize, 'font-weight':'700'});
+      if (p[2]) { t.setAttribute('transform', 'rotate(' + p[2] + ',' + p[0] + ',' + p[1] + ')'); }
+      t.span = function (txt, fill) { var s = el('tspan', {fill:fill}); s.textContent = txt; t.appendChild(s); };
+      return t;
     }
 
     for (var hh = 1; hh <= 12; hh++) {
       var v = ring[hh] || ring[String(hh)];
       if (!v) { continue; }
-      var p = POS[hh];
+
+      // AV/BB (outer band).
+      var a = placed(bandPos(hh, 11.4), 2.5);
       var bb = (v.bb_virupa != null) ? Math.round(v.bb_virupa) : v.bb;
-      label(p[0], p[1], p[2], ROMAN[hh], v.av, bb);
+      a.span(ROMAN[hh] + '=', '#111827');
+      a.span('AV:' + v.av, AV_COLOR);
+      a.span(', ', '#111827');
+      a.span('BB:' + bb, BB_COLOR);
+      svg.appendChild(a);
+
+      // Drishti (inner band): "Dr: " + colour-coded aspecting planets.
+      var d = placed(bandPos(hh, 4.6), 2.1);
+      d.span('Dr: ', '#6b7280');
+      var list = v.drishti || [];
+      if (!list.length) { d.span('—', '#9ca3af'); }
+      list.forEach(function (ab, i) {
+        if (i) { d.span(', ', '#6b7280'); }
+        d.span(ab, COLOR[ab] || '#111827');
+      });
+      svg.appendChild(d);
     }
   }
 
@@ -128,7 +153,7 @@
     // house just outside the chart; it widens the viewBox to make room.
     var ring = opts.outer || null;
     var svg = el('svg', {
-      viewBox: ring ? '-5.6 -5.6 111.2 111.2' : '0 0 100 100',
+      viewBox: ring ? '-14.6 -14.6 129.2 129.2' : '0 0 100 100',
       width: '100%', height: 'auto', 'class': 'rounded'
     });
 

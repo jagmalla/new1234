@@ -128,6 +128,14 @@ final class CalculationEngine
             }
         }
 
+        // Graha Drishti (BPHS whole-house aspects) — one shared computation used
+        // by the D1 chart ring, the House Details table and the Copy text.
+        $drishti = Drishti::byHouse(array_map(static fn($p) => (int) $p['house'], $planets));
+        foreach ($houses as $hh => &$H) {
+            $H['drishti'] = $drishti[$hh] ?? [];
+        }
+        unset($H);
+
         return [
             'meta' => [
                 'jd_ut' => $jdUt,
