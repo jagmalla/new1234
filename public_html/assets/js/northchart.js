@@ -223,11 +223,13 @@
         };
         if (items[j].own) { ptAttrs['text-decoration'] = 'underline'; }
         var pt = el('text', ptAttrs, items[j].txt);
-        // Retrograde: a raised circled-R (®) after the planet — slightly smaller
-        // than the planet text, nudged right so it never touches the degree.
+        // Retrograde: a raised circled-R (®) after the planet — one size smaller
+        // than the planet text, tucked close (small dx) and raised by a fixed
+        // fraction of the planet font so it aligns as a neat superscript.
         if (items[j].retro) {
           var sup = el('tspan', {
-            'font-size': (fs * 0.78).toFixed(2), 'baseline-shift': 'super', fill: '#b91c1c', dx: 0.4
+            'font-size': (fs * 0.85).toFixed(2), fill: '#b91c1c',
+            dx: 0.2, dy: (-fs * 0.32).toFixed(2)
           });
           sup.textContent = '®';
           pt.appendChild(sup);

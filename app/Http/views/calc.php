@@ -589,7 +589,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                     <td class="pr-3"><?= $h($lordHouses((string) $name)) ?></td>
                     <td class="pr-3"><?= $h($p['nakshatra']['name']) ?> (<?= (int) $p['nakshatra']['pada'] ?>)</td>
                     <td class="pr-3"><?= $h($p['navamsa_sign']) ?></td>
-                    <td><?= $p['retro'] ? '<sup style="color:#b91c1c;font-size:0.85em">&#174;</sup>' : '' ?></td>
+                    <td><?= $p['retro'] ? '<sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -650,7 +650,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <tbody>
             <?php foreach ($vp['varsha_chart']['planets'] as $name => $p): ?>
                 <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
-                    <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:0.85em">&#174;</sup>' : '' ?></td></tr>
+                    <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td></tr>
             <?php endforeach; ?>
             </tbody>
         </table>
@@ -671,7 +671,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
             <tbody>
             <?php foreach ($gochar['transits'] as $name => $t): ?>
-                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.85em">&#174;</sup>' : '' ?></td>
+                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
                     <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
             <?php endforeach; ?>
             </tbody>
