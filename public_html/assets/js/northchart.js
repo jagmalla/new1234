@@ -91,7 +91,7 @@
   // chart, then the AV/BB band outside that. Nesting inside-out: (1) chart,
   // (2) Drishti, (3) AV/BB.
   function drawOuterRing(svg, ring) {
-    var DR = 9, O = 14;  // band outer offsets: Drishti 0..9, AV/BB 9..14
+    var DR = 5, O = 10;  // band outer offsets: Drishti 0..5, AV/BB 5..10 (slim, equal)
     var sep = function (x1,y1,x2,y2) {
       svg.appendChild(el('line', {x1:x1,y1:y1,x2:x2,y2:y2, stroke:'#cbd5e1', 'stroke-width':0.4}));
     };
@@ -117,7 +117,7 @@
       if (!v) { continue; }
 
       // AV/BB (outer band).
-      var a = placed(bandPos(hh, 11.4), 2.5);
+      var a = placed(bandPos(hh, 7.5), 2.5);
       var bb = (v.bb_virupa != null) ? Math.round(v.bb_virupa) : v.bb;
       a.span(ROMAN[hh] + '=', '#111827');
       a.span('AV:' + v.av, AV_COLOR);
@@ -125,13 +125,14 @@
       a.span('BB:' + bb, BB_COLOR);
       svg.appendChild(a);
 
-      // Drishti (inner band): "Dr: " + colour-coded aspecting planets.
-      var d = placed(bandPos(hh, 4.6), 2.1);
-      d.span('Dr: ', '#6b7280');
+      // Drishti (inner band): "Dr: " + colour-coded aspecting planets, styled to
+      // match the AV/BB band (same font size 2.5 and weight 700).
+      var d = placed(bandPos(hh, 2.5), 2.5);
+      d.span('Dr: ', '#111827');
       var list = v.drishti || [];
       if (!list.length) { d.span('—', '#9ca3af'); }
       list.forEach(function (ab, i) {
-        if (i) { d.span(', ', '#6b7280'); }
+        if (i) { d.span(', ', '#111827'); }
         d.span(ab, COLOR[ab] || '#111827');
       });
       svg.appendChild(d);
@@ -153,7 +154,7 @@
     // house just outside the chart; it widens the viewBox to make room.
     var ring = opts.outer || null;
     var svg = el('svg', {
-      viewBox: ring ? '-14.6 -14.6 129.2 129.2' : '0 0 100 100',
+      viewBox: ring ? '-10.6 -10.6 121.2 121.2' : '0 0 100 100',
       width: '100%', height: 'auto', 'class': 'rounded'
     });
 
