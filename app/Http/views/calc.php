@@ -74,15 +74,15 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         #planet-phala-card .pp-sub  { font-size: 1.1rem;  font-weight: 700; }
     </style>
 </head>
-<body class="text-gray-900 p-4 md:p-8">
-<div class="max-w-5xl mx-auto space-y-6">
+<body class="text-gray-900 p-3 sm:p-4 md:p-6 lg:p-8">
+<div class="max-w-7xl mx-auto space-y-4 md:space-y-6">
 
     <h1 class="text-2xl font-bold">Calculation Engine — Chart Test</h1>
 
     <!-- ROW 1 — Chart (birth) details -->
     <form method="get" action="/calc" class="bg-white rounded-lg shadow p-4 text-sm">
         <h2 class="font-semibold mb-3 text-gray-700">Chart Calculation Details</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <label class="flex flex-col gap-1"><span class="text-gray-500">Name</span>
                 <input name="name" value="<?= $h($in['name']) ?>" class="border rounded px-2 py-1"></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Gender</span>
@@ -96,7 +96,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <label class="flex flex-col gap-1"><span class="text-gray-500">Time (HH:MM)</span>
                 <input name="time" value="<?= $h($in['time']) ?>" placeholder="HH:MM or HH MM" class="border rounded px-2 py-1"></label>
 
-            <label class="flex flex-col gap-1 relative col-span-2 md:col-span-3"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
+            <label class="flex flex-col gap-1 relative sm:col-span-2 lg:col-span-3"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
                 <input id="b-place" name="place" value="<?= $h($in['place']) ?>" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
                 <div id="b-place-results" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border rounded shadow max-h-60 overflow-y-auto hidden"></div></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Ayanamsa</span>
@@ -305,7 +305,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     </div>
 
     <!-- CHARTS VIEW (dashboard rows) -->
-    <div id="charts-view" class="space-y-6">
+    <div id="charts-view" class="space-y-4 md:space-y-6">
 
         <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (scrolls, height = D1) -->
         <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-start">
@@ -403,10 +403,10 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         <!-- ROW 6 — Varsha chart + Mudda dasha, side by side -->
         <div id="vp-output"></div>
 
-        <!-- Remaining divisional charts — 2 per row -->
+        <!-- Remaining divisional charts — reflow: 1 / 2 / 3 per row by width -->
         <div>
             <h2 class="font-semibold mb-2 text-gray-700">Divisional Charts</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 <?php foreach (($vargas ?? []) as $vkey => $vinfo): if ($vkey === 'D1' || $vkey === 'D9') { continue; } ?>
                     <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
                 <?php endforeach; ?>
@@ -434,7 +434,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                 . '<span class="text-gray-500">(' . $dates . ')</span></div>';
         };
     ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm">
+    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-2">Current Dasha — today (<?= $h(date('d-m-Y')) ?>)</h2>
         <div class="space-y-1 leading-snug">
             <?= $cdRow('MahaDasha', $dashaNow['maha'], 0, '–') ?>
@@ -597,7 +597,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     </div>
 
     <!-- Vimshottari — same expandable, colour-coded tree as the Chart view -->
-    <div class="bg-white rounded-lg shadow p-4 text-sm">
+    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
         <div class="mb-2">Birth balance: <b style="color: <?= $pcolor($chart['dasha']['balance']['lord']) ?>"><?= $h($chart['dasha']['balance']['lord']) ?></b>
             for <?= sprintf('%.2f', $chart['dasha']['balance']['years']) ?> years.
