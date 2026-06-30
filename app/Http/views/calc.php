@@ -309,8 +309,23 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
 
         <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (scrolls, height = D1) -->
         <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-start">
-            <div id="d1-card" class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
-                <div class="w-full max-w-xl mx-auto" data-varga="D1" data-ring="1"></div>
+            <div id="d1-card" class="bg-white rounded-lg shadow p-4 flex flex-col">
+                <!-- Two-line header: legend for the ring short-codes + chart identity. -->
+                <div class="text-center text-sm mb-2 leading-snug">
+                    <div class="mb-1">
+                        <span class="font-semibold text-gray-800">NOTES:</span>
+                        <span class="text-gray-700"><b>Dr:</b> Drishti,</span>
+                        <span class="ml-2" style="color:#1d4ed8"><b>AV:</b> Ashtavarga Score,</span>
+                        <span class="ml-2" style="color:#15803d"><b>BB:</b> Bhav Bal</span>
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-x-4 gap-y-0.5 text-gray-800 font-semibold">
+                        <span>D1: <?= $h($in['name'] !== '' ? $in['name'] : '—') ?></span>
+                        <span>DOB: <?= $h($in['date']) ?></span>
+                        <span>TIME: <?= $h($in['time']) ?></span>
+                        <span>PLACE: <?= $h($pob !== '' ? $pob : '—') ?></span>
+                    </div>
+                </div>
+                <div class="w-full max-w-xl mx-auto" data-varga="D1" data-ring="1" data-notitle="1"></div>
             </div>
             <div id="vim-card" class="bg-white rounded-lg shadow p-4 flex flex-col" style="display:flex; flex-direction:column">
                 <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
