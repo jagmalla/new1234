@@ -653,6 +653,33 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         <p class="text-xs text-gray-400 mt-2">Total = sum of all six balas (virupas); Rupas = Total ÷ 60; Ratio = Total ÷ minimum required. Ishta = √(Uchcha × Chesta), Kashta = √((60−Uchcha) × (60−Chesta)).</p>
     </div>
 
+    <!-- Vimshopaka Bala — divisional strength (out of 20) in four varga groups -->
+    <?php if (!empty($chart['vimshopaka'])): $vb = $chart['vimshopaka']; ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+        <h2 class="font-semibold mb-1">Vimshopaka Bala</h2>
+        <p class="text-xs text-gray-500 mb-2">Strength across the divisional charts, scored out of 20, from each planet's dignity in every varga (Own/Moolatrikona/Exaltation = full, down to Debilitation). Groups: Shadvarga (6), Saptavarga (7), Dashavarga (10), Shodashavarga (16).</p>
+        <table class="w-full">
+            <thead><tr class="text-left border-b">
+                <th class="py-1 pr-3">Group</th>
+                <?php foreach ($vb['planets'] as $pn): ?>
+                    <th class="pr-3 text-center font-semibold" style="color: <?= $pcolor($pn) ?>"><?= $h($pn) ?></th>
+                <?php endforeach; ?>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($vb['groups'] as $grp): ?>
+                <tr class="border-b border-gray-100">
+                    <td class="py-1 pr-3 font-semibold text-gray-700"><?= $h($grp) ?></td>
+                    <?php foreach ($vb['planets'] as $pn): ?>
+                        <td class="pr-3 text-center"><?= (int) ($vb['scores'][$grp][$pn] ?? 0) ?></td>
+                    <?php endforeach; ?>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <p class="text-xs text-gray-400 mt-2">Higher = stronger (max 20). Uses the same divisional placements as the charts; dignity by natural (Naisargika) friendship with each divisional sign's lord.</p>
+    </div>
+    <?php endif; ?>
+
     <!-- Varshaphal -->
     <?php if ($vp !== null): ?>
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">

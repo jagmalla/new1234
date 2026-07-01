@@ -136,6 +136,12 @@ final class CalculationEngine
         }
         unset($H);
 
+        // Vimshopaka Bala — divisional-strength score (out of 20) per planet in
+        // the four varga groups.
+        $vimshopaka = VimshopakaBala::compute(
+            array_map(static fn($p) => (float) $p['sidereal_lon'], $planets)
+        );
+
         return [
             'meta' => [
                 'jd_ut' => $jdUt,
@@ -165,6 +171,7 @@ final class CalculationEngine
                 'running' => $running,
             ],
             'shadbala' => $shadbala,
+            'vimshopaka' => $vimshopaka,
             'ashtakavarga' => $ashtakavarga,
             'bhava_bala' => $bhavaBala,
             'houses' => $houses,

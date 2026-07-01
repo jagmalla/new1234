@@ -67,6 +67,9 @@ final class Varga
             'D27' => ([0, 3, 6, 9][$s % 4] + (int) floor($deg / (30.0 / 27.0))) % 12,
             // D60 Shashtiamsha: count floor(deg*2) signs forward from the natal sign.
             'D60' => ($s + (int) floor($deg * 2.0)) % 12,
+            // D45 Akshavedamsa: movable/fixed/dual start Aries/Leo/Sagittarius (45 parts).
+            // Not shown as a chart; used by Shodashavarga Vimshopaka Bala.
+            'D45' => self::cyclicByModality($s, (int) floor($deg / (30.0 / 45.0)), [0, 4, 8]),
             default => $s,
         };
     }
