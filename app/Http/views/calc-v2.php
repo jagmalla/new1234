@@ -244,10 +244,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         @media (min-width: 1100px) {
             .pred-expanded #chart-panel { display: none; }
             .pred-expanded #pred-panel { grid-column: 2 / 4; }
-            /* Reading mode: bigger copy flowing in two columns. */
+            /* Reading mode: bigger copy; card lists flow in two columns, and the
+               picker-based cards keep full width with their reading text in two
+               columns instead (a single card cannot split across CSS columns). */
             .pred-expanded .pred-view { font-size: 14px; }
-            .pred-expanded .pred-view:not(.hidden) { column-count: 2; column-gap: 32px; }
-            .pred-expanded .pred-view:not(.hidden) > div { break-inside: avoid; }
+            .pred-expanded .pred-view[data-pred="bhavesh"]:not(.hidden),
+            .pred-expanded .pred-view[data-pred="yoga"]:not(.hidden) { column-count: 2; column-gap: 32px; }
+            .pred-expanded .pred-view[data-pred="bhavesh"] > div,
+            .pred-expanded .pred-view[data-pred="yoga"] > div { break-inside: avoid; }
+            .pred-expanded .planet-detail:not(.hidden),
+            .pred-expanded .house-detail:not(.hidden),
+            .pred-expanded .karaka-detail:not(.hidden) { column-count: 2; column-gap: 32px; }
+            .pred-expanded #planet-detail-pane, .pred-expanded #house-detail-pane,
+            .pred-expanded #karaka-detail-pane { max-height: none !important; }
         }
         #pred-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px;
             scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
@@ -299,7 +308,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <option value="hi" <?= $phalaLang === 'hi' ? 'selected' : '' ?>>हिन्दी</option>
                 <option value="en" <?= $phalaLang === 'en' ? 'selected' : '' ?>>English</option>
             </select>
-            <button type="button" id="new-kundli" class="btn-sindoor">नई कुंडली</button>
+            <button type="button" id="new-kundli" class="btn-sindoor">New Kundli</button>
         </div>
     </div>
 </header>
@@ -327,37 +336,37 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     <?php $ovSun = (string) ($chart['planets']['Sun']['sign'] ?? ''); ?>
     <div class="ov-tiles">
         <div class="ov-tile">
-            <div class="ov-label">नाम</div>
+            <div class="ov-label">Name</div>
             <div class="ov-value"><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></div>
             <div class="ov-sub"><?= $in['gender'] !== '' ? $h($in['gender']) : '&nbsp;' ?></div>
         </div>
         <div class="ov-tile">
-            <div class="ov-label">जन्म तिथि / समय</div>
+            <div class="ov-label">DOB / Time</div>
             <div class="ov-value"><?= $h($in['date']) ?></div>
             <div class="ov-sub"><?= $h($in['time']) ?></div>
         </div>
         <div class="ov-tile">
-            <div class="ov-label">जन्म स्थान</div>
+            <div class="ov-label">Birth Place</div>
             <div class="ov-value" title="<?= $h($pobTop) ?>"><?= $h($pobTop) ?></div>
             <div class="ov-sub"><?= $h($in['latIn']) ?>, <?= $h($in['lonIn']) ?></div>
         </div>
         <div class="ov-tile">
-            <div class="ov-label">लग्न</div>
+            <div class="ov-label">Lagna (Asc)</div>
             <div class="ov-value"><?= $h($rashiHi[$ovLagna] ?? $ovLagna) ?></div>
             <div class="ov-sub"><?= $h($ovLagna) ?> · <?= $h((string) ($chart['ascendant']['formatted'] ?? '')) ?></div>
         </div>
         <div class="ov-tile">
-            <div class="ov-label">राशि (चंद्र)</div>
+            <div class="ov-label">Moon Sign (राशि)</div>
             <div class="ov-value"><?= $h($rashiHi[$ovMoon] ?? $ovMoon) ?></div>
             <div class="ov-sub">चंद्र राशि · <?= $h($ovMoon) ?></div>
         </div>
         <div class="ov-tile">
-            <div class="ov-label">सूर्य राशि</div>
+            <div class="ov-label">Sun Sign</div>
             <div class="ov-value"><?= $h($rashiHi[$ovSun] ?? $ovSun) ?></div>
             <div class="ov-sub">Sun Sign · <?= $h($ovSun) ?></div>
         </div>
         <div class="ov-tile">
-            <div class="ov-label">चालू दशा</div>
+            <div class="ov-label">Current Dasha</div>
             <div class="ov-value acc-dasha"><?= $h(($grahaHi[$ovMaha] ?? $ovMaha) . ($ovAntar !== '' ? ' – ' . ($grahaHi[$ovAntar] ?? $ovAntar) : '')) ?></div>
             <div class="ov-sub"><?= $ovPrat !== '' ? 'प्रत्यंतर: ' . $h($grahaHi[$ovPrat] ?? $ovPrat) : '&nbsp;' ?></div>
         </div>
@@ -366,7 +375,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             $ovYGood = array_values(array_filter($ovYogas, static fn($y) => !empty($y['good'])));
         ?>
         <div class="ov-tile">
-            <div class="ov-label">योग</div>
+            <div class="ov-label">Yoga (योग)</div>
             <div class="ov-value acc-yoga"><?= $ovYGood !== [] ? count($ovYGood) . ' शुभ योग' : '—' ?></div>
             <div class="ov-sub"><?= $ovYGood !== []
                 ? $h(implode(' · ', array_slice(array_map(static fn($y) => (string) $y['name'], $ovYGood), 0, 2)))
@@ -436,57 +445,57 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <!-- Side menu -->
         <nav id="side-menu" class="l2-menu l2-card" aria-label="मुख्य अनुभाग">
             <div class="l2-mi">
-                <button type="button" data-sec="home" class="active">जन्म कुंडली</button>
+                <button type="button" data-sec="home" class="active">Birth Chart</button>
                 <div class="l2-sub">
-                    <button type="button" data-sec="home" data-target="chart-panel">कुंडली चार्ट</button>
-                    <button type="button" data-sec="home" data-target="pred-panel">फलादेश</button>
+                    <button type="button" data-sec="home" data-target="chart-panel">Kundali Chart</button>
+                    <button type="button" data-sec="home" data-target="pred-panel">Predictions</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="grah">ग्रह स्थिति</button>
+                <button type="button" data-sec="grah">Planet Positions</button>
                 <div class="l2-sub">
-                    <button type="button" data-sec="grah" data-target="card-native">जन्म विवरण</button>
-                    <button type="button" data-sec="grah" data-target="card-housedet">भाव विवरण</button>
-                    <button type="button" data-sec="grah" data-target="card-d1pos">ग्रह स्थिति (D1)</button>
+                    <button type="button" data-sec="grah" data-target="card-native">Birth Details</button>
+                    <button type="button" data-sec="grah" data-target="card-housedet">House Details</button>
+                    <button type="button" data-sec="grah" data-target="card-d1pos">Positions (D1)</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="varga">वर्ग कुंडली</button>
+                <button type="button" data-sec="varga">Varga Charts</button>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="dasha">दशा</button>
+                <button type="button" data-sec="dasha">Dasha</button>
                 <div class="l2-sub">
-                    <button type="button" data-sec="dasha" data-target="card-curdasha">चालू दशा</button>
-                    <button type="button" data-sec="dasha" data-target="card-vimtree">विंशोत्तरी (5 स्तर)</button>
+                    <button type="button" data-sec="dasha" data-target="card-curdasha">Current Dasha</button>
+                    <button type="button" data-sec="dasha" data-target="card-vimtree">Vimshottari (5 levels)</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="bal">बल</button>
+                <button type="button" data-sec="bal">Bala (Strength)</button>
                 <div class="l2-sub">
-                    <button type="button" data-sec="bal" data-tab="shad">षड्बल</button>
-                    <button type="button" data-sec="bal" data-tab="bb">भाव बल</button>
-                    <button type="button" data-sec="bal" data-tab="av">अष्टकवर्ग</button>
-                    <button type="button" data-sec="bal" data-tab="vim">विंशोपक</button>
+                    <button type="button" data-sec="bal" data-tab="shad">Shadbala</button>
+                    <button type="button" data-sec="bal" data-tab="bb">Bhava Bala</button>
+                    <button type="button" data-sec="bal" data-tab="av">Ashtakavarga</button>
+                    <button type="button" data-sec="bal" data-tab="vim">Vimshopaka</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="gochar">गोचर</button>
+                <button type="button" data-sec="gochar">Gochar (Transit)</button>
                 <div class="l2-sub">
-                    <button type="button" data-sec="gochar" data-target="card-gocharcalc">गोचर गणना</button>
-                    <button type="button" data-sec="gochar" data-target="card-gocharpair">कुंडली बनाम गोचर</button>
-                    <button type="button" data-sec="gochar" data-target="card-gochardet">गोचर तालिका</button>
+                    <button type="button" data-sec="gochar" data-target="card-gocharcalc">Gochar Calculation</button>
+                    <button type="button" data-sec="gochar" data-target="card-gocharpair">Natal vs Transit</button>
+                    <button type="button" data-sec="gochar" data-target="card-gochardet">Transit Table</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="varsha">वर्ष कुंडली</button>
+                <button type="button" data-sec="varsha">Varshaphal</button>
                 <div class="l2-sub">
-                    <button type="button" data-sec="varsha" data-target="card-vpbox">वर्ष चयन</button>
-                    <button type="button" data-sec="varsha" data-target="vp-output">वर्ष चार्ट + मुद्दा दशा</button>
-                    <button type="button" data-sec="varsha" data-target="card-varshadet">वार्षिक स्थिति</button>
+                    <button type="button" data-sec="varsha" data-target="card-vpbox">Year Selection</button>
+                    <button type="button" data-sec="varsha" data-target="vp-output">Varsha Chart + Mudda Dasha</button>
+                    <button type="button" data-sec="varsha" data-target="card-varshadet">Annual Positions</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="home" data-focus="pred">फलादेश</button>
+                <button type="button" data-sec="home" data-focus="pred">Predictions</button>
             </div>
         </nav>
 
@@ -494,10 +503,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <?php
             // Chart selector: every computed varga + गोचर + वर्ष कुंडली.
             $vargaHi = [
-                'D1' => 'जन्म कुंडली', 'D2' => 'होरा', 'D3' => 'द्रेष्काण', 'D4' => 'चतुर्थांश',
-                'D7' => 'सप्तमांश', 'D9' => 'नवमांश', 'D10' => 'दशमांश', 'D12' => 'द्वादशांश',
-                'D16' => 'षोडशांश', 'D20' => 'विंशांश', 'D24' => 'चतुर्विंशांश', 'D27' => 'सप्तविंशांश',
-                'D30' => 'त्रिंशांश', 'D40' => 'खवेदांश', 'D60' => 'षष्ट्यंश',
+                'D1' => 'Birth Chart (Rasi)', 'D2' => 'Hora', 'D3' => 'Drekkana', 'D4' => 'Chaturthamsa',
+                'D7' => 'Saptamsa', 'D9' => 'Navamsa', 'D10' => 'Dasamsa', 'D12' => 'Dwadasamsa',
+                'D16' => 'Shodasamsa', 'D20' => 'Vimsamsa', 'D24' => 'Chaturvimsamsa', 'D27' => 'Bhamsa',
+                'D30' => 'Trimsamsa', 'D40' => 'Khavedamsa', 'D60' => 'Shashtiamsa',
             ];
         ?>
         <section id="chart-panel" class="l2-card l2-panel" aria-label="कुंडली चार्ट">
@@ -505,8 +514,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <?php foreach ($vargaHi as $vk => $vlbl): if (!isset($vargas[$vk])) { continue; } ?>
                     <option value="<?= $h($vk) ?>"><?= $h($vk) ?> — <?= $h($vlbl) ?></option>
                 <?php endforeach; ?>
-                <?php if ($gochar !== null): ?><option value="gochar">गोचर</option><?php endif; ?>
-                <?php if (($view['varshaNorth'] ?? null) !== null): ?><option value="varsha">वर्ष कुंडली (<?= (int) $in['forYear'] ?>)</option><?php endif; ?>
+                <?php if ($gochar !== null): ?><option value="gochar">Gochar (Transit)</option><?php endif; ?>
+                <?php if (($view['varshaNorth'] ?? null) !== null): ?><option value="varsha">Varsha Kundali (<?= (int) $in['forYear'] ?>)</option><?php endif; ?>
             </select>
             <div class="l2-legend">
                 <span style="color:#1d4ed8"><b>AV:</b> Ashtakavarga</span> ·
@@ -546,14 +555,14 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
             <div class="pred-head">
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0; flex:1">
-                    <option value="dasha">दशा फल</option>
-                    <option value="bhavesh">भावेश फल</option>
-                    <option value="grah">ग्रह फल</option>
-                    <option value="bhav">भाव फलादेश</option>
-                    <option value="karak">कारक फल</option>
-                    <option value="yoga">योग</option>
+                    <option value="dasha">Dasha Phal (दशा फल)</option>
+                    <option value="bhavesh">Bhavesh Phal (भावेश फल)</option>
+                    <option value="grah">Graha Phal (ग्रह फल)</option>
+                    <option value="bhav">Bhava Phaladesh (भाव फलादेश)</option>
+                    <option value="karak">Karaka Phal (कारक फल)</option>
+                    <option value="yoga">Yoga (योग)</option>
                 </select>
-                <button type="button" id="pred-expand" class="pred-expand" aria-label="विस्तृत करें" title="विस्तृत करें">⤢</button>
+                <button type="button" id="pred-expand" class="pred-expand" aria-label="Expand" title="Expand">⤢</button>
             </div>
             <div id="pred-scroll">
 
@@ -1187,10 +1196,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <div id="sec-bal" class="l2-section l2-full hidden space-y-4 md:space-y-6">
             <!-- बल tabs: Shadbala / Bhava Bala / Ashtakavarga / Vimshopaka -->
             <div class="bal-tabbar" aria-label="बल">
-                <button type="button" data-bal="shad" class="active">षड्बल (Shadbala)</button>
-                <button type="button" data-bal="bb">भाव बल (Bhava Bala)</button>
-                <button type="button" data-bal="av">अष्टकवर्ग (AV)</button>
-                <button type="button" data-bal="vim">विंशोपक बल</button>
+                <button type="button" data-bal="shad" class="active">Shadbala</button>
+                <button type="button" data-bal="bb">Bhava Bala</button>
+                <button type="button" data-bal="av">Ashtakavarga (AV)</button>
+                <button type="button" data-bal="vim">Vimshopaka Bala</button>
             </div>
 
             <div class="bal-tab space-y-4 md:space-y-6" data-bal="shad">
@@ -1668,7 +1677,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     function apply(expanded) {
       home.classList.toggle('pred-expanded', expanded);
       btn.textContent = expanded ? '⤡' : '⤢';
-      var label = expanded ? 'संकुचित करें' : 'विस्तृत करें';
+      var label = expanded ? 'Collapse' : 'Expand';
       btn.setAttribute('aria-label', label);
       btn.setAttribute('title', label);
       btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
@@ -1696,6 +1705,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       if (el) el.classList.toggle('hidden', id !== 'sec-' + key);
     });
     if (homeMode) { setTimeout(setPanelHeights, 60); }
+    // Cards rendered while their section was hidden (Mudda dasha, gochar pair)
+    // measured zero heights — re-run their resize syncs now they are visible.
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 200);
     if (focusPred && pp) { pp.scrollIntoView({ block: 'nearest' }); }
   }
   function activateBalTab(v) {
