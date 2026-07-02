@@ -121,16 +121,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             padding: 6px 16px; min-height: 44px; border-radius: 6px; display: inline-flex; align-items: center; }
         .btn-sindoor:hover { filter: brightness(1.1); }
 
-        /* ---- Overview tiles ---- */
-        .ov-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        /* ---- Overview tiles (compact; birth info included) ---- */
+        .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); gap: 8px; }
         @media (max-width: 699px) { .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         .ov-tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(38,34,28,.08); padding: 10px 14px; }
-        .ov-label { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft); }
-        .ov-value { font-size: 1.15rem; font-weight: 700; color: var(--ink); }
+            box-shadow: 0 1px 3px rgba(38,34,28,.08); padding: 6px 10px; min-width: 0; }
+        .ov-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ov-value { font-size: .98rem; font-weight: 700; color: var(--ink); line-height: 1.4;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .ov-value.acc-dasha { color: var(--sindoor); }
         .ov-value.acc-yoga  { color: var(--shubh); }
-        .ov-sub { font-size: .78rem; color: var(--ink-soft); }
+        .ov-sub { font-size: .72rem; color: var(--ink-soft);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* ---- Three-column shell (Phase 2) ---- */
         .l2-wrap { max-width: 1400px; }
@@ -148,6 +151,18 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .l2-menu button:hover { background: var(--sindoor-soft); }
         .l2-menu button.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
             color: var(--sindoor); font-weight: 700; }
+        /* Sub-menu: shown under the active section for direct jumps. */
+        .l2-sub { display: none; }
+        .l2-mi.open .l2-sub { display: block; }
+        .l2-sub button { font-size: .82rem; padding: 6px 14px 6px 26px; color: var(--ink-soft);
+            font-weight: 500; border-left: 3px solid var(--sindoor-soft); }
+        .l2-sub button:hover { color: var(--sindoor); }
+        /* Birth-details form: token styling (matches the approved design). */
+        #birth-form h2 { font-size: 1rem; }
+        #birth-form span { color: var(--ink-soft); }
+        #birth-form input, #birth-form select { border: 1px solid var(--line); min-height: 44px;
+            background: var(--card); color: var(--ink); }
+        #birth-form .bg-blue-600 { background: var(--sindoor) !important; min-height: 44px; }
         .chart-frame { width: 100%; margin: 0 auto; }
         .l2-select { width: 100%; border: 1px solid var(--line); background: var(--card);
             color: var(--ink); padding: 8px 10px; min-height: 44px; font-weight: 600; margin-bottom: 8px; }
@@ -245,6 +260,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         @media (max-width: 1099px) {
             .l2-grid { display: block; }
             .l2-menu { position: static; display: flex; overflow-x: auto; padding: 4px; margin-bottom: 12px; }
+            .l2-mi { flex: 0 0 auto; }
+            .l2-sub, .l2-mi.open .l2-sub { display: none; } /* chip bar: top-level only */
             .l2-menu button { width: auto; white-space: nowrap; border-left: none;
                 border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; }
             .l2-menu button.active { border-left: none; border-bottom-color: var(--sindoor); }
@@ -307,16 +324,37 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         $ovAntar = (string) ($dashaNow['antar']['lord'] ?? '');
         $ovPrat  = (string) ($dashaNow['pratyantar']['lord'] ?? '');
     ?>
+    <?php $ovSun = (string) ($chart['planets']['Sun']['sign'] ?? ''); ?>
     <div class="ov-tiles">
+        <div class="ov-tile">
+            <div class="ov-label">नाम</div>
+            <div class="ov-value"><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></div>
+            <div class="ov-sub"><?= $in['gender'] !== '' ? $h($in['gender']) : '&nbsp;' ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">जन्म तिथि / समय</div>
+            <div class="ov-value"><?= $h($in['date']) ?></div>
+            <div class="ov-sub"><?= $h($in['time']) ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">जन्म स्थान</div>
+            <div class="ov-value" title="<?= $h($pobTop) ?>"><?= $h($pobTop) ?></div>
+            <div class="ov-sub"><?= $h($in['latIn']) ?>, <?= $h($in['lonIn']) ?></div>
+        </div>
         <div class="ov-tile">
             <div class="ov-label">लग्न</div>
             <div class="ov-value"><?= $h($rashiHi[$ovLagna] ?? $ovLagna) ?></div>
             <div class="ov-sub"><?= $h($ovLagna) ?> · <?= $h((string) ($chart['ascendant']['formatted'] ?? '')) ?></div>
         </div>
         <div class="ov-tile">
-            <div class="ov-label">राशि</div>
+            <div class="ov-label">राशि (चंद्र)</div>
             <div class="ov-value"><?= $h($rashiHi[$ovMoon] ?? $ovMoon) ?></div>
             <div class="ov-sub">चंद्र राशि · <?= $h($ovMoon) ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">सूर्य राशि</div>
+            <div class="ov-value"><?= $h($rashiHi[$ovSun] ?? $ovSun) ?></div>
+            <div class="ov-sub">Sun Sign · <?= $h($ovSun) ?></div>
         </div>
         <div class="ov-tile">
             <div class="ov-label">चालू दशा</div>
@@ -397,12 +435,59 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
         <!-- Side menu -->
         <nav id="side-menu" class="l2-menu l2-card" aria-label="मुख्य अनुभाग">
-            <button type="button" data-sec="home" class="active">जन्म कुंडली</button>
-            <button type="button" data-sec="grah">ग्रह स्थिति</button>
-            <button type="button" data-sec="varga">वर्ग कुंडली</button>
-            <button type="button" data-sec="dasha">दशा</button>
-            <button type="button" data-sec="bal">बल</button>
-            <button type="button" data-sec="home" data-focus="pred">फलादेश</button>
+            <div class="l2-mi">
+                <button type="button" data-sec="home" class="active">जन्म कुंडली</button>
+                <div class="l2-sub">
+                    <button type="button" data-sec="home" data-target="chart-panel">कुंडली चार्ट</button>
+                    <button type="button" data-sec="home" data-target="pred-panel">फलादेश</button>
+                </div>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="grah">ग्रह स्थिति</button>
+                <div class="l2-sub">
+                    <button type="button" data-sec="grah" data-target="card-native">जन्म विवरण</button>
+                    <button type="button" data-sec="grah" data-target="card-housedet">भाव विवरण</button>
+                    <button type="button" data-sec="grah" data-target="card-d1pos">ग्रह स्थिति (D1)</button>
+                </div>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="varga">वर्ग कुंडली</button>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="dasha">दशा</button>
+                <div class="l2-sub">
+                    <button type="button" data-sec="dasha" data-target="card-curdasha">चालू दशा</button>
+                    <button type="button" data-sec="dasha" data-target="card-vimtree">विंशोत्तरी (5 स्तर)</button>
+                </div>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="bal">बल</button>
+                <div class="l2-sub">
+                    <button type="button" data-sec="bal" data-tab="shad">षड्बल</button>
+                    <button type="button" data-sec="bal" data-tab="bb">भाव बल</button>
+                    <button type="button" data-sec="bal" data-tab="av">अष्टकवर्ग</button>
+                    <button type="button" data-sec="bal" data-tab="vim">विंशोपक</button>
+                </div>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="gochar">गोचर</button>
+                <div class="l2-sub">
+                    <button type="button" data-sec="gochar" data-target="card-gocharcalc">गोचर गणना</button>
+                    <button type="button" data-sec="gochar" data-target="card-gocharpair">कुंडली बनाम गोचर</button>
+                    <button type="button" data-sec="gochar" data-target="card-gochardet">गोचर तालिका</button>
+                </div>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="varsha">वर्ष कुंडली</button>
+                <div class="l2-sub">
+                    <button type="button" data-sec="varsha" data-target="card-vpbox">वर्ष चयन</button>
+                    <button type="button" data-sec="varsha" data-target="vp-output">वर्ष चार्ट + मुद्दा दशा</button>
+                    <button type="button" data-sec="varsha" data-target="card-varshadet">वार्षिक स्थिति</button>
+                </div>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="home" data-focus="pred">फलादेश</button>
+            </div>
         </nav>
 
         <!-- Chart panel (middle column) -->
@@ -461,12 +546,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
             <div class="pred-head">
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0; flex:1">
-                    <option value="dasha">फलादेश — दशा फल</option>
-                    <option value="bhavesh">फलादेश — भावेश फल</option>
-                    <option value="grah">फलादेश — ग्रह फल</option>
-                    <option value="bhav">फलादेश — भाव फलादेश</option>
-                    <option value="karak">फलादेश — कारक फल</option>
-                    <option value="yoga">फलादेश — योग</option>
+                    <option value="dasha">दशा फल</option>
+                    <option value="bhavesh">भावेश फल</option>
+                    <option value="grah">ग्रह फल</option>
+                    <option value="bhav">भाव फलादेश</option>
+                    <option value="karak">कारक फल</option>
+                    <option value="yoga">योग</option>
                 </select>
                 <button type="button" id="pred-expand" class="pred-expand" aria-label="विस्तृत करें" title="विस्तृत करें">⤢</button>
             </div>
@@ -813,7 +898,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 . '<div class="font-semibold text-gray-800">' . ($value !== '' ? $h($value) : '—') . '</div></div>';
         };
     ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm">
+    <div id="card-native" class="bg-white rounded-lg shadow p-4 text-sm">
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
             <?= $field('Name', $in['name']) ?>
             <?= $field('Gender', $in['gender']) ?>
@@ -891,7 +976,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
 
     <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala total, lord -->
-    <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+    <div id="card-housedet" class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <div class="flex items-center justify-between mb-2">
             <h2 class="font-semibold">House Details</h2>
             <button id="hd-copy" type="button" class="text-xs bg-gray-100 hover:bg-gray-200 border rounded px-3 py-1 font-semibold">Copy</button>
@@ -930,7 +1015,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
 
     <!-- D1 -->
-    <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+    <div id="card-d1pos" class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <h2 class="font-semibold mb-2">D1 (Rasi) — Planetary Positions</h2>
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b">
@@ -968,18 +1053,20 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             </div>
             <p class="text-xs text-gray-400 mt-2">North-Indian style: house 1 top-centre (As = Ascendant); black number at each inner corner = Rashi (sign) number; planet abbreviations colour-coded (Dasha palette), &#174; = retrograde.</p>
         </div>
+        </div><!-- /sec-varga -->
 
-
-        <!-- ROW 3 — Gochar calculation details (defaults to now + IP location) -->
-        <div class="bg-white rounded-lg shadow p-4">
+        <!-- ============ गोचर (full-width section) ============ -->
+        <div id="sec-gochar" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+        <!-- Gochar calculation details (defaults to now + IP location) -->
+        <div id="card-gocharcalc" class="bg-white rounded-lg shadow p-4">
             <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details</h2>
             <div id="gochar-inputs"></div>
         </div>
 
 
-        <!-- ROW 4 — natal D1 (Rasi) vs current Gochar (transit). Both cards carry
+        <!-- natal D1 (Rasi) vs current Gochar (transit). Both cards carry
              a matching header (title + date/time/place) so the charts line up. -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+        <div id="card-gocharpair" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div class="bg-white rounded-lg shadow p-2 flex flex-col">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
                     <span class="font-semibold text-gray-800">Rasi (D1)</span>
@@ -994,23 +1081,41 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div id="gochar-output" class="w-full"></div>
             </div>
         </div>
+    <!-- Gochar transits table -->
+    <?php if ($gochar !== null): ?>
+    <div id="card-gochardet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+        <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
+        <?php if (isset($gochar['ascendant'])): ?>
+            <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
+        <?php endif; ?>
+        <table class="w-full">
+            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
+            <tbody>
+            <?php foreach ($gochar['transits'] as $name => $t): ?>
+                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
+                    <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+        </div><!-- /sec-gochar -->
 
-
-        <!-- ROW 5 — Varshaphal year selection + summary details -->
-        <div class="bg-white rounded-lg shadow p-4">
+        <!-- ============ वर्ष कुंडली (full-width section) ============ -->
+        <div id="sec-varsha" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+        <!-- Varshaphal year selection + summary details -->
+        <div id="card-vpbox" class="bg-white rounded-lg shadow p-4">
             <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
             <div id="vp-box" class="mb-3"></div>
             <div id="vp-summary" class="text-sm"></div>
         </div>
 
-
-        <!-- ROW 6 — Varsha chart + Mudda dasha, side by side -->
+        <!-- Varsha chart + Mudda dasha, side by side -->
         <div id="vp-output"></div>
 
-
-    <!-- Varshaphal -->
+    <!-- Varshaphal annual positions + Mudda dasha tree -->
     <?php if ($vp !== null): ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+    <div id="card-varshadet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-2">Varshaphal (Annual Chart) — year <?= (int) $in['forYear'] ?></h2>
         <div>Varsha Lagna: <b><?= $h($vp['varsha_chart']['ascendant']['formatted']) ?></b> (lord <?= $h($vp['varsha_lagna']['lord']) ?>)
             · Muntha: <?= $h($vp['muntha']['sign']) ?> (lord <?= $h($vp['muntha']['lord']) ?>)
@@ -1027,26 +1132,6 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
         <h3 class="font-semibold mt-4 mb-2">Mudda (Annual) Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h3>
         <div id="mudda-dasha-detail"></div>
-    </div>
-    <?php endif; ?>
-
-
-    <!-- Gochar -->
-    <?php if ($gochar !== null): ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
-        <?php if (isset($gochar['ascendant'])): ?>
-            <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
-        <?php endif; ?>
-        <table class="w-full">
-            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
-            <tbody>
-            <?php foreach ($gochar['transits'] as $name => $t): ?>
-                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
-                    <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
     </div>
     <?php endif; ?>
 
@@ -1070,7 +1155,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 . '<span class="text-gray-500">(' . $dates . ')</span></div>';
         };
     ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+    <div id="card-curdasha" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-2">Current Dasha — today (<?= $h(date('d-m-Y')) ?>)</h2>
         <div class="space-y-1 leading-snug">
             <?= $cdRow('MahaDasha', $dashaNow['maha'], 0, '–') ?>
@@ -1086,7 +1171,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
 
     <!-- Vimshottari — same expandable, colour-coded tree as the Chart view -->
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+    <div id="card-vimtree" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
         <div class="mb-2">Birth balance: <b style="color: <?= $pcolor($chart['dasha']['balance']['lord']) ?>"><?= $h($chart['dasha']['balance']['lord']) ?></b>
             for <?= sprintf('%.2f', $chart['dasha']['balance']['years']) ?> years.
@@ -1599,7 +1684,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   })();
 
   // Side-menu section switching: home = three-panel; others span the two panels.
-  var FULL_SECTIONS = ['sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal'];
+  var FULL_SECTIONS = ['sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-varsha'];
   function showSection(key, focusPred) {
     var homeMode = key === 'home';
     var cp = document.getElementById('chart-panel');
@@ -1613,46 +1698,64 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     if (homeMode) { setTimeout(setPanelHeights, 60); }
     if (focusPred && pp) { pp.scrollIntoView({ block: 'nearest' }); }
   }
+  function activateBalTab(v) {
+    document.querySelectorAll('.bal-tabbar button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-bal') === v);
+    });
+    document.querySelectorAll('.bal-tab').forEach(function (el) {
+      el.classList.toggle('hidden', el.getAttribute('data-bal') !== v);
+    });
+  }
   document.querySelectorAll('#side-menu [data-sec]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('#side-menu [data-sec]').forEach(function (b) { b.classList.toggle('active', b === btn); });
-      showSection(btn.getAttribute('data-sec'), btn.hasAttribute('data-focus'));
+      var isSub = !!btn.closest('.l2-sub');
+      // Top-level active state follows the section, whichever button was used.
+      var sec = btn.getAttribute('data-sec');
+      document.querySelectorAll('#side-menu .l2-mi').forEach(function (mi) {
+        var top = mi.querySelector(':scope > button');
+        var owns = top && top.getAttribute('data-sec') === sec && !top.hasAttribute('data-focus');
+        if (btn.hasAttribute('data-focus')) { owns = top === btn; }
+        top.classList.toggle('active', owns);
+        mi.classList.toggle('open', owns);
+      });
+      showSection(sec, btn.hasAttribute('data-focus'));
+      if (btn.hasAttribute('data-tab')) { activateBalTab(btn.getAttribute('data-tab')); }
+      var tgt = btn.getAttribute('data-target');
+      if (tgt) {
+        var el = document.getElementById(tgt);
+        if (el) { setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); }
+      }
     });
   });
+  // Open the sub-menu of the default section on load.
+  (function () { var mi = document.querySelector('#side-menu .l2-mi'); if (mi) { mi.classList.add('open'); } })();
 
-  // Equal heights (required): chart panel height == prediction panel height,
-  // filling the viewport below the tiles; min 560px. Desktop (≥1100px) only.
+  // Equal heights (required): both panels match, sized by the chart at FULL
+  // column width (the chart is square, so panel height follows column width).
   function setPanelHeights() {
     var cp = document.getElementById('chart-panel');
     var pp = document.getElementById('pred-panel');
+    var frame = document.getElementById('chart-frame');
     if (!cp || !pp) { return; }
     if (!window.matchMedia('(min-width: 1100px)').matches) {
       cp.style.height = ''; pp.style.height = '';
-      sizeChartFrame(null);
       return;
     }
-    // Measure from whichever panel is on screen (chart panel is display:none
-    // in the expanded reading mode).
-    var ref = cp.offsetParent !== null ? cp : pp;
-    var top = ref.getBoundingClientRect().top;
-    var hpx = Math.max(560, window.innerHeight - top - 16);
+    if (cp.offsetParent === null) {
+      // Expanded reading mode: prediction panel fills the viewport.
+      var top = pp.getBoundingClientRect().top;
+      pp.style.height = Math.max(560, window.innerHeight - top - 16) + 'px';
+      return;
+    }
+    // Chart expands to the full column width; the panel wraps around it.
+    var other = 0;
+    Array.prototype.forEach.call(cp.children, function (ch) {
+      if (ch !== frame) { other += ch.getBoundingClientRect().height; }
+    });
+    var chartH = frame ? frame.getBoundingClientRect().width : 0; // square chart
+    var hpx = Math.max(560, Math.ceil(chartH + other + 32));
     cp.style.height = hpx + 'px';
     pp.style.height = hpx + 'px';
-    sizeChartFrame(hpx);
-  }
-  // The chart is square: cap its width so it fits the panel height (CSS
-  // container scaling only — nothing inside the SVG changes).
-  function sizeChartFrame(panelH) {
-    var frame = document.getElementById('chart-frame');
-    var cp = document.getElementById('chart-panel');
-    if (!frame || !cp) { return; }
-    if (panelH == null) { frame.style.maxWidth = ''; return; }
-    var used = 0;
-    Array.prototype.forEach.call(cp.children, function (ch) {
-      if (ch !== frame) { used += ch.getBoundingClientRect().height; }
-    });
-    var avail = panelH - used - 40; // paddings/margins
-    frame.style.maxWidth = Math.max(300, avail) + 'px';
   }
   var resizeT2;
   window.addEventListener('resize', function () {
