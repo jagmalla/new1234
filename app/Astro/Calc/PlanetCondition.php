@@ -18,28 +18,28 @@ final class PlanetCondition
         0 => 'Mars', 1 => 'Venus', 2 => 'Mercury', 3 => 'Moon', 4 => 'Sun', 5 => 'Mercury',
         6 => 'Venus', 7 => 'Mars', 8 => 'Jupiter', 9 => 'Saturn', 10 => 'Saturn', 11 => 'Jupiter',
     ];
-    /** Exaltation sign index per planet. */
-    private const EXALT_SIGN = [
-        'Sun' => 0, 'Moon' => 1, 'Mars' => 9, 'Mercury' => 5, 'Jupiter' => 3,
-        'Venus' => 11, 'Saturn' => 6, 'Rahu' => 1, 'Ketu' => 7,
+    /**
+     * Default dignity data (0-indexed signs) mirroring migrations/009 planet_dignity.
+     * Per planet: exalt sign, deep-exalt°, debil sign, moolatrikona [sign, from°, to°),
+     * own sign list. Exalt/MT/own can partition one sign by degree (e.g. Mercury in
+     * Virgo: 0-15 exalt, 15-20 MT, 20-30 own). Nodes: exalt/debil only, no MT/own.
+     * Overridable at runtime via {@see configure()} so the owner-editable DB table wins.
+     */
+    private const DIG_DEFAULT = [
+        'Sun'     => ['ex' => 0,  'deep' => 10.0, 'de' => 6,  'mt' => [4, 0.0, 20.0],  'own' => [4]],
+        'Moon'    => ['ex' => 1,  'deep' => 3.0,  'de' => 7,  'mt' => [1, 3.0, 30.0],  'own' => [3]],
+        'Mars'    => ['ex' => 9,  'deep' => 28.0, 'de' => 3,  'mt' => [0, 0.0, 12.0],  'own' => [0, 7]],
+        'Mercury' => ['ex' => 5,  'deep' => 15.0, 'de' => 11, 'mt' => [5, 15.0, 20.0], 'own' => [2, 5]],
+        'Jupiter' => ['ex' => 3,  'deep' => 5.0,  'de' => 9,  'mt' => [8, 0.0, 10.0],  'own' => [8, 11]],
+        'Venus'   => ['ex' => 11, 'deep' => 27.0, 'de' => 5,  'mt' => [6, 0.0, 15.0],  'own' => [1, 6]],
+        'Saturn'  => ['ex' => 6,  'deep' => 20.0, 'de' => 0,  'mt' => [10, 0.0, 20.0], 'own' => [9, 10]],
+        'Rahu'    => ['ex' => 1,  'deep' => null, 'de' => 7,  'mt' => null, 'own' => []],
+        'Ketu'    => ['ex' => 7,  'deep' => null, 'de' => 1,  'mt' => null, 'own' => []],
     ];
-    /** Deep-exaltation (परम उच्च) degree within the exaltation sign. */
-    private const DEEP_EXALT_DEG = [
-        'Sun' => 10.0, 'Moon' => 3.0, 'Mars' => 28.0, 'Mercury' => 15.0,
-        'Jupiter' => 5.0, 'Venus' => 27.0, 'Saturn' => 20.0,
-    ];
-    /** Own sign indices (nodes co-lord Aquarius / Scorpio, per the common scheme). */
-    private const OWN = [
-        'Sun' => [4], 'Moon' => [3], 'Mars' => [0, 7], 'Mercury' => [2, 5],
-        'Jupiter' => [8, 11], 'Venus' => [1, 6], 'Saturn' => [9, 10],
-        'Rahu' => [10], 'Ketu' => [7],
-    ];
-    /** Moolatrikona: [sign index, start°, end°]. */
-    private const MOOLA = [
-        'Sun' => [4, 0.0, 20.0], 'Mars' => [0, 0.0, 12.0], 'Mercury' => [5, 16.0, 20.0],
-        'Jupiter' => [8, 0.0, 10.0], 'Venus' => [6, 0.0, 15.0], 'Saturn' => [10, 0.0, 20.0],
-        // Moon's MT (Taurus 4-30) is subsumed by its exaltation sign, so omitted.
-    ];
+    /** Runtime dignity + orb overrides (from DB); null = use defaults. */
+    private static ?array $digOverride = null;
+    private static ?array $orbOverride = null;
+    private static float $moonAmavasyaOrb = 12.0;
     /** Natural (Naisargika) friendship: F=friend, N=neutral, E=enemy. */
     private const PERM = [
         'Sun'     => ['Moon' => 'F', 'Mars' => 'F', 'Jupiter' => 'F', 'Mercury' => 'N', 'Venus' => 'E', 'Saturn' => 'E'],
@@ -101,39 +101,75 @@ final class PlanetCondition
     }
 
     /**
-     * Resolve dignity tier/word/score.
+     * Inject owner-editable dignity bands / combustion orbs (from the DB tables
+     * planet_dignity + combustion_orbs). Pass null to keep built-in defaults.
+     *
+     * @param array<string,array<string,mixed>>|null $dignity planet => {ex,deep,de,mt:[sign,from,to]|null,own:int[]}
+     * @param array<string,array{0:float,1:float}>|null $orbs   planet => [direct, retro]
+     */
+    public static function configure(?array $dignity = null, ?array $orbs = null, ?float $moonAmavasyaOrb = null): void
+    {
+        self::$digOverride = $dignity;
+        self::$orbOverride = $orbs;
+        if ($moonAmavasyaOrb !== null) {
+            self::$moonAmavasyaOrb = $moonAmavasyaOrb;
+        }
+    }
+
+    /**
+     * Resolve dignity — FIRST MATCH WINS, degree-aware (exalt/MT/own may split
+     * one sign). Order: exalt → moolatrikona → own → debil(+neecha-bhanga) →
+     * panchadha maitri toward the sign lord.
      *
      * @param array<string,array<string,mixed>> $planets
-     * @return array{tier:string,word:string,score:float,neecha_bhanga:bool}
+     * @return array{tier:string,word:string,score:float,neecha_bhanga:bool,deep:string,reason:string}
      */
     public static function dignity(string $planet, int $sign, float $deg, array $planets, int $ascSign): array
     {
+        $d = (self::$digOverride[$planet] ?? null) ?? self::DIG_DEFAULT[$planet] ?? null;
         $tier = null;
         $bhanga = false;
+        $deepNote = '';
+        $reason = '';
 
-        $exaltSign = self::EXALT_SIGN[$planet] ?? -1;
-        if ($sign === $exaltSign) {
-            $deep = self::DEEP_EXALT_DEG[$planet] ?? null;
-            $tier = ($deep !== null && abs($deg - $deep) <= 1.0) ? 'param_uchcha' : 'exalt';
-        } elseif ($exaltSign >= 0 && $sign === ($exaltSign + 6) % 12) {
-            $tier = 'debil';
-            $bhanga = self::neechaBhanga($planet, $sign, $planets, $ascSign);
-            if ($bhanga) {
-                $tier = 'debil_bhanga';
+        if ($d !== null) {
+            $mt = $d['mt'] ?? null;
+            $exaltSameAsMt = $mt !== null && (int) $mt[0] === (int) $d['ex'];
+
+            // 1) EXALTED — in exalt sign, unless that sign's upper part is MT/own by degree.
+            if ($sign === (int) $d['ex'] && !($exaltSameAsMt && $deg >= (float) $mt[1])) {
+                $tier = 'exalt';
+                if ($d['deep'] !== null && abs($deg - (float) $d['deep']) <= 3.0) {
+                    $tier = 'param_uchcha';
+                    $deepNote = ' (परम उच्च के निकट)';
+                }
+            // 2) MOOLATRIKONA — [from, to)
+            } elseif ($mt !== null && $sign === (int) $mt[0] && $deg >= (float) $mt[1] && $deg < (float) $mt[2]) {
+                $tier = 'moolatrikona';
+            // 3) OWN
+            } elseif (in_array($sign, $d['own'] ?? [], true)) {
+                $tier = 'own';
+            // 4) DEBILITATED (+ neecha bhanga)
+            } elseif ($sign === (int) $d['de']) {
+                $tier = 'debil';
+                [$bhanga, $reason] = self::neechaBhanga($planet, $sign, $planets, $ascSign);
+                if ($bhanga) {
+                    $tier = 'debil_bhanga';
+                }
             }
-        } elseif (isset(self::MOOLA[$planet])
-            && $sign === self::MOOLA[$planet][0]
-            && $deg >= self::MOOLA[$planet][1] && $deg <= self::MOOLA[$planet][2]) {
-            $tier = 'moolatrikona';
-        } elseif (in_array($sign, self::OWN[$planet] ?? [], true)) {
-            $tier = 'own';
-        } else {
+        }
+
+        // 5) PANCHADHA MAITRI toward the sign lord
+        if ($tier === null) {
             $lord = self::SIGN_LORD[$sign];
             $tier = $lord === $planet ? 'own' : self::compoundTier($planet, $lord, $planets);
         }
 
         [$word, $score] = self::DIGNITY[$tier];
-        return ['tier' => $tier, 'word' => $word, 'score' => (float) $score, 'neecha_bhanga' => $bhanga];
+        return [
+            'tier' => $tier, 'word' => $word, 'score' => (float) $score,
+            'neecha_bhanga' => $bhanga, 'deep' => $deepNote, 'reason' => $reason,
+        ];
     }
 
     /**
@@ -148,7 +184,8 @@ final class PlanetCondition
             return null;
         }
         $retro = (bool) ($planets[$planet]['retro'] ?? false);
-        $orb = self::COMBUST_ORB[$planet][$retro ? 1 : 0];
+        $orbs = (self::$orbOverride[$planet] ?? null) ?? self::COMBUST_ORB[$planet];
+        $orb = $orbs[$retro ? 1 : 0];
 
         $sep = self::sep((float) $planets[$planet]['sidereal_lon'], (float) $planets['Sun']['sidereal_lon']);
         if ($sep >= $orb) {
@@ -157,7 +194,9 @@ final class PlanetCondition
         $pct = (int) round(($orb - $sep) / $orb * 100.0);
         $pct = max(0, min(100, $pct));
         $tier = $pct >= 75 ? 'full' : ($pct >= 40 ? 'moderate' : 'partial');
-        return ['sep' => round($sep, 1), 'pct' => $pct, 'tier' => $tier];
+        // Moon very close to the Sun → amavasya-weakness (independent of band).
+        $amavasya = $planet === 'Moon' && $sep < self::$moonAmavasyaOrb;
+        return ['sep' => round($sep, 1), 'pct' => $pct, 'tier' => $tier, 'orb' => $orb, 'amavasya' => $amavasya];
     }
 
     /**
@@ -270,26 +309,45 @@ final class PlanetCondition
     }
 
     /**
-     * Simplified neecha-bhanga: the dispositor (lord of the debilitation sign)
-     * sits in a kendra (1/4/7/10) from the Lagna, or is itself exalted/own.
+     * Neecha-bhanga (cancellation of debilitation). Returns [cancelled, reason].
+     * Any one: (a) the dispositor (lord of the debilitation sign) is in a kendra
+     * from Lagna or Moon; (b) the planet that is exalted in that sign is in a
+     * kendra from Lagna/Moon; (c) either of those aspects the debilitated planet.
      *
      * @param array<string,array<string,mixed>> $planets
+     * @return array{0:bool,1:string}
      */
-    private static function neechaBhanga(string $planet, int $debilSign, array $planets, int $ascSign): bool
+    private static function neechaBhanga(string $planet, int $debilSign, array $planets, int $ascSign): array
     {
+        $moonSign = (int) ($planets['Moon']['sign_index'] ?? $ascSign);
+        $kendra = static function (string $who) use ($planets, $ascSign, $moonSign): bool {
+            if (!isset($planets[$who])) {
+                return false;
+            }
+            $s = (int) $planets[$who]['sign_index'];
+            $fromLagna = (($s - $ascSign + 12) % 12) + 1;
+            $fromMoon  = (($s - $moonSign + 12) % 12) + 1;
+            return in_array($fromLagna, [1, 4, 7, 10], true) || in_array($fromMoon, [1, 4, 7, 10], true);
+        };
+
+        // (a) dispositor of the debilitation sign in a kendra
         $lord = self::SIGN_LORD[$debilSign];
-        if (!isset($planets[$lord])) {
-            return false;
+        if ($kendra($lord)) {
+            return [true, self::hi($lord) . ' (राशि-स्वामी) केन्द्र में है'];
         }
-        $lordHouse = (($planets[$lord]['sign_index'] - $ascSign + 12) % 12) + 1;
-        if (in_array($lordHouse, [1, 4, 7, 10], true)) {
-            return true;
+        // (b) the planet exalted in that sign, in a kendra
+        foreach (self::DIG_DEFAULT as $pl => $d) {
+            if ((int) $d['ex'] === $debilSign && $kendra($pl)) {
+                return [true, self::hi($pl) . ' (जो इस राशि में उच्च होता है) केन्द्र में है'];
+            }
         }
-        $ls = (int) $planets[$lord]['sign_index'];
-        if ($ls === (self::EXALT_SIGN[$lord] ?? -1) || in_array($ls, self::OWN[$lord] ?? [], true)) {
-            return true;
-        }
-        return false;
+        return [false, ''];
+    }
+
+    private static function hi(string $planet): string
+    {
+        return ['Sun' => 'सूर्य', 'Moon' => 'चंद्र', 'Mars' => 'मंगल', 'Mercury' => 'बुध',
+            'Jupiter' => 'गुरु', 'Venus' => 'शुक्र', 'Saturn' => 'शनि', 'Rahu' => 'राहु', 'Ketu' => 'केतु'][$planet] ?? $planet;
     }
 
     /** Angular separation 0..180. */

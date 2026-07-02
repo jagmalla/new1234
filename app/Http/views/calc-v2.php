@@ -307,6 +307,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gc-mishrit{ background: #f2e6c9; color: #8a6412; }
         .gc-pratikul { background: #f4d9d4; color: #8A2F2F; }
         .gc-ati    { background: #e7b3ac; color: #5f1a1a; }
+        .gc-ashubh { background: #f4d9d4; color: #8A2F2F; }
         #planet-phala-card .pp-sec  { font-size: 1.15rem; font-weight: 700; }
         #planet-phala-card .pp-sub  { font-size: 1.1rem;  font-weight: 700; }
     </style>
@@ -760,7 +761,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div class="overflow-y-auto pr-1" style="max-height:480px" id="house-detail-pane">
                     <?php foreach ($hp['houses'] as $hh => $hd): ?>
                     <div class="house-detail<?= $hh === 1 ? '' : ' hidden' ?> mb-4" data-house="<?= (int) $hh ?>">
-                        <div class="font-semibold text-gray-800 mb-1"><?= $ord2((int) $hh) ?> House — <?= $h((string) $hd['rashi_hi']) ?> (<?= $h((string) $hd['rashi']) ?>)</div>
+                        <div class="font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                            <span><?= $ord2((int) $hh) ?> House — <?= $h((string) $hd['rashi_hi']) ?> (<?= $h((string) $hd['rashi']) ?>)</span>
+                            <?php if (!empty($hd['chip'])): ?><span class="gc-chip gc-<?= $h((string) $hd['chip']['tier']) ?>"><?= $h((string) $hd['chip']['word']) ?></span><?php endif; ?>
+                        </div>
                         <div class="text-gray-600 mb-2 whitespace-pre-line" style="font-size:1.02rem"><?= $h((string) $hd['intro']) ?></div>
                         <?php if (!empty($hd['lines'])): ?>
                         <ul class="list-disc pl-5 space-y-1 text-gray-800" style="font-size:1.02rem; line-height:1.6">
@@ -1046,10 +1050,13 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b">
                 <th class="py-1 pr-3">Planet</th><th class="pr-3">Position</th><th class="pr-3">Placement</th><th class="pr-3">Lord</th>
-                <th class="pr-3">Nakshatra (pada)</th><th class="pr-3">Navamsa</th><th>Retro</th>
+                <th class="pr-3">Nakshatra (pada)</th><th class="pr-3">Navamsa</th><th class="pr-3">अस्त %</th><th>Retro</th>
             </tr></thead>
             <tbody>
-            <?php foreach ($chart['planets'] as $name => $p): ?>
+            <?php foreach ($chart['planets'] as $name => $p):
+                // Combustion % from the shared service (single source of truth).
+                $cmb = \AutoBusiness\Astro\Calc\PlanetCondition::combustion((string) $name, $chart['planets']);
+            ?>
                 <tr class="border-b border-gray-100">
                     <td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
                     <td class="pr-3"><?= $h($p['formatted']) ?></td>
@@ -1057,6 +1064,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                     <td class="pr-3"><?= $h($lordHouses((string) $name)) ?></td>
                     <td class="pr-3"><?= $h($p['nakshatra']['name']) ?> (<?= (int) $p['nakshatra']['pada'] ?>)</td>
                     <td class="pr-3"><?= $h($p['navamsa_sign']) ?></td>
+                    <td class="pr-3"><?= $cmb !== null ? '<span style="color:#b45309;font-weight:600">' . (int) $cmb['pct'] . '%</span>' : '<span class="text-gray-300">—</span>' ?></td>
                     <td><?= $p['retro'] ? '<sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
                 </tr>
             <?php endforeach; ?>

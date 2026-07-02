@@ -71,6 +71,53 @@ final class HousePredictionRepository
                 $rules['tpl'][(string) $r['rule_key']] = (string) $r['sentence_template'];
             }
 
+            // --- Fix v2 tables (migration 009): yuti rules, config, and the
+            // owner-editable dignity/combustion bands fed into PlanetCondition. ---
+            $rules['yuti'] = [];
+            $stmt = $pdo->prepare('SELECT rule_key, with_planet, sentence_template, good_bad, score FROM yuti_rules WHERE language = ?');
+            $stmt->execute([$language]);
+            foreach ($stmt as $r) {
+                $rules['yuti'][(string) $r['rule_key']] = [
+                    'with' => $r['with_planet'] !== null ? (string) $r['with_planet'] : null,
+                    'tpl' => (string) $r['sentence_template'], 'gb' => (string) $r['good_bad'], 'score' => (float) $r['score'],
+                ];
+            }
+
+            $rules['config'] = [];
+            try {
+                foreach ($pdo->query('SELECT cfg_key, cfg_value FROM house_engine_config') as $r) {
+                    $rules['config'][(string) $r['cfg_key']] = (string) $r['cfg_value'];
+                }
+            } catch (Throwable $e) { /* config table optional */ }
+
+            // planet_dignity (1-indexed signs) -> PlanetCondition's 0-indexed shape.
+            $rules['dignity'] = [];
+            try {
+                foreach ($pdo->query('SELECT planet, exalt_sign, deep_exalt_deg, debil_sign, mt_sign, mt_deg_from, mt_deg_to, own_signs FROM planet_dignity') as $r) {
+                    $own = [];
+                    foreach (explode(',', (string) $r['own_signs']) as $x) {
+                        $x = trim($x);
+                        if ($x !== '' && ctype_digit($x)) { $own[] = (int) $x - 1; }
+                    }
+                    $rules['dignity'][(string) $r['planet']] = [
+                        'ex' => $r['exalt_sign'] !== null ? (int) $r['exalt_sign'] - 1 : -1,
+                        'deep' => $r['deep_exalt_deg'] !== null ? (float) $r['deep_exalt_deg'] : null,
+                        'de' => $r['debil_sign'] !== null ? (int) $r['debil_sign'] - 1 : -1,
+                        'mt' => $r['mt_sign'] !== null ? [(int) $r['mt_sign'] - 1, (float) $r['mt_deg_from'], (float) $r['mt_deg_to']] : null,
+                        'own' => $own,
+                    ];
+                }
+            } catch (Throwable $e) { /* dignity table optional — PlanetCondition uses defaults */ }
+
+            $rules['orbs'] = [];
+            try {
+                foreach ($pdo->query('SELECT planet, orb_deg, orb_deg_retro FROM combustion_orbs') as $r) {
+                    $direct = (float) $r['orb_deg'];
+                    $retro = $r['orb_deg_retro'] !== null ? (float) $r['orb_deg_retro'] : $direct;
+                    $rules['orbs'][(string) $r['planet']] = [$direct, $retro];
+                }
+            } catch (Throwable $e) { /* orbs table optional */ }
+
             return $rules;
         } catch (Throwable $e) {
             self::$lastError = $e->getMessage();
