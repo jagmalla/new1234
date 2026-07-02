@@ -328,7 +328,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                         <button type="button" class="house-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100" data-house="all">सभी भाव (All 12)</button>
                         <?php foreach ($hp['houses'] as $hh => $hd): ?>
                             <button type="button" class="house-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100 <?= $hh === 1 ? 'bg-blue-50 border-blue-200 font-semibold' : '' ?>" data-house="<?= (int) $hh ?>">
-                                <?= (int) $hh ?> — <?= $h((string) $hd['rashi_hi']) ?>
+                                <?= $ord2((int) $hh) ?> House — <?= $h((string) $hd['rashi_hi']) ?>
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -336,7 +336,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
                 <div class="overflow-y-auto pr-1" style="max-height:480px" id="house-detail-pane">
                     <?php foreach ($hp['houses'] as $hh => $hd): ?>
                     <div class="house-detail<?= $hh === 1 ? '' : ' hidden' ?> mb-4" data-house="<?= (int) $hh ?>">
-                        <div class="font-semibold text-gray-800 mb-1"><?= (int) $hh ?> भाव — <?= $h((string) $hd['rashi_hi']) ?> (<?= $h((string) $hd['rashi']) ?>)</div>
+                        <div class="font-semibold text-gray-800 mb-1"><?= $ord2((int) $hh) ?> House — <?= $h((string) $hd['rashi_hi']) ?> (<?= $h((string) $hd['rashi']) ?>)</div>
                         <div class="text-gray-600 mb-2 whitespace-pre-line" style="font-size:1.02rem"><?= $h((string) $hd['intro']) ?></div>
                         <?php if (!empty($hd['lines'])): ?>
                         <ul class="list-disc pl-5 space-y-1 text-gray-800" style="font-size:1.02rem; line-height:1.6">
