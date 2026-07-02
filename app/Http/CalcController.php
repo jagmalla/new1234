@@ -127,8 +127,32 @@ final class CalcController
             // (B) Graha-in-Bhava (as placement). Built from the chart's own
             // ruled-house + placed-house knowledge.
             'planetPhala' => $this->planetPhala($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // House Prediction: combines the editable rule tables with the chart
+            // facts to write a per-house Hindi reading.
+            'housePred' => $this->housePred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';
+    }
+
+    /**
+     * Build the House Prediction payload: load the rule tables and combine them
+     * with the chart facts. Degrades to an error note if the DB is unreachable.
+     *
+     * @return array{lang:string, error:?string, houses:array<int,mixed>}|null
+     */
+    private function housePred(?array $chart, string $lang): ?array
+    {
+        if ($chart === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Phala\HousePredictionRepository::load($lang);
+        return [
+            'lang' => $lang,
+            'error' => \AutoBusiness\Astro\Phala\HousePredictionRepository::lastError(),
+            'houses' => $rules !== null
+                ? \AutoBusiness\Astro\Phala\HousePrediction::generate($chart, $rules)
+                : [],
+        ];
     }
 
     /**

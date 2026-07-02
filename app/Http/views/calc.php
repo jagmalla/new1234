@@ -304,6 +304,57 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         <?php endif; ?>
     </div>
 
+    <!-- House Prediction: rule-combined per-house Hindi reading. Shown in both views. -->
+    <?php $hp = $view['housePred'] ?? null; ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm" id="house-pred-card">
+        <div class="flex flex-wrap items-end gap-x-6 gap-y-2 mb-3">
+            <h2 class="font-semibold">House Prediction <span class="text-xs text-gray-400 font-normal">(भाव फल)</span></h2>
+            <span class="text-xs text-gray-400">नियम-आधारित — राशि तत्व, मैत्री, दृष्टि व भावेश स्थिति के संयोजन से</span>
+            <button type="button" class="phala-toggle ml-auto text-xs bg-gray-100 hover:bg-gray-200 border rounded px-2 py-1 font-semibold" data-target="house-body" aria-expanded="true">Collapse ▴</button>
+        </div>
+        <div id="house-body">
+        <?php if ($hp === null || empty($hp['houses'])): ?>
+            <?php if ($hp !== null && !empty($hp['error'])): ?>
+            <div class="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                Database not reachable — staff note: <?= $h((string) $hp['error']) ?>.
+                Check <code>.env</code> DB settings and that <code>migrations/006_house_prediction.sql</code> is imported.
+            </div>
+            <?php endif; ?>
+            <div class="text-gray-500 italic">House prediction not available yet (rule tables not imported).</div>
+        <?php else: ?>
+            <div class="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4" id="house-grid">
+                <div class="sm:border-r sm:pr-2 overflow-y-auto" style="max-height:480px">
+                    <div class="flex sm:flex-col flex-wrap gap-1">
+                        <button type="button" class="house-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100" data-house="all">सभी भाव (All 12)</button>
+                        <?php foreach ($hp['houses'] as $hh => $hd): ?>
+                            <button type="button" class="house-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100 <?= $hh === 1 ? 'bg-blue-50 border-blue-200 font-semibold' : '' ?>" data-house="<?= (int) $hh ?>">
+                                <?= (int) $hh ?> — <?= $h((string) $hd['rashi_hi']) ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="overflow-y-auto pr-1" style="max-height:480px" id="house-detail-pane">
+                    <?php foreach ($hp['houses'] as $hh => $hd): ?>
+                    <div class="house-detail<?= $hh === 1 ? '' : ' hidden' ?> mb-4" data-house="<?= (int) $hh ?>">
+                        <div class="font-semibold text-gray-800 mb-1"><?= (int) $hh ?> भाव — <?= $h((string) $hd['rashi_hi']) ?> (<?= $h((string) $hd['rashi']) ?>)</div>
+                        <div class="text-gray-600 mb-2 whitespace-pre-line" style="font-size:1.02rem"><?= $h((string) $hd['intro']) ?></div>
+                        <?php if (!empty($hd['lines'])): ?>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-800" style="font-size:1.02rem; line-height:1.6">
+                            <?php foreach ($hd['lines'] as $ln): ?>
+                                <li class="whitespace-pre-line"><?= $h((string) $ln) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php else: ?>
+                            <div class="text-gray-500 italic">इस भाव के लिए कोई विशेष नियम लागू नहीं होता।</div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        </div><!-- /#house-body -->
+    </div>
+
     <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="space-y-4 md:space-y-6">
 
@@ -841,6 +892,30 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         var pl = btn.getAttribute('data-planet');
         details.forEach(function (d) {
           d.classList.toggle('hidden', d.getAttribute('data-planet') !== pl);
+        });
+        picks.forEach(function (b) {
+          var on = b === btn;
+          b.classList.toggle('bg-blue-50', on);
+          b.classList.toggle('border-blue-200', on);
+          b.classList.toggle('font-semibold', on);
+        });
+        if (pane) { pane.scrollTop = 0; }
+      });
+    });
+  })();
+
+  // House Prediction: pick a house (or "All 12") -> show its reading.
+  (function () {
+    var card = document.getElementById('house-pred-card');
+    if (!card) { return; }
+    var picks = card.querySelectorAll('.house-pick');
+    var details = card.querySelectorAll('.house-detail');
+    var pane = document.getElementById('house-detail-pane');
+    picks.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var hv = btn.getAttribute('data-house');
+        details.forEach(function (d) {
+          d.classList.toggle('hidden', hv !== 'all' && d.getAttribute('data-house') !== hv);
         });
         picks.forEach(function (b) {
           var on = b === btn;
