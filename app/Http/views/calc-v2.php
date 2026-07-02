@@ -155,6 +155,36 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .dasha-strip .ds-arrow { color: var(--ink-soft); }
         .ds-pill { background: var(--sindoor-soft); color: var(--sindoor); border-radius: 999px;
             padding: 1px 8px; font-size: .72rem; font-weight: 700; vertical-align: 1px; }
+
+        /* ---- Prediction panel (Phase 4) ---- */
+        .pred-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .pred-expand { width: 44px; height: 44px; min-height: 44px; flex: 0 0 auto;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid var(--line); border-radius: 6px; color: var(--sindoor);
+            font-size: 1.15rem; font-weight: 700; background: var(--card); }
+        .pred-expand:hover { background: var(--sindoor-soft); }
+        /* Prediction body copy reads at 12px base (bumps to 14px when expanded). */
+        .pred-view { font-size: 12px; }
+        .pred-view .whitespace-pre-line, .pred-view li { line-height: 1.65; }
+        /* Colored dot labels + token colours for the curated text sections. */
+        #pred-scroll .text-green-700 { color: var(--shubh) !important; }
+        #pred-scroll .text-red-700 { color: var(--ashubh) !important; }
+        #pred-scroll .text-blue-700 { color: var(--haldi) !important; }
+        #phala-sections > div > .font-semibold::before { content: '● '; }
+        #pred-scroll .pp-sub::before { content: '● '; }
+        /* Yoga card variant: 4px sindoor left border, कारण/फल lines. */
+        .yoga-card { border: 1px solid var(--line); border-left: 4px solid var(--sindoor);
+            border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; background: var(--card); }
+        .yoga-card.yoga-bad { border-left-color: var(--ashubh); }
+        .yoga-title { font-weight: 700; font-size: 13px; color: var(--ink); margin-bottom: 2px; }
+        .yoga-why { color: var(--ink-soft); }
+        .yoga-why b { color: var(--ink-soft); }
+        .yoga-res b { color: var(--shubh); }
+        .yoga-bad .yoga-res b { color: var(--ashubh); }
+        /* भावेश फल cards */
+        .bh-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+            margin-bottom: 12px; background: var(--card); }
+        .bh-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
         #pred-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px;
             scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
         #pred-scroll::-webkit-scrollbar { width: 8px; }
@@ -244,10 +274,16 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             <div class="ov-value acc-dasha"><?= $h(($grahaHi[$ovMaha] ?? $ovMaha) . ($ovAntar !== '' ? ' – ' . ($grahaHi[$ovAntar] ?? $ovAntar) : '')) ?></div>
             <div class="ov-sub"><?= $ovPrat !== '' ? 'प्रत्यंतर: ' . $h($grahaHi[$ovPrat] ?? $ovPrat) : '&nbsp;' ?></div>
         </div>
+        <?php
+            $ovYogas = $view['yogas'] ?? [];
+            $ovYGood = array_values(array_filter($ovYogas, static fn($y) => !empty($y['good'])));
+        ?>
         <div class="ov-tile">
             <div class="ov-label">योग</div>
-            <div class="ov-value acc-yoga">—</div>
-            <div class="ov-sub">फलादेश पैनल में (चरण 4)</div>
+            <div class="ov-value acc-yoga"><?= $ovYGood !== [] ? count($ovYGood) . ' शुभ योग' : '—' ?></div>
+            <div class="ov-sub"><?= $ovYGood !== []
+                ? $h(implode(' · ', array_slice(array_map(static fn($y) => (string) $y['name'], $ovYGood), 0, 2)))
+                : 'कोई प्रमुख योग नहीं' ?></div>
         </div>
     </div>
     <?php endif; ?>
@@ -374,8 +410,20 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
         <!-- Prediction panel (right column) -->
         <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
-            <h2 class="l2-panel-title">फलादेश</h2>
+            <div class="pred-head">
+                <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0; flex:1">
+                    <option value="dasha">फलादेश — दशा फल</option>
+                    <option value="bhavesh">फलादेश — भावेश फल</option>
+                    <option value="grah">फलादेश — ग्रह फल</option>
+                    <option value="bhav">फलादेश — भाव फलादेश</option>
+                    <option value="karak">फलादेश — कारक फल</option>
+                    <option value="yoga">फलादेश — योग</option>
+                </select>
+                <button type="button" id="pred-expand" class="pred-expand" aria-label="विस्तृत करें" title="विस्तृत करें">⤢</button>
+            </div>
             <div id="pred-scroll">
+
+            <div class="pred-view" data-pred="dasha">
     <!-- Dasha Prediction (दशा फल): Maha/Antar dropdowns default to the running
          dasha; text comes from the editable dasha_phala table. Shown in both views. -->
     <?php
@@ -427,8 +475,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <?php endif; ?>
         </div><!-- /#dasha-body -->
     </div>
+            </div><!-- /pred-view dasha -->
 
-
+            <div class="pred-view hidden" data-pred="grah">
     <!-- Planet Prediction: (A) as house-lord (Bhavesh Phal) and (B) as placement
          (Graha-in-Bhava). Built from the chart's ruled/placed houses. Both views. -->
     <?php
@@ -522,8 +571,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             </div><!-- /#planet-body -->
         <?php endif; ?>
     </div>
+            </div><!-- /pred-view grah -->
 
-
+            <div class="pred-view hidden" data-pred="bhav">
     <!-- House Prediction: rule-combined per-house Hindi reading. Shown in both views. -->
     <?php $hp = $view['housePred'] ?? null; ?>
     <div class="bg-white rounded-lg shadow p-4 text-sm" id="house-pred-card">
@@ -574,8 +624,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <?php endif; ?>
         </div><!-- /#house-body -->
     </div>
+            </div><!-- /pred-view bhav -->
 
-
+            <div class="pred-view hidden" data-pred="karak">
     <!-- Karaka Prediction: each karaka paired with its main house's House Prediction. -->
     <?php
         $kp = $view['karakaPred'] ?? null;
@@ -658,7 +709,47 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <?php endif; ?>
         </div><!-- /#karaka-body -->
     </div>
+            </div><!-- /pred-view karak -->
 
+            <!-- भावेश फल — the house-lord layer alone (same data as ग्रह फल part A). -->
+            <div class="pred-view hidden" data-pred="bhavesh">
+                <?php $pp2 = $view['planetPhala'] ?? null; ?>
+                <?php if ($pp2 === null || empty($pp2['planets'])): ?>
+                    <div class="text-gray-500 italic p-3">Chart not available.</div>
+                <?php else: foreach ($pp2['planets'] as $row): if (!$row['lord_entries']) { continue; } $pl = $row['planet']; ?>
+                    <div class="bh-card">
+                        <div class="bh-title">
+                            <span style="color:<?= $pcolor($pl) ?>"><?= $h($pl) ?></span>
+                            <span class="text-gray-400 font-normal">(<?= $h($grahaHi[$pl] ?? '') ?>)</span>
+                            — भावेश फल
+                        </div>
+                        <?php foreach ($row['lord_entries'] as $e): ?>
+                            <div class="mb-1">
+                                <div class="text-xs text-gray-500"><?= $ord2((int) $e['ruled_house']) ?> भाव का स्वामी, <?= $ord2((int) $e['placed_house']) ?> भाव में:</div>
+                                <?php if ($e['text'] !== null && $e['text'] !== ''): ?>
+                                    <div class="whitespace-pre-line text-gray-800"><?= $h((string) $e['text']) ?></div>
+                                <?php else: ?>
+                                    <div class="text-gray-500 italic">Summary not available yet for this combination.</div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endforeach; endif; ?>
+            </div><!-- /pred-view bhavesh -->
+
+            <!-- योग — classical yogas detected from the computed placements. -->
+            <div class="pred-view hidden" data-pred="yoga">
+                <?php $yogas = $view['yogas'] ?? []; ?>
+                <?php if (empty($yogas)): ?>
+                    <div class="text-gray-500 italic p-3">इस कुंडली में कोई प्रमुख योग नहीं मिला।</div>
+                <?php else: foreach ($yogas as $y): ?>
+                    <div class="yoga-card<?= empty($y['good']) ? ' yoga-bad' : '' ?>">
+                        <div class="yoga-title"><?= $h((string) $y['name']) ?><?= empty($y['good']) ? '' : ' ✓' ?></div>
+                        <div class="yoga-why"><b>कारण:</b> <?= $h((string) $y['why']) ?></div>
+                        <div class="yoga-res"><b>फल:</b> <?= $h((string) $y['result']) ?></div>
+                    </div>
+                <?php endforeach; endif; ?>
+            </div><!-- /pred-view yoga -->
 
             </div>
         </section>
@@ -1358,6 +1449,19 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     chartSel.addEventListener('change', function () {
       renderChartFrame(this.value);
       setPanelHeights();
+    });
+  }
+
+  // Prediction selector: swap which prediction layer shows in the scroll area.
+  var predSel = document.getElementById('pred-select');
+  if (predSel) {
+    predSel.addEventListener('change', function () {
+      var v = this.value;
+      document.querySelectorAll('#pred-scroll .pred-view').forEach(function (el) {
+        el.classList.toggle('hidden', el.getAttribute('data-pred') !== v);
+      });
+      var ps = document.getElementById('pred-scroll');
+      if (ps) { ps.scrollTop = 0; }
     });
   }
 

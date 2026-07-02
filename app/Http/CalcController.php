@@ -137,6 +137,9 @@ final class CalcController
             // Karaka Prediction: each karaka judged from its own position, paired
             // with the House Prediction of its main house.
             'karakaPred' => $this->karakaPred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Yoga list (layout v2): classical yogas detected from the computed
+            // placements — presentation layer only, no engine changes.
+            'yogas' => $chart !== null ? \AutoBusiness\Astro\Phala\YogaFinder::find($chart) : [],
         ];
         // Layout redesign runs side by side: ?layout=new renders the v2 shell
         // (same $view data); the existing page stays the default until approved.
