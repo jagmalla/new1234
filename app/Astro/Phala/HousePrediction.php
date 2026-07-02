@@ -150,6 +150,7 @@ final class HousePrediction
                 'intro' => $intro,
                 'lines' => $lines,
                 'chip' => self::houseChip($score),
+                'score' => round($score, 2),   // exposed so the Karaka engine reuses the lagna-side verdict
             ];
         }
 

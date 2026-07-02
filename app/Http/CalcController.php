@@ -133,10 +133,10 @@ final class CalcController
             'planetPhala' => $this->planetPhala($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
             // House Prediction: combines the editable rule tables with the chart
             // facts to write a per-house Hindi reading.
-            'housePred' => $this->housePred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
-            // Karaka Prediction: each karaka judged from its own position, paired
-            // with the House Prediction of its main house.
-            'karakaPred' => $this->karakaPred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            'housePred' => $housePred = $this->housePred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Karaka Prediction: karaka assessment + houses judged from the karaka;
+            // reuses the House v2 per-house score as the lagna-side verdict.
+            'karakaPred' => $this->karakaPred($chart, (string) ($_GET['phala_lang'] ?? 'hi'), $housePred['houses'] ?? []),
             // Yoga list (layout v2): classical yogas detected from the computed
             // placements — presentation layer only, no engine changes. Wrapped so
             // a detector edge-case can never blank the whole chart page.
@@ -154,17 +154,22 @@ final class CalcController
      *
      * @return array{lang:string, error:?string, karakas:list<mixed>}|null
      */
-    private function karakaPred(?array $chart, string $lang): ?array
+    private function karakaPred(?array $chart, string $lang, array $houseData = []): ?array
     {
         if ($chart === null) {
             return null;
+        }
+        // Lagna-side verdict per house = the House v2 numeric score (reused).
+        $houseScores = [];
+        foreach ($houseData as $hn => $hd) {
+            $houseScores[(int) $hn] = (float) ($hd['score'] ?? 0.0);
         }
         $rules = \AutoBusiness\Astro\Phala\KarakaPredictionRepository::load($lang);
         return [
             'lang' => $lang,
             'error' => \AutoBusiness\Astro\Phala\KarakaPredictionRepository::lastError(),
             'karakas' => $rules !== null
-                ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\KarakaPrediction::generate($chart, $rules), [])
+                ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\KarakaPrediction::generate($chart, $rules, $houseScores), [])
                 : [],
         ];
     }

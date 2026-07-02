@@ -794,6 +794,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         if ($kp !== null) {
             foreach ($kp['karakas'] as $k) {
                 $kCopyLines[] = '■ ' . $k['title'] . '  [' . $k['signifies'] . ']';
+                // Karaka assessment block.
+                $as = $k['assess'] ?? [];
+                if (!empty($as['status'])) { $kCopyLines[] = 'ग्रह स्थिति: ' . $as['status']; }
+                if (!empty($as['combust'])) { $kCopyLines[] = '• ' . $as['combust']; }
+                foreach (($as['yuti'] ?? []) as $y) { $kCopyLines[] = '• ' . $y['text']; }
+                if (!empty($as['bhavo_nashaya'])) { $kCopyLines[] = '• ' . $as['bhavo_nashaya']; }
                 foreach ($k['paired_houses'] as $ph) {
                     if (!isset($hpHouses[$ph])) { continue; }
                     $kCopyLines[] = 'भाव फल — ' . $ord2((int) $ph) . ' House (' . $hpHouses[$ph]['rashi_hi'] . '):';
@@ -801,7 +807,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                     foreach ($hpHouses[$ph]['lines'] as $ln) { $kCopyLines[] = '• ' . $ln; }
                 }
                 $kCopyLines[] = 'कारक विश्लेषण:';
-                foreach ($k['karaka_lines'] as $l) { $kCopyLines[] = '• ' . $l['sentence']; }
+                foreach ($k['karaka_lines'] as $l) {
+                    foreach (($l['occupants'] ?? []) as $o) { $kCopyLines[] = '  ◦ ' . $o['text']; }
+                    if (!empty($l['drishti'])) { $kCopyLines[] = '  ◦ ' . $l['drishti']; }
+                    $kCopyLines[] = '• ' . $l['sentence'];
+                    if (!empty($l['reason'])) { $kCopyLines[] = '   ' . $l['reason']; }
+                }
                 $kCopyLines[] = 'समग्र निष्कर्ष: ' . $k['combined'];
                 $kCopyLines[] = '';
             }
@@ -842,6 +853,26 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         <div class="font-bold text-gray-800" style="font-size:1.25rem"><?= $h((string) $k['title']) ?></div>
                         <div class="text-xs text-gray-500 mb-2">कारक: <?= $h((string) $k['signifies']) ?></div>
 
+                        <!-- Karaka assessment block (migration 010): status/combust/yuti/bhavo-nashaya -->
+                        <?php $as = $k['assess'] ?? null; if ($as !== null): ?>
+                        <div class="gc-block">
+                            <div class="gc-head">
+                                <span class="pp-sub text-gray-700">कारक स्थिति</span>
+                                <span class="gc-chip gc-<?= $h((string) ($as['verdict']['tier'] ?? 'mishrit')) ?>"><?= $h((string) ($as['verdict']['word'] ?? '')) ?></span>
+                            </div>
+                            <?php if (!empty($as['status'])): ?><div class="gc-status"><?= $h((string) $as['status']) ?></div><?php endif; ?>
+                            <?php if (!empty($as['combust'])): ?><div class="gc-combust"><?= $h((string) $as['combust']) ?></div><?php endif; ?>
+                            <?php if (!empty($as['yuti']) || !empty($as['bhavo_nashaya'])): ?>
+                            <ul class="gc-lines">
+                                <?php foreach (($as['yuti'] ?? []) as $y): ?>
+                                    <li class="gc-line <?= !empty($y['good']) ? 'gc-good' : 'gc-bad' ?>"><?= $h((string) $y['text']) ?></li>
+                                <?php endforeach; ?>
+                                <?php if (!empty($as['bhavo_nashaya'])): ?><li class="gc-line gc-bad"><?= $h((string) $as['bhavo_nashaya']) ?></li><?php endif; ?>
+                            </ul>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
+
                         <?php foreach ($k['paired_houses'] as $ph): if (!isset($hpHouses[$ph])) { continue; } $hd = $hpHouses[$ph]; ?>
                             <div class="font-semibold text-indigo-700 mt-2" style="font-size:1.05rem">भाव फल — <?= $ord2((int) $ph) ?> House (<?= $h((string) $hd['rashi_hi']) ?>)</div>
                             <div class="text-gray-600 mb-1" style="font-size:1.02rem"><?= $h((string) $hd['intro']) ?></div>
@@ -854,9 +885,22 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
                         <div class="font-semibold text-teal-700 mt-3" style="font-size:1.05rem">कारक विश्लेषण <span class="text-gray-400 font-normal text-xs">(भीतरी अनुभव — लग्न बनाम कारक)</span></div>
                         <?php if (!empty($k['karaka_lines'])): ?>
-                        <ul class="list-disc pl-5 space-y-1 text-gray-800" style="font-size:1.02rem; line-height:1.6">
-                            <?php foreach ($k['karaka_lines'] as $l): ?><li><?= $h((string) $l['sentence']) ?></li><?php endforeach; ?>
-                        </ul>
+                        <div class="space-y-2 text-gray-800" style="font-size:1.02rem; line-height:1.6">
+                            <?php foreach ($k['karaka_lines'] as $l): ?>
+                            <div>
+                                <?php if (!empty($l['occupants']) || !empty($l['drishti'])): ?>
+                                <ul class="list-disc pl-5 text-gray-600" style="font-size:0.96rem">
+                                    <?php foreach (($l['occupants'] ?? []) as $o): ?>
+                                        <li class="<?= !empty($o['good']) ? 'text-green-700' : 'text-red-700' ?>"><?= $h((string) $o['text']) ?></li>
+                                    <?php endforeach; ?>
+                                    <?php if (!empty($l['drishti'])): ?><li class="text-gray-600"><?= $h((string) $l['drishti']) ?></li><?php endif; ?>
+                                </ul>
+                                <?php endif; ?>
+                                <div class="font-medium"><?= $h((string) $l['sentence']) ?></div>
+                                <?php if (!empty($l['reason'])): ?><div class="text-xs text-gray-500 pl-1"><?= $h((string) $l['reason']) ?></div><?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
                         <?php else: ?><div class="text-gray-500 italic">इस कारक के लिए कोई व्याख्या उपलब्ध नहीं।</div><?php endif; ?>
 
                         <div class="mt-3 px-3 py-2 bg-amber-50 border-l-4 border-amber-300 text-gray-800 font-medium" style="font-size:1.02rem"><?= $h((string) $k['combined']) ?></div>
