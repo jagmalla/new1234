@@ -130,8 +130,32 @@ final class CalcController
             // House Prediction: combines the editable rule tables with the chart
             // facts to write a per-house Hindi reading.
             'housePred' => $this->housePred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Karaka Prediction: each karaka judged from its own position, paired
+            // with the House Prediction of its main house.
+            'karakaPred' => $this->karakaPred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         require dirname(__DIR__) . '/Http/views/calc.php';
+    }
+
+    /**
+     * Build the Karaka Prediction payload: load the rule tables and generate the
+     * per-karaka reading. Degrades to an error note if the DB is unreachable.
+     *
+     * @return array{lang:string, error:?string, karakas:list<mixed>}|null
+     */
+    private function karakaPred(?array $chart, string $lang): ?array
+    {
+        if ($chart === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Phala\KarakaPredictionRepository::load($lang);
+        return [
+            'lang' => $lang,
+            'error' => \AutoBusiness\Astro\Phala\KarakaPredictionRepository::lastError(),
+            'karakas' => $rules !== null
+                ? \AutoBusiness\Astro\Phala\KarakaPrediction::generate($chart, $rules)
+                : [],
+        ];
     }
 
     /**

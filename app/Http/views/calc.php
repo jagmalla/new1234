@@ -355,6 +355,89 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         </div><!-- /#house-body -->
     </div>
 
+    <!-- Karaka Prediction: each karaka paired with its main house's House Prediction. -->
+    <?php
+        $kp = $view['karakaPred'] ?? null;
+        $hpHouses = $view['housePred']['houses'] ?? [];
+        // Copy text (all karakas), Devanagari.
+        $kCopyLines = [];
+        if ($kp !== null) {
+            foreach ($kp['karakas'] as $k) {
+                $kCopyLines[] = '■ ' . $k['title'] . '  [' . $k['signifies'] . ']';
+                foreach ($k['paired_houses'] as $ph) {
+                    if (!isset($hpHouses[$ph])) { continue; }
+                    $kCopyLines[] = 'भाव फल — ' . $ord2((int) $ph) . ' House (' . $hpHouses[$ph]['rashi_hi'] . '):';
+                    $kCopyLines[] = $hpHouses[$ph]['intro'];
+                    foreach ($hpHouses[$ph]['lines'] as $ln) { $kCopyLines[] = '• ' . $ln; }
+                }
+                $kCopyLines[] = 'कारक विश्लेषण:';
+                foreach ($k['karaka_lines'] as $l) { $kCopyLines[] = '• ' . $l['sentence']; }
+                $kCopyLines[] = 'समग्र निष्कर्ष: ' . $k['combined'];
+                $kCopyLines[] = '';
+            }
+        }
+        $kCopyText = implode("\n", $kCopyLines);
+    ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm" id="karaka-pred-card">
+        <div class="flex flex-wrap items-end gap-x-6 gap-y-2 mb-3">
+            <h2 class="font-semibold">Karaka Prediction <span class="text-xs text-gray-400 font-normal">(कारक फल)</span></h2>
+            <span class="text-xs text-gray-400">प्रत्येक भाव — लग्न (बाहरी) व कारक (आंतरिक), भाव फल के साथ संयुक्त</span>
+            <button id="karaka-copy" type="button" class="ml-auto text-xs bg-gray-100 hover:bg-gray-200 border rounded px-3 py-1 font-semibold">Copy</button>
+            <button type="button" class="phala-toggle text-xs bg-gray-100 hover:bg-gray-200 border rounded px-2 py-1 font-semibold" data-target="karaka-body" aria-expanded="true">Collapse ▴</button>
+        </div>
+        <pre id="karaka-copy-text" class="hidden"><?= $h($kCopyText) ?></pre>
+        <div id="karaka-body">
+        <?php if ($kp === null || empty($kp['karakas'])): ?>
+            <?php if ($kp !== null && !empty($kp['error'])): ?>
+            <div class="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                Database not reachable — staff note: <?= $h((string) $kp['error']) ?>.
+                Check <code>.env</code> DB settings and that <code>migrations/007_karaka_prediction.sql</code> is imported.
+            </div>
+            <?php endif; ?>
+            <div class="text-gray-500 italic">Karaka prediction not available yet (rule tables not imported).</div>
+        <?php else: ?>
+            <div class="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-4" id="karaka-grid">
+                <div class="sm:border-r sm:pr-2 overflow-y-auto" style="max-height:520px">
+                    <div class="flex sm:flex-col flex-wrap gap-1">
+                        <?php foreach ($kp['karakas'] as $i => $k): ?>
+                            <button type="button" class="karaka-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100 <?= $i === 0 ? 'bg-blue-50 border-blue-200 font-semibold' : '' ?>" data-karaka="<?= $h((string) $k['planet']) ?>">
+                                <?= $h((string) $k['title']) ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="overflow-y-auto pr-1" style="max-height:520px" id="karaka-detail-pane">
+                    <?php foreach ($kp['karakas'] as $i => $k): ?>
+                    <div class="karaka-detail<?= $i === 0 ? '' : ' hidden' ?>" data-karaka="<?= $h((string) $k['planet']) ?>">
+                        <div class="font-bold text-gray-800" style="font-size:1.25rem"><?= $h((string) $k['title']) ?></div>
+                        <div class="text-xs text-gray-500 mb-2">कारक: <?= $h((string) $k['signifies']) ?></div>
+
+                        <?php foreach ($k['paired_houses'] as $ph): if (!isset($hpHouses[$ph])) { continue; } $hd = $hpHouses[$ph]; ?>
+                            <div class="font-semibold text-indigo-700 mt-2" style="font-size:1.05rem">भाव फल — <?= $ord2((int) $ph) ?> House (<?= $h((string) $hd['rashi_hi']) ?>)</div>
+                            <div class="text-gray-600 mb-1" style="font-size:1.02rem"><?= $h((string) $hd['intro']) ?></div>
+                            <?php if (!empty($hd['lines'])): ?>
+                            <ul class="list-disc pl-5 space-y-1 text-gray-800" style="font-size:1.02rem; line-height:1.6">
+                                <?php foreach ($hd['lines'] as $ln): ?><li><?= $h((string) $ln) ?></li><?php endforeach; ?>
+                            </ul>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+
+                        <div class="font-semibold text-teal-700 mt-3" style="font-size:1.05rem">कारक विश्लेषण <span class="text-gray-400 font-normal text-xs">(भीतरी अनुभव — लग्न बनाम कारक)</span></div>
+                        <?php if (!empty($k['karaka_lines'])): ?>
+                        <ul class="list-disc pl-5 space-y-1 text-gray-800" style="font-size:1.02rem; line-height:1.6">
+                            <?php foreach ($k['karaka_lines'] as $l): ?><li><?= $h((string) $l['sentence']) ?></li><?php endforeach; ?>
+                        </ul>
+                        <?php else: ?><div class="text-gray-500 italic">इस कारक के लिए कोई व्याख्या उपलब्ध नहीं।</div><?php endif; ?>
+
+                        <div class="mt-3 px-3 py-2 bg-amber-50 border-l-4 border-amber-300 text-gray-800 font-medium" style="font-size:1.02rem"><?= $h((string) $k['combined']) ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        </div><!-- /#karaka-body -->
+    </div>
+
     <!-- CHARTS VIEW (dashboard rows) -->
     <div id="charts-view" class="space-y-4 md:space-y-6">
 
@@ -926,6 +1009,40 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
         if (pane) { pane.scrollTop = 0; }
       });
     });
+  })();
+
+  // Karaka Prediction: pick a karaka -> show its paired reading.
+  (function () {
+    var card = document.getElementById('karaka-pred-card');
+    if (!card) { return; }
+    var picks = card.querySelectorAll('.karaka-pick');
+    var details = card.querySelectorAll('.karaka-detail');
+    var pane = document.getElementById('karaka-detail-pane');
+    picks.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var kv = btn.getAttribute('data-karaka');
+        details.forEach(function (d) { d.classList.toggle('hidden', d.getAttribute('data-karaka') !== kv); });
+        picks.forEach(function (b) {
+          var on = b === btn;
+          b.classList.toggle('bg-blue-50', on);
+          b.classList.toggle('border-blue-200', on);
+          b.classList.toggle('font-semibold', on);
+        });
+        if (pane) { pane.scrollTop = 0; }
+      });
+    });
+    // Copy all karaka readings (Devanagari-safe).
+    var kc = document.getElementById('karaka-copy');
+    if (kc) {
+      kc.addEventListener('click', function () {
+        var src = document.getElementById('karaka-copy-text');
+        var text = src ? src.textContent : '';
+        var done = function () { var o = kc.textContent; kc.textContent = 'Copied!'; setTimeout(function () { kc.textContent = o; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+        } else { fallbackCopy(text); done(); }
+      });
+    }
   })();
 
   // Birth-form city search -> fills lat/lon/tz (worldwide, Open-Meteo).
