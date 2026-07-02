@@ -127,6 +127,42 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .ov-value.acc-dasha { color: var(--sindoor); }
         .ov-value.acc-yoga  { color: var(--shubh); }
         .ov-sub { font-size: .78rem; color: var(--ink-soft); }
+
+        /* ---- Three-column shell (Phase 2) ---- */
+        .l2-wrap { max-width: 1400px; }
+        .l2-grid { display: grid; grid-template-columns: 180px minmax(0, 50fr) minmax(0, 40fr);
+            gap: 16px; align-items: start; }
+        .l2-full { grid-column: 2 / 4; min-width: 0; }
+        .l2-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(38,34,28,.08); }
+        .l2-panel { display: flex; flex-direction: column; padding: 12px 14px; min-height: 560px; min-width: 0; }
+        .l2-panel-title { font-size: 1rem; font-weight: 800; margin-bottom: 6px; }
+        .l2-legend { text-align: center; font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
+        .l2-menu { padding: 6px 0; align-self: start; position: sticky; top: 76px; overflow: hidden; }
+        .l2-menu button { display: block; width: 100%; text-align: left; padding: 10px 14px;
+            border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .95rem; }
+        .l2-menu button:hover { background: var(--sindoor-soft); }
+        .l2-menu button.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
+            color: var(--sindoor); font-weight: 700; }
+        .chart-frame { width: 100%; margin: 0 auto; }
+        #pred-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px;
+            scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+        #pred-scroll::-webkit-scrollbar { width: 8px; }
+        #pred-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+        /* Cards nested in the prediction panel: flatter, token-bordered. */
+        #pred-scroll > div, #pred-scroll .pred-view > div { box-shadow: none; border: 1px solid var(--line);
+            border-radius: 8px; margin-bottom: 12px; }
+        /* 700–1099px: menu becomes a horizontal chip bar; panels stack. */
+        @media (max-width: 1099px) {
+            .l2-grid { display: block; }
+            .l2-menu { position: static; display: flex; overflow-x: auto; padding: 4px; margin-bottom: 12px; }
+            .l2-menu button { width: auto; white-space: nowrap; border-left: none;
+                border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; }
+            .l2-menu button.active { border-left: none; border-bottom-color: var(--sindoor); }
+            .l2-panel { min-height: 0; height: auto !important; margin-bottom: 16px; }
+            #pred-scroll { max-height: 70vh; }
+            .l2-section { margin-top: 12px; }
+        }
         /* Detail-view cards: gentle tint + definition; headers get a colour accent. */
         #details-view > div { background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%); border: 1px solid #e6edf6; }
         #details-view h2 {
@@ -157,7 +193,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <option value="hi" <?= $phalaLang === 'hi' ? 'selected' : '' ?>>हिन्दी</option>
                 <option value="en" <?= $phalaLang === 'en' ? 'selected' : '' ?>>English</option>
             </select>
-            <a class="btn-sindoor" href="#birth-form">नई कुंडली</a>
+            <button type="button" id="new-kundli" class="btn-sindoor">नई कुंडली</button>
         </div>
     </div>
 </header>
@@ -171,7 +207,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 });
 </script>
 
-<div class="max-w-7xl mx-auto space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6 lg:p-8">
+<div class="l2-wrap mx-auto space-y-4 p-3 sm:p-4">
 
     <!-- ============ OVERVIEW TILES (layout v2, Phase 1) ============ -->
     <?php if ($chart !== null): ?>
@@ -206,10 +242,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     </div>
     <?php endif; ?>
 
-    <h1 class="text-2xl font-bold">Calculation Engine — Chart Test</h1>
-
-    <!-- ROW 1 — Chart (birth) details -->
-    <form id="birth-form" method="get" action="/calc" class="bg-white rounded-lg shadow p-4 text-sm">
+    <!-- Birth-details form: collapsed once a chart is shown; नई कुंडली reopens it. -->
+    <form id="birth-form" method="get" action="/calc" class="l2-card p-4 text-sm<?= ($chart !== null && $view['error'] === null) ? ' hidden' : '' ?>">
         <input type="hidden" name="layout" value="new">
         <h2 class="font-semibold mb-3 text-gray-700">Chart Calculation Details</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -255,13 +289,6 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
     <?php if ($chart !== null): ?>
 
-    <!-- View toggle (Charts / Details) — reusable pattern for Module 5d -->
-    <div class="flex gap-2">
-        <button id="btn-charts" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white">View Charts</button>
-        <button id="btn-details" type="button" class="px-4 py-2 rounded text-sm font-semibold bg-gray-200">View Details</button>
-    </div>
-
-    <!-- Native (birth) summary: shown in both views, below the toggle buttons. -->
     <?php
         $pob = $in['place'] !== '' ? $in['place'] : ($in['latIn'] . ', ' . $in['lonIn']);
         $field = static function (string $label, string $value) use ($h): string {
@@ -269,25 +296,35 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 . '<div class="font-semibold text-gray-800">' . ($value !== '' ? $h($value) : '—') . '</div></div>';
         };
     ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm">
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
-            <?= $field('Name', $in['name']) ?>
-            <?= $field('Gender', $in['gender']) ?>
-            <?= $field('Date of Birth', $in['date']) ?>
-            <?= $field('Time of Birth', $in['time']) ?>
-            <div>
-                <div class="text-xs text-gray-500">Place of Birth</div>
-                <div class="font-semibold text-gray-800" id="pob-value" data-place="<?= $h($in['place']) ?>"><?= $pob !== '' ? $h($pob) : '—' ?></div>
-            </div>
-        </div>
-        <div class="border-t border-gray-100 my-3"></div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
-            <?= $field('Ascendant / Lagna Rashi', (string) ($chart['ascendant']['sign'] ?? '')) ?>
-            <?= $field('Moon Sign Rashi', (string) ($chart['planets']['Moon']['sign'] ?? '')) ?>
-            <?= $field('Sun Sign Rashi', (string) ($chart['planets']['Sun']['sign'] ?? '')) ?>
-        </div>
-    </div>
 
+    <!-- ============ THREE-PANEL SHELL (layout v2, Phase 2) ============ -->
+    <div id="sec-home" class="l2-grid">
+
+        <!-- Side menu -->
+        <nav id="side-menu" class="l2-menu l2-card" aria-label="मुख्य अनुभाग">
+            <button type="button" data-sec="home" class="active">जन्म कुंडली</button>
+            <button type="button" data-sec="grah">ग्रह स्थिति</button>
+            <button type="button" data-sec="varga">वर्ग कुंडली</button>
+            <button type="button" data-sec="dasha">दशा</button>
+            <button type="button" data-sec="bal">बल</button>
+            <button type="button" data-sec="home" data-focus="pred">फलादेश</button>
+        </nav>
+
+        <!-- Chart panel (middle column) -->
+        <section id="chart-panel" class="l2-card l2-panel" aria-label="कुंडली चार्ट">
+            <h2 class="l2-panel-title">जन्म कुंडली</h2>
+            <div class="l2-legend">
+                <span style="color:#1d4ed8"><b>AV:</b> Ashtakavarga</span> ·
+                <span style="color:#15803d"><b>BB:</b> Bhav Bala</span> ·
+                <span><b>Dr:</b> Drishti</span>
+            </div>
+            <div id="chart-frame" class="chart-frame"></div>
+        </section>
+
+        <!-- Prediction panel (right column) -->
+        <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
+            <h2 class="l2-panel-title">फलादेश</h2>
+            <div id="pred-scroll">
     <!-- Dasha Prediction (दशा फल): Maha/Antar dropdowns default to the running
          dasha; text comes from the editable dasha_phala table. Shown in both views. -->
     <?php
@@ -339,6 +376,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <?php endif; ?>
         </div><!-- /#dasha-body -->
     </div>
+
 
     <!-- Planet Prediction: (A) as house-lord (Bhavesh Phal) and (B) as placement
          (Graha-in-Bhava). Built from the chart's ruled/placed houses. Both views. -->
@@ -434,6 +472,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <?php endif; ?>
     </div>
 
+
     <!-- House Prediction: rule-combined per-house Hindi reading. Shown in both views. -->
     <?php $hp = $view['housePred'] ?? null; ?>
     <div class="bg-white rounded-lg shadow p-4 text-sm" id="house-pred-card">
@@ -484,6 +523,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <?php endif; ?>
         </div><!-- /#house-body -->
     </div>
+
 
     <!-- Karaka Prediction: each karaka paired with its main house's House Prediction. -->
     <?php
@@ -568,164 +608,39 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         </div><!-- /#karaka-body -->
     </div>
 
-    <!-- CHARTS VIEW (dashboard rows) -->
-    <div id="charts-view" class="space-y-4 md:space-y-6">
 
-        <!-- ROW 1 — D1 (Rasi) chart (wider) + Vimshottari Dasha (scrolls, height = D1) -->
-        <div class="grid grid-cols-1 lg:grid-cols-[14fr_11fr] gap-4 items-start">
-            <div id="d1-card" class="bg-white rounded-lg shadow p-4 flex flex-col">
-                <!-- Two-line header: legend for the ring short-codes + chart identity. -->
-                <div class="text-center text-sm mb-2 leading-snug">
-                    <div class="mb-1">
-                        <span class="font-semibold text-gray-800">NOTES:</span>
-                        <span class="text-gray-700"><b>Dr:</b> Drishti,</span>
-                        <span class="ml-2" style="color:#1d4ed8"><b>AV:</b> Ashtavarga Score,</span>
-                        <span class="ml-2" style="color:#15803d"><b>BB:</b> Bhav Bal</span>
-                    </div>
-                    <div class="flex flex-wrap justify-center gap-x-4 gap-y-0.5 text-gray-800 font-semibold">
-                        <span>D1: <?= $h($in['name'] !== '' ? $in['name'] : '—') ?></span>
-                        <span>DOB: <?= $h($in['date']) ?></span>
-                        <span>TIME: <?= $h($in['time']) ?></span>
-                        <span>PLACE: <?= $h($pob !== '' ? $pob : '—') ?></span>
-                    </div>
-                </div>
-                <div class="w-full max-w-xl mx-auto" data-varga="D1" data-ring="1" data-notitle="1"></div>
             </div>
-            <div id="vim-card" class="bg-white rounded-lg shadow p-4 flex flex-col" style="display:flex; flex-direction:column">
-                <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
-                <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
-                    $tzc = (float) ($meta['tz'] ?? 0);
-                    $cd = static fn(array $p): string =>
-                        \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzc)
-                        . ' – ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzc);
-                    // $depth indents each level so AntarDasha nests under
-                    // MahaDasha and Pratyantar under AntarDasha (with a ↳ marker).
-                    $cdLine = static function (string $label, ?array $p, int $depth) use ($pcolor, $cd, $h): string {
-                        if (empty($p)) { return ''; }
-                        $arrow = $depth > 0 ? '<span class="text-gray-400">↳</span> ' : '';
-                        return '<div style="padding-left:' . ($depth * 1.6) . 'rem">' . $arrow
-                            . '<span class="text-gray-600 font-semibold">' . $label . ':</span> '
-                            . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
-                            . '<span class="text-gray-500">(' . $cd($p) . ')</span></div>';
-                    };
-                ?>
-                <div class="mb-2 pb-2 border-b text-sm leading-snug space-y-0.5">
-                    <?= $cdLine('MahaDasha', $dashaNow['maha'], 0) ?>
-                    <?= $cdLine('AntarDasha', $dashaNow['antar'], 1) ?>
-                    <?= $cdLine('Pratyantar', $dashaNow['pratyantar'], 2) ?>
-                </div>
-                <?php endif; ?>
-                <div id="vim-dasha" class="text-sm flex-1 min-h-0 overflow-y-auto" style="flex:1 1 auto; min-height:0; overflow-y:auto"></div>
-            </div>
-        </div>
+        </section>
 
-        <!-- ROW 2 — Navamsa (D9, 60%) + Shadbala (40%) -->
-        <div class="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4 items-stretch">
-            <div class="bg-white rounded-lg shadow p-4 flex items-center justify-center">
-                <div class="w-full max-w-lg mx-auto" data-varga="D9"></div>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 flex flex-col justify-center">
-                <h2 class="font-semibold mb-1">Shadbala</h2>
-                <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
-                <div class="relative" style="height:330px">
-                    <!-- 1.00 threshold line (1.60 fills the 270px track => 1.00 sits at 62.5%) -->
-                    <div class="absolute left-0 right-0" style="bottom:calc(30px + 270px * 0.625); border-top:1px dashed #9ca3af"></div>
-                    <div class="flex items-end justify-between gap-1 absolute inset-x-0 bottom-0" style="height:330px">
-                        <?php foreach (($chart['shadbala'] ?? []) as $name => $b):
-                            $ratio = (float) $b['ratio'];
-                            $hpx = max(3.0, min(270.0, $ratio / 1.6 * 270.0));
-                            $abbr = substr((string) $name, 0, 2);
-                            $band = $shadColor($ratio);
-                        ?>
-                        <div class="flex flex-col items-center justify-end" style="height:330px; flex:1">
-                            <div class="text-[16px] font-bold leading-tight" style="color:<?= $band ?>"><?= sprintf('%.2f', $ratio) ?></div>
-                            <div class="w-full rounded-t" style="height:<?= sprintf('%.1f', $hpx) ?>px; background:<?= $band ?>"></div>
-                            <div class="text-[16px] mt-1 font-bold leading-tight" style="color:<?= $pcolor($name) ?>"><?= $h($abbr) ?></div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ROW 3 — Gochar calculation details (defaults to now + IP location) -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details</h2>
-            <div id="gochar-inputs"></div>
-        </div>
-
-        <!-- ROW 4 — natal D1 (Rasi) vs current Gochar (transit). Both cards carry
-             a matching header (title + date/time/place) so the charts line up. -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
-                    <span class="font-semibold text-gray-800">Rasi (D1)</span>
-                    <span class="ml-auto flex flex-wrap items-center gap-x-4">
-                        <span><?= $h($in['date']) ?></span>
-                        <span><?= $h($in['time']) ?></span>
-                    </span>
-                </div>
-                <div class="w-full" data-varga="D1" data-notitle="1"></div>
-            </div>
-            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
-                <div id="gochar-output" class="w-full"></div>
-            </div>
-        </div>
-
-        <!-- ROW 5 — Varshaphal year selection + summary details -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
-            <div id="vp-box" class="mb-3"></div>
-            <div id="vp-summary" class="text-sm"></div>
-        </div>
-
-        <!-- ROW 6 — Varsha chart + Mudda dasha, side by side -->
-        <div id="vp-output"></div>
-
-        <!-- Remaining divisional charts — reflow: 1 / 2 / 3 per row by width -->
-        <div>
-            <h2 class="font-semibold mb-2 text-gray-700">Divisional Charts</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                <?php foreach (($vargas ?? []) as $vkey => $vinfo): if ($vkey === 'D1' || $vkey === 'D9') { continue; } ?>
-                    <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
-                <?php endforeach; ?>
-            </div>
-            <p class="text-xs text-gray-400 mt-2">North-Indian style: house 1 top-centre (As = Ascendant); black number at each inner corner = Rashi (sign) number; planet abbreviations colour-coded (Dasha palette), &#174; = retrograde.</p>
-        </div>
-
-    </div>
-
-    <!-- DETAILS VIEW (text tables) -->
-    <div id="details-view" class="hidden">
-
-    <!-- Current dasha chain (today) — shown first -->
-    <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
-        $tzv = (float) ($meta['tz'] ?? 0);
-        // $depth indents each level (↳); $sep is the date-range separator.
-        $cdRow = function (string $label, ?array $p, int $depth, string $sep) use ($pcolor, $h, $tzv): string {
-            if (empty($p)) { return ''; }
-            $dates = \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzv)
-                . ' ' . $sep . ' ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzv);
-            $arrow = $depth > 0 ? '<span class="text-gray-400">↳</span> ' : '';
-            return '<div style="padding-left:' . ($depth * 1.6) . 'rem">' . $arrow
-                . '<span class="text-gray-600 font-semibold">' . $label . ':</span> '
-                . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
-                . '<span class="text-gray-500">(' . $dates . ')</span></div>';
+        <!-- ============ ग्रह स्थिति (full-width section) ============ -->
+        <div id="sec-grah" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+    <!-- Native (birth) summary: shown in both views, below the toggle buttons. -->
+    <?php
+        $pob = $in['place'] !== '' ? $in['place'] : ($in['latIn'] . ', ' . $in['lonIn']);
+        $field = static function (string $label, string $value) use ($h): string {
+            return '<div><div class="text-xs text-gray-500">' . $h($label) . '</div>'
+                . '<div class="font-semibold text-gray-800">' . ($value !== '' ? $h($value) : '—') . '</div></div>';
         };
     ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Current Dasha — today (<?= $h(date('d-m-Y')) ?>)</h2>
-        <div class="space-y-1 leading-snug">
-            <?= $cdRow('MahaDasha', $dashaNow['maha'], 0, '–') ?>
-            <?= $cdRow('AntarDasha', $dashaNow['antar'], 1, '–') ?>
-            <?= $cdRow('Pratyantar', $dashaNow['pratyantar'], 2, '–') ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-3">
+            <?= $field('Name', $in['name']) ?>
+            <?= $field('Gender', $in['gender']) ?>
+            <?= $field('Date of Birth', $in['date']) ?>
+            <?= $field('Time of Birth', $in['time']) ?>
+            <div>
+                <div class="text-xs text-gray-500">Place of Birth</div>
+                <div class="font-semibold text-gray-800" id="pob-value" data-place="<?= $h($in['place']) ?>"><?= $pob !== '' ? $h($pob) : '—' ?></div>
+            </div>
         </div>
-        <div class="border-t border-gray-200 my-2"></div>
-        <div class="leading-snug">
-            <?= $cdRow('Next Antardasha', $dashaNow['next_antar'], 1, '→') ?>
+        <div class="border-t border-gray-100 my-3"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
+            <?= $field('Ascendant / Lagna Rashi', (string) ($chart['ascendant']['sign'] ?? '')) ?>
+            <?= $field('Moon Sign Rashi', (string) ($chart['planets']['Moon']['sign'] ?? '')) ?>
+            <?= $field('Sun Sign Rashi', (string) ($chart['planets']['Sun']['sign'] ?? '')) ?>
         </div>
     </div>
-    <?php endif; ?>
+
 
     <?php $num = static fn($v) => $h(number_format((float) $v, 0));
         // Ordinal (1->1st, 2->2nd, …) and a plain-text summary of every house,
@@ -783,6 +698,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         $copyText = implode("\n", $copyLines);
     ?>
 
+
     <!-- House details: planets, rashi, Ashtakavarga (AV), Bhava Bala total, lord -->
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <div class="flex items-center justify-between mb-2">
@@ -821,35 +737,6 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         </table>
     </div>
 
-    <!-- Bhava Bala — component breakdown per house -->
-    <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
-        <h2 class="font-semibold mb-2">Bhava Bala</h2>
-        <table class="w-full text-sm">
-            <thead><tr class="text-left border-b align-bottom">
-                <th class="py-1 pr-3">House</th><th class="pr-3">Rashi</th><th class="pr-3">Lord</th>
-                <th class="pr-2 text-right">From&nbsp;Lord</th><th class="pr-2 text-right">Dig&nbsp;Bala</th>
-                <th class="pr-2 text-right">Drishti</th><th class="pr-2 text-right">Planets&nbsp;in</th>
-                <th class="pr-2 text-right">Day-Night</th>
-                <th class="pr-3 text-right">Bhava&nbsp;Bala</th>
-            </tr></thead>
-            <tbody>
-            <?php foreach (($chart['houses'] ?? []) as $hh => $H): ?>
-                <tr class="border-b border-gray-100">
-                    <td class="py-1 pr-3 font-semibold"><?= (int) $H['house'] ?></td>
-                    <td class="pr-3"><?= (int) $H['rashi_num'] ?> <?= $h($H['sign']) ?></td>
-                    <td class="pr-3"><span style="color:<?= $pcolor($H['lord']) ?>" class="font-semibold"><?= $h($H['lord']) ?></span></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_adhipati'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_digbala'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_drishti'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_planets_in'] ?? 0) ?></td>
-                    <td class="pr-2 text-right"><?= $num($H['bb_day_night'] ?? 0) ?></td>
-                    <td class="pr-3 text-right font-semibold" style="color:#15803d"><?= $num($H['bb_virupa'] ?? $H['bb'] * 60) ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-        <p class="text-xs text-gray-400 mt-2">Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti + Planets&nbsp;in (benefic/malefic occupants) + Day-Night (Bhava Kaala). Drishti follows Parashara's Light (Sphuta-drishti curve at the whole-sign cusp, each planet weighted by benefic/malefic and Ishta/Kashta; nodes excluded). From&nbsp;Lord, Planets&nbsp;in, Day-Night and Drishti track Parashara's Light; Dig&nbsp;Bala uses the standard BPHS directional figure.</p>
-    </div>
 
     <!-- D1 -->
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
@@ -875,6 +762,138 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         </table>
     </div>
 
+
+        </div>
+
+        <!-- ============ वर्ग कुंडली (full-width section) ============ -->
+        <div id="sec-varga" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+        <!-- Remaining divisional charts — reflow: 1 / 2 / 3 per row by width -->
+        <div>
+            <h2 class="font-semibold mb-2 text-gray-700">Divisional Charts</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                <?php foreach (($vargas ?? []) as $vkey => $vinfo): ?>
+                    <div class="bg-white rounded-lg shadow p-2" data-varga="<?= $h($vkey) ?>"></div>
+                <?php endforeach; ?>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">North-Indian style: house 1 top-centre (As = Ascendant); black number at each inner corner = Rashi (sign) number; planet abbreviations colour-coded (Dasha palette), &#174; = retrograde.</p>
+        </div>
+
+
+        <!-- ROW 3 — Gochar calculation details (defaults to now + IP location) -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details</h2>
+            <div id="gochar-inputs"></div>
+        </div>
+
+
+        <!-- ROW 4 — natal D1 (Rasi) vs current Gochar (transit). Both cards carry
+             a matching header (title + date/time/place) so the charts line up. -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
+                    <span class="font-semibold text-gray-800">Rasi (D1)</span>
+                    <span class="ml-auto flex flex-wrap items-center gap-x-4">
+                        <span><?= $h($in['date']) ?></span>
+                        <span><?= $h($in['time']) ?></span>
+                    </span>
+                </div>
+                <div class="w-full" data-varga="D1" data-notitle="1"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
+                <div id="gochar-output" class="w-full"></div>
+            </div>
+        </div>
+
+
+        <!-- ROW 5 — Varshaphal year selection + summary details -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
+            <div id="vp-box" class="mb-3"></div>
+            <div id="vp-summary" class="text-sm"></div>
+        </div>
+
+
+        <!-- ROW 6 — Varsha chart + Mudda dasha, side by side -->
+        <div id="vp-output"></div>
+
+
+    <!-- Varshaphal -->
+    <?php if ($vp !== null): ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+        <h2 class="font-semibold mb-2">Varshaphal (Annual Chart) — year <?= (int) $in['forYear'] ?></h2>
+        <div>Varsha Lagna: <b><?= $h($vp['varsha_chart']['ascendant']['formatted']) ?></b> (lord <?= $h($vp['varsha_lagna']['lord']) ?>)
+            · Muntha: <?= $h($vp['muntha']['sign']) ?> (lord <?= $h($vp['muntha']['lord']) ?>)
+            · Age <?= (int) $vp['age_completed'] ?></div>
+        <table class="w-full mt-2">
+            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Annual position</th><th>House</th></tr></thead>
+            <tbody>
+            <?php foreach ($vp['varsha_chart']['planets'] as $name => $p): ?>
+                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
+                    <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <h3 class="font-semibold mt-4 mb-2">Mudda (Annual) Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h3>
+        <div id="mudda-dasha-detail"></div>
+    </div>
+    <?php endif; ?>
+
+
+    <!-- Gochar -->
+    <?php if ($gochar !== null): ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+        <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
+        <?php if (isset($gochar['ascendant'])): ?>
+            <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
+        <?php endif; ?>
+        <table class="w-full">
+            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
+            <tbody>
+            <?php foreach ($gochar['transits'] as $name => $t): ?>
+                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
+                    <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+
+
+        </div>
+
+        <!-- ============ दशा (full-width section) ============ -->
+        <div id="sec-dasha" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+    <!-- Current dasha chain (today) — shown first -->
+    <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
+        $tzv = (float) ($meta['tz'] ?? 0);
+        // $depth indents each level (↳); $sep is the date-range separator.
+        $cdRow = function (string $label, ?array $p, int $depth, string $sep) use ($pcolor, $h, $tzv): string {
+            if (empty($p)) { return ''; }
+            $dates = \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzv)
+                . ' ' . $sep . ' ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzv);
+            $arrow = $depth > 0 ? '<span class="text-gray-400">↳</span> ' : '';
+            return '<div style="padding-left:' . ($depth * 1.6) . 'rem">' . $arrow
+                . '<span class="text-gray-600 font-semibold">' . $label . ':</span> '
+                . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
+                . '<span class="text-gray-500">(' . $dates . ')</span></div>';
+        };
+    ?>
+    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+        <h2 class="font-semibold mb-2">Current Dasha — today (<?= $h(date('d-m-Y')) ?>)</h2>
+        <div class="space-y-1 leading-snug">
+            <?= $cdRow('MahaDasha', $dashaNow['maha'], 0, '–') ?>
+            <?= $cdRow('AntarDasha', $dashaNow['antar'], 1, '–') ?>
+            <?= $cdRow('Pratyantar', $dashaNow['pratyantar'], 2, '–') ?>
+        </div>
+        <div class="border-t border-gray-200 my-2"></div>
+        <div class="leading-snug">
+            <?= $cdRow('Next Antardasha', $dashaNow['next_antar'], 1, '→') ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+
     <!-- Vimshottari — same expandable, colour-coded tree as the Chart view -->
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-2">Vimshottari Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h2>
@@ -885,6 +904,33 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <div id="vim-dasha-detail"></div>
     </div>
 
+
+        </div>
+
+        <!-- ============ बल (full-width section) ============ -->
+        <div id="sec-bal" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+            <div class="bg-white rounded-lg shadow p-4 flex flex-col justify-center">
+                <h2 class="font-semibold mb-1">Shadbala</h2>
+                <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
+                <div class="relative" style="height:330px">
+                    <!-- 1.00 threshold line (1.60 fills the 270px track => 1.00 sits at 62.5%) -->
+                    <div class="absolute left-0 right-0" style="bottom:calc(30px + 270px * 0.625); border-top:1px dashed #9ca3af"></div>
+                    <div class="flex items-end justify-between gap-1 absolute inset-x-0 bottom-0" style="height:330px">
+                        <?php foreach (($chart['shadbala'] ?? []) as $name => $b):
+                            $ratio = (float) $b['ratio'];
+                            $hpx = max(3.0, min(270.0, $ratio / 1.6 * 270.0));
+                            $abbr = substr((string) $name, 0, 2);
+                            $band = $shadColor($ratio);
+                        ?>
+                        <div class="flex flex-col items-center justify-end" style="height:330px; flex:1">
+                            <div class="text-[16px] font-bold leading-tight" style="color:<?= $band ?>"><?= sprintf('%.2f', $ratio) ?></div>
+                            <div class="w-full rounded-t" style="height:<?= sprintf('%.1f', $hpx) ?>px; background:<?= $band ?>"></div>
+                            <div class="text-[16px] mt-1 font-bold leading-tight" style="color:<?= $pcolor($name) ?>"><?= $h($abbr) ?></div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
     <!-- Shadbala -->
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-1">Shadbala (Six-fold Strength)</h2>
@@ -917,6 +963,38 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <p class="text-xs text-gray-400 mt-2">Total = sum of all six balas (virupas); Rupas = Total ÷ 60; Ratio = Total ÷ minimum required. Ishta = √(Uchcha × Chesta), Kashta = √((60−Uchcha) × (60−Chesta)).</p>
     </div>
 
+
+    <!-- Bhava Bala — component breakdown per house -->
+    <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+        <h2 class="font-semibold mb-2">Bhava Bala</h2>
+        <table class="w-full text-sm">
+            <thead><tr class="text-left border-b align-bottom">
+                <th class="py-1 pr-3">House</th><th class="pr-3">Rashi</th><th class="pr-3">Lord</th>
+                <th class="pr-2 text-right">From&nbsp;Lord</th><th class="pr-2 text-right">Dig&nbsp;Bala</th>
+                <th class="pr-2 text-right">Drishti</th><th class="pr-2 text-right">Planets&nbsp;in</th>
+                <th class="pr-2 text-right">Day-Night</th>
+                <th class="pr-3 text-right">Bhava&nbsp;Bala</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach (($chart['houses'] ?? []) as $hh => $H): ?>
+                <tr class="border-b border-gray-100">
+                    <td class="py-1 pr-3 font-semibold"><?= (int) $H['house'] ?></td>
+                    <td class="pr-3"><?= (int) $H['rashi_num'] ?> <?= $h($H['sign']) ?></td>
+                    <td class="pr-3"><span style="color:<?= $pcolor($H['lord']) ?>" class="font-semibold"><?= $h($H['lord']) ?></span></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_adhipati'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_digbala'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_drishti'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_planets_in'] ?? 0) ?></td>
+                    <td class="pr-2 text-right"><?= $num($H['bb_day_night'] ?? 0) ?></td>
+                    <td class="pr-3 text-right font-semibold" style="color:#15803d"><?= $num($H['bb_virupa'] ?? $H['bb'] * 60) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <p class="text-xs text-gray-400 mt-2">Bhava Bala (virupas) = From&nbsp;Lord (bhava lord's Shadbala) + Dig&nbsp;Bala + Drishti + Planets&nbsp;in (benefic/malefic occupants) + Day-Night (Bhava Kaala). Drishti follows Parashara's Light (Sphuta-drishti curve at the whole-sign cusp, each planet weighted by benefic/malefic and Ishta/Kashta; nodes excluded). From&nbsp;Lord, Planets&nbsp;in, Day-Night and Drishti track Parashara's Light; Dig&nbsp;Bala uses the standard BPHS directional figure.</p>
+    </div>
+
+
     <!-- Vimshopaka Bala — divisional strength (out of 20) in four varga groups -->
     <?php if (!empty($chart['vimshopaka'])): $vb = $chart['vimshopaka']; ?>
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
@@ -944,48 +1022,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     </div>
     <?php endif; ?>
 
-    <!-- Varshaphal -->
-    <?php if ($vp !== null): ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Varshaphal (Annual Chart) — year <?= (int) $in['forYear'] ?></h2>
-        <div>Varsha Lagna: <b><?= $h($vp['varsha_chart']['ascendant']['formatted']) ?></b> (lord <?= $h($vp['varsha_lagna']['lord']) ?>)
-            · Muntha: <?= $h($vp['muntha']['sign']) ?> (lord <?= $h($vp['muntha']['lord']) ?>)
-            · Age <?= (int) $vp['age_completed'] ?></div>
-        <table class="w-full mt-2">
-            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Annual position</th><th>House</th></tr></thead>
-            <tbody>
-            <?php foreach ($vp['varsha_chart']['planets'] as $name => $p): ?>
-                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
-                    <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td></tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
 
-        <h3 class="font-semibold mt-4 mb-2">Mudda (Annual) Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h3>
-        <div id="mudda-dasha-detail"></div>
-    </div>
-    <?php endif; ?>
+        </div>
 
-    <!-- Gochar -->
-    <?php if ($gochar !== null): ?>
-    <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
-        <?php if (isset($gochar['ascendant'])): ?>
-            <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
-        <?php endif; ?>
-        <table class="w-full">
-            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
-            <tbody>
-            <?php foreach ($gochar['transits'] as $name => $t): ?>
-                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
-                    <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-    <?php endif; ?>
-
-    </div><!-- /details-view -->
+    </div><!-- /sec-home grid -->
     <?php endif; ?>
 
     <p class="text-xs text-gray-400">Auto Business — Calculation Engine test page. For arc-second accuracy set SWETEST_PATH (Swiss Ephemeris).</p>
@@ -1206,48 +1246,15 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       .catch(function () { /* keep the lat/lon fallback */ });
   })();
 
-  var charts = document.getElementById('charts-view');
-  var details = document.getElementById('details-view');
-  var bC = document.getElementById('btn-charts');
-  var bD = document.getElementById('btn-details');
-
-  var chartsBuilt = false, detailsBuilt = false;
-  function activate(btn, on) {
-    btn.classList.toggle('bg-blue-600', on);
-    btn.classList.toggle('text-white', on);
-    btn.classList.toggle('bg-gray-200', !on);
-  }
-
-  // Make the Vimshottari Dasha card exactly as tall as the D1 chart card so the
-  // two cells in row 1 line up; the dasha list (flex-1) then scrolls inside it.
-  // Measured after layout (and on resize) because the chart SVG is height:auto.
-  function syncDashaHeight() {
-    var d1 = document.getElementById('d1-card');
-    var vc = document.getElementById('vim-card');
-    if (!d1 || !vc) { return; }
-    // Only match heights in the side-by-side (lg) layout; stacked on narrow screens.
-    if (window.matchMedia('(min-width: 1024px)').matches) {
-      vc.style.height = d1.getBoundingClientRect().height + 'px';
-    } else {
-      vc.style.height = '';
-    }
-  }
-  var resizeT;
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeT);
-    resizeT = setTimeout(syncDashaHeight, 150);
-  });
-  function buildCharts() {
-    if (chartsBuilt) return;
-    chartsBuilt = true;
+  // ---- Layout v2: everything is built once; the side menu shows/hides sections ----
+  function buildAllV2() {
     if (window.ABChart && window.AB_VARGAS) { ABChart.renderAll(window.AB_VARGAS, window.AB_HOUSES); }
     if (window.ABDasha) {
-      // No maxRows here: the Vimshottari card height is synced to the D1 chart
-      // (syncDashaHeight) and the list scrolls inside that fixed height.
-      ABDasha.render(document.getElementById('vim-dasha'), window.AB_DASHA, { tz: window.AB_TZ, datesInline: true });
+      var vdd = document.getElementById('vim-dasha-detail');
+      if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
+      var mdd = document.getElementById('mudda-dasha-detail');
+      if (mdd && window.AB_MUDDA) ABDasha.render(mdd, window.AB_MUDDA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
     }
-    // Defer so the D1 chart SVG (height:auto) has laid out before we measure it.
-    setTimeout(syncDashaHeight, 160);
     if (window.ABGochar) {
       ABGochar.init({
         inputs: '#gochar-inputs', output: '#gochar-output',
@@ -1261,33 +1268,91 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         birth: window.AB_BIRTH, tz: window.AB_TZ, year: window.AB_YEAR
       });
     }
+    renderChartFrame('D1');
+    setTimeout(setPanelHeights, 120);
   }
-  // Detail view shows the same colour-coded Vimshottari + Mudda trees. Built
-  // lazily (when first opened) so row heights are measured while visible.
-  function buildDetails() {
-    if (detailsBuilt) return;
-    detailsBuilt = true;
-    if (window.ABDasha) {
-      var vdd = document.getElementById('vim-dasha-detail');
-      if (vdd) ABDasha.render(vdd, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
-      var mdd = document.getElementById('mudda-dasha-detail');
-      if (mdd && window.AB_MUDDA) ABDasha.render(mdd, window.AB_MUDDA, { tz: window.AB_TZ, datesInline: true, maxRows: 10 });
+
+  // Chart panel frame: same renderer + payloads as the section charts (protected).
+  function renderChartFrame(key) {
+    var frame = document.getElementById('chart-frame');
+    if (!frame || !window.ABChart) { return; }
+    if (window.AB_VARGAS && window.AB_VARGAS[key]) {
+      ABChart.renderNorth(frame, window.AB_VARGAS[key], {
+        title: null, showDeg: true, big: key === 'D1',
+        outer: key === 'D1' ? (window.AB_HOUSES || null) : null
+      });
     }
   }
-  function showCharts() {
-    buildCharts();
-    charts.classList.remove('hidden'); details.classList.add('hidden');
-    activate(bC, true); activate(bD, false);
-    // Re-measure once visible (a hidden tab reports zero height).
-    setTimeout(syncDashaHeight, 60);
+
+  // Side-menu section switching: home = three-panel; others span the two panels.
+  var FULL_SECTIONS = ['sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal'];
+  function showSection(key, focusPred) {
+    var homeMode = key === 'home';
+    var cp = document.getElementById('chart-panel');
+    var pp = document.getElementById('pred-panel');
+    if (cp) cp.classList.toggle('hidden', !homeMode);
+    if (pp) pp.classList.toggle('hidden', !homeMode);
+    FULL_SECTIONS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden', id !== 'sec-' + key);
+    });
+    if (homeMode) { setTimeout(setPanelHeights, 60); }
+    if (focusPred && pp) { pp.scrollIntoView({ block: 'nearest' }); }
   }
-  function showDetails() {
-    buildDetails();
-    charts.classList.add('hidden'); details.classList.remove('hidden');
-    activate(bD, true); activate(bC, false);
+  document.querySelectorAll('#side-menu [data-sec]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#side-menu [data-sec]').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      showSection(btn.getAttribute('data-sec'), btn.hasAttribute('data-focus'));
+    });
+  });
+
+  // Equal heights (required): chart panel height == prediction panel height,
+  // filling the viewport below the tiles; min 560px. Desktop (≥1100px) only.
+  function setPanelHeights() {
+    var cp = document.getElementById('chart-panel');
+    var pp = document.getElementById('pred-panel');
+    if (!cp || !pp) { return; }
+    if (!window.matchMedia('(min-width: 1100px)').matches) {
+      cp.style.height = ''; pp.style.height = '';
+      sizeChartFrame(null);
+      return;
+    }
+    var top = cp.getBoundingClientRect().top;
+    var hpx = Math.max(560, window.innerHeight - top - 16);
+    cp.style.height = hpx + 'px';
+    pp.style.height = hpx + 'px';
+    sizeChartFrame(hpx);
   }
-  bC.addEventListener('click', showCharts);
-  bD.addEventListener('click', showDetails);
+  // The chart is square: cap its width so it fits the panel height (CSS
+  // container scaling only — nothing inside the SVG changes).
+  function sizeChartFrame(panelH) {
+    var frame = document.getElementById('chart-frame');
+    var cp = document.getElementById('chart-panel');
+    if (!frame || !cp) { return; }
+    if (panelH == null) { frame.style.maxWidth = ''; return; }
+    var used = 0;
+    Array.prototype.forEach.call(cp.children, function (ch) {
+      if (ch !== frame) { used += ch.getBoundingClientRect().height; }
+    });
+    var avail = panelH - used - 40; // paddings/margins
+    frame.style.maxWidth = Math.max(300, avail) + 'px';
+  }
+  var resizeT2;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeT2);
+    resizeT2 = setTimeout(setPanelHeights, 150);
+  });
+
+  // नई कुंडली: reveal / hide the birth-details form.
+  var nk = document.getElementById('new-kundli');
+  if (nk) {
+    nk.addEventListener('click', function () {
+      var bf = document.getElementById('birth-form');
+      if (!bf) { return; }
+      var show = bf.classList.toggle('hidden') === false;
+      if (show) { bf.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  }
 
   // House Details "Copy" button → copies the plain-text summary of all houses.
   var hdCopy = document.getElementById('hd-copy');
@@ -1309,8 +1374,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     document.body.removeChild(ta);
   }
 
-  // Default view when the page opens = Charts.
-  showCharts();
+  // Boot: render charts/trees/panels once; menu default = जन्म कुंडली.
+  buildAllV2();
 })();
 </script>
 <?php endif; ?>
