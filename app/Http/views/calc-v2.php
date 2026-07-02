@@ -93,12 +93,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         }
         h1, h2, h3 { font-family: 'Martel', 'Mukta', serif; }
         table { font-variant-numeric: tabular-nums; }
+        /* Secondary text: warm ink-soft instead of cool gray-400 (a11y contrast ≥4.5:1).
+           !important because the Tailwind runtime stylesheet loads after this block. */
+        .text-gray-400 { color: var(--ink-soft) !important; }
         /* PROTECTED: the chart SVGs keep their pre-redesign font stack so the
            rendered chart stays pixel-identical (rings, planets, markers). */
         svg { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif; }
         /* Controls: 6px radius + sindoor focus ring (token spec). */
         input, select, textarea { border-radius: 6px; }
-        input:focus-visible, select:focus-visible, textarea:focus-visible {
+        input:focus-visible, select:focus-visible, textarea:focus-visible,
+        button:focus-visible, a:focus-visible {
             outline: none; border-color: var(--sindoor);
             box-shadow: 0 0 0 3px var(--sindoor-soft);
         }
@@ -186,6 +190,37 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             margin-bottom: 12px; background: var(--card); }
         .bh-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
 
+        /* ---- Full-width section restyle (Phase 6): token-driven tables ---- */
+        .l2-section .bg-white { border: 1px solid var(--line); border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(38,34,28,.08); }
+        .l2-section table { font-variant-numeric: tabular-nums; }
+        .l2-section table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .4px;
+            color: var(--ink-soft); font-weight: 600; }
+        .l2-section table thead tr { border-color: var(--line); }
+        .l2-section .border-gray-100, .l2-section .border-b { border-color: var(--line); }
+        .l2-section tbody tr:hover { background: var(--sindoor-soft); }
+        /* बल tabs */
+        .bal-tabbar { display: flex; gap: 8px; flex-wrap: wrap; }
+        .bal-tabbar button { border: 1px solid var(--line); border-radius: 6px; background: var(--card);
+            padding: 8px 14px; min-height: 44px; font-weight: 600; font-size: .9rem; color: var(--ink); }
+        .bal-tabbar button.active { background: var(--sindoor-soft); border-color: var(--sindoor);
+            color: var(--sindoor); }
+
+        /* ---- Print (Phase 6): stacked, expanded, controls hidden, chart intact ---- */
+        @media print {
+            body { background: #fff; }
+            .topbar { position: static; }
+            .topbar select, #new-kundli, #side-menu, #birth-form, .pred-expand,
+            .phala-toggle, #karaka-copy, #hd-copy, #chart-select, #pred-select,
+            .bal-tabbar { display: none !important; }
+            .l2-grid { display: block; }
+            .l2-panel { height: auto !important; min-height: 0; }
+            #pred-scroll { overflow: visible; max-height: none; }
+            #pred-scroll .hidden { display: block !important; }   /* all cards expanded */
+            #pred-scroll pre.hidden { display: none !important; } /* copy buffers stay hidden */
+            .l2-card, .l2-section .bg-white { box-shadow: none; }
+        }
+
         /* ---- Expand / collapse reading mode (Phase 5) ---- */
         #chart-panel, #pred-panel { transition: opacity .18s ease; }
         @media (prefers-reduced-motion: reduce) {
@@ -238,7 +273,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 <!-- ============ TOP BAR (layout v2, Phase 1) ============ -->
 <header class="topbar">
     <div class="topbar-inner">
-        <div class="brand">Analysis of Karma</div>
+        <h1 class="brand" style="margin:0">Analysis of Karma</h1>
         <div class="meta">
             <span><b><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></b></span>
             <span><?= $h($in['date']) ?>, <?= $h($in['time']) ?></span>
@@ -261,7 +296,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 });
 </script>
 
-<div class="l2-wrap mx-auto space-y-4 p-3 sm:p-4">
+<main class="l2-wrap mx-auto space-y-4 p-3 sm:p-4">
 
     <!-- ============ OVERVIEW TILES (layout v2, Phase 1) ============ -->
     <?php if ($chart !== null): ?>
@@ -1065,6 +1100,15 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
         <!-- ============ बल (full-width section) ============ -->
         <div id="sec-bal" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+            <!-- बल tabs: Shadbala / Bhava Bala / Ashtakavarga / Vimshopaka -->
+            <div class="bal-tabbar" aria-label="बल">
+                <button type="button" data-bal="shad" class="active">षड्बल (Shadbala)</button>
+                <button type="button" data-bal="bb">भाव बल (Bhava Bala)</button>
+                <button type="button" data-bal="av">अष्टकवर्ग (AV)</button>
+                <button type="button" data-bal="vim">विंशोपक बल</button>
+            </div>
+
+            <div class="bal-tab space-y-4 md:space-y-6" data-bal="shad">
             <div class="bg-white rounded-lg shadow p-4 flex flex-col justify-center">
                 <h2 class="font-semibold mb-1">Shadbala</h2>
                 <p class="text-xs text-gray-500 mb-3">Strength ÷ minimum required (ratio). Dashed line = 1.00. Red &lt; 0.95, orange 0.95–1.01, green &gt; 1.01.</p>
@@ -1120,6 +1164,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     </div>
 
 
+            </div><!-- /bal-tab shad -->
+
+            <div class="bal-tab hidden" data-bal="bb">
     <!-- Bhava Bala — component breakdown per house -->
     <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <h2 class="font-semibold mb-2">Bhava Bala</h2>
@@ -1151,6 +1198,38 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     </div>
 
 
+            </div><!-- /bal-tab bb -->
+
+            <!-- अष्टकवर्ग: per-house Sarva-Ashtakavarga scores (same values as the
+                 chart ring / House Details column — presentation only). -->
+            <div class="bal-tab hidden" data-bal="av">
+                <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+                    <h2 class="font-semibold mb-2">Ashtakavarga <span class="text-xs text-gray-400 font-normal">(अष्टकवर्ग — सर्व)</span></h2>
+                    <table class="w-full text-sm">
+                        <thead><tr class="text-left border-b">
+                            <th class="py-1 pr-3">House</th>
+                            <?php for ($avh = 1; $avh <= 12; $avh++): ?><th class="pr-2 text-center"><?= $avh ?></th><?php endfor; ?>
+                        </tr></thead>
+                        <tbody>
+                            <tr>
+                                <td class="py-1 pr-3 font-semibold">AV</td>
+                                <?php for ($avh = 1; $avh <= 12; $avh++): ?>
+                                    <td class="pr-2 text-center font-semibold" style="color:#1d4ed8"><?= (int) ($chart['houses'][$avh]['av'] ?? 0) ?></td>
+                                <?php endfor; ?>
+                            </tr>
+                            <tr class="border-t border-gray-100">
+                                <td class="py-1 pr-3 font-semibold">Rashi</td>
+                                <?php for ($avh = 1; $avh <= 12; $avh++): ?>
+                                    <td class="pr-2 text-center text-gray-600"><?= (int) ($chart['houses'][$avh]['rashi_num'] ?? 0) ?></td>
+                                <?php endfor; ?>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="text-xs text-gray-400 mt-2">Sarva-Ashtakavarga per house — the same AV values shown on the chart ring (blue) and in House Details.</p>
+                </div>
+            </div><!-- /bal-tab av -->
+
+            <div class="bal-tab hidden" data-bal="vim">
     <!-- Vimshopaka Bala — divisional strength (out of 20) in four varga groups -->
     <?php if (!empty($chart['vimshopaka'])): $vb = $chart['vimshopaka']; ?>
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
@@ -1177,7 +1256,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <p class="text-xs text-gray-400 mt-2">Higher = stronger (max 20). Uses the same divisional placements as the charts; dignity by natural (Naisargika) friendship with each divisional sign's lord.</p>
     </div>
     <?php endif; ?>
-
+            </div><!-- /bal-tab vim -->
 
         </div>
 
@@ -1185,7 +1264,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     <?php endif; ?>
 
     <p class="text-xs text-gray-400">Auto Business — Calculation Engine test page. For arc-second accuracy set SWETEST_PATH (Swiss Ephemeris).</p>
-</div>
+</main>
 
 <?php if ($chart !== null): ?>
 <script>
@@ -1428,6 +1507,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     }
     renderChartFrame('D1');
     setTimeout(setPanelHeights, 120);
+    // Keyboard users can scroll the overflow regions (a11y).
+    document.querySelectorAll('.overflow-x-auto, #pred-scroll, .overflow-y-auto').forEach(function (el) {
+      if (!el.hasAttribute('tabindex')) { el.setAttribute('tabindex', '0'); }
+    });
   }
 
   // Chart panel frame: same renderer + payloads as the section charts (protected).
@@ -1478,6 +1561,17 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       if (ps) { ps.scrollTop = 0; }
     });
   }
+
+  // बल tabs: one strength table at a time.
+  document.querySelectorAll('.bal-tabbar button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var v = btn.getAttribute('data-bal');
+      document.querySelectorAll('.bal-tabbar button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      document.querySelectorAll('.bal-tab').forEach(function (el) {
+        el.classList.toggle('hidden', el.getAttribute('data-bal') !== v);
+      });
+    });
+  });
 
   // Expand / collapse (required): expanded = chart column hidden, prediction
   // panel spans both columns in two-column reading mode. Collapse restores the
