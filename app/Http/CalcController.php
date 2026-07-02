@@ -84,6 +84,9 @@ final class CalcController
             $gochar = $engine->gochar($chart, $jdG, $lat, $lon);
 
             $vargas = $engine->vargaCharts($chart);
+            // North-chart payload of the annual chart for the v2 chart selector
+            // (render-ready; same shape the varshaphal JSON endpoint returns).
+            $varshaNorth = $vp !== null ? $engine->northPayload($vp['varsha_chart']) : null;
             $meta = ['lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'jd' => $jd];
             // Birth params handed to the browser so the interactive gochar panel
             // can rebuild the natal chart for any transit instant/place.
@@ -108,6 +111,7 @@ final class CalcController
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
+            'varshaNorth' => $varshaNorth ?? null,
             // Dasha Prediction: dropdowns default to the running Maha/Antar; the
             // matching phala text (if seeded) is pre-rendered so it shows at once.
             'phala' => [

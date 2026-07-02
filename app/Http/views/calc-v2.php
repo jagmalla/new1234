@@ -145,6 +145,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .l2-menu button.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
             color: var(--sindoor); font-weight: 700; }
         .chart-frame { width: 100%; margin: 0 auto; }
+        .l2-select { width: 100%; border: 1px solid var(--line); background: var(--card);
+            color: var(--ink); padding: 8px 10px; min-height: 44px; font-weight: 600; margin-bottom: 8px; }
+        /* Dasha strip — pinned to the chart panel bottom (mt-auto + divider). */
+        .dasha-strip { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px;
+            font-size: .85rem; line-height: 1.6; }
+        .dasha-strip .ds-label { color: var(--ink); font-weight: 700; }
+        .dasha-strip .ds-dates { color: var(--ink-soft); }
+        .dasha-strip .ds-arrow { color: var(--ink-soft); }
+        .ds-pill { background: var(--sindoor-soft); color: var(--sindoor); border-radius: 999px;
+            padding: 1px 8px; font-size: .72rem; font-weight: 700; vertical-align: 1px; }
         #pred-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px;
             scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
         #pred-scroll::-webkit-scrollbar { width: 8px; }
@@ -311,14 +321,55 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         </nav>
 
         <!-- Chart panel (middle column) -->
+        <?php
+            // Chart selector: every computed varga + गोचर + वर्ष कुंडली.
+            $vargaHi = [
+                'D1' => 'जन्म कुंडली', 'D2' => 'होरा', 'D3' => 'द्रेष्काण', 'D4' => 'चतुर्थांश',
+                'D7' => 'सप्तमांश', 'D9' => 'नवमांश', 'D10' => 'दशमांश', 'D12' => 'द्वादशांश',
+                'D16' => 'षोडशांश', 'D20' => 'विंशांश', 'D24' => 'चतुर्विंशांश', 'D27' => 'सप्तविंशांश',
+                'D30' => 'त्रिंशांश', 'D40' => 'खवेदांश', 'D60' => 'षष्ट्यंश',
+            ];
+        ?>
         <section id="chart-panel" class="l2-card l2-panel" aria-label="कुंडली चार्ट">
-            <h2 class="l2-panel-title">जन्म कुंडली</h2>
+            <select id="chart-select" class="l2-select" aria-label="कुंडली चुनें">
+                <?php foreach ($vargaHi as $vk => $vlbl): if (!isset($vargas[$vk])) { continue; } ?>
+                    <option value="<?= $h($vk) ?>"><?= $h($vk) ?> — <?= $h($vlbl) ?></option>
+                <?php endforeach; ?>
+                <?php if ($gochar !== null): ?><option value="gochar">गोचर</option><?php endif; ?>
+                <?php if (($view['varshaNorth'] ?? null) !== null): ?><option value="varsha">वर्ष कुंडली (<?= (int) $in['forYear'] ?>)</option><?php endif; ?>
+            </select>
             <div class="l2-legend">
                 <span style="color:#1d4ed8"><b>AV:</b> Ashtakavarga</span> ·
                 <span style="color:#15803d"><b>BB:</b> Bhav Bala</span> ·
                 <span><b>Dr:</b> Drishti</span>
             </div>
             <div id="chart-frame" class="chart-frame"></div>
+
+            <!-- DASHA STRIP: always visible at the panel bottom, every selection.
+                 Existing Vimshottari data (running chain + next antar) — formatting only. -->
+            <?php if ($dashaNow !== null && ($dashaNow['maha'] ?? null) !== null):
+                $tzs = (float) ($meta['tz'] ?? 0);
+                $dmy = static fn(array $p, string $sep = '–'): string =>
+                    \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['start_jd'], $tzs)
+                    . ' ' . $sep . ' ' . \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $p['end_jd'], $tzs);
+                $stripRow = static function (string $label, ?array $p, int $depth, bool $running = false, string $sep = '–') use ($pcolor, $h, $dmy): string {
+                    if (empty($p)) { return ''; }
+                    $arrow = $depth > 0 ? '<span class="ds-arrow">↳</span> ' : '';
+                    return '<div class="ds-row" style="padding-left:' . ($depth * 16) . 'px">' . $arrow
+                        . '<b class="ds-label">' . $h($label) . ':</b> '
+                        . '<b style="color:' . $pcolor($p['lord']) . '">' . $h($p['lord']) . '</b> '
+                        . '<span class="ds-dates">(' . $h($dmy($p, $sep)) . ')</span>'
+                        . ($running ? ' <span class="ds-pill">चालू</span>' : '')
+                        . '</div>';
+                };
+            ?>
+            <div class="dasha-strip" aria-label="चालू दशा">
+                <?= $stripRow('MahaDasha', $dashaNow['maha'], 0) ?>
+                <?= $stripRow('AntarDasha', $dashaNow['antar'], 1) ?>
+                <?= $stripRow('Pratyantar', $dashaNow['pratyantar'], 2, true) ?>
+                <?= $stripRow('Next Antardasha', $dashaNow['next_antar'], 1, false, '→') ?>
+            </div>
+            <?php endif; ?>
         </section>
 
         <!-- Prediction panel (right column) -->
@@ -1040,6 +1091,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   window.AB_TZ     = <?= json_encode((float) ($meta['tz'] ?? 0)) ?>;
   window.AB_YEAR   = <?= json_encode((int) $in['forYear']) ?>;
   window.AB_HOUSES = <?= json_encode($chart['houses'] ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_GOCHAR = <?= json_encode($gochar ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_VARSHAN = <?= json_encode($view['varshaNorth'] ?? null, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <?php $asset = static fn(string $p): string => \AutoBusiness\Core\Asset::url($p); ?>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
@@ -1276,12 +1329,36 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   function renderChartFrame(key) {
     var frame = document.getElementById('chart-frame');
     if (!frame || !window.ABChart) { return; }
+    if (key === 'gochar') {
+      var g = window.AB_GOCHAR || {};
+      if (!g.transits || !g.ascendant) { return; }
+      var ABBR = { Sun:'Su', Moon:'Mo', Mars:'Ma', Mercury:'Me', Jupiter:'Ju', Venus:'Ve', Saturn:'Sa', Rahu:'Ra', Ketu:'Ke' };
+      var planets = Object.keys(g.transits).map(function (n) {
+        var t = g.transits[n];
+        return { abbr: ABBR[n] || n.slice(0, 2), sign: t.sign_index, deg: Math.floor(t.deg), retro: !!t.retro };
+      });
+      ABChart.renderNorth(frame, { asc_sign: g.ascendant.sign_index, planets: planets }, { showDeg: true });
+      return;
+    }
+    if (key === 'varsha') {
+      if (window.AB_VARSHAN && window.AB_VARSHAN.planets) {
+        ABChart.renderNorth(frame, window.AB_VARSHAN, { showDeg: true });
+      }
+      return;
+    }
     if (window.AB_VARGAS && window.AB_VARGAS[key]) {
       ABChart.renderNorth(frame, window.AB_VARGAS[key], {
         title: null, showDeg: true, big: key === 'D1',
         outer: key === 'D1' ? (window.AB_HOUSES || null) : null
       });
     }
+  }
+  var chartSel = document.getElementById('chart-select');
+  if (chartSel) {
+    chartSel.addEventListener('change', function () {
+      renderChartFrame(this.value);
+      setPanelHeights();
+    });
   }
 
   // Side-menu section switching: home = three-panel; others span the two panels.
