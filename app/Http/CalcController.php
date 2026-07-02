@@ -134,7 +134,10 @@ final class CalcController
             // with the House Prediction of its main house.
             'karakaPred' => $this->karakaPred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
-        require dirname(__DIR__) . '/Http/views/calc.php';
+        // Layout redesign runs side by side: ?layout=new renders the v2 shell
+        // (same $view data); the existing page stays the default until approved.
+        $tpl = (($_GET['layout'] ?? '') === 'new') ? 'calc-v2.php' : 'calc.php';
+        require dirname(__DIR__) . '/Http/views/' . $tpl;
     }
 
     /**
