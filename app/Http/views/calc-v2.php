@@ -192,6 +192,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* Prediction body copy reads at 12px base (bumps to 14px when expanded). */
         .pred-view { font-size: 12px; }
         .pred-view .whitespace-pre-line, .pred-view li { line-height: 1.65; }
+        /* Yoga + Bhavesh read at the same size as the other predictions (~1.02rem). */
+        .pred-view[data-pred="yoga"], .pred-view[data-pred="bhavesh"] { font-size: 1.02rem; line-height: 1.6; }
+        /* Inline dropdown pickers (replace the old side lists). */
+        .pred-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+        .pred-picker-label { font-size: .8rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+        .pred-inline-select { flex: 1; min-width: 160px; border: 1px solid var(--line); border-radius: 6px;
+            background: var(--card); color: var(--ink); padding: 8px 10px; min-height: 40px; font-weight: 600; }
         /* Colored dot labels + token colours for the curated text sections. */
         #pred-scroll .text-green-700 { color: var(--shubh) !important; }
         #pred-scroll .text-red-700 { color: var(--ashubh) !important; }
@@ -202,7 +210,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .yoga-card { border: 1px solid var(--line); border-left: 4px solid var(--sindoor);
             border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; background: var(--card); }
         .yoga-card.yoga-bad { border-left-color: var(--ashubh); }
-        .yoga-title { font-weight: 700; font-size: 13px; color: var(--ink); margin-bottom: 2px; }
+        .yoga-title { font-weight: 700; font-size: 1.1rem; color: var(--ink); margin-bottom: 2px; }
         .yoga-why { color: var(--ink-soft); }
         .yoga-why b { color: var(--ink-soft); }
         .yoga-res b { color: var(--shubh); }
@@ -210,7 +218,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* भावेश फल cards */
         .bh-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
             margin-bottom: 12px; background: var(--card); }
-        .bh-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+        .bh-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; }
 
         /* ---- Full-width section restyle (Phase 6): token-driven tables ---- */
         .l2-section .bg-white { border: 1px solid var(--line); border-radius: 10px;
@@ -685,17 +693,15 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 Check <code>.env</code> DB settings and that <code>migrations/004_planet_phala.sql</code> is imported.
             </div>
             <?php endif; ?>
-            <!-- Two columns: pick a planet (left) -> its prediction (right, scrolls). -->
-            <div class="grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-4" id="planet-grid">
-                <div class="sm:border-r sm:pr-2 overflow-y-auto" style="max-height:460px">
-                    <div class="flex sm:flex-col flex-wrap gap-1">
+            <!-- Pick a planet from the dropdown -> its prediction (scrolls). -->
+            <div id="planet-grid">
+                <div class="pred-picker">
+                    <label class="pred-picker-label" for="planet-select">Select Planet (ग्रह चुनें)</label>
+                    <select id="planet-select" class="pred-inline-select">
                     <?php foreach ($pp['planets'] as $i => $row): $pl = $row['planet']; ?>
-                        <button type="button" class="planet-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100 <?= $i === 0 ? 'bg-blue-50 border-blue-200 font-semibold' : '' ?>" data-planet="<?= $h($pl) ?>">
-                            <span style="color:<?= $pcolor($pl) ?>"><?= $h($pl) ?></span>
-                            <span class="text-gray-400 text-xs">(<?= $h($ppHi[$pl] ?? '') ?>)</span>
-                        </button>
+                        <option value="<?= $h($pl) ?>"><?= $h($pl) ?> (<?= $h($ppHi[$pl] ?? '') ?>)</option>
                     <?php endforeach; ?>
-                    </div>
+                    </select>
                 </div>
                 <div class="overflow-y-auto pr-1" style="max-height:460px" id="planet-detail-pane">
                     <?php foreach ($pp['planets'] as $i => $row):
@@ -797,16 +803,15 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             <?php endif; ?>
             <div class="text-gray-500 italic">House prediction not available yet (rule tables not imported).</div>
         <?php else: ?>
-            <div class="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4" id="house-grid">
-                <div class="sm:border-r sm:pr-2 overflow-y-auto" style="max-height:480px">
-                    <div class="flex sm:flex-col flex-wrap gap-1">
-                        <button type="button" class="house-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100" data-house="all">सभी भाव (All 12)</button>
+            <div id="house-grid">
+                <div class="pred-picker">
+                    <label class="pred-picker-label" for="house-select">Select House (भाव चुनें)</label>
+                    <select id="house-select" class="pred-inline-select">
+                        <option value="all">सभी भाव (All 12)</option>
                         <?php foreach ($hp['houses'] as $hh => $hd): ?>
-                            <button type="button" class="house-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100 <?= $hh === 1 ? 'bg-blue-50 border-blue-200 font-semibold' : '' ?>" data-house="<?= (int) $hh ?>">
-                                <?= $ord2((int) $hh) ?> House — <?= $h((string) $hd['rashi_hi']) ?>
-                            </button>
+                            <option value="<?= (int) $hh ?>"<?= $hh === 1 ? ' selected' : '' ?>><?= $ord2((int) $hh) ?> House — <?= $h((string) $hd['rashi_hi']) ?></option>
                         <?php endforeach; ?>
-                    </div>
+                    </select>
                 </div>
                 <div class="overflow-y-auto pr-1" style="max-height:480px" id="house-detail-pane">
                     <?php foreach ($hp['houses'] as $hh => $hd): ?>
@@ -887,15 +892,14 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             <?php endif; ?>
             <div class="text-gray-500 italic">Karaka prediction not available yet (rule tables not imported).</div>
         <?php else: ?>
-            <div class="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-4" id="karaka-grid">
-                <div class="sm:border-r sm:pr-2 overflow-y-auto" style="max-height:520px">
-                    <div class="flex sm:flex-col flex-wrap gap-1">
+            <div id="karaka-grid">
+                <div class="pred-picker">
+                    <label class="pred-picker-label" for="karaka-select">Select Karaka (कारक चुनें)</label>
+                    <select id="karaka-select" class="pred-inline-select">
                         <?php foreach ($kp['karakas'] as $i => $k): ?>
-                            <button type="button" class="karaka-pick text-left px-2 py-1 rounded border border-transparent hover:bg-gray-100 <?= $i === 0 ? 'bg-blue-50 border-blue-200 font-semibold' : '' ?>" data-karaka="<?= $h((string) $k['planet']) ?>">
-                                <?= $h((string) $k['title']) ?>
-                            </button>
+                            <option value="<?= $h((string) $k['planet']) ?>"><?= $h((string) $k['title']) ?></option>
                         <?php endforeach; ?>
-                    </div>
+                    </select>
                 </div>
                 <div class="overflow-y-auto pr-1" style="max-height:520px" id="karaka-detail-pane">
                     <?php foreach ($kp['karakas'] as $i => $k): ?>
@@ -1621,74 +1625,27 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   })();
 
   // Planet Prediction: pick a planet (left) -> show only its detail (right).
-  (function () {
-    var card = document.getElementById('planet-phala-card');
-    if (!card) { return; }
-    var picks = card.querySelectorAll('.planet-pick');
-    var details = card.querySelectorAll('.planet-detail');
-    var pane = document.getElementById('planet-detail-pane');
-    picks.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var pl = btn.getAttribute('data-planet');
-        details.forEach(function (d) {
-          d.classList.toggle('hidden', d.getAttribute('data-planet') !== pl);
-        });
-        picks.forEach(function (b) {
-          var on = b === btn;
-          b.classList.toggle('bg-blue-50', on);
-          b.classList.toggle('border-blue-200', on);
-          b.classList.toggle('font-semibold', on);
-        });
-        if (pane) { pane.scrollTop = 0; }
+  // Prediction pickers are dropdowns: on change, show the matching detail.
+  // dataAttr is the detail's data-* key; 'all' (House) reveals every detail.
+  function bindPredSelect(selectId, detailSel, dataAttr, paneId) {
+    var sel = document.getElementById(selectId);
+    if (!sel) { return; }
+    var details = document.querySelectorAll(detailSel);
+    var pane = paneId ? document.getElementById(paneId) : null;
+    sel.addEventListener('change', function () {
+      var v = sel.value;
+      details.forEach(function (d) {
+        d.classList.toggle('hidden', v !== 'all' && d.getAttribute(dataAttr) !== v);
       });
+      if (pane) { pane.scrollTop = 0; }
     });
-  })();
+  }
+  bindPredSelect('planet-select', '#planet-phala-card .planet-detail', 'data-planet', 'planet-detail-pane');
+  bindPredSelect('house-select', '#house-pred-card .house-detail', 'data-house', 'house-detail-pane');
+  bindPredSelect('karaka-select', '#karaka-pred-card .karaka-detail', 'data-karaka', 'karaka-detail-pane');
 
-  // House Prediction: pick a house (or "All 12") -> show its reading.
+  // Karaka copy button (Devanagari-safe).
   (function () {
-    var card = document.getElementById('house-pred-card');
-    if (!card) { return; }
-    var picks = card.querySelectorAll('.house-pick');
-    var details = card.querySelectorAll('.house-detail');
-    var pane = document.getElementById('house-detail-pane');
-    picks.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var hv = btn.getAttribute('data-house');
-        details.forEach(function (d) {
-          d.classList.toggle('hidden', hv !== 'all' && d.getAttribute('data-house') !== hv);
-        });
-        picks.forEach(function (b) {
-          var on = b === btn;
-          b.classList.toggle('bg-blue-50', on);
-          b.classList.toggle('border-blue-200', on);
-          b.classList.toggle('font-semibold', on);
-        });
-        if (pane) { pane.scrollTop = 0; }
-      });
-    });
-  })();
-
-  // Karaka Prediction: pick a karaka -> show its paired reading.
-  (function () {
-    var card = document.getElementById('karaka-pred-card');
-    if (!card) { return; }
-    var picks = card.querySelectorAll('.karaka-pick');
-    var details = card.querySelectorAll('.karaka-detail');
-    var pane = document.getElementById('karaka-detail-pane');
-    picks.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var kv = btn.getAttribute('data-karaka');
-        details.forEach(function (d) { d.classList.toggle('hidden', d.getAttribute('data-karaka') !== kv); });
-        picks.forEach(function (b) {
-          var on = b === btn;
-          b.classList.toggle('bg-blue-50', on);
-          b.classList.toggle('border-blue-200', on);
-          b.classList.toggle('font-semibold', on);
-        });
-        if (pane) { pane.scrollTop = 0; }
-      });
-    });
-    // Copy all karaka readings (Devanagari-safe).
     var kc = document.getElementById('karaka-copy');
     if (kc) {
       kc.addEventListener('click', function () {
