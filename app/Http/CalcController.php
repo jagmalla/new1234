@@ -127,6 +127,14 @@ final class CalcController
                 // silent "not available" placeholder.
                 'error' => \AutoBusiness\Astro\Phala\DashaPhalaRepository::lastError(),
             ],
+            // Calculated Dasha engine (दशा फल v2): chart-specific cards for the
+            // running maha/antar. Recomputed on dropdown change via /calc/dashaEngine.
+            'dashaEngine' => $this->dashaEngine(
+                $chart,
+                $dashaNow['maha']['lord'] ?? 'Sun',
+                $dashaNow['antar']['lord'] ?? 'Sun',
+                (string) ($_GET['phala_lang'] ?? 'hi')
+            ),
             // Planet Prediction: per-planet (A) Bhavesh Phal (as house-lord) and
             // (B) Graha-in-Bhava (as placement). Built from the chart's own
             // ruled-house + placed-house knowledge.
@@ -172,6 +180,70 @@ final class CalcController
                 ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\KarakaPrediction::generate($chart, $rules, $houseScores), [])
                 : [],
         ];
+    }
+
+    /**
+     * Build the calculated Dasha-engine payload (दशा फल v2) for a maha/antar
+     * pair. Fail-safe: a DB/edge failure degrades to null and the panel falls
+     * back to the classical 81-combo block.
+     *
+     * @return array{lang:string,error:?string,data:array<string,mixed>|null}|null
+     */
+    private function dashaEngine(?array $chart, string $maha, string $antar, string $lang): ?array
+    {
+        if ($chart === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Phala\DashaEngineRepository::load($lang);
+        return [
+            'lang' => $lang,
+            'error' => \AutoBusiness\Astro\Phala\DashaEngineRepository::lastError(),
+            'data' => $rules !== null
+                ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\DashaPhalEngine::compute($chart, $maha, $antar, $rules, $lang), null)
+                : null,
+        ];
+    }
+
+    /**
+     * JSON endpoint for the Dasha-engine dropdowns: rebuilds the natal chart from
+     * the birth params, computes the engine for the selected maha/antar, renders
+     * the cards partial and returns the HTML so the panel updates without reload.
+     */
+    public function dashaEngineJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
+            $lat = self::parseAngle((string) ($_GET['blat'] ?? '0'));
+            $lon = self::parseAngle((string) ($_GET['blon'] ?? '0'));
+            $tz = self::parseTz((string) ($_GET['btz'] ?? '0'));
+            [$bY, $bMo, $bD] = array_map('intval', explode('-', (string) ($_GET['bdate'] ?? date('Y-m-d'))));
+            [$bH, $bMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['btime'] ?? '12:00')), 2, '0'));
+            $maha = (string) ($_GET['maha'] ?? 'Sun');
+            $antar = (string) ($_GET['antar'] ?? 'Sun');
+            $lang = (string) ($_GET['lang'] ?? 'hi');
+
+            $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
+            $chart = $engine->computeChart(JulianDay::fromGregorian($bY, $bMo, $bD, $bH, $bMi, 0.0, $tz), $lat, $lon);
+
+            $rules = \AutoBusiness\Astro\Phala\DashaEngineRepository::load($lang);
+            if ($rules === null) {
+                echo json_encode(['error' => \AutoBusiness\Astro\Phala\DashaEngineRepository::lastError() ?? 'unavailable']);
+                return;
+            }
+            $eng = \AutoBusiness\Astro\Phala\DashaPhalEngine::compute($chart, $maha, $antar, $rules, $lang);
+
+            $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
+            ob_start();
+            require dirname(__DIR__) . '/Http/views/_dasha_cards.php';
+            $html = (string) ob_get_clean();
+            echo json_encode(['html' => $html], JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            error_log('dashaEngineJson failed: ' . $e->getMessage());
+            http_response_code(400);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
     }
 
     /**

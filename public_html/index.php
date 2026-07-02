@@ -41,6 +41,10 @@ try {
             (new CalcController())->dashaPhalaJson();
             break;
 
+        case 'GET calc/dashaEngine':
+            (new CalcController())->dashaEngineJson();
+            break;
+
         case 'POST api/workflow/save':
             (new CanvasController())->save();
             break;

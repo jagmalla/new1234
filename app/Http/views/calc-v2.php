@@ -308,6 +308,26 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gc-pratikul { background: #f4d9d4; color: #8A2F2F; }
         .gc-ati    { background: #e7b3ac; color: #5f1a1a; }
         .gc-ashubh { background: #f4d9d4; color: #8A2F2F; }
+
+        /* ---- Calculated Dasha engine cards (दशा फल v2) ---- */
+        .de-overall { display: flex; align-items: flex-start; gap: 8px; background: #fffdf9;
+            border: 1px solid var(--line); border-left: 4px solid var(--sindoor); border-radius: 8px;
+            padding: 10px 12px; margin-bottom: 12px; }
+        .de-overall-txt { font-weight: 600; color: var(--ink); }
+        .de-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--card); }
+        .de-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
+        .de-title { font-weight: 700; font-size: 13px; color: var(--ink); }
+        .de-facts { font-size: 12px; color: var(--ink-soft); margin-bottom: 5px; }
+        .de-line { margin: 3px 0; line-height: 1.6; }
+        .de-line b { font-weight: 700; }
+        .de-pos b { color: var(--shubh); }
+        .de-neg b { color: var(--ashubh); }
+        .de-rem b, .de-rem { color: var(--haldi); }
+        .de-remlist { list-style: none; padding-left: 0; margin: 0; }
+        .de-remlist li { color: var(--haldi); margin: 3px 0; }
+        .de-classical { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+        .de-classical-btn { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+        .de-classical-btn:hover { color: var(--sindoor); }
         #planet-phala-card .pp-sec  { font-size: 1.15rem; font-weight: 700; }
         #planet-phala-card .pp-sub  { font-size: 1.1rem;  font-weight: 700; }
     </style>
@@ -582,6 +602,26 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             <button type="button" class="phala-toggle ml-auto text-xs bg-gray-100 hover:bg-gray-200 border rounded px-2 py-1 font-semibold" data-target="dasha-body" aria-expanded="true">Collapse ▴</button>
         </div>
         <div id="dasha-body">
+
+        <!-- Calculated Dasha engine (दशा फल v2): chart-specific cards. -->
+        <?php $de = $view['dashaEngine'] ?? null; ?>
+        <div id="dasha-cards">
+            <?php if ($de !== null && !empty($de['data'])): $eng = $de['data']; require __DIR__ . '/_dasha_cards.php'; ?>
+            <?php elseif ($de !== null && !empty($de['error'])): ?>
+                <div class="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    Database not reachable — staff note: <?= $h((string) $de['error']) ?>.
+                    Check <code>.env</code> and that <code>migrations/011_dasha_engine.sql</code> is imported.
+                </div>
+            <?php else: ?>
+                <div class="text-gray-500 italic">Calculated dasha analysis not available yet (import migration 011).</div>
+            <?php endif; ?>
+        </div>
+        <div id="dasha-cards-loading" class="text-xs text-gray-400 hidden">गणना हो रही है…</div>
+
+        <!-- 7. शास्त्रीय संदर्भ (BPHS) — the existing 81-combo text, collapsed. -->
+        <div class="de-classical">
+            <button type="button" id="classical-toggle" class="de-classical-btn" aria-expanded="false">▸ शास्त्रीय संदर्भ (BPHS 81 योग)</button>
+            <div id="classical-body" class="hidden mt-2">
         <div id="phala-sections" class="grid grid-cols-1 md:grid-cols-3 gap-4<?= $pText ? '' : ' hidden' ?>">
             <div>
                 <div class="font-semibold text-green-700 mb-1">सकारात्मक फल <span class="text-gray-400 font-normal">(Positive)</span></div>
@@ -603,6 +643,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             Check the <code>.env</code> DB settings (DB_HOST / DB_NAME / DB_USER / DB_PASS) match the database you imported into.
         </div>
         <?php endif; ?>
+            </div><!-- /#classical-body -->
+        </div><!-- /.de-classical -->
         </div><!-- /#dasha-body -->
     </div>
             </div><!-- /pred-view dasha -->
@@ -1516,8 +1558,45 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         })
         .catch(function () { sec.classList.add('hidden'); empty.classList.remove('hidden'); });
     };
-    mSel.addEventListener('change', load);
-    aSel.addEventListener('change', load);
+
+    // Calculated engine: rebuild the chart-specific cards for the selected pair.
+    var cardsBox = document.getElementById('dasha-cards');
+    var loadingBox = document.getElementById('dasha-cards-loading');
+    var loadEngine = function () {
+      if (!cardsBox) { return; }
+      var b = window.AB_BIRTH || {};
+      if (b.date == null) { return; }
+      var q = new URLSearchParams({
+        bdate: b.date || '', btime: b.time || '12:00',
+        blat: b.lat != null ? b.lat : '', blon: b.lon != null ? b.lon : '',
+        btz: b.tz != null ? b.tz : '', ayanamsa: b.ayanamsa || 'lahiri',
+        maha: mSel.value, antar: aSel.value, lang: lang
+      });
+      if (loadingBox) { loadingBox.classList.remove('hidden'); }
+      fetch('/calc/dashaEngine?' + q.toString(), { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (loadingBox) { loadingBox.classList.add('hidden'); }
+          if (d && d.html != null) { cardsBox.innerHTML = d.html; }
+        })
+        .catch(function () { if (loadingBox) { loadingBox.classList.add('hidden'); } });
+    };
+
+    var onChange = function () { load(); loadEngine(); };
+    mSel.addEventListener('change', onChange);
+    aSel.addEventListener('change', onChange);
+  })();
+
+  // शास्त्रीय संदर्भ (BPHS) collapse toggle.
+  (function () {
+    var btn = document.getElementById('classical-toggle');
+    var body = document.getElementById('classical-body');
+    if (!btn || !body) { return; }
+    btn.addEventListener('click', function () {
+      var open = body.classList.toggle('hidden') === false;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.textContent = (open ? '▾' : '▸') + ' शास्त्रीय संदर्भ (BPHS 81 योग)';
+    });
   })();
 
   // Collapse / expand the prediction cards (Dasha & Planet rows).
