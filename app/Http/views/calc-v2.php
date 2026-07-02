@@ -151,12 +151,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .l2-menu button:hover { background: var(--sindoor-soft); }
         .l2-menu button.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
             color: var(--sindoor); font-weight: 700; }
+        /* Expand caret on menu items that have a sub-menu (added by JS). */
+        .l2-menu > .l2-mi > button { position: relative; }
+        .l2-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            font-size: .9rem; font-weight: 700; color: var(--ink-soft); line-height: 1; }
+        .l2-mi.open > button .l2-caret { color: var(--sindoor); }
         /* Sub-menu: shown under the active section for direct jumps. */
         .l2-sub { display: none; }
         .l2-mi.open .l2-sub { display: block; }
         .l2-sub button { font-size: .82rem; padding: 6px 14px 6px 26px; color: var(--ink-soft);
             font-weight: 500; border-left: 3px solid var(--sindoor-soft); }
         .l2-sub button:hover { color: var(--sindoor); }
+        .l2-sub button.active { color: var(--sindoor); font-weight: 700;
+            background: var(--sindoor-soft); border-left-color: var(--sindoor); }
         /* Birth-details form: token styling (matches the approved design). */
         #birth-form h2 { font-size: 1rem; }
         #birth-form span { color: var(--ink-soft); }
@@ -271,6 +278,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             .l2-menu { position: static; display: flex; overflow-x: auto; padding: 4px; margin-bottom: 12px; }
             .l2-mi { flex: 0 0 auto; }
             .l2-sub, .l2-mi.open .l2-sub { display: none; } /* chip bar: top-level only */
+            .l2-caret { display: none; } /* no expand affordance in the chip bar */
             .l2-menu button { width: auto; white-space: nowrap; border-left: none;
                 border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; }
             .l2-menu button.active { border-left: none; border-bottom-color: var(--sindoor); }
@@ -1866,11 +1874,37 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       el.classList.toggle('hidden', el.getAttribute('data-bal') !== v);
     });
   }
+  // Add a +/− caret to every menu item that has a sub-menu (so the user knows
+  // which items expand). Kept in sync with the .open state.
+  function syncCarets() {
+    document.querySelectorAll('#side-menu .l2-mi').forEach(function (mi) {
+      var top = mi.querySelector(':scope > button');
+      if (!top || !mi.querySelector('.l2-sub')) { return; }
+      var caret = top.querySelector('.l2-caret');
+      if (!caret) {
+        caret = document.createElement('span');
+        caret.className = 'l2-caret';
+        top.appendChild(caret);
+      }
+      caret.textContent = mi.classList.contains('open') ? '−' : '+';
+    });
+  }
+
   document.querySelectorAll('#side-menu [data-sec]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var isSub = !!btn.closest('.l2-sub');
-      // Top-level active state follows the section, whichever button was used.
       var sec = btn.getAttribute('data-sec');
+      var tgt = btn.getAttribute('data-target');
+
+      // If the prediction panel is expanded and the user navigates to the chart
+      // (Kundali Chart / Birth Chart), leave reading mode so both panels show.
+      var home = document.getElementById('sec-home');
+      if (home && home.classList.contains('pred-expanded') && (tgt === 'chart-panel' || (sec === 'home' && !btn.hasAttribute('data-focus') && !tgt))) {
+        var eb = document.getElementById('pred-expand');
+        if (eb) { eb.click(); }   // reuse the collapse logic (state + heights)
+      }
+
+      // Top-level active + open state follows the section, whichever button was used.
       document.querySelectorAll('#side-menu .l2-mi').forEach(function (mi) {
         var top = mi.querySelector(':scope > button');
         var owns = top && top.getAttribute('data-sec') === sec && !top.hasAttribute('data-focus');
@@ -1878,17 +1912,27 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         top.classList.toggle('active', owns);
         mi.classList.toggle('open', owns);
       });
+      // Sub-menu highlight: mark the clicked sub-item active (clear the rest).
+      document.querySelectorAll('#side-menu .l2-sub button').forEach(function (s) {
+        s.classList.toggle('active', s === btn && isSub);
+      });
+      syncCarets();
+
       showSection(sec, btn.hasAttribute('data-focus'));
       if (btn.hasAttribute('data-tab')) { activateBalTab(btn.getAttribute('data-tab')); }
-      var tgt = btn.getAttribute('data-target');
       if (tgt) {
         var el = document.getElementById(tgt);
         if (el) { setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); }
       }
     });
   });
-  // Open the sub-menu of the default section on load.
-  (function () { var mi = document.querySelector('#side-menu .l2-mi'); if (mi) { mi.classList.add('open'); } })();
+  // Open the sub-menu of the DEFAULT (active) section on load + draw carets.
+  (function () {
+    var active = document.querySelector('#side-menu .l2-mi > button.active');
+    var mi = active ? active.closest('.l2-mi') : document.querySelector('#side-menu .l2-mi');
+    if (mi) { mi.classList.add('open'); }
+    syncCarets();
+  })();
 
   // Equal heights (required): both panels match, sized by the chart at FULL
   // column width (the chart is square, so panel height follows column width).
