@@ -185,6 +185,20 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .bh-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
             margin-bottom: 12px; background: var(--card); }
         .bh-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+
+        /* ---- Expand / collapse reading mode (Phase 5) ---- */
+        #chart-panel, #pred-panel { transition: opacity .18s ease; }
+        @media (prefers-reduced-motion: reduce) {
+            #chart-panel, #pred-panel { transition: none; }
+        }
+        @media (min-width: 1100px) {
+            .pred-expanded #chart-panel { display: none; }
+            .pred-expanded #pred-panel { grid-column: 2 / 4; }
+            /* Reading mode: bigger copy flowing in two columns. */
+            .pred-expanded .pred-view { font-size: 14px; }
+            .pred-expanded .pred-view:not(.hidden) { column-count: 2; column-gap: 32px; }
+            .pred-expanded .pred-view:not(.hidden) > div { break-inside: avoid; }
+        }
         #pred-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px;
             scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
         #pred-scroll::-webkit-scrollbar { width: 8px; }
@@ -1465,6 +1479,31 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     });
   }
 
+  // Expand / collapse (required): expanded = chart column hidden, prediction
+  // panel spans both columns in two-column reading mode. Collapse restores the
+  // exact three-column state. Persisted per session.
+  (function () {
+    var btn = document.getElementById('pred-expand');
+    var home = document.getElementById('sec-home');
+    if (!btn || !home) { return; }
+    function apply(expanded) {
+      home.classList.toggle('pred-expanded', expanded);
+      btn.textContent = expanded ? '⤡' : '⤢';
+      var label = expanded ? 'संकुचित करें' : 'विस्तृत करें';
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('title', label);
+      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      try { sessionStorage.setItem('l2predexp', expanded ? '1' : '0'); } catch (e) {}
+      setPanelHeights();
+    }
+    btn.addEventListener('click', function () {
+      apply(!home.classList.contains('pred-expanded'));
+    });
+    var saved = null;
+    try { saved = sessionStorage.getItem('l2predexp'); } catch (e) {}
+    if (saved === '1') { apply(true); }
+  })();
+
   // Side-menu section switching: home = three-panel; others span the two panels.
   var FULL_SECTIONS = ['sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal'];
   function showSection(key, focusPred) {
@@ -1498,7 +1537,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       sizeChartFrame(null);
       return;
     }
-    var top = cp.getBoundingClientRect().top;
+    // Measure from whichever panel is on screen (chart panel is display:none
+    // in the expanded reading mode).
+    var ref = cp.offsetParent !== null ? cp : pp;
+    var top = ref.getBoundingClientRect().top;
     var hpx = Math.max(560, window.innerHeight - top - 16);
     cp.style.height = hpx + 'px';
     pp.style.height = hpx + 'px';
