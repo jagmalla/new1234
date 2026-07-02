@@ -384,49 +384,15 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     </div>
     <?php endif; ?>
 
-    <!-- Birth-details form: collapsed once a chart is shown; नई कुंडली reopens it. -->
-    <form id="birth-form" method="get" action="/calc" class="l2-card p-4 text-sm<?= ($chart !== null && $view['error'] === null) ? ' hidden' : '' ?>">
-        <input type="hidden" name="layout" value="new">
-        <h2 class="font-semibold mb-3 text-gray-700">Chart Calculation Details</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Name</span>
-                <input name="name" value="<?= $h($in['name']) ?>" class="border rounded px-2 py-1"></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Gender</span>
-                <select name="gender" class="border rounded px-2 py-1 bg-white">
-                    <?php foreach (['' => '—', 'Male' => 'Male', 'Female' => 'Female', 'Other' => 'Other'] as $gv => $gl): ?>
-                        <option value="<?= $h($gv) ?>" <?= $in['gender'] === $gv ? 'selected' : '' ?>><?= $h($gl) ?></option>
-                    <?php endforeach; ?>
-                </select></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Date (DD-MM-YYYY)</span>
-                <input name="date" value="<?= $h($in['date']) ?>" placeholder="DD-MM-YYYY or DD MM YYYY" class="border rounded px-2 py-1"></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Time (HH:MM)</span>
-                <input name="time" value="<?= $h($in['time']) ?>" placeholder="HH:MM or HH MM" class="border rounded px-2 py-1"></label>
-
-            <label class="flex flex-col gap-1 relative sm:col-span-2 lg:col-span-3"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
-                <input id="b-place" name="place" value="<?= $h($in['place']) ?>" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
-                <div id="b-place-results" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border rounded shadow max-h-60 overflow-y-auto hidden"></div></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Ayanamsa</span>
-                <select name="ayanamsa" class="border rounded px-2 py-1 bg-white">
-                    <?php foreach (['lahiri' => 'Lahiri (Chitrapaksha)', 'raman' => 'B.V. Raman', 'kp' => 'KP (Krishnamurti)', 'fagan_bradley' => 'Fagan-Bradley'] as $av => $al): ?>
-                        <option value="<?= $h($av) ?>" <?= $in['ayanamsa'] === $av ? 'selected' : '' ?>><?= $h($al) ?></option>
-                    <?php endforeach; ?>
-                </select></label>
-
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Latitude</span>
-                <input id="b-lat" name="lat" value="<?= $h($in['latIn']) ?>" class="border rounded px-2 py-1"></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Longitude</span>
-                <input id="b-lon" name="lon" value="<?= $h($in['lonIn']) ?>" class="border rounded px-2 py-1"></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-500">Timezone (east +)</span>
-                <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
-            <div class="flex items-end">
-                <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold w-full">Calculate</button>
-            </div>
-        </div>
-        <p class="text-xs text-gray-500 mt-2">Search any city worldwide to fill lat/lon/timezone, or type lat/lon directly (also accept DMS, e.g. 30N48'00). Timezone is the place's offset on the birth date.</p>
-    </form>
-
     <?php if ($view['error'] !== null): ?>
         <div class="bg-red-100 text-red-800 rounded p-3 text-sm">Error: <?= $h($view['error']) ?></div>
+    <?php endif; ?>
+
+    <?php if ($chart === null): ?>
+        <!-- No valid chart yet: show the entry form standalone so the visitor can
+             enter details. Once a chart exists it moves into the New / Profile
+             side-menu section (below). -->
+        <?php require __DIR__ . '/_birth_form.php'; ?>
     <?php endif; ?>
 
     <?php if ($chart !== null): ?>
@@ -443,7 +409,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     <div id="sec-home" class="l2-grid">
 
         <!-- Side menu -->
-        <nav id="side-menu" class="l2-menu l2-card" aria-label="मुख्य अनुभाग">
+        <nav id="side-menu" class="l2-menu l2-card" aria-label="Sections">
+            <div class="l2-mi">
+                <button type="button" data-sec="profile">New / Profile</button>
+            </div>
             <div class="l2-mi">
                 <button type="button" data-sec="home" class="active">Birth Chart</button>
                 <div class="l2-sub">
@@ -896,6 +865,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
             </div>
         </section>
+
+        <!-- ============ New / Profile (full-width section) — the birth-details
+             form, shown beside the menu like the Gochar Calculation card ======= -->
+        <div id="sec-profile" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+            <?php require __DIR__ . '/_birth_form.php'; ?>
+        </div>
 
         <!-- ============ ग्रह स्थिति (full-width section) ============ -->
         <div id="sec-grah" class="l2-section l2-full hidden space-y-4 md:space-y-6">
@@ -1693,7 +1668,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   })();
 
   // Side-menu section switching: home = three-panel; others span the two panels.
-  var FULL_SECTIONS = ['sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-varsha'];
+  var FULL_SECTIONS = ['sec-profile', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-varsha'];
   function showSection(key, focusPred) {
     var homeMode = key === 'home';
     var cp = document.getElementById('chart-panel');
@@ -1775,14 +1750,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     resizeT2 = setTimeout(setPanelHeights, 150);
   });
 
-  // नई कुंडली: reveal / hide the birth-details form.
+  // New Kundli: jump to the New / Profile section (birth-details form).
   var nk = document.getElementById('new-kundli');
   if (nk) {
     nk.addEventListener('click', function () {
-      var bf = document.getElementById('birth-form');
-      if (!bf) { return; }
-      var show = bf.classList.toggle('hidden') === false;
-      if (show) { bf.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      var mb = document.querySelector('#side-menu button[data-sec="profile"]');
+      if (mb) { mb.click(); mb.scrollIntoView({ block: 'nearest' }); }
     });
   }
 

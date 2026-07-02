@@ -138,12 +138,13 @@ final class CalcController
             // with the House Prediction of its main house.
             'karakaPred' => $this->karakaPred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
             // Yoga list (layout v2): classical yogas detected from the computed
-            // placements — presentation layer only, no engine changes.
-            'yogas' => $chart !== null ? \AutoBusiness\Astro\Phala\YogaFinder::find($chart) : [],
+            // placements — presentation layer only, no engine changes. Wrapped so
+            // a detector edge-case can never blank the whole chart page.
+            'yogas' => $this->safe(static fn() => $chart !== null ? \AutoBusiness\Astro\Phala\YogaFinder::find($chart) : [], []),
         ];
-        // Layout redesign runs side by side: ?layout=new renders the v2 shell
-        // (same $view data); the existing page stays the default until approved.
-        $tpl = (($_GET['layout'] ?? '') === 'new') ? 'calc-v2.php' : 'calc.php';
+        // Layout redesign: the v2 shell is now the default. Legacy page still
+        // reachable at ?layout=old for side-by-side comparison.
+        $tpl = (($_GET['layout'] ?? '') === 'old') ? 'calc.php' : 'calc-v2.php';
         require dirname(__DIR__) . '/Http/views/' . $tpl;
     }
 
@@ -163,9 +164,30 @@ final class CalcController
             'lang' => $lang,
             'error' => \AutoBusiness\Astro\Phala\KarakaPredictionRepository::lastError(),
             'karakas' => $rules !== null
-                ? \AutoBusiness\Astro\Phala\KarakaPrediction::generate($chart, $rules)
+                ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\KarakaPrediction::generate($chart, $rules), [])
                 : [],
         ];
+    }
+
+    /**
+     * Run a prediction generator so any exception is contained: the feature
+     * degrades to $fallback and the page still renders. The real error is logged
+     * (visible in the server log) so a broken rule/chart combo can be diagnosed
+     * without 500-ing the whole chart page.
+     *
+     * @template T
+     * @param callable():T $fn
+     * @param T $fallback
+     * @return T
+     */
+    private function safe(callable $fn, mixed $fallback): mixed
+    {
+        try {
+            return $fn();
+        } catch (\Throwable $e) {
+            error_log('Prediction generation failed: ' . $e->getMessage());
+            return $fallback;
+        }
     }
 
     /**
@@ -184,7 +206,7 @@ final class CalcController
             'lang' => $lang,
             'error' => \AutoBusiness\Astro\Phala\HousePredictionRepository::lastError(),
             'houses' => $rules !== null
-                ? \AutoBusiness\Astro\Phala\HousePrediction::generate($chart, $rules)
+                ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\HousePrediction::generate($chart, $rules), [])
                 : [],
         ];
     }
