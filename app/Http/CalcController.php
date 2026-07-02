@@ -228,6 +228,14 @@ final class CalcController
         $order = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
         $houses = $chart['houses'] ?? [];
 
+        // ग्रह स्थिति block (migration 008): computed dignity/combustion/companions
+        // per planet. Fail-safe — a rule/data edge case degrades to an empty
+        // block rather than 500-ing the panel.
+        $gcRules = \AutoBusiness\Astro\Phala\GrahaConditionRepository::load($lang);
+        $condition = $gcRules !== null
+            ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\GrahaCondition::generate($chart, $gcRules), [])
+            : [];
+
         $out = [];
         foreach ($order as $pl) {
             if (!isset($chart['planets'][$pl])) {
@@ -256,6 +264,7 @@ final class CalcController
             $out[] = [
                 'planet' => $pl,
                 'placed_house' => $placed,
+                'condition' => $condition[$pl] ?? null,     // ग्रह स्थिति block (dignity/combust/companions)
                 'lord_entries' => $lordEntries,            // (A) Bhavesh Phal
                 'placement' => $repo::grahaBhava($pl, $placed, $lang), // (B) Graha-in-Bhava {positive,negative}|null
             ];

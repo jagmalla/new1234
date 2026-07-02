@@ -290,6 +290,23 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* Planet Prediction headings — bold + larger so they read as headings. */
         #planet-phala-card .planet-pick { font-size: 1.1rem; font-weight: 600; }
         #planet-phala-card .pp-name { font-size: 1.3rem;  font-weight: 700; }
+        /* ग्रह स्थिति computed block (migration 008) */
+        .gc-block { border: 1px solid var(--line); border-left: 4px solid var(--sindoor);
+            border-radius: 8px; padding: 8px 12px; margin: 6px 0 12px; background: #fffdf9; }
+        .gc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .gc-status { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+        .gc-combust { color: var(--ashubh); margin-bottom: 4px; }
+        .gc-lines { list-style: disc; padding-left: 20px; margin: 0; }
+        .gc-line { margin: 2px 0; }
+        .gc-line.gc-good { color: var(--shubh); }
+        .gc-line.gc-bad { color: var(--ashubh); }
+        .gc-line.gc-yoga { font-weight: 600; }
+        .gc-chip { font-size: .75rem; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+        .gc-vshubh { background: #cfe9d9; color: #1c5138; }
+        .gc-shubh  { background: #e2f0e8; color: #1c5138; }
+        .gc-mishrit{ background: #f2e6c9; color: #8a6412; }
+        .gc-pratikul { background: #f4d9d4; color: #8A2F2F; }
+        .gc-ati    { background: #e7b3ac; color: #5f1a1a; }
         #planet-phala-card .pp-sec  { font-size: 1.15rem; font-weight: 700; }
         #planet-phala-card .pp-sub  { font-size: 1.1rem;  font-weight: 700; }
     </style>
@@ -644,6 +661,31 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                                 echo $rules ? ', rules ' . implode(', ', array_map($ord2, $rules)) . ' house' . (count($rules) > 1 ? 's' : '') : ', rules no house (node)'; ?>
                             </span>
                         </div>
+
+                        <!-- ग्रह स्थिति block (migration 008) — computed dignity /
+                             combustion / companions, above the unchanged (A)/(B). -->
+                        <?php $gc = $row['condition'] ?? null; if ($gc !== null): ?>
+                        <div class="gc-block">
+                            <div class="gc-head">
+                                <span class="pp-sub text-gray-700">ग्रह स्थिति</span>
+                                <span class="gc-chip gc-<?= $h((string) ($gc['verdict']['tier'] ?? 'mishrit')) ?>"><?= $h((string) ($gc['verdict']['word'] ?? '')) ?></span>
+                            </div>
+                            <?php if (!empty($gc['status'])): ?>
+                                <div class="gc-status"><?= $h((string) $gc['status']) ?></div>
+                            <?php endif; ?>
+                            <?php if (!empty($gc['combust'])): ?>
+                                <div class="gc-combust"><?= $h((string) $gc['combust']) ?></div>
+                            <?php endif; ?>
+                            <?php if (!empty($gc['lines'])): ?>
+                            <ul class="gc-lines">
+                                <?php foreach ($gc['lines'] as $ln): ?>
+                                    <li class="gc-line<?= $ln['kind'] === 'yoga' ? ' gc-yoga' : '' ?><?= $ln['good'] === true ? ' gc-good' : ($ln['good'] === false ? ' gc-bad' : '') ?>"><?= $h((string) $ln['text']) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
+
                         <!-- (A) As House-Lord -->
                         <div class="mb-2">
                             <div class="pp-sec text-indigo-700 mb-0.5">(A) As House-Lord — Bhavesh Phal</div>
