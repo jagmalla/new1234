@@ -212,9 +212,13 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             border: 1px solid var(--line); border-radius: 6px; color: var(--sindoor);
             font-size: 1.15rem; font-weight: 700; background: var(--card); }
         .pred-expand:hover { background: var(--sindoor-soft); }
-        /* Prediction body copy reads at 12px base (bumps to 14px when expanded). */
-        .pred-view { font-size: 12px; }
-        .pred-view .whitespace-pre-line, .pred-view li { line-height: 1.65; }
+        /* Prediction body copy reads at 13px base (bumps to 15px when expanded). */
+        .pred-view { font-size: 13px; }
+        .pred-view .whitespace-pre-line, .pred-view li { line-height: 1.68; }
+        /* कारण / reason & other small descriptive lines: bigger + darker so they
+           are easy to read (was tiny light-grey). Applies across all predictions. */
+        #pred-scroll .text-gray-500 { color: #55504A; }
+        #pred-scroll .text-xs { font-size: .82rem; }
         /* Yoga + Bhavesh read at the same size as the other predictions (~1.02rem). */
         .pred-view[data-pred="yoga"], .pred-view[data-pred="bhavesh"] { font-size: 1.02rem; line-height: 1.6; }
         /* Inline dropdown pickers (replace the old side lists). */
@@ -260,7 +264,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; background: var(--card); }
         .yoga-card.yoga-bad { border-left-color: var(--ashubh); }
         .yoga-title { font-weight: 700; font-size: 1.1rem; color: var(--ink); margin-bottom: 2px; }
-        .yoga-why { color: var(--ink-soft); }
+        .yoga-why { color: #453F37; font-size: .9rem; }
         .yoga-why b { color: var(--ink-soft); }
         .yoga-res b { color: var(--shubh); }
         .yoga-bad .yoga-res b { color: var(--ashubh); }
@@ -311,7 +315,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             /* Reading mode: bigger copy; card lists flow in two columns, and the
                picker-based cards keep full width with their reading text in two
                columns instead (a single card cannot split across CSS columns). */
-            .pred-expanded .pred-view { font-size: 14px; }
+            .pred-expanded .pred-view { font-size: 15px; }
             .pred-expanded .pred-view[data-pred="bhavesh"]:not(.hidden),
             .pred-expanded .pred-view[data-pred="yoga"]:not(.hidden) { column-count: 2; column-gap: 32px; }
             .pred-expanded .pred-view[data-pred="bhavesh"] > div,
@@ -382,7 +386,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .de-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--card); }
         .de-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
         .de-title { font-weight: 700; font-size: 13px; color: var(--ink); }
-        .de-facts { font-size: 12px; color: var(--ink-soft); margin-bottom: 5px; }
+        .de-facts { font-size: .9rem; color: #453F37; font-weight: 500; margin-bottom: 5px; }
         .de-line { margin: 3px 0; line-height: 1.6; }
         .de-line b { font-weight: 700; }
         .de-pos b { color: var(--shubh); }
