@@ -192,10 +192,10 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
             padding-right: 30px; }
         .l2-select { width: 100%; padding: 9px 30px 9px 12px; min-height: 44px; margin-bottom: 8px; }
-        /* Leading label so newcomers know the control is a chooser. */
-        .pick-tag { display: block; font-size: .7rem; font-weight: 800; letter-spacing: .03em;
-            text-transform: uppercase; color: var(--sindoor); margin-bottom: 3px; }
-        .l2-picker { margin-bottom: 8px; }
+        /* Label sits to the LEFT of a smaller dropdown (chart / prediction pickers). */
+        .pick-tag { font-size: 1.05rem; font-weight: 800; color: var(--sindoor); white-space: nowrap; }
+        .l2-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .l2-picker .l2-select { width: auto; flex: 0 1 320px; min-width: 180px; margin-bottom: 0; }
         /* Dasha strip — pinned to the chart panel bottom (mt-auto + divider). */
         .dasha-strip { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px;
             font-size: .85rem; line-height: 1.6; }
@@ -207,7 +207,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         /* ---- Prediction panel (Phase 4) ---- */
         .pred-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .pred-expand { width: 44px; height: 44px; min-height: 44px; flex: 0 0 auto;
+        .pred-expand { width: 44px; height: 44px; min-height: 44px; flex: 0 0 auto; margin-left: auto;
             display: inline-flex; align-items: center; justify-content: center;
             border: 1px solid var(--line); border-radius: 6px; color: var(--sindoor);
             font-size: 1.15rem; font-weight: 700; background: var(--card); }
@@ -584,7 +584,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         ?>
         <section id="chart-panel" class="l2-card l2-panel" aria-label="कुंडली चार्ट">
             <div class="l2-picker">
-            <span class="pick-tag">यहाँ से चुनें ▾ Select chart</span>
+            <span class="pick-tag">Select Chart ▾</span>
             <select id="chart-select" class="l2-select" aria-label="कुंडली चुनें">
                 <?php foreach ($vargaHi as $vk => $vlbl): if (!isset($vargas[$vk])) { continue; } ?>
                     <option value="<?= $h($vk) ?>"><?= $h($vk) ?> — <?= $h($vlbl) ?></option>
@@ -630,8 +630,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <!-- Prediction panel (right column) -->
         <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
             <div class="pred-head">
-                <div class="l2-picker" style="flex:1; margin-bottom:0">
-                <span class="pick-tag">यहाँ से चुनें ▾ Select prediction</span>
+                <div class="l2-picker" style="margin-bottom:0">
+                <span class="pick-tag">Select Prediction ▾</span>
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0">
                     <option value="dasha">Dasha Phal (दशा फल)</option>
                     <option value="bhavesh">Bhavesh Phal (भावेश फल)</option>
