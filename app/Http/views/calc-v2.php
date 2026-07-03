@@ -484,9 +484,6 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <button type="button" data-sec="profile">New / Profile</button>
             </div>
             <div class="l2-mi">
-                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan (गुण मिलान)</a>
-            </div>
-            <div class="l2-mi">
                 <button type="button" data-sec="home" class="active">Birth Chart</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="home" data-target="chart-panel">Kundali Chart</button>
@@ -537,7 +534,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="home" data-focus="pred">Predictions</button>
+                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan (गुण मिलान)</a>
             </div>
         </nav>
 
@@ -1903,7 +1900,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       // Top-level active + open state follows the section, whichever button was used.
       document.querySelectorAll('#side-menu .l2-mi').forEach(function (mi) {
         var top = mi.querySelector(':scope > button');
-        var owns = top && top.getAttribute('data-sec') === sec && !top.hasAttribute('data-focus');
+        if (!top) { return; }   // e.g. the Kundali Milan link item has no button
+        var owns = top.getAttribute('data-sec') === sec && !top.hasAttribute('data-focus');
         if (btn.hasAttribute('data-focus')) { owns = top === btn; }
         top.classList.toggle('active', owns);
         mi.classList.toggle('open', owns);
