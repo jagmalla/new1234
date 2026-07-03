@@ -230,6 +230,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .dp-field > span { font-size: .74rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
         .dp-select { padding: 7px 26px 7px 9px; min-height: 38px; min-width: 0; max-width: 100%; }
         .dp-picker .pred-picker-label { flex: 0 0 auto; }
+        /* Gochar prediction placeholder ("coming soon"). */
+        .gochar-pred-soon { flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; text-align: center; gap: 10px; padding: 30px 16px;
+            color: var(--ink-soft); border: 2px dashed var(--line); border-radius: 10px;
+            background: #FBF8F2; min-height: 240px; }
+        .gochar-pred-soon .gps-icon { font-size: 2.2rem; line-height: 1; }
+        .gochar-pred-soon .gps-title { font-weight: 800; font-size: 1.05rem; color: var(--sindoor); }
+        .gochar-pred-soon .gps-sub { font-size: .88rem; max-width: 360px; line-height: 1.5; }
         /* अष्टकवर्ग मत — the SAV/BAV opinion block inside each house card. */
         .av-mat { border-top: 1px dashed var(--line); padding-top: 8px; }
         .av-mat-title { font-weight: 700; font-size: 1rem; color: #7c3aed; margin-bottom: 4px; }
@@ -547,8 +555,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <button type="button" data-sec="gochar">Gochar (Transit)</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="gochar" data-target="card-gocharcalc">Gochar Calculation</button>
-                    <button type="button" data-sec="gochar" data-target="card-gocharpair">Natal vs Transit</button>
-                    <button type="button" data-sec="gochar" data-target="card-gochardet">Transit Table</button>
+                    <button type="button" data-sec="gochar" data-target="card-gocharpair">Gochar Chart + Phal</button>
+                    <button type="button" data-sec="gochar" data-target="card-gochardet">D1 + Transit Table</button>
                 </div>
             </div>
             <div class="l2-mi">
@@ -1268,9 +1276,27 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         </div>
 
 
-        <!-- natal D1 (Rasi) vs current Gochar (transit). Both cards carry
-             a matching header (title + date/time/place) so the charts line up. -->
+        <!-- ROW 1: current Gochar (transit) chart on the LEFT + Gochar prediction
+             panel on the RIGHT (rules coming later). -->
         <div id="card-gocharpair" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
+                <div id="gochar-output" class="w-full"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
+                    <span class="font-semibold text-gray-800">Gochar Phal <span class="text-xs text-gray-400 font-normal">(गोचर फल)</span></span>
+                </div>
+                <div class="gochar-pred-soon">
+                    <div class="gps-icon">🔮</div>
+                    <div class="gps-title">भविष्यफल शीघ्र आ रहा है — Predictions coming soon</div>
+                    <div class="gps-sub">इस भाग में शीघ्र ही गोचर-आधारित भविष्यफल जोड़ा जाएगा।<br>Gochar-based predictions will be added here soon.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 2: natal Rasi (D1) chart on the LEFT + the transit detail table
+             on the RIGHT. -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div class="bg-white rounded-lg shadow p-2 flex flex-col">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
                     <span class="font-semibold text-gray-800">Rasi (D1)</span>
@@ -1281,28 +1307,26 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 </div>
                 <div class="w-full" data-varga="D1" data-notitle="1"></div>
             </div>
-            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
-                <div id="gochar-output" class="w-full"></div>
-            </div>
-        </div>
-    <!-- Gochar transits table -->
     <?php if ($gochar !== null): ?>
-    <div id="card-gochardet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
-        <?php if (isset($gochar['ascendant'])): ?>
-            <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
-        <?php endif; ?>
-        <table class="w-full">
-            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
-            <tbody>
-            <?php foreach ($gochar['transits'] as $name => $t): ?>
-                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
-                    <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+            <div id="card-gochardet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+                <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
+                <?php if (isset($gochar['ascendant'])): ?>
+                    <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
+                <?php endif; ?>
+                <table class="w-full">
+                    <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($gochar['transits'] as $name => $t): ?>
+                        <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
+                            <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+    <?php else: ?>
+            <div id="card-gochardet" class="bg-white rounded-lg shadow p-4 text-sm text-gray-400 italic">Transit table not available.</div>
     <?php endif; ?>
+        </div>
         </div><!-- /sec-gochar -->
 
         <!-- ============ वर्ष कुंडली (full-width section) ============ -->
