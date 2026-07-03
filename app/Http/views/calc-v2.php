@@ -1423,32 +1423,45 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             <div id="vp-summary" class="text-sm"></div>
         </div>
 
-        <!-- Varsha chart + Mudda dasha, side by side -->
-        <div id="vp-output"></div>
+        <!-- ROW 1: Varsha (Annual) chart on the LEFT + Varshaphal prediction
+             panel on the RIGHT (rules coming later). -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div id="vp-chart-cell"></div>
+            <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
+                    <span class="font-semibold text-gray-800">Varshaphal Phal <span class="text-xs text-gray-400 font-normal">(वर्षफल)</span></span>
+                </div>
+                <div class="gochar-pred-soon">
+                    <div class="gps-icon">🔮</div>
+                    <div class="gps-title">भविष्यफल शीघ्र आ रहा है — Predictions coming soon</div>
+                    <div class="gps-sub">इस भाग में शीघ्र ही वर्षफल-आधारित भविष्यफल जोड़ा जाएगा।<br>Varshaphal-based predictions will be added here soon.</div>
+                </div>
+            </div>
+        </div>
 
-    <!-- Varshaphal annual positions + Mudda dasha tree -->
+        <!-- ROW 2: Mudda Dasha on the LEFT + annual positions detail on the RIGHT. -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div id="vp-mudda-cell"></div>
     <?php if ($vp !== null): ?>
-    <div id="card-varshadet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-        <h2 class="font-semibold mb-2">Varshaphal (Annual Chart) — year <?= (int) $in['forYear'] ?></h2>
-        <div>Varsha Lagna: <b><?= $h($vp['varsha_chart']['ascendant']['formatted']) ?></b> (lord <?= $h($vp['varsha_lagna']['lord']) ?>)
-            · Muntha: <?= $h($vp['muntha']['sign']) ?> (lord <?= $h($vp['muntha']['lord']) ?>)
-            · Age <?= (int) $vp['age_completed'] ?></div>
-        <table class="w-full mt-2">
-            <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Annual position</th><th>House</th></tr></thead>
-            <tbody>
-            <?php foreach ($vp['varsha_chart']['planets'] as $name => $p): ?>
-                <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
-                    <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td></tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-
-        <h3 class="font-semibold mt-4 mb-2">Mudda (Annual) Dasha <span class="text-xs text-gray-400 font-normal">(+ drills 5 levels)</span></h3>
-        <div id="mudda-dasha-detail"></div>
-    </div>
+            <div id="card-varshadet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+                <h2 class="font-semibold mb-2">Varshaphal (Annual Chart) — year <?= (int) $in['forYear'] ?></h2>
+                <div>Varsha Lagna: <b><?= $h($vp['varsha_chart']['ascendant']['formatted']) ?></b> (lord <?= $h($vp['varsha_lagna']['lord']) ?>)
+                    · Muntha: <?= $h($vp['muntha']['sign']) ?> (lord <?= $h($vp['muntha']['lord']) ?>)
+                    · Age <?= (int) $vp['age_completed'] ?></div>
+                <table class="w-full mt-2">
+                    <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Annual position</th><th>House</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($vp['varsha_chart']['planets'] as $name => $p): ?>
+                        <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
+                            <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td></tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+    <?php else: ?>
+            <div id="card-varshadet" class="bg-white rounded-lg shadow p-4 text-sm text-gray-400 italic">Annual positions not available.</div>
     <?php endif; ?>
-
-
+        </div>
         </div>
 
         <!-- ============ दशा (full-width section) ============ -->
@@ -1889,7 +1902,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     }
     if (window.ABVarsha) {
       ABVarsha.init({
-        box: '#vp-box', summary: '#vp-summary', output: '#vp-output',
+        box: '#vp-box', summary: '#vp-summary',
+        chart: '#vp-chart-cell', dasha: '#vp-mudda-cell',   // split: chart row 1, Mudda dasha row 2
         birth: window.AB_BIRTH, tz: window.AB_TZ, year: window.AB_YEAR
       });
     }

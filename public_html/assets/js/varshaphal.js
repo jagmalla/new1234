@@ -20,7 +20,11 @@
   function init(cfg) {
     cfg = cfg || {};
     var boxRoot = sel(cfg.box), outRoot = sel(cfg.output);
-    if (!boxRoot || !outRoot) return;
+    // Optional split targets: render the Varsha chart and the Mudda dasha into
+    // two separate containers (so they can sit in different rows of the page).
+    var chartRoot = sel(cfg.chart), dashaRoot = sel(cfg.dasha);
+    var split = !!(chartRoot && dashaRoot);
+    if (!boxRoot || (!outRoot && !split)) return;
     var summaryRoot = sel(cfg.summary) || null;
     var birth = cfg.birth || {};
     var tz = cfg.tz || 0;
@@ -45,7 +49,6 @@
 
     // Output: Varsha chart | Mudda dasha side by side. The dasha column height is
     // synced to the Varsha chart and the list scrolls inside it.
-    outRoot.innerHTML = '';
     var grid = h('div', 'grid grid-cols-1 lg:grid-cols-2 gap-4 items-start');
     var chartCell = h('div', 'bg-white rounded-lg shadow p-3 flex flex-col');
     // Header: title on the left, Varshaphal (Varsha Pravesh) date on the right.
@@ -68,12 +71,22 @@
     dashaBox.style.flex = '1 1 auto'; dashaBox.style.minHeight = '0'; dashaBox.style.overflowY = 'auto';
     dashaCell.appendChild(dashaBox);
 
-    grid.appendChild(chartCell); grid.appendChild(dashaCell);
-    if (!summaryRoot) { outRoot.appendChild(summary); }
-    outRoot.appendChild(grid);
+    if (split) {
+      // Chart in one row, Mudda dasha in another (each in its own container).
+      chartRoot.innerHTML = ''; dashaRoot.innerHTML = '';
+      if (!summaryRoot && outRoot) { outRoot.innerHTML = ''; outRoot.appendChild(summary); }
+      chartRoot.appendChild(chartCell); dashaRoot.appendChild(dashaCell);
+      dashaCell.style.maxHeight = '640px';   // its own scroll (not synced to the chart)
+    } else {
+      outRoot.innerHTML = '';
+      grid.appendChild(chartCell); grid.appendChild(dashaCell);
+      if (!summaryRoot) { outRoot.appendChild(summary); }
+      outRoot.appendChild(grid);
+    }
 
     // Match the Mudda dasha column height to the Varsha chart card (lg layout).
     function syncMuddaHeight() {
+      if (split) { dashaCell.style.height = ''; return; }
       if (global.matchMedia('(min-width: 1024px)').matches) {
         dashaCell.style.height = chartCell.getBoundingClientRect().height + 'px';
       } else {
