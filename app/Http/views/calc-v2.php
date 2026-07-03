@@ -176,8 +176,20 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             background: var(--card); color: var(--ink); }
         #birth-form .bg-blue-600 { background: var(--sindoor) !important; min-height: 44px; }
         .chart-frame { width: 100%; margin: 0 auto; }
-        .l2-select { width: 100%; border: 1px solid var(--line); background: var(--card);
-            color: var(--ink); padding: 8px 10px; min-height: 44px; font-weight: 600; margin-bottom: 8px; }
+        /* All dropdowns get an obvious "select me" look: accent border, tinted
+           background and a visible caret — plus a leading label (see .pick-tag). */
+        .l2-select, .pred-inline-select, .dp-select {
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            border: 2px solid var(--sindoor); border-radius: 8px; color: var(--ink);
+            background-color: var(--sindoor-soft); font-weight: 700; cursor: pointer;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23c0392b'><path d='M5 7.5l5 5 5-5z'/></svg>");
+            background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
+            padding-right: 30px; }
+        .l2-select { width: 100%; padding: 9px 30px 9px 12px; min-height: 44px; margin-bottom: 8px; }
+        /* Leading label so newcomers know the control is a chooser. */
+        .pick-tag { display: block; font-size: .7rem; font-weight: 800; letter-spacing: .03em;
+            text-transform: uppercase; color: var(--sindoor); margin-bottom: 3px; }
+        .l2-picker { margin-bottom: 8px; }
         /* Dasha strip — pinned to the chart panel bottom (mt-auto + divider). */
         .dasha-strip { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px;
             font-size: .85rem; line-height: 1.6; }
@@ -202,9 +214,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* Inline dropdown pickers (replace the old side lists). */
         .pred-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
             margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-        .pred-picker-label { font-size: .8rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
-        .pred-inline-select { flex: 1; min-width: 160px; border: 1px solid var(--line); border-radius: 6px;
-            background: var(--card); color: var(--ink); padding: 8px 10px; min-height: 40px; font-weight: 600; }
+        .pred-picker-label { font-size: .8rem; font-weight: 800; color: var(--sindoor); white-space: nowrap;
+            text-transform: uppercase; letter-spacing: .02em; }
+        .pred-inline-select { flex: 1; min-width: 160px; padding: 9px 30px 9px 12px; min-height: 40px; }
+        /* Dasha Maha/Antar picker — always ONE line (own full-width row, no wrap). */
+        .dp-picker { display: flex; align-items: center; gap: 6px 12px; flex-wrap: nowrap;
+            flex-basis: 100%; width: 100%; }
+        .dp-field { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .dp-field > span { font-size: .74rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+        .dp-select { padding: 7px 26px 7px 9px; min-height: 38px; min-width: 0; max-width: 100%; }
+        .dp-picker .pred-picker-label { flex: 0 0 auto; }
         /* अष्टकवर्ग मत — the SAV/BAV opinion block inside each house card. */
         .av-mat { border-top: 1px dashed var(--line); padding-top: 8px; }
         .av-mat-title { font-weight: 700; font-size: 1rem; color: #7c3aed; margin-bottom: 4px; }
@@ -549,6 +568,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             ];
         ?>
         <section id="chart-panel" class="l2-card l2-panel" aria-label="कुंडली चार्ट">
+            <div class="l2-picker">
+            <span class="pick-tag">यहाँ से चुनें ▾ Select chart</span>
             <select id="chart-select" class="l2-select" aria-label="कुंडली चुनें">
                 <?php foreach ($vargaHi as $vk => $vlbl): if (!isset($vargas[$vk])) { continue; } ?>
                     <option value="<?= $h($vk) ?>"><?= $h($vk) ?> — <?= $h($vlbl) ?></option>
@@ -556,6 +577,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <?php if ($gochar !== null): ?><option value="gochar">Gochar (Transit)</option><?php endif; ?>
                 <?php if (($view['varshaNorth'] ?? null) !== null): ?><option value="varsha">Varsha Kundali (<?= (int) $in['forYear'] ?>)</option><?php endif; ?>
             </select>
+            </div><!-- /.l2-picker -->
             <div class="l2-legend">
                 <span style="color:#1d4ed8"><b>AV:</b> Ashtakavarga</span> ·
                 <span style="color:#15803d"><b>BB:</b> Bhav Bala</span> ·
@@ -593,7 +615,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <!-- Prediction panel (right column) -->
         <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
             <div class="pred-head">
-                <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0; flex:1">
+                <div class="l2-picker" style="flex:1; margin-bottom:0">
+                <span class="pick-tag">यहाँ से चुनें ▾ Select prediction</span>
+                <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0">
                     <option value="dasha">Dasha Phal (दशा फल)</option>
                     <option value="bhavesh">Bhavesh Phal (भावेश फल)</option>
                     <option value="grah">Graha Phal (ग्रह फल)</option>
@@ -601,6 +625,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                     <option value="karak">Karaka Phal (कारक फल)</option>
                     <option value="yoga">Yoga (योग)</option>
                 </select>
+                </div>
                 <button type="button" id="pred-expand" class="pred-expand" aria-label="Expand" title="Expand">⤢</button>
             </div>
             <div id="pred-scroll">
@@ -626,10 +651,14 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
          data-lang="<?= $h((string) $phala['lang']) ?>">
         <div class="flex flex-wrap items-end gap-x-6 gap-y-3 mb-3">
             <h2 class="font-semibold">Dasha Prediction <span class="text-xs text-gray-400 font-normal">(दशा फल)</span></h2>
-            <label class="flex flex-col gap-1"><span class="text-xs text-gray-500">Mahadasha</span>
-                <select id="phala-maha" class="border rounded px-2 py-1"><?= $pOpt((string) $phala['maha']) ?></select></label>
-            <label class="flex flex-col gap-1"><span class="text-xs text-gray-500">Antardasha</span>
-                <select id="phala-antar" class="border rounded px-2 py-1"><?= $pOpt((string) $phala['antar']) ?></select></label>
+            <div class="dp-picker">
+                <span class="pred-picker-label">यहाँ से चुनें ▾</span>
+                <label class="dp-field"><span>Mahadasha</span>
+                    <select id="phala-maha" class="dp-select"><?= $pOpt((string) $phala['maha']) ?></select></label>
+                <label class="dp-field"><span>Antardasha</span>
+                    <select id="phala-antar" class="dp-select"><?= $pOpt((string) $phala['antar']) ?></select></label>
+            </div>
+            <?php /* dp-picker sits on its own full-width row so Maha + Antar stay on one line */ ?>
             <span class="text-xs text-gray-400">Running now: <b><?= $h((string) $phala['maha']) ?></b> / <b><?= $h((string) $phala['antar']) ?></b></span>
             <button type="button" class="phala-toggle ml-auto text-xs bg-gray-100 hover:bg-gray-200 border rounded px-2 py-1 font-semibold" data-target="dasha-body" aria-expanded="true">Collapse ▴</button>
         </div>
