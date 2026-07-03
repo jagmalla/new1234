@@ -147,6 +147,37 @@ final class HousePredictionRepository
                 }
             } catch (Throwable $e) { /* AV rule tables optional — section stays empty */ }
 
+            // --- Bhava Bala "भाव बल मत" tables (migration 013). All optional. ---
+            $rules['bb'] = ['band' => [], 'rank' => [], 'compare' => [], 'lord' => []];
+            try {
+                $stmt = $pdo->prepare('SELECT house, band_key, phal_text FROM bb_house_band_phal WHERE language = ?');
+                $stmt->execute([$language]);
+                foreach ($stmt as $r) {
+                    $rules['bb']['band'][(int) $r['house']][(string) $r['band_key']] = (string) $r['phal_text'];
+                }
+                $stmt = $pdo->prepare('SELECT rule_key, phal_text, score FROM bb_rank_rules WHERE language = ?');
+                $stmt->execute([$language]);
+                foreach ($stmt as $r) {
+                    $rules['bb']['rank'][(string) $r['rule_key']] = ['text' => (string) $r['phal_text'], 'score' => (float) $r['score']];
+                }
+                $stmt = $pdo->prepare('SELECT rule_key, condition_expr, houses_involved, phal_text, good_bad FROM bb_compare_rules WHERE language = ?');
+                $stmt->execute([$language]);
+                foreach ($stmt as $r) {
+                    $rules['bb']['compare'][] = [
+                        'rule_key' => (string) $r['rule_key'],
+                        'condition_expr' => (string) $r['condition_expr'],
+                        'houses' => self::houseList((string) $r['houses_involved']),
+                        'phal_text' => (string) $r['phal_text'],
+                        'gb' => (string) ($r['good_bad'] ?? ''),
+                    ];
+                }
+                $stmt = $pdo->prepare('SELECT rule_key, phal_text, score FROM bb_lord_match WHERE language = ?');
+                $stmt->execute([$language]);
+                foreach ($stmt as $r) {
+                    $rules['bb']['lord'][(string) $r['rule_key']] = ['text' => (string) $r['phal_text'], 'score' => (float) $r['score']];
+                }
+            } catch (Throwable $e) { /* BB rule tables optional — section stays empty */ }
+
             return $rules;
         } catch (Throwable $e) {
             self::$lastError = $e->getMessage();

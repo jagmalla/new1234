@@ -203,6 +203,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* अष्टकवर्ग मत — the SAV/BAV opinion block inside each house card. */
         .av-mat { border-top: 1px dashed var(--line); padding-top: 8px; }
         .av-mat-title { font-weight: 700; font-size: 1rem; color: #7c3aed; margin-bottom: 4px; }
+        .bb-mat .av-mat-title { color: #b45309; }   /* भाव बल मत — amber, distinct from AV purple */
         .av-mat-list { list-style: none; padding-left: 0; margin: 0;
             font-size: 1.02rem; line-height: 1.6; }
         .av-mat-list li { position: relative; padding-left: 18px; margin-bottom: 3px; }
@@ -846,6 +847,16 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                             <ul class="av-mat-list">
                                 <?php foreach ($hd['av']['lines'] as $al): ?>
                                 <li class="av-<?= $h((string) ($al['tone'] ?? 'info')) ?>"><?= $h((string) $al['text']) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($hd['bb'])): ?>
+                        <div class="av-mat bb-mat mt-3">
+                            <div class="av-mat-title"><?= $h((string) $hd['bb']['title']) ?></div>
+                            <ul class="av-mat-list">
+                                <?php foreach ($hd['bb']['lines'] as $bl): ?>
+                                <li class="av-<?= $h((string) ($bl['tone'] ?? 'info')) ?>"><?= $h((string) $bl['text']) ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         </div>

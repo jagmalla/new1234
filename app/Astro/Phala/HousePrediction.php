@@ -149,6 +149,12 @@ final class HousePrediction
             $avSection = AshtakavargaPhala::forHouse($h, $chart, $rules['av'] ?? [], $rules['config'] ?? []);
             $score += $avSection['score'];
 
+            // (7) भाव बल मत — Bhava-Bala opinion block (migration 013), rendered
+            // directly below the अष्टकवर्ग मत block. Its weighted score also folds
+            // into the same house verdict.
+            $bbSection = BhavaBalaPhala::forHouse($h, $chart, $rules['bb'] ?? [], $rules['config'] ?? [], $rules['tpl'] ?? []);
+            $score += $bbSection['score'];
+
             $out[$h] = [
                 'house' => $h,
                 'rashi' => $rashiEn,
@@ -156,6 +162,7 @@ final class HousePrediction
                 'intro' => $intro,
                 'lines' => $lines,
                 'av' => $avSection['lines'] === [] ? null : ['title' => 'अष्टकवर्ग मत', 'lines' => $avSection['lines']],
+                'bb' => $bbSection['lines'] === [] ? null : ['title' => 'भाव बल मत', 'lines' => $bbSection['lines']],
                 'chip' => self::houseChip($score),
                 'score' => round($score, 2),   // exposed so the Karaka engine reuses the lagna-side verdict
             ];
