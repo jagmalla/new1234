@@ -112,10 +112,12 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .topbar-inner { max-width: 1400px; margin: 0 auto; padding: 10px 16px;
             display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
         .topbar .brand { font-family: 'Martel', serif; font-weight: 800; font-size: 1.25rem; line-height: 1.3; }
-        /* "Under testing" banner in the top-bar gap. */
-        .test-banner { flex: 1 1 220px; text-align: center; font-size: .82rem; font-weight: 600;
-            color: #F6C177; line-height: 1.35; min-width: 0; }
-        .test-banner a { color: #FFE3B3; text-decoration: underline; }
+        /* "Under testing" banner in the top-bar gap — high contrast, prominent. */
+        .test-banner { flex: 1 1 240px; text-align: center; font-size: 1rem; font-weight: 800;
+            color: #FFD84D; line-height: 1.4; min-width: 0; letter-spacing: .01em;
+            text-shadow: 0 1px 2px rgba(0,0,0,.45); padding: 4px 10px; border-radius: 8px;
+            background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
+        .test-banner a { color: #FFFFFF; text-decoration: underline; font-weight: 800; }
         .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
             flex-wrap: wrap; font-size: .85rem; color: #C9C2B4; }
         .topbar .meta b { color: #FFFFFF; font-weight: 600; }
