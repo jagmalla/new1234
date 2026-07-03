@@ -200,6 +200,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .pred-picker-label { font-size: .8rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
         .pred-inline-select { flex: 1; min-width: 160px; border: 1px solid var(--line); border-radius: 6px;
             background: var(--card); color: var(--ink); padding: 8px 10px; min-height: 40px; font-weight: 600; }
+        /* अष्टकवर्ग मत — the SAV/BAV opinion block inside each house card. */
+        .av-mat { border-top: 1px dashed var(--line); padding-top: 8px; }
+        .av-mat-title { font-weight: 700; font-size: 1rem; color: #7c3aed; margin-bottom: 4px; }
+        .av-mat-list { list-style: none; padding-left: 0; margin: 0;
+            font-size: 1.02rem; line-height: 1.6; }
+        .av-mat-list li { position: relative; padding-left: 18px; margin-bottom: 3px; }
+        .av-mat-list li::before { content: '●'; position: absolute; left: 0; font-size: .7rem; top: .28em; }
+        .av-mat-list li.av-pos::before { color: #16a34a; }
+        .av-mat-list li.av-neg::before { color: #dc2626; }
+        .av-mat-list li.av-info::before { color: #9ca3af; }
         /* Colored dot labels + token colours for the curated text sections. */
         #pred-scroll .text-green-700 { color: var(--shubh) !important; }
         #pred-scroll .text-red-700 { color: var(--ashubh) !important; }
@@ -829,6 +839,16 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         </ul>
                         <?php else: ?>
                             <div class="text-gray-500 italic">इस भाव के लिए कोई विशेष नियम लागू नहीं होता।</div>
+                        <?php endif; ?>
+                        <?php if (!empty($hd['av'])): ?>
+                        <div class="av-mat mt-3">
+                            <div class="av-mat-title"><?= $h((string) $hd['av']['title']) ?></div>
+                            <ul class="av-mat-list">
+                                <?php foreach ($hd['av']['lines'] as $al): ?>
+                                <li class="av-<?= $h((string) ($al['tone'] ?? 'info')) ?>"><?= $h((string) $al['text']) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
                         <?php endif; ?>
                     </div>
                     <?php endforeach; ?>

@@ -143,12 +143,19 @@ final class HousePrediction
                 $score += in_array($lordHouse, self::TRIK, true) ? -0.4 : 0.4;
             }
 
+            // (6) अष्टकवर्ग मत — SAV/BAV opinion block (migration 012). Its
+            // weighted score folds into the house verdict chip; each line shows
+            // its own numbers so everything stays explainable.
+            $avSection = AshtakavargaPhala::forHouse($h, $chart, $rules['av'] ?? [], $rules['config'] ?? []);
+            $score += $avSection['score'];
+
             $out[$h] = [
                 'house' => $h,
                 'rashi' => $rashiEn,
                 'rashi_hi' => $rashiHi,
                 'intro' => $intro,
                 'lines' => $lines,
+                'av' => $avSection['lines'] === [] ? null : ['title' => 'अष्टकवर्ग मत', 'lines' => $avSection['lines']],
                 'chip' => self::houseChip($score),
                 'score' => round($score, 2),   // exposed so the Karaka engine reuses the lagna-side verdict
             ];

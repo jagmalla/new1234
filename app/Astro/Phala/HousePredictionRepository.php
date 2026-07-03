@@ -118,6 +118,35 @@ final class HousePredictionRepository
                 }
             } catch (Throwable $e) { /* orbs table optional */ }
 
+            // --- Ashtakavarga "अष्टकवर्ग मत" tables (migration 012). All optional:
+            // when absent the AV section simply renders empty. ---
+            $rules['av'] = ['band' => [], 'compare' => [], 'bav' => []];
+            try {
+                $stmt = $pdo->prepare('SELECT house, band_key, phal_text FROM av_house_band_phal WHERE language = ?');
+                $stmt->execute([$language]);
+                foreach ($stmt as $r) {
+                    $rules['av']['band'][(int) $r['house']][(string) $r['band_key']] = (string) $r['phal_text'];
+                }
+                $stmt = $pdo->prepare('SELECT rule_key, condition_expr, houses_involved, phal_text, good_bad FROM av_compare_rules WHERE language = ?');
+                $stmt->execute([$language]);
+                foreach ($stmt as $r) {
+                    $rules['av']['compare'][] = [
+                        'rule_key' => (string) $r['rule_key'],
+                        'condition_expr' => (string) $r['condition_expr'],
+                        'houses' => self::houseList((string) $r['houses_involved']),
+                        'phal_text' => (string) $r['phal_text'],
+                        'gb' => (string) ($r['good_bad'] ?? ''),
+                    ];
+                }
+                $stmt = $pdo->prepare('SELECT rule_key, sentence_template, score FROM av_bav_rules WHERE language = ?');
+                $stmt->execute([$language]);
+                foreach ($stmt as $r) {
+                    $rules['av']['bav'][(string) $r['rule_key']] = [
+                        'tpl' => (string) $r['sentence_template'], 'score' => (float) $r['score'],
+                    ];
+                }
+            } catch (Throwable $e) { /* AV rule tables optional — section stays empty */ }
+
             return $rules;
         } catch (Throwable $e) {
             self::$lastError = $e->getMessage();
