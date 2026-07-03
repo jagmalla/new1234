@@ -126,6 +126,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .btn-sindoor { background: var(--sindoor); color: #fff; font-weight: 600; font-size: .9rem;
             padding: 6px 16px; min-height: 44px; border-radius: 6px; display: inline-flex; align-items: center; }
         .btn-sindoor:hover { filter: brightness(1.1); }
+        /* Hamburger menu button — hidden on desktop, shown ≤1099px (see media query). */
+        #menu-btn { display: none; align-items: center; gap: 8px; background: #2A3742;
+            color: #F7F3EA; border: 1px solid #3B4854; border-radius: 8px; font-weight: 700;
+            font-size: .9rem; padding: 8px 14px; min-height: 44px; cursor: pointer; }
+        #menu-btn:hover { background: #34424F; }
+        #menu-btn .menu-btn-bars { position: relative; width: 18px; height: 2px; background: currentColor;
+            border-radius: 2px; box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor; }
+        #menu-overlay { position: fixed; inset: 0; background: rgba(20,16,10,.5); z-index: 55; }
 
         /* ---- Overview tiles (compact; birth info included) ---- */
         .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); gap: 8px; }
@@ -313,7 +321,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         @media print {
             body { background: #fff; }
             .topbar { position: static; }
-            .topbar select, #new-kundli, #side-menu, #birth-form, .pred-expand,
+            .topbar select, #new-kundli, #side-menu, #menu-btn, #menu-overlay, #birth-form, .pred-expand,
             .phala-toggle, #karaka-copy, #hd-copy, #chart-select, #pred-select,
             .bal-tabbar { display: none !important; }
             .l2-grid { display: block; }
@@ -353,20 +361,28 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* Cards nested in the prediction panel: flatter, token-bordered. */
         #pred-scroll > div, #pred-scroll .pred-view > div { box-shadow: none; border: 1px solid var(--line);
             border-radius: 8px; margin-bottom: 12px; }
-        /* 700–1099px: menu becomes a horizontal chip bar; panels stack. */
+        /* ≤1099px (tablet + phone): the side menu becomes a slide-in drawer opened
+           by the ☰ Menu button; panels stack full-width. The drawer keeps the full
+           vertical menu with expandable sub-items (unlike the old chip bar). */
         @media (max-width: 1099px) {
             .l2-grid { display: block; }
-            .l2-menu { position: static; display: flex; overflow-x: auto; padding: 4px; margin-bottom: 12px; }
-            .l2-mi { flex: 0 0 auto; }
-            .l2-sub, .l2-mi.open .l2-sub { display: none; } /* chip bar: top-level only */
-            .l2-caret { display: none; } /* no expand affordance in the chip bar */
-            .l2-menu button { width: auto; white-space: nowrap; border-left: none;
-                border-bottom: 3px solid transparent; border-radius: 6px 6px 0 0; }
-            .l2-menu button.active { border-left: none; border-bottom-color: var(--sindoor); }
+            #menu-btn { display: inline-flex; }
+            .l2-menu {
+                position: fixed; top: 0; left: 0; z-index: 60;
+                width: min(84vw, 300px); height: 100dvh; overflow-y: auto;
+                border-radius: 0; margin: 0; padding: 8px 0;
+                box-shadow: 2px 0 18px rgba(0,0,0,.28);
+                transform: translateX(-100%); transition: transform .22s ease;
+                -webkit-overflow-scrolling: touch;
+            }
+            body.menu-open { overflow: hidden; }
+            body.menu-open .l2-menu { transform: translateX(0); }
             .l2-panel { min-height: 0; height: auto !important; margin-bottom: 16px; }
             #pred-scroll { max-height: 70vh; }
             .l2-section { margin-top: 12px; }
         }
+        @media (min-width: 1100px) { #menu-overlay { display: none !important; } }
+        @media (prefers-reduced-motion: reduce) { .l2-menu { transition: none; } }
         /* Detail-view cards: gentle tint + definition; headers get a colour accent. */
         #details-view > div { background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%); border: 1px solid #e6edf6; }
         #details-view h2 {
@@ -476,6 +492,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 <!-- ============ TOP BAR (layout v2, Phase 1) ============ -->
 <header class="topbar">
     <div class="topbar-inner">
+        <?php if ($chart !== null): ?>
+        <button type="button" id="menu-btn" aria-label="मेन्यू / Menu" aria-expanded="false" aria-controls="side-menu">
+            <span class="menu-btn-bars" aria-hidden="true"></span>Menu
+        </button>
+        <?php endif; ?>
         <h1 class="brand" style="margin:0">Analysis of Karma</h1>
         <div class="test-banner">System is Under Testing — Not Finalized Yet.<br>Feedback: <a href="mailto:analysisofkarma@gmail.com">analysisofkarma@gmail.com</a></div>
         <!-- Shown only on the Custom Screen: jump back to the D1 birth chart. -->
@@ -650,6 +671,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan</a>
             </div>
         </nav>
+        <!-- Backdrop for the mobile/tablet slide-in menu drawer. -->
+        <div id="menu-overlay" hidden></div>
 
         <!-- Chart panel (middle column) -->
         <?php
@@ -2207,6 +2230,42 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       }
     });
   });
+
+  // ---- Mobile / tablet menu drawer (☰ Menu button) ----
+  (function () {
+    var btn = document.getElementById('menu-btn');
+    var overlay = document.getElementById('menu-overlay');
+    var menu = document.getElementById('side-menu');
+    if (!btn || !overlay || !menu) { return; }
+    function open() {
+      document.body.classList.add('menu-open');
+      overlay.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+    }
+    function close() {
+      document.body.classList.remove('menu-open');
+      overlay.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    function toggle() { document.body.classList.contains('menu-open') ? close() : open(); }
+    btn.addEventListener('click', toggle);
+    overlay.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
+    // Selecting a menu item closes the drawer — except a top-level item that has
+    // a sub-menu, which stays open so its just-revealed sub-items are tappable.
+    menu.querySelectorAll('button, a').forEach(function (el) {
+      el.addEventListener('click', function () {
+        if (!window.matchMedia('(max-width: 1099px)').matches) { return; }
+        var mi = el.closest('.l2-mi');
+        var isParentWithSub = mi && el === mi.querySelector(':scope > button') && !!mi.querySelector('.l2-sub');
+        if (!isParentWithSub) { close(); }
+      });
+    });
+    // Never leave the drawer state hanging when resizing up to desktop.
+    window.addEventListener('resize', function () {
+      if (window.innerWidth >= 1100) { close(); }
+    });
+  })();
   // Open the sub-menu of the DEFAULT (active) section on load + draw carets.
   (function () {
     var active = document.querySelector('#side-menu .l2-mi > button.active');
