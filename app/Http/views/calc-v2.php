@@ -484,7 +484,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <button type="button" data-sec="profile">New / Profile</button>
             </div>
             <div class="l2-mi">
-                <a href="<?= $h($asset('/milan')) ?>" class="l2-mi-link">Kundali Milan (गुण मिलान)</a>
+                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan (गुण मिलान)</a>
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="home" class="active">Birth Chart</button>
