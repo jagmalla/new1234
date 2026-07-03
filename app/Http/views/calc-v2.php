@@ -242,6 +242,23 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gochar-pred-soon .gps-icon { font-size: 2.2rem; line-height: 1; }
         .gochar-pred-soon .gps-title { font-weight: 800; font-size: 1.05rem; color: var(--sindoor); }
         .gochar-pred-soon .gps-sub { font-size: .88rem; max-width: 360px; line-height: 1.5; }
+        /* Saham (Varshaphal) panel. */
+        .saham-active { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+            background: #FBF8F2; font-size: .92rem; }
+        .saham-related { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .8rem; color: var(--ink-soft); }
+        .saham-chip { cursor: pointer; border: 1px solid transparent; }
+        .saham-chip .saham-why { font-weight: 400; opacity: .8; }
+        .saham-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+        .saham-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+        .saham-name { font-weight: 800; font-size: 1.08rem; }
+        .saham-tag { font-size: .7rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; }
+        .saham-tag.rel { background: var(--sindoor-soft); color: var(--sindoor); }
+        .saham-tag.dup { background: #EEF2FF; color: #4338ca; }
+        .saham-signifies { color: var(--ink-soft); font-size: .85rem; margin-bottom: 3px; }
+        .saham-pos { font-size: .95rem; margin-bottom: 3px; }
+        .saham-facts { font-size: .85rem; color: #453F37; margin-bottom: 4px; }
+        .saham-phal { font-size: 1rem; line-height: 1.6; margin: 2px 0; }
+        .saham-timing { font-size: .85rem; color: var(--haldi); margin-top: 5px; border-top: 1px dashed var(--line); padding-top: 5px; }
         /* अष्टकवर्ग मत — the SAV/BAV opinion block inside each house card. */
         .av-mat { border-top: 1px dashed var(--line); padding-top: 8px; }
         .av-mat-title { font-weight: 700; font-size: 1rem; color: #7c3aed; margin-bottom: 4px; }
@@ -1427,15 +1444,82 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
              panel on the RIGHT (rules coming later). -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div id="vp-chart-cell"></div>
-            <div class="bg-white rounded-lg shadow p-4 flex flex-col">
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
-                    <span class="font-semibold text-gray-800">Varshaphal Phal <span class="text-xs text-gray-400 font-normal">(वर्षफल)</span></span>
+            <div class="bg-white rounded-lg shadow p-4 flex flex-col" id="varsha-pred-card">
+                <div class="l2-picker" style="margin-bottom:10px">
+                    <span class="pick-tag">Varshaphal Prediction ▾</span>
+                    <select id="vp-pred-type" class="l2-select">
+                        <option value="saham">सहम — Sahams (50)</option>
+                    </select>
                 </div>
+                <?php
+                    $sah = $view['saham'] ?? null;
+                    $sahams = ($sah && !empty($sah['sahams'])) ? $sah['sahams'] : [];
+                    if ($sahams !== []):
+                        $vpTz = (float) ($sah['tz'] ?? 0.0);
+                        $activeLord = (string) ($sah['active_lord'] ?? '');
+                        $sTone = static fn(string $t): string => $t === 'pos' ? 'gc-shubh' : ($t === 'neg' ? 'gc-ashubh' : 'gc-mishrit');
+                        $fmtJd = static fn($jd) => \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $jd, $vpTz);
+                        // duplicate-formula detection: same longitude -> "समान सूत्र"
+                        $lonCount = [];
+                        foreach ($sahams as $s) { $k = (string) $s['lon']; $lonCount[$k] = ($lonCount[$k] ?? 0) + 1; }
+                        $related = array_values(array_filter($sahams, static fn($s) => !empty($s['related'])));
+                        $defaultKey = $related !== [] ? $related[0]['key'] : $sahams[0]['key'];
+                ?>
+                <!-- Active Mudda mahadasha + its related sahams -->
+                <div class="saham-active">
+                    <div><b>सक्रिय मुद्दा-दशा:</b> <span style="color:<?= $pcolor($activeLord) ?>;font-weight:700"><?= $h($grahaHi[$activeLord] ?? $activeLord) ?></span>
+                        <span class="text-xs text-gray-500">(<?= ($sah['is_day'] ?? true) ? 'दिन-वर्षप्रवेश' : 'रात्रि-वर्षप्रवेश' ?>)</span></div>
+                    <?php if ($related !== []): ?>
+                    <div class="saham-related">इससे संबंधित सहम:
+                        <?php foreach ($related as $r): ?>
+                            <button type="button" class="saham-chip <?= $sTone($r['tone']) ?>" data-goto="<?= $h($r['key']) ?>"><?= (int) $r['seq'] ?>. <?= $h($r['name_hi']) ?> <span class="saham-why">(<?= $h($r['related_why']) ?>)</span></button>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php else: ?>
+                    <div class="text-xs text-gray-500">इस ग्रह से सीधे संबंधित कोई सहम नहीं — नीचे से कोई भी सहम चुनें।</div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Numbered, scrollable saham selector -->
+                <div class="pred-picker" style="margin-top:8px">
+                    <label class="pred-picker-label" for="saham-select">सहम चुनें (1–50)</label>
+                    <select id="saham-select" class="pred-inline-select" size="1">
+                        <?php foreach ($sahams as $s): ?>
+                            <option value="<?= $h($s['key']) ?>"<?= $s['key'] === $defaultKey ? ' selected' : '' ?>><?= (int) $s['seq'] ?>. <?= $h($s['name_hi']) ?> — <?= $h($s['verdict_hi']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Saham detail cards (only the selected one shows) -->
+                <div id="saham-detail-pane" class="overflow-y-auto pr-1" style="max-height:420px">
+                    <?php foreach ($sahams as $s): $isDup = ($lonCount[(string) $s['lon']] ?? 0) > 1; ?>
+                    <div class="saham-card<?= $s['key'] === $defaultKey ? '' : ' hidden' ?>" data-saham="<?= $h($s['key']) ?>">
+                        <div class="saham-card-head">
+                            <span class="saham-name"><?= (int) $s['seq'] ?>. <?= $h($s['name_hi']) ?></span>
+                            <span class="gc-chip <?= $sTone($s['tone']) ?>"><?= $h($s['verdict_hi']) ?></span>
+                            <?php if (!empty($s['related'])): ?><span class="saham-tag rel">सक्रिय</span><?php endif; ?>
+                            <?php if ($isDup): ?><span class="saham-tag dup">समान सूत्र</span><?php endif; ?>
+                        </div>
+                        <?php if (!empty($s['signifies'])): ?><div class="saham-signifies"><?= $h($s['signifies']) ?></div><?php endif; ?>
+                        <div class="saham-pos">राशि-अंश: <b><?= $h($s['rashi_hi']) ?> <?= $h($s['deg']) ?></b> · वर्ष-भाव: <b><?= (int) $s['house'] ?></b> · सहमेश: <b style="color:<?= $pcolor($s['sahamesh']) ?>"><?= $h($s['sahamesh_hi']) ?></b></div>
+                        <?php $f = $s['facts']; ?>
+                        <div class="saham-facts">सहमेश <?= $h($s['sahamesh_hi']) ?> — षड्बल <?= $h((string) $f['shadbala']) ?> (<?= $f['pass'] ? 'पूर्ण' : 'अपूर्ण' ?>)<?= $f['debil'] ? ' · नीच' : '' ?><?= $f['combust'] >= 40 ? ' · अस्त ' . (int) $f['combust'] . '%' : '' ?></div>
+                        <?php foreach (($s['phal'] ?? []) as $ph): ?>
+                            <div class="saham-phal">● <?= $h($ph) ?></div>
+                        <?php endforeach; ?>
+                        <?php if (!empty($s['timing_mudda'])): $tm = $s['timing_mudda']; ?>
+                        <div class="saham-timing">🕒 समय: सहमेश <?= $h($s['sahamesh_hi']) ?> की मुद्दा-दशा — <b><?= $h($fmtJd($tm['start_jd'])) ?></b> से <b><?= $h($fmtJd($tm['end_jd'])) ?></b></div>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
                 <div class="gochar-pred-soon">
                     <div class="gps-icon">🔮</div>
-                    <div class="gps-title">भविष्यफल शीघ्र आ रहा है — Predictions coming soon</div>
-                    <div class="gps-sub">इस भाग में शीघ्र ही वर्षफल-आधारित भविष्यफल जोड़ा जाएगा।<br>Varshaphal-based predictions will be added here soon.</div>
+                    <div class="gps-title">सहम उपलब्ध नहीं</div>
+                    <div class="gps-sub"><?= $h((string) ($sah['error'] ?? 'वर्ष कुंडली गणना के बाद 50 सहम यहाँ दिखेंगे।')) ?></div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -1837,6 +1921,16 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   bindPredSelect('planet-select', '#planet-phala-card .planet-detail', 'data-planet', 'planet-detail-pane');
   bindPredSelect('house-select', '#house-pred-card .house-detail', 'data-house', 'house-detail-pane');
   bindPredSelect('karaka-select', '#karaka-pred-card .karaka-detail', 'data-karaka', 'karaka-detail-pane');
+  // Saham selector (Varshaphal panel) + related-saham chips jump to a saham.
+  bindPredSelect('saham-select', '#saham-detail-pane .saham-card', 'data-saham', 'saham-detail-pane');
+  document.querySelectorAll('.saham-chip[data-goto]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var sel = document.getElementById('saham-select');
+      if (!sel) { return; }
+      sel.value = b.getAttribute('data-goto');
+      sel.dispatchEvent(new Event('change'));
+    });
+  });
 
   // Karaka copy button (Devanagari-safe).
   (function () {

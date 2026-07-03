@@ -151,6 +151,7 @@ final class CalculationEngine
                 'latitude' => $lat,
                 'longitude_east' => $lonEast,
             ],
+            'is_day' => $isDay,   // Sun above horizon at the chart moment (Saham day/night)
             'ascendant' => [
                 'sidereal_lon' => round($ascSid, 4),
                 'sign' => Charts::signName($ascSid),

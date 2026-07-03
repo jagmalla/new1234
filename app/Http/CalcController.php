@@ -149,6 +149,10 @@ final class CalcController
             // placements — presentation layer only, no engine changes. Wrapped so
             // a detector edge-case can never blank the whole chart page.
             'yogas' => $this->safe(static fn() => $chart !== null ? \AutoBusiness\Astro\Phala\YogaFinder::find($chart) : [], []),
+            // Saham (50 Tajik sahams) computed from the Varshaphal chart, shown in
+            // the Varshaphal prediction panel with the active Mudda-mahadasha's
+            // related sahams highlighted.
+            'saham' => $this->saham($vp ?? null, (float) ($meta['tz'] ?? 0.0), (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.
@@ -286,6 +290,41 @@ final class CalcController
                 ? $this->safe(static fn() => \AutoBusiness\Astro\Phala\HousePrediction::generate($chart, $rules), [])
                 : [],
         ];
+    }
+
+    /**
+     * Build the Saham payload for the Varshaphal panel: 50 sahams from the
+     * annual chart + the active Mudda-mahadasha lord (so related sahams can be
+     * highlighted). @return array<string,mixed>|null
+     */
+    private function saham(?array $vp, float $tz, string $lang): ?array
+    {
+        if ($vp === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Saham\SahamRepository::load($lang);   // baked fallback when DB down
+        if ($rules === null) {
+            return ['error' => \AutoBusiness\Astro\Saham\SahamRepository::lastError(), 'sahams' => []];
+        }
+        // Active Mudda mahadasha = the annual period containing "now".
+        $nowJd = \AutoBusiness\Astro\Time\JulianDay::fromGregorian(
+            (int) date('Y'), (int) date('m'), (int) date('d'), (int) date('H'), (int) date('i'), 0.0, $tz
+        );
+        $activeLord = null;
+        foreach (($vp['mudda_dasha'] ?? []) as $md) {
+            if ($nowJd >= (float) $md['start_jd'] && $nowJd < (float) $md['end_jd']) { $activeLord = (string) $md['lord']; break; }
+        }
+        if ($activeLord === null && !empty($vp['mudda_dasha'])) {
+            $activeLord = (string) $vp['mudda_dasha'][0]['lord'];
+        }
+        $data = $this->safe(
+            static fn() => \AutoBusiness\Astro\Saham\SahamEngine::compute($vp, $rules, $activeLord),
+            ['sahams' => [], 'is_day' => true, 'active_lord' => $activeLord]
+        );
+        $data['error'] = \AutoBusiness\Astro\Saham\SahamRepository::lastError();
+        $data['active_lord'] = $activeLord;
+        $data['tz'] = $tz;
+        return $data;
     }
 
     /**
