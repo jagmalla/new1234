@@ -2317,6 +2317,19 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     });
   }
 
+  // Default landing: a fresh visit opens on "New / Profile" (the New Kundali
+  // entry form) so the visitor can add their details and start. Once they
+  // Calculate — birth details are then in the URL — the page opens on the Birth
+  // Chart instead, to show the result.
+  (function () {
+    var q = new URLSearchParams(window.location.search);
+    var submitted = (q.get('date') || '').trim() !== '' || (q.get('name') || '').trim() !== '';
+    if (!submitted) {
+      var mb = document.querySelector('#side-menu button[data-sec="profile"]');
+      if (mb) { mb.click(); window.scrollTo(0, 0); }
+    }
+  })();
+
   // ---- Custom Screen: user drops chart / prediction panels into a grid ----
   (function () {
     var grid = document.getElementById('custom-grid');
