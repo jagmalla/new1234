@@ -14,6 +14,7 @@ require dirname(__DIR__) . '/bootstrap.php';
 
 use AutoBusiness\Http\CalcController;
 use AutoBusiness\Http\CanvasController;
+use AutoBusiness\Http\MilanController;
 use AutoBusiness\Http\WebhookController;
 
 $route  = (string) ($_GET['r'] ?? 'canvas');
@@ -43,6 +44,10 @@ try {
 
         case 'GET calc/dashaEngine':
             (new CalcController())->dashaEngineJson();
+            break;
+
+        case 'GET milan':
+            (new MilanController())->show();
             break;
 
         case 'POST api/workflow/save':

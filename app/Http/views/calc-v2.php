@@ -149,6 +149,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .l2-menu button { display: block; width: 100%; text-align: left; padding: 10px 14px;
             border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .95rem; }
         .l2-menu button:hover { background: var(--sindoor-soft); }
+        /* Kundali Milan opens a separate page, so it's an anchor styled as a menu row. */
+        .l2-mi-link { display: block; width: 100%; text-align: left; padding: 10px 14px;
+            border-left: 3px solid transparent; color: var(--ink); font-weight: 700; font-size: .95rem;
+            text-decoration: none; }
+        .l2-mi-link:hover { background: var(--sindoor-soft); color: var(--sindoor); }
         .l2-menu button.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
             color: var(--sindoor); font-weight: 700; }
         /* Expand caret on menu items that have a sub-menu (added by JS). */
@@ -477,6 +482,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <nav id="side-menu" class="l2-menu l2-card" aria-label="Sections">
             <div class="l2-mi">
                 <button type="button" data-sec="profile">New / Profile</button>
+            </div>
+            <div class="l2-mi">
+                <a href="<?= $h($asset('/milan')) ?>" class="l2-mi-link">Kundali Milan (गुण मिलान)</a>
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="home" class="active">Birth Chart</button>

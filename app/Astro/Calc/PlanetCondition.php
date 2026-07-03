@@ -256,6 +256,20 @@ final class PlanetCondition
     }
 
     /**
+     * Directional natural (naisargika) relation a→b as a single letter:
+     * 'F' friend, 'N' neutral, 'E' enemy. Same planet counts as friendly.
+     * Used by Guna Milan's Graha-Maitri koota, which needs both directions
+     * separately (unlike {@see naisargikaMaitri}, which collapses the pair).
+     */
+    public static function naturalRelationDirected(string $a, string $b): string
+    {
+        if ($a === $b) {
+            return 'F';
+        }
+        return self::PERM[$a][$b] ?? 'N';
+    }
+
+    /**
      * Other planets sharing $planet's house (excludes itself).
      *
      * @param array<string,array<string,mixed>> $planets
