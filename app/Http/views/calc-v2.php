@@ -1308,6 +1308,14 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             $copyLines[] = $line;
         }
         $copyText = implode("\n", $copyLines);
+        // Short details: only houses that hold planets — "In Nth House, Planet is A, B."
+        $shortLines = [];
+        foreach (($chart['houses'] ?? []) as $H) {
+            if (!empty($H['planets'])) {
+                $shortLines[] = 'In ' . $ord((int) $H['house']) . ' House, Planet is ' . implode(', ', $H['planets']) . '.';
+            }
+        }
+        $shortText = implode("\n", $shortLines);
     ?>
 
 
@@ -1315,9 +1323,13 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     <div id="card-housedet" class="bg-white rounded-lg shadow p-4 overflow-x-auto">
         <div class="flex items-center justify-between mb-2">
             <h2 class="font-semibold">House Details</h2>
-            <button id="hd-copy" type="button" class="text-xs bg-gray-100 hover:bg-gray-200 border rounded px-3 py-1 font-semibold">Copy</button>
+            <div class="flex items-center gap-2">
+                <button id="hd-copy-short" type="button" class="text-xs bg-gray-100 hover:bg-gray-200 border rounded px-3 py-1 font-semibold">Short Details</button>
+                <button id="hd-copy" type="button" class="text-xs bg-gray-100 hover:bg-gray-200 border rounded px-3 py-1 font-semibold">Long Details</button>
+            </div>
         </div>
         <pre id="hd-copy-text" class="hidden"><?= $h($copyText) ?></pre>
+        <pre id="hd-short-text" class="hidden"><?= $h($shortText) ?></pre>
         <table class="w-full text-sm">
             <thead><tr class="text-left border-b align-bottom">
                 <th class="py-1 pr-3">House</th><th class="pr-3">Planet(s) in house</th><th class="pr-3">Drishti</th><th class="pr-3">Rashi</th>
@@ -2434,18 +2446,23 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     });
   }
 
-  // House Details "Copy" button → copies the plain-text summary of all houses.
-  var hdCopy = document.getElementById('hd-copy');
-  if (hdCopy) {
-    hdCopy.addEventListener('click', function () {
-      var src = document.getElementById('hd-copy-text');
+  // House Details copy buttons → copy a plain-text summary of the houses.
+  // "Long Details" copies the full per-house lines; "Short Details" copies only
+  // the houses that hold planets ("In Nth House, Planet is A, B.").
+  function bindHdCopy(btnId, srcId, label) {
+    var btn = document.getElementById(btnId);
+    if (!btn) { return; }
+    btn.addEventListener('click', function () {
+      var src = document.getElementById(srcId);
       var text = src ? src.textContent : '';
-      var done = function () { hdCopy.textContent = 'Copied!'; setTimeout(function () { hdCopy.textContent = 'Copy'; }, 1500); };
+      var done = function () { btn.textContent = 'Copied!'; setTimeout(function () { btn.textContent = label; }, 1500); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
       } else { fallbackCopy(text); done(); }
     });
   }
+  bindHdCopy('hd-copy', 'hd-copy-text', 'Long Details');
+  bindHdCopy('hd-copy-short', 'hd-short-text', 'Short Details');
   function fallbackCopy(text) {
     var ta = document.createElement('textarea');
     ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
