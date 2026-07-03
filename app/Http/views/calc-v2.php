@@ -534,7 +534,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 </div>
             </div>
             <div class="l2-mi">
-                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan (गुण मिलान)</a>
+                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan</a>
             </div>
         </nav>
 

@@ -107,6 +107,20 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         table.pl th, table.pl td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; }
         table.pl th { color: var(--ink-soft); font-weight: 700; }
         .banner { color: var(--ink-soft); font-size: .85rem; }
+        /* Left menu (mirrors the main calculator) so Milan sits beside it. */
+        .layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; align-items: start; }
+        .side { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(38,34,28,.08); padding: 6px 0; position: sticky; top: 16px; overflow: hidden; }
+        .side a { display: block; padding: 10px 14px; border-left: 3px solid transparent;
+            color: var(--ink); font-weight: 500; font-size: .95rem; text-decoration: none; }
+        .side a:hover { background: #f6efe3; }
+        .side a.active { background: #f6efe3; border-left-color: var(--accent); color: var(--accent); font-weight: 700; }
+        .content { min-width: 0; }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .side { position: static; display: flex; flex-wrap: wrap; }
+            .side a { border-left: 0; }
+        }
         @media (max-width: 820px) {
             .forms, .res-head, .kgrid, .pair, .chartbox, .mangal-grid { grid-template-columns: 1fr; }
             .res-head { text-align: center; }
@@ -126,6 +140,23 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         </div>
         <div class="noprint"><a href="<?= $h($asset('/calc')) ?>">← मुख्य कैलकुलेटर</a></div>
     </div>
+
+    <div class="layout">
+        <!-- Left menu — mirrors the main calculator so Milan opens beside it. -->
+        <nav class="side noprint" aria-label="Sections">
+            <?php $calc = $h($asset('/calc')); ?>
+            <a href="<?= $calc ?>">New / Profile</a>
+            <a href="<?= $calc ?>">Birth Chart</a>
+            <a href="<?= $calc ?>">Planet Positions</a>
+            <a href="<?= $calc ?>">Varga Charts</a>
+            <a href="<?= $calc ?>">Dasha</a>
+            <a href="<?= $calc ?>">Bala (Strength)</a>
+            <a href="<?= $calc ?>">Gochar (Transit)</a>
+            <a href="<?= $calc ?>">Varshaphal</a>
+            <a href="<?= $h($asset('/milan')) ?>" class="active">Kundali Milan</a>
+        </nav>
+
+        <div class="content">
 
     <?php if ($error !== null): ?>
         <div class="warn"><?= $h($error) ?></div>
@@ -308,6 +339,8 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     </div>
 
     <?php endif; ?>
+        </div><!-- /.content -->
+    </div><!-- /.layout -->
 </div>
 
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
