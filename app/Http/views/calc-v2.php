@@ -1565,6 +1565,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <h2 class="font-semibold mb-2">Varshaphal (Annual Chart) — year <?= (int) $in['forYear'] ?></h2>
                 <div>Varsha Lagna: <b><?= $h($vp['varsha_chart']['ascendant']['formatted']) ?></b> (lord <?= $h($vp['varsha_lagna']['lord']) ?>)
                     · Muntha: <?= $h($vp['muntha']['sign']) ?> (lord <?= $h($vp['muntha']['lord']) ?>)
+                    <?php if (!empty($vp['varshesh']['lord'])): ?>· Varshesh (Year Lord): <b><?= $h($vp['varshesh']['lord']) ?></b> (Panchavargeeya Bala <?= $h((string) $vp['varshesh']['bala']) ?>)<?php endif; ?>
                     · Age <?= (int) $vp['age_completed'] ?></div>
                 <table class="w-full mt-2">
                     <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Annual position</th><th>House</th></tr></thead>

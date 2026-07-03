@@ -126,10 +126,15 @@
         .then(function (v) {
           if (v.error) { status.textContent = 'Error: ' + v.error; return; }
           status.textContent = '';
+          var varshesh = v.varshesh
+            ? '<div><b>Varshesh (Year Lord)</b> ' + v.varshesh.lord
+                + ' <span class="text-gray-500">(Panchavargeeya Bala ' + v.varshesh.bala + ')</span></div>'
+            : '';
           summary.innerHTML =
               '<div><b>Year</b> ' + v.year + '</div>'
             + '<div><b>Varsha Lagna</b> ' + v.varsha_lagna.sign + ' (lord ' + v.varsha_lagna.lord + ')</div>'
             + '<div><b>Muntha</b> ' + v.muntha.sign + ' (lord ' + v.muntha.lord + ')</div>'
+            + varshesh
             + '<div><b>Age</b> ' + v.age_completed + '</div>'
             + '<div><b>Varshaphal Date</b>: ' + (v.varsha_start || '—') + '</div>';
           // Show the Muntha as a "MUN" marker in its house on the Varsha chart.
