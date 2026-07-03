@@ -1463,7 +1463,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         $lonCount = [];
                         foreach ($sahams as $s) { $k = (string) $s['lon']; $lonCount[$k] = ($lonCount[$k] ?? 0) + 1; }
                         $related = array_values(array_filter($sahams, static fn($s) => !empty($s['related'])));
-                        $defaultKey = $related !== [] ? $related[0]['key'] : $sahams[0]['key'];
+                        // Default view: "Active Saham" (all sahams tied to the running Mudda-dasha).
+                        // Falls back to "All Saham" only when no saham is active this year.
+                        $defaultOpt = $related !== [] ? 'active' : 'all';
                 ?>
                 <!-- Active Mudda mahadasha + its related sahams -->
                 <div class="saham-active">
@@ -1482,18 +1484,23 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
                 <!-- Numbered, scrollable saham selector -->
                 <div class="pred-picker" style="margin-top:8px">
-                    <label class="pred-picker-label" for="saham-select">सहम चुनें (1–50)</label>
+                    <label class="pred-picker-label" for="saham-select">सहम चुनें</label>
                     <select id="saham-select" class="pred-inline-select" size="1">
+                        <option value="active"<?= $defaultOpt === 'active' ? ' selected' : '' ?>>● सक्रिय सहम (मुद्दा-दशा अनुसार)<?= $related !== [] ? ' — ' . count($related) : '' ?></option>
+                        <option value="all"<?= $defaultOpt === 'all' ? ' selected' : '' ?>>सभी सहम (All Saham)</option>
                         <?php foreach ($sahams as $s): ?>
-                            <option value="<?= $h($s['key']) ?>"<?= $s['key'] === $defaultKey ? ' selected' : '' ?>><?= (int) $s['seq'] ?>. <?= $h($s['name_hi']) ?> — <?= $h($s['verdict_hi']) ?></option>
+                            <option value="<?= $h($s['key']) ?>"><?= (int) $s['seq'] ?>. <?= $h($s['name_hi']) ?> — <?= $h($s['verdict_hi']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
                 <!-- Saham detail cards (only the selected one shows) -->
                 <div id="saham-detail-pane" class="overflow-y-auto pr-1" style="max-height:420px">
-                    <?php foreach ($sahams as $s): $isDup = ($lonCount[(string) $s['lon']] ?? 0) > 1; ?>
-                    <div class="saham-card<?= $s['key'] === $defaultKey ? '' : ' hidden' ?>" data-saham="<?= $h($s['key']) ?>">
+                    <?php foreach ($sahams as $s): $isDup = ($lonCount[(string) $s['lon']] ?? 0) > 1;
+                        $isActive = !empty($s['related']);
+                        $showInit = $defaultOpt === 'all' || ($defaultOpt === 'active' && $isActive);
+                    ?>
+                    <div class="saham-card<?= $showInit ? '' : ' hidden' ?>" data-saham="<?= $h($s['key']) ?>" data-active="<?= $isActive ? '1' : '0' ?>">
                         <div class="saham-card-head">
                             <span class="saham-name"><?= (int) $s['seq'] ?>. <?= $h($s['name_hi']) ?></span>
                             <span class="gc-chip <?= $sTone($s['tone']) ?>"><?= $h($s['verdict_hi']) ?></span>
@@ -1921,16 +1928,32 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   bindPredSelect('planet-select', '#planet-phala-card .planet-detail', 'data-planet', 'planet-detail-pane');
   bindPredSelect('house-select', '#house-pred-card .house-detail', 'data-house', 'house-detail-pane');
   bindPredSelect('karaka-select', '#karaka-pred-card .karaka-detail', 'data-karaka', 'karaka-detail-pane');
-  // Saham selector (Varshaphal panel) + related-saham chips jump to a saham.
-  bindPredSelect('saham-select', '#saham-detail-pane .saham-card', 'data-saham', 'saham-detail-pane');
-  document.querySelectorAll('.saham-chip[data-goto]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var sel = document.getElementById('saham-select');
-      if (!sel) { return; }
-      sel.value = b.getAttribute('data-goto');
-      sel.dispatchEvent(new Event('change'));
+  // Saham selector (Varshaphal panel): "active" shows every saham tied to the
+  // running Mudda-dasha, "all" shows all 50, otherwise a single saham by key.
+  (function () {
+    var sel = document.getElementById('saham-select');
+    if (!sel) { return; }
+    var cards = document.querySelectorAll('#saham-detail-pane .saham-card');
+    var pane = document.getElementById('saham-detail-pane');
+    function apply() {
+      var v = sel.value;
+      cards.forEach(function (d) {
+        var show = v === 'all'
+          || (v === 'active' ? d.getAttribute('data-active') === '1'
+                             : d.getAttribute('data-saham') === v);
+        d.classList.toggle('hidden', !show);
+      });
+      if (pane) { pane.scrollTop = 0; }
+    }
+    sel.addEventListener('change', apply);
+    // Related-saham chips jump straight to that single saham.
+    document.querySelectorAll('.saham-chip[data-goto]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        sel.value = b.getAttribute('data-goto');
+        apply();
+      });
     });
-  });
+  })();
 
   // Karaka copy button (Devanagari-safe).
   (function () {
