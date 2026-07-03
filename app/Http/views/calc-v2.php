@@ -194,8 +194,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .l2-select { width: 100%; padding: 9px 30px 9px 12px; min-height: 44px; margin-bottom: 8px; }
         /* Label sits to the LEFT of a smaller dropdown (chart / prediction pickers). */
         .pick-tag { font-size: 1.05rem; font-weight: 800; color: var(--sindoor); white-space: nowrap; }
-        .l2-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-        .l2-picker .l2-select { width: auto; flex: 0 1 320px; min-width: 180px; margin-bottom: 0; }
+        .l2-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: nowrap; }
+        .l2-picker .l2-select { width: auto; flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
         /* Dasha strip — pinned to the chart panel bottom (mt-auto + divider). */
         .dasha-strip { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px;
             font-size: .85rem; line-height: 1.6; }
@@ -634,7 +634,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <!-- Prediction panel (right column) -->
         <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
             <div class="pred-head">
-                <div class="l2-picker" style="margin-bottom:0">
+                <div class="l2-picker" style="flex:1; margin-bottom:0">
                 <span class="pick-tag">Select Prediction ▾</span>
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0">
                     <option value="dasha">Dasha Phal (दशा फल)</option>
