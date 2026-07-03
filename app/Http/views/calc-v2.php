@@ -399,6 +399,56 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .de-classical-btn:hover { color: var(--sindoor); }
         #planet-phala-card .pp-sec  { font-size: 1.15rem; font-weight: 700; }
         #planet-phala-card .pp-sub  { font-size: 1.1rem;  font-weight: 700; }
+
+        /* ---- Custom Screen ---- */
+        .l2-grid.custom-active > #side-menu { display: none; }
+        .l2-grid.custom-active > #sec-custom { grid-column: 1 / 4; }
+        .cs-bar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; }
+        .cs-title { font-size: 1.15rem; font-weight: 800; color: var(--ink); }
+        .cs-title-hi { color: var(--ink-soft); font-weight: 600; font-size: .95rem; }
+        .cs-hint { font-size: .82rem; color: var(--ink-soft); }
+        .cs-toolbtn { border: 1px solid var(--line); background: var(--card); color: var(--ink);
+            font-weight: 700; font-size: .82rem; padding: 7px 12px; border-radius: 8px; }
+        .cs-toolbtn:hover { background: var(--sindoor-soft); border-color: var(--sindoor); color: var(--sindoor); }
+        .cs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 14px; align-items: start; }
+        .cs-slot { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(38,34,28,.08); min-height: 320px; display: flex; flex-direction: column;
+            overflow: hidden; }
+        .cs-slot.cs-empty { border: 2px dashed var(--line); box-shadow: none; align-items: center; justify-content: center;
+            cursor: pointer; background: #FBF8F2; }
+        .cs-slot.cs-empty:hover { border-color: var(--sindoor); background: var(--sindoor-soft); }
+        .cs-plus { font-size: 3rem; line-height: 1; color: var(--sindoor); font-weight: 300; }
+        .cs-empty .cs-plus-lbl { font-size: .8rem; color: var(--ink-soft); margin-top: 6px; }
+        .cs-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line);
+            background: #FBF8F2; }
+        .cs-head .cs-sel { flex: 1 1 auto; min-width: 0; -webkit-appearance: none; appearance: none;
+            border: 1px solid var(--sindoor); border-radius: 6px; background: var(--card); color: var(--ink);
+            font-weight: 700; font-size: .85rem; padding: 6px 24px 6px 8px;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23c0392b'><path d='M5 7.5l5 5 5-5z'/></svg>");
+            background-repeat: no-repeat; background-position: right 6px center; background-size: 12px; }
+        .cs-iconbtn { flex: 0 0 auto; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px;
+            background: var(--card); color: var(--ink-soft); font-size: .9rem; display: inline-flex;
+            align-items: center; justify-content: center; }
+        .cs-iconbtn:hover { border-color: var(--sindoor); color: var(--sindoor); background: var(--sindoor-soft); }
+        .cs-body { padding: 10px; overflow: auto; flex: 1 1 auto; max-height: 560px; }
+        .cs-body .pred-view { font-size: 13px; }
+        /* picker modal */
+        .cs-modal { position: fixed; inset: 0; z-index: 100; background: rgba(31,42,51,.55);
+            display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .cs-modal.hidden { display: none; }
+        .cs-modal-box { background: var(--card); border-radius: 12px; max-width: 560px; width: 100%;
+            max-height: 82vh; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+        .cs-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px;
+            border-bottom: 1px solid var(--line); font-weight: 800; font-size: 1.05rem; position: sticky; top: 0; background: var(--card); }
+        .cs-modal-x { font-size: 1.1rem; color: var(--ink-soft); width: 32px; height: 32px; border-radius: 6px; }
+        .cs-modal-x:hover { background: var(--sindoor-soft); color: var(--sindoor); }
+        .cs-modal-body { padding: 12px 16px 18px; }
+        .cs-group-title { font-weight: 800; color: var(--sindoor); font-size: .9rem; margin: 10px 0 6px; }
+        .cs-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+        .cs-opt { text-align: left; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+            background: var(--card); color: var(--ink); font-weight: 600; font-size: .85rem; }
+        .cs-opt:hover { border-color: var(--sindoor); background: var(--sindoor-soft); color: var(--sindoor); }
     </style>
 </head>
 <body class="text-gray-900">
@@ -408,6 +458,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     <div class="topbar-inner">
         <h1 class="brand" style="margin:0">Analysis of Karma</h1>
         <div class="test-banner">System is Under Testing — Not Finalized Yet.<br>Feedback: <a href="mailto:analysisofkarma@gmail.com">analysisofkarma@gmail.com</a></div>
+        <!-- Shown only on the Custom Screen: jump back to the D1 birth chart. -->
+        <button type="button" id="cs-back" class="btn-sindoor" style="display:none">Birth Chart (D1)</button>
         <div class="meta">
             <span><b><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></b></span>
             <span><?= $h($in['date']) ?>, <?= $h($in['time']) ?></span>
@@ -520,6 +572,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <nav id="side-menu" class="l2-menu l2-card" aria-label="Sections">
             <div class="l2-mi">
                 <button type="button" data-sec="profile">New / Profile</button>
+            </div>
+            <div class="l2-mi">
+                <button type="button" data-sec="custom">Custom Screen</button>
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="home" class="active">Birth Chart</button>
@@ -1098,6 +1153,32 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
              form, shown beside the menu like the Gochar Calculation card ======= -->
         <div id="sec-profile" class="l2-section l2-full hidden space-y-4 md:space-y-6">
             <?php require __DIR__ . '/_birth_form.php'; ?>
+        </div>
+
+        <!-- ============ CUSTOM SCREEN (full-width, user-arranged panels) ======= -->
+        <div id="sec-custom" class="l2-section l2-full hidden">
+            <div class="cs-bar">
+                <span class="cs-title">Custom Screen <span class="cs-title-hi">— अपनी स्क्रीन</span></span>
+                <span class="cs-hint">Press <b>+</b> in any panel, then pick a chart or a prediction. Change or remove it any time.</span>
+                <span style="margin-left:auto"></span>
+                <button type="button" id="cs-add" class="cs-toolbtn">+ Panel</button>
+                <button type="button" id="cs-reset" class="cs-toolbtn">Reset</button>
+            </div>
+            <div id="custom-grid" class="cs-grid"></div>
+        </div>
+
+        <!-- Custom Screen picker modal -->
+        <div id="cs-picker" class="cs-modal hidden">
+            <div class="cs-modal-box">
+                <div class="cs-modal-head"><span>Select a panel — पैनल चुनें</span>
+                    <button type="button" class="cs-modal-x" aria-label="Close">✕</button></div>
+                <div class="cs-modal-body">
+                    <div class="cs-group-title">📊 Charts / कुंडली</div>
+                    <div class="cs-opts" id="cs-opts-chart"></div>
+                    <div class="cs-group-title">📜 Predictions / फलादेश</div>
+                    <div class="cs-opts" id="cs-opts-pred"></div>
+                </div>
+            </div>
         </div>
 
         <!-- ============ ग्रह स्थिति (full-width section) ============ -->
@@ -1906,13 +1987,20 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   })();
 
   // Side-menu section switching: home = three-panel; others span the two panels.
-  var FULL_SECTIONS = ['sec-profile', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-varsha'];
+  var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-varsha'];
   function showSection(key, focusPred) {
     var homeMode = key === 'home';
+    var customMode = key === 'custom';
     var cp = document.getElementById('chart-panel');
     var pp = document.getElementById('pred-panel');
     if (cp) cp.classList.toggle('hidden', !homeMode);
     if (pp) pp.classList.toggle('hidden', !homeMode);
+    // Custom Screen: full-width (hide the side menu) + show the "Birth Chart" jump.
+    var grid = document.getElementById('sec-home');
+    if (grid) { grid.classList.toggle('custom-active', customMode); }
+    var back = document.getElementById('cs-back');
+    if (back) { back.style.display = customMode ? '' : 'none'; }
+    if (customMode && window.ABCustom) { window.ABCustom.ensure(); }
     FULL_SECTIONS.forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.classList.toggle('hidden', id !== 'sec-' + key);
@@ -2031,6 +2119,110 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     nk.addEventListener('click', function () {
       var mb = document.querySelector('#side-menu button[data-sec="profile"]');
       if (mb) { mb.click(); mb.scrollIntoView({ block: 'nearest' }); }
+    });
+  }
+
+  // ---- Custom Screen: user drops chart / prediction panels into a grid ----
+  (function () {
+    var grid = document.getElementById('custom-grid');
+    if (!grid) { return; }
+    var START_SLOTS = 6;
+    var PRED_LABELS = { dasha: 'Dasha Phal', bhavesh: 'Bhavesh Phal', grah: 'Graha Phal',
+      bhav: 'Bhava Phaladesh', karak: 'Karaka Phal', yoga: 'Yoga' };
+    var PRED_ORDER = ['dasha', 'bhavesh', 'grah', 'bhav', 'karak', 'yoga'];
+
+    function chartOptions() {
+      var out = [], V = window.AB_VARGAS || {};
+      Object.keys(V).forEach(function (k) { if (V[k] && V[k].planets) { out.push({ key: k, label: k + ' — ' + (V[k].label || k) }); } });
+      if (window.AB_GOCHAR && window.AB_GOCHAR.transits) { out.push({ key: 'gochar', label: 'Gochar (Transit)' }); }
+      if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { out.push({ key: 'varsha', label: 'Varsha Kundali' }); }
+      return out;
+    }
+    function predOptions() {
+      return PRED_ORDER.filter(function (p) { return document.querySelector('#pred-scroll .pred-view[data-pred="' + p + '"]'); })
+        .map(function (p) { return { key: p, label: PRED_LABELS[p] }; });
+    }
+    function renderChart(body, key) {
+      body.innerHTML = ''; var host = document.createElement('div'); host.className = 'w-full'; body.appendChild(host);
+      if (!window.ABChart) { return; }
+      if (key === 'gochar') {
+        var g = window.AB_GOCHAR || {};
+        if (!g.transits || !g.ascendant) { host.innerHTML = '<div class="text-gray-400 italic">Gochar not available.</div>'; return; }
+        var AB = { Sun: 'Su', Moon: 'Mo', Mars: 'Ma', Mercury: 'Me', Jupiter: 'Ju', Venus: 'Ve', Saturn: 'Sa', Rahu: 'Ra', Ketu: 'Ke' };
+        var pls = Object.keys(g.transits).map(function (n) { var t = g.transits[n]; return { abbr: AB[n] || n.slice(0, 2), sign: t.sign_index, deg: Math.floor(t.deg), retro: !!t.retro }; });
+        window.ABChart.renderNorth(host, { asc_sign: g.ascendant.sign_index, planets: pls }, { showDeg: true });
+      } else if (key === 'varsha') {
+        if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg: true }); }
+      } else {
+        var V = window.AB_VARGAS || {};
+        if (V[key]) { window.ABChart.renderNorth(host, V[key], { showDeg: true, big: key === 'D1', outer: key === 'D1' ? (window.AB_HOUSES || null) : null }); }
+      }
+    }
+    function renderPred(body, pred) {
+      var src = document.querySelector('#pred-scroll .pred-view[data-pred="' + pred + '"]');
+      if (!src) { body.innerHTML = '<div class="text-gray-400 italic">Not available.</div>'; return; }
+      var clone = src.cloneNode(true);
+      clone.classList.remove('hidden');
+      clone.querySelectorAll('.pred-picker').forEach(function (e) { e.remove(); });      // inner dropdown not needed
+      clone.querySelectorAll('.hidden').forEach(function (e) { e.classList.remove('hidden'); }); // show all details
+      clone.querySelectorAll('[id]').forEach(function (e) { e.removeAttribute('id'); });   // avoid duplicate ids
+      body.innerHTML = ''; body.appendChild(clone);
+    }
+
+    function emptySlot(slot) {
+      slot.className = 'cs-slot cs-empty';
+      slot.removeAttribute('data-kind'); slot.removeAttribute('data-key');
+      slot.innerHTML = '<div style="text-align:center"><div class="cs-plus">+</div><div class="cs-plus-lbl">Add panel</div></div>';
+      slot.onclick = function () { openPicker(slot); };
+    }
+    function fillSlot(slot, kind, key) {
+      slot.className = 'cs-slot'; slot.onclick = null; slot.innerHTML = '';
+      var head = document.createElement('div'); head.className = 'cs-head';
+      var sel = document.createElement('select'); sel.className = 'cs-sel';
+      (kind === 'chart' ? chartOptions() : predOptions()).forEach(function (o) {
+        var op = document.createElement('option'); op.value = o.key; op.textContent = o.label;
+        if (o.key === key) { op.selected = true; } sel.appendChild(op);
+      });
+      var rep = document.createElement('button'); rep.className = 'cs-iconbtn'; rep.title = 'Replace panel'; rep.innerHTML = '⟳';
+      var del = document.createElement('button'); del.className = 'cs-iconbtn'; del.title = 'Remove panel'; del.innerHTML = '✕';
+      head.appendChild(sel); head.appendChild(rep); head.appendChild(del);
+      var body = document.createElement('div'); body.className = 'cs-body';
+      slot.appendChild(head); slot.appendChild(body);
+      slot.dataset.kind = kind;
+      function draw() { slot.dataset.key = sel.value; if (kind === 'chart') { renderChart(body, sel.value); } else { renderPred(body, sel.value); } }
+      sel.addEventListener('change', draw);
+      rep.addEventListener('click', function (e) { e.stopPropagation(); openPicker(slot); });
+      del.addEventListener('click', function (e) { e.stopPropagation(); emptySlot(slot); });
+      draw();
+    }
+
+    var modal = document.getElementById('cs-picker'), targetSlot = null;
+    function openPicker(slot) {
+      targetSlot = slot; if (!modal) { return; }
+      var oc = document.getElementById('cs-opts-chart'), op = document.getElementById('cs-opts-pred');
+      oc.innerHTML = ''; op.innerHTML = '';
+      chartOptions().forEach(function (o) { var b = document.createElement('button'); b.className = 'cs-opt'; b.textContent = o.label; b.onclick = function () { fillSlot(targetSlot, 'chart', o.key); closePicker(); }; oc.appendChild(b); });
+      predOptions().forEach(function (o) { var b = document.createElement('button'); b.className = 'cs-opt'; b.textContent = o.label; b.onclick = function () { fillSlot(targetSlot, 'pred', o.key); closePicker(); }; op.appendChild(b); });
+      modal.classList.remove('hidden');
+    }
+    function closePicker() { if (modal) { modal.classList.add('hidden'); } }
+    if (modal) {
+      modal.addEventListener('click', function (e) { if (e.target === modal) { closePicker(); } });
+      var mx = modal.querySelector('.cs-modal-x'); if (mx) { mx.addEventListener('click', closePicker); }
+    }
+
+    var built = false;
+    function ensure() { if (built) { return; } built = true; for (var i = 0; i < START_SLOTS; i++) { var s = document.createElement('div'); grid.appendChild(s); emptySlot(s); } }
+    var add = document.getElementById('cs-add'); if (add) { add.addEventListener('click', function () { var s = document.createElement('div'); grid.appendChild(s); emptySlot(s); }); }
+    var rst = document.getElementById('cs-reset'); if (rst) { rst.addEventListener('click', function () { grid.innerHTML = ''; built = false; ensure(); }); }
+    window.ABCustom = { ensure: ensure };
+  })();
+  // "Birth Chart (D1)" top-bar button → leave the Custom Screen.
+  var csBack = document.getElementById('cs-back');
+  if (csBack) {
+    csBack.addEventListener('click', function () {
+      var mb = document.querySelector('#side-menu button[data-sec="home"]');
+      if (mb) { mb.click(); }
     });
   }
 
