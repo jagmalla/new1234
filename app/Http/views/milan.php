@@ -36,17 +36,46 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         :root {
             --bg: #F3EEE4; --card: #FFFFFF; --ink: #26221C; --ink-soft: #6B6156;
             --line: #E4DCCE; --accent: #b45309; --accent2: #7c3aed;
+            --header-bg: #1F2A33; --sindoor: #B3341C; --sindoor-soft: #F6E3DD; --shubh: #2E6E4E;
         }
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); color: var(--ink);
             font-family: 'Mukta', system-ui, 'Segoe UI', sans-serif; line-height: 1.5; }
         h1, h2, h3 { font-family: 'Martel', 'Mukta', serif; margin: 0; }
         a { color: var(--accent); }
-        .wrap { max-width: 1180px; margin: 0 auto; padding: 18px; }
-        .topbar { display: flex; align-items: center; justify-content: space-between;
-            gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-        .topbar h1 { font-size: 1.5rem; }
-        .topbar .sub { color: var(--ink-soft); font-size: .85rem; }
+        .wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
+        /* Dark top bar — same chrome as the main calculator. */
+        .topbar { position: sticky; top: 0; z-index: 50; background: var(--header-bg); color: #F7F3EA; }
+        .topbar-inner { max-width: 1400px; margin: 0 auto; padding: 10px 16px;
+            display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
+        .topbar .brand { font-family: 'Martel', serif; font-weight: 800; font-size: 1.25rem; color: #F7F3EA; }
+        .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
+            flex-wrap: wrap; font-size: .85rem; color: #C9C2B4; }
+        .topbar .meta b { color: #fff; font-weight: 600; }
+        .btn-sindoor { background: var(--sindoor); color: #fff; font-weight: 600; font-size: .9rem;
+            padding: 8px 16px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; }
+        .btn-sindoor:hover { filter: brightness(1.1); }
+        /* Overview tiles (same format as the main site) — Milan info. */
+        .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px; margin-bottom: 16px; }
+        .ov-tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(38,34,28,.08); padding: 6px 10px; min-width: 0; }
+        .ov-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ov-value { font-size: .98rem; font-weight: 700; color: var(--ink); line-height: 1.35;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ov-value.acc { color: var(--sindoor); }
+        .ov-value.good { color: var(--shubh); }
+        .ov-sub { font-size: .72rem; color: var(--ink-soft);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 699px) { .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        /* Place autocomplete dropdown. */
+        .place-wrap { position: relative; }
+        .place-results { position: absolute; left: 0; right: 0; top: 100%; margin-top: 2px; z-index: 30;
+            background: #fff; border: 1px solid var(--line); border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.12); max-height: 240px; overflow-y: auto; display: none; }
+        .place-results > div { padding: 7px 10px; font-size: .9rem; cursor: pointer; }
+        .place-results > div:hover { background: var(--sindoor-soft); }
         .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,.06); padding: 16px; }
         .mt { margin-top: 16px; }
@@ -132,14 +161,74 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     </style>
 </head>
 <body>
-<div class="wrap">
-    <div class="topbar">
-        <div>
-            <h1>कुंडली मिलान <span class="sub">— Guna Milan / Ashtakoot</span></h1>
-            <div class="sub">दो जन्म-विवरण भरें — 36 गुण मिलान, दोष-परिहार, मंगल जाँच व दोनों की D1/D9 कुंडली।</div>
+<?php
+    // Koota lookup + small helpers for the top tiles.
+    $koBy = [];
+    if ($milan !== null) { foreach ($milan['kootas'] as $k) { $koBy[$k['koota']] = $k; } }
+    $mangalShort = ['o_mangal_both' => 'दोनों मांगलिक', 'o_mangal_mismatch' => 'असंतुलन', 'o_mangal_none' => 'निर्दोष'];
+?>
+<!-- ============ DARK TOP BAR (same chrome as the main calculator) ============ -->
+<header class="topbar">
+    <div class="topbar-inner">
+        <h1 class="brand">Analysis of Karma</h1>
+        <div class="meta">
+            <span><b>कुंडली मिलान</b></span>
+            <?php if ($milan !== null): ?>
+                <span>वर <b><?= $h($milan['boy']['rashi_hi']) ?></b> · कन्या <b><?= $h($milan['girl']['rashi_hi']) ?></b></span>
+                <span>गुण <b><?= $h($num((float) $milan['total'])) ?>/36</b></span>
+            <?php endif; ?>
         </div>
-        <div class="noprint"><a href="<?= $h($asset('/calc')) ?>">← मुख्य कैलकुलेटर</a></div>
+        <a class="btn-sindoor" href="<?= $h($asset('/calc')) ?>">New Kundli</a>
     </div>
+</header>
+
+<main class="wrap">
+
+    <?php if ($milan !== null): ?>
+    <!-- ============ OVERVIEW TILES — Kundali Milan info ============ -->
+    <div class="ov-tiles">
+        <div class="ov-tile">
+            <div class="ov-label">वर / Boy</div>
+            <div class="ov-value"><?= $h($milan['boy']['name'] !== '' ? $milan['boy']['name'] : '—') ?></div>
+            <div class="ov-sub"><?= $h($boyIn['date']) ?> · <?= $h($boyIn['time']) ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">वर — चन्द्र राशि</div>
+            <div class="ov-value"><?= $h($milan['boy']['rashi_hi']) ?></div>
+            <div class="ov-sub"><?= $h($milan['boy']['nak_hi']) ?> पाद <?= (int) $milan['boy']['pada'] ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">कन्या / Girl</div>
+            <div class="ov-value"><?= $h($milan['girl']['name'] !== '' ? $milan['girl']['name'] : '—') ?></div>
+            <div class="ov-sub"><?= $h($girlIn['date']) ?> · <?= $h($girlIn['time']) ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">कन्या — चन्द्र राशि</div>
+            <div class="ov-value"><?= $h($milan['girl']['rashi_hi']) ?></div>
+            <div class="ov-sub"><?= $h($milan['girl']['nak_hi']) ?> पाद <?= (int) $milan['girl']['pada'] ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">कुल गुण मिलान</div>
+            <div class="ov-value <?= ($milan['band']['tier'] ?? '') === 'shubh' ? 'good' : (($milan['band']['tier'] ?? '') === 'ashubh' ? 'acc' : '') ?>"><?= $h($num((float) $milan['total'])) ?> / 36</div>
+            <div class="ov-sub"><?= $h(mb_substr((string) $milan['band']['text'], 0, 14)) ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">मंगल दोष</div>
+            <div class="ov-value <?= ($milan['mangal']['result']['key'] ?? '') === 'o_mangal_none' ? 'good' : 'acc' ?>"><?= $h($mangalShort[$milan['mangal']['result']['key']] ?? '—') ?></div>
+            <div class="ov-sub">वर: <?= $milan['mangal']['boy']['manglik'] ? 'हाँ' : 'नहीं' ?> · कन्या: <?= $milan['mangal']['girl']['manglik'] ? 'हाँ' : 'नहीं' ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">नाड़ी कूट</div>
+            <div class="ov-value <?= (($koBy['nadi']['points'] ?? 0) > 0) ? 'good' : 'acc' ?>"><?= $h($num((float) ($koBy['nadi']['points'] ?? 0))) ?> / 8</div>
+            <div class="ov-sub"><?= ($koBy['nadi']['points'] ?? 0) > 0 ? 'भिन्न — शुभ' : 'नाड़ी दोष' ?></div>
+        </div>
+        <div class="ov-tile">
+            <div class="ov-label">भकूट कूट</div>
+            <div class="ov-value <?= (($koBy['bhakoot']['points'] ?? 0) > 0) ? 'good' : 'acc' ?>"><?= $h($num((float) ($koBy['bhakoot']['points'] ?? 0))) ?> / 7</div>
+            <div class="ov-sub"><?= ($koBy['bhakoot']['points'] ?? 0) > 0 ? 'शुभ' : 'भकूट दोष' ?></div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div class="layout">
         <!-- Left menu — mirrors the main calculator so Milan opens beside it. -->
@@ -174,15 +263,18 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
                     <h2><?= $h($title) ?></h2>
                     <div class="fld"><label>नाम / Name</label><input name="<?= $p ?>_name" value="<?= $h($in['name']) ?>"></div>
                     <div class="row2">
-                        <div class="fld"><label>जन्म तिथि (DD-MM-YYYY)</label><input name="<?= $p ?>_date" value="<?= $h($in['date']) ?>"></div>
-                        <div class="fld"><label>समय (HH:MM)</label><input name="<?= $p ?>_time" value="<?= $h($in['time']) ?>"></div>
+                        <div class="fld"><label>जन्म तिथि (DD-MM-YYYY)</label><input name="<?= $p ?>_date" class="fmt-date" value="<?= $h($in['date']) ?>" placeholder="DD-MM-YYYY"></div>
+                        <div class="fld"><label>समय (HH:MM)</label><input name="<?= $p ?>_time" class="fmt-time" value="<?= $h($in['time']) ?>" placeholder="HH:MM"></div>
                     </div>
-                    <div class="fld"><label>जन्म स्थान / Place</label><input name="<?= $p ?>_place" value="<?= $h($in['place']) ?>" placeholder="optional"></div>
+                    <div class="fld place-wrap"><label>जन्म स्थान / Place</label>
+                        <input id="<?= $p ?>-place" name="<?= $p ?>_place" value="<?= $h($in['place']) ?>" placeholder="शहर खोजें / Search city…" autocomplete="off">
+                        <div id="<?= $p ?>-place-results" class="place-results"></div>
+                    </div>
                     <div class="row2">
-                        <div class="fld"><label>अक्षांश / Latitude</label><input name="<?= $p ?>_lat" value="<?= $h($in['lat']) ?>"></div>
-                        <div class="fld"><label>देशांतर / Longitude</label><input name="<?= $p ?>_lon" value="<?= $h($in['lon']) ?>"></div>
+                        <div class="fld"><label>अक्षांश / Latitude</label><input id="<?= $p ?>-lat" name="<?= $p ?>_lat" value="<?= $h($in['lat']) ?>"></div>
+                        <div class="fld"><label>देशांतर / Longitude</label><input id="<?= $p ?>-lon" name="<?= $p ?>_lon" value="<?= $h($in['lon']) ?>"></div>
                     </div>
-                    <div class="fld" style="max-width:140px"><label>समय क्षेत्र / TZ</label><input name="<?= $p ?>_tz" value="<?= $h($in['tz']) ?>"></div>
+                    <div class="fld" style="max-width:140px"><label>समय क्षेत्र / TZ</label><input id="<?= $p ?>-tz" name="<?= $p ?>_tz" value="<?= $h($in['tz']) ?>"></div>
                 </div>
                 <?php
             };
@@ -341,7 +433,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     <?php endif; ?>
         </div><!-- /.content -->
     </div><!-- /.layout -->
-</div>
+</main>
 
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
 <?php if ($milan !== null && $boy !== null && $girl !== null): ?>
@@ -363,5 +455,52 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
   })();
 </script>
 <?php endif; ?>
+
+<!-- City search (place -> lat/lon/tz) + date/time auto-format, same as the main form. -->
+<script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
+<script>
+(function () {
+  // Place -> lat/lon/tz for each person (worldwide, Open-Meteo), matching /calc.
+  if (window.ABCitySearch) {
+    ['boy', 'girl'].forEach(function (p) {
+      if (!document.getElementById(p + '-place')) { return; }
+      ABCitySearch.init({
+        input: '#' + p + '-place', results: '#' + p + '-place-results',
+        lat: '#' + p + '-lat', lon: '#' + p + '-lon', tz: '#' + p + '-tz',
+        getDate: function () {
+          var d = (document.querySelector('[name="' + p + '_date"]') || {}).value;
+          var t = (document.querySelector('[name="' + p + '_time"]') || {}).value || '12:00';
+          var dt = d ? new Date(d + 'T' + (t.length === 5 ? t : '12:00') + ':00') : new Date();
+          return isNaN(dt) ? new Date() : dt;
+        }
+      });
+    });
+  }
+
+  // Auto-correct date/time to canonical form on blur (e.g. "1 12 1980" -> "01-12-1980").
+  var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+  var normDate = function (raw) {
+    var q = String(raw).trim().split(/[-\/.\s]+/).filter(Boolean);
+    if (q.length !== 3 || q.some(function (x) { return !/^\d+$/.test(x); })) { return raw; }
+    var a = +q[0], b = +q[1], c = +q[2], d, m, y;
+    if (a > 31) { y = a; m = b; d = c; } else { d = a; m = b; y = c; }
+    if (d < 1 || d > 31 || m < 1 || m > 12) { return raw; }
+    return pad2(d) + '-' + pad2(m) + '-' + y;
+  };
+  var normTime = function (raw) {
+    var q = String(raw).trim().split(/[:\s.]+/).filter(Boolean);
+    if (!q.length || q.some(function (x) { return !/^\d+$/.test(x); })) { return raw; }
+    var hh = +q[0], mi = +(q[1] || 0);
+    if (hh > 23 || mi > 59) { return raw; }
+    return pad2(hh) + ':' + pad2(mi);
+  };
+  document.querySelectorAll('.fmt-date').forEach(function (el) {
+    el.addEventListener('blur', function () { if (el.value.trim()) { el.value = normDate(el.value); } });
+  });
+  document.querySelectorAll('.fmt-time').forEach(function (el) {
+    el.addEventListener('blur', function () { if (el.value.trim()) { el.value = normTime(el.value); } });
+  });
+})();
+</script>
 </body>
 </html>
