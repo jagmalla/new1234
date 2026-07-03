@@ -255,6 +255,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .saham-tag.rel { background: var(--sindoor-soft); color: var(--sindoor); }
         .saham-tag.dup { background: #EEF2FF; color: #4338ca; }
         .saham-signifies { color: var(--ink-soft); font-size: .85rem; margin-bottom: 3px; }
+        .saham-explain { background: #F4F1EA; border-left: 3px solid #C9A227; border-radius: 4px;
+            padding: 5px 8px; margin-bottom: 6px; font-size: .92rem; line-height: 1.5; color: #3A352D; }
+        .saham-explain b { color: #7A5C00; }
         .saham-pos { font-size: .95rem; margin-bottom: 3px; }
         .saham-facts { font-size: .85rem; color: #453F37; margin-bottom: 4px; }
         .saham-phal { font-size: 1rem; line-height: 1.6; margin: 2px 0; }
@@ -1508,6 +1511,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                             <?php if ($isDup): ?><span class="saham-tag dup">समान सूत्र</span><?php endif; ?>
                         </div>
                         <?php if (!empty($s['signifies'])): ?><div class="saham-signifies"><?= $h($s['signifies']) ?></div><?php endif; ?>
+                        <?php if (!empty($s['explain'])): ?><div class="saham-explain"><b>यह सहम क्या है?</b> <?= $h($s['explain']) ?></div><?php endif; ?>
                         <div class="saham-pos">राशि-अंश: <b><?= $h($s['rashi_hi']) ?> <?= $h($s['deg']) ?></b> · वर्ष-भाव: <b><?= (int) $s['house'] ?></b> · सहमेश: <b style="color:<?= $pcolor($s['sahamesh']) ?>"><?= $h($s['sahamesh_hi']) ?></b></div>
                         <?php $f = $s['facts']; ?>
                         <div class="saham-facts">सहमेश <?= $h($s['sahamesh_hi']) ?> — षड्बल <?= $h((string) $f['shadbala']) ?> (<?= $f['pass'] ? 'पूर्ण' : 'अपूर्ण' ?>)<?= $f['debil'] ? ' · नीच' : '' ?><?= $f['combust'] >= 40 ? ' · अस्त ' . (int) $f['combust'] . '%' : '' ?></div>

@@ -123,6 +123,59 @@ final class SahamRepository
         'duhita'=>['signifies'=>'कन्या-संतान','phal_anukul'=>'कन्या-संतान — सहमेश बली, शुभ-स्थित व अ-अस्त होने पर कन्या-संतान/कन्या-पक्ष शुभ; फल सहमेश की मुद्दा-दशा या गणित-दिवस पर।','phal_pratikul'=>'सहमेश निर्बल, अस्त या पाप-पीड़ित होने पर कन्या-पक्ष की चिंता; उपाय रखें।'],
         'ashva'=>['signifies'=>'वाहन','phal_anukul'=>'वाहन — सहमेश बली, शुभ-स्थित व अ-अस्त होने पर वाहन-सुख/नया वाहन; फल सहमेश की मुद्दा-दशा या गणित-दिवस पर।','phal_pratikul'=>'सहमेश निर्बल, अस्त या पाप-पीड़ित होने पर वाहन से सावधानी; उपाय रखें।'],
     ];
+    /** Plain, easy-Hindi one-line "what is this saham?" — DB overrides via saham_phal.explain_hi. */
+    private const DEFAULT_EXPLAIN = [
+        'punya'=>'यह सहम इस वर्ष के आपके कुल भाग्य और पुण्य को दिखाता है — साल कितना शुभ व सहज रहेगा।',
+        'guru'=>'यह सहम गुरुजनों, बड़ों और मार्गदर्शकों के आशीर्वाद व सहयोग को बताता है।',
+        'gyan'=>'यह सहम पढ़ाई, विद्या और नई बातें सीखने की स्थिति दिखाता है।',
+        'yash'=>'यह सहम आपकी कीर्ति, नाम और समाज में प्रतिष्ठा को दर्शाता है।',
+        'mitra'=>'यह सहम मित्रों और शुभचिंतकों से मिलने वाले सहयोग को बताता है।',
+        'mahatmya'=>'यह सहम आपके प्रभाव, महत्ता और लोगों पर पड़ने वाले असर को दिखाता है।',
+        'asha'=>'यह सहम आपकी इच्छाओं और मनोकामनाओं के पूरा होने की संभावना बताता है।',
+        'samarthya'=>'यह सहम काम करने की आपकी शक्ति और क्षमता को दर्शाता है।',
+        'bhratru'=>'यह सहम भाई-बहनों से संबंध और उनसे मिलने वाले सुख को बताता है।',
+        'gaurav'=>'यह सहम आपको मिलने वाले मान-सम्मान और गौरव को दिखाता है।',
+        'rajya'=>'यह सहम सरकार, पद और अधिकार-पक्ष से लाभ या बाधा को बताता है।',
+        'tata'=>'यह सहम पिता से संबंध, उनके सुख और स्वास्थ्य को दर्शाता है।',
+        'matru'=>'यह सहम माता से संबंध और उनके सुख को बताता है।',
+        'suta'=>'यह सहम संतान से जुड़े सुख और शुभ समाचार को दर्शाता है।',
+        'jeevit'=>'यह सहम आपकी जीवनी-शक्ति, रोग-प्रतिरोध और आयुबल को बताता है।',
+        'ambu'=>'यह सहम जल और तरल-पदार्थ से जुड़े लाभ या भय को दिखाता है।',
+        'karma'=>'यह सहम आपके कार्य, नौकरी और व्यवसाय की स्थिति को दर्शाता है।',
+        'roga'=>'यह सहम रोग और स्वास्थ्य-कष्ट की संभावना को बताता है।',
+        'manmatha'=>'यह सहम प्रेम, आकर्षण और वैवाहिक-सुख को दर्शाता है।',
+        'kali'=>'यह सहम कलह, झगड़े और वाद-विवाद की संभावना को बताता है।',
+        'kshama'=>'यह सहम आपके धैर्य, सहनशीलता और क्षमा-भाव को दर्शाता है।',
+        'shastra'=>'यह सहम गहन अध्ययन, शास्त्र और विशेष विद्या में रुचि को बताता है।',
+        'bandhu'=>'यह सहम रिश्तेदारों और परिवार-वर्ग से सहयोग को दर्शाता है।',
+        'bandaka'=>'यह सहम रुकावट, अवरोध और बंधन जैसी बाधाओं को बताता है।',
+        'mrityu'=>'यह सहम बड़े संकट, जोखिम और मृत्यु-तुल्य भय को दर्शाता है।',
+        'pardesh'=>'यह सहम विदेश, दूर-यात्रा और प्रवास से जुड़ी बातों को बताता है।',
+        'dhana'=>'यह सहम धन-लाभ, आमदनी और आर्थिक स्थिति को दर्शाता है।',
+        'anyadara'=>'यह सहम पराए आकर्षण और मर्यादा से जुड़े जोखिम को बताता है।',
+        'anyakarma'=>'यह सहम मुख्य काम के अलावा दूसरे व अतिरिक्त कार्यों को दर्शाता है।',
+        'vanik'=>'यह सहम व्यापार और वाणिज्य से जुड़े लाभ को बताता है।',
+        'karyasiddhi'=>'यह सहम रुके हुए कामों के पूरा होने और सफलता को दर्शाता है।',
+        'vivaha'=>'यह सहम विवाह और वैवाहिक-संबंध के योग को बताता है।',
+        'suti'=>'यह सहम संतान-जन्म और प्रसव से जुड़ी बातों को दर्शाता है।',
+        'santapa'=>'यह सहम मानसिक चिंता, दुख और क्लेश की संभावना को बताता है।',
+        'shraddha'=>'यह सहम धर्म, भक्ति और श्रद्धा-भाव को दर्शाता है।',
+        'preeti'=>'यह सहम प्रेम, स्नेह और संबंधों की मिठास को बताता है।',
+        'bala'=>'यह सहम आपकी शारीरिक शक्ति और ऊर्जा को दर्शाता है।',
+        'tanu'=>'यह सहम शरीर और स्वास्थ्य की सामान्य स्थिति को बताता है।',
+        'jadya'=>'यह सहम आलस्य, जड़ता और सुस्ती की स्थिति को दर्शाता है।',
+        'vyapara'=>'यह सहम व्यापार, सौदे और लेन-देन की स्थिति को बताता है।',
+        'paniyapatana'=>'यह सहम जल-दुर्घटना और जल से जुड़े जोखिम को दर्शाता है।',
+        'ripu'=>'यह सहम शत्रु और विरोधियों की स्थिति को बताता है।',
+        'shaurya'=>'यह सहम आपके साहस, वीरता और पराक्रम को दर्शाता है।',
+        'upaya'=>'यह सहम समस्याओं के समाधान और युक्ति-उपाय को बताता है।',
+        'daridra'=>'यह सहम अभाव, दरिद्रता और आर्थिक तंगी की संभावना को दर्शाता है।',
+        'guruta'=>'यह सहम बड़प्पन, गौरव और ऊँचे पद की प्राप्ति को बताता है।',
+        'jalapatha'=>'यह सहम समुद्र और जल-मार्ग की यात्रा से जुड़ी बातों को दर्शाता है।',
+        'bandhana'=>'यह सहम बंधन, कैद और विधिक अवरोध के भय को बताता है।',
+        'duhita'=>'यह सहम कन्या-संतान और कन्या-पक्ष से जुड़े सुख को दर्शाता है।',
+        'ashva'=>'यह सहम वाहन और सवारी-सुख से जुड़ी बातों को बताता है।',
+    ];
 
 
     public static function lastError(): ?string
@@ -168,16 +221,40 @@ final class SahamRepository
                 }
             } catch (Throwable $e) { /* config optional */ }
 
+            // Easy-Hindi "what is this saham?" line. Optional DB column
+            // (saham_phal.explain_hi); missing column is tolerated. Baked text
+            // fills any gap so every saham always has an explanation.
+            try {
+                $es = $pdo->prepare('SELECT saham_key, explain_hi FROM saham_phal WHERE language = ?');
+                $es->execute([$language]);
+                foreach ($es as $r) {
+                    $ex = trim((string) ($r['explain_hi'] ?? ''));
+                    if ($ex !== '' && isset($phal[(string) $r['saham_key']])) {
+                        $phal[(string) $r['saham_key']]['explain'] = $ex;
+                    }
+                }
+            } catch (Throwable $e) { /* explain_hi column optional */ }
+
             if ($defs === []) { $defs = self::DEFAULT_DEFS; }      // table empty -> baked
             if ($phal === []) { $phal = self::DEFAULT_PHAL; }
-            return ['defs' => $defs, 'phal' => $phal, 'config' => self::config($config)];
+            return ['defs' => $defs, 'phal' => self::withExplain($phal), 'config' => self::config($config)];
         } catch (Throwable $e) {
             // DB unreachable: fall back to the baked classical data so the panel
             // still works (production DB, once imported, overrides this).
             self::$lastError = $e->getMessage();
             error_log('Saham rules load failed (using baked fallback): ' . $e->getMessage());
-            return ['defs' => self::DEFAULT_DEFS, 'phal' => self::DEFAULT_PHAL, 'config' => self::config([])];
+            return ['defs' => self::DEFAULT_DEFS, 'phal' => self::withExplain(self::DEFAULT_PHAL), 'config' => self::config([])];
         }
+    }
+
+    /** Ensure every phal entry carries an 'explain' line (baked fallback when unset). */
+    private static function withExplain(array $phal): array
+    {
+        foreach ($phal as $key => &$p) {
+            if (empty($p['explain'])) { $p['explain'] = self::DEFAULT_EXPLAIN[$key] ?? ''; }
+        }
+        unset($p);
+        return $phal;
     }
 
     /** Merge loaded config over saham_* defaults. */

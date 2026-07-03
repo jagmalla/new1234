@@ -117,6 +117,7 @@ final class SahamEngine
                 'sign_index' => $si, 'rashi_hi' => self::RASHI_HI[$si] ?? '', 'deg' => self::dms($degIn),
                 'house' => $house, 'sahamesh' => $sahamesh, 'sahamesh_hi' => self::PLANET_HI[$sahamesh] ?? $sahamesh,
                 'signifies' => (string) ($phal[$key]['signifies'] ?? ''),
+                'explain' => (string) ($phal[$key]['explain'] ?? ''),
             ];
         }
 
