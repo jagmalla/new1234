@@ -70,10 +70,14 @@
     var placeCell = lab('Place (search city)', fPlace, 'relative col-span-2');
     placeCell.appendChild(fResults);
     form.appendChild(placeCell);
-    form.appendChild(lab('Latitude (N+)', fLat));
-    form.appendChild(lab('Longitude (E+)', fLon));
-    form.appendChild(lab('Timezone (hrs E+)', fTz));
     inRoot.appendChild(form);
+
+    // Advanced (lat/lon/tz): auto-filled by the city search, so hidden by default.
+    var adv = h('div', 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mt-3 hidden');
+    adv.appendChild(lab('Latitude (N+)', fLat));
+    adv.appendChild(lab('Longitude (E+)', fLon));
+    adv.appendChild(lab('Timezone (hrs E+)', fTz));
+    inRoot.appendChild(adv);
 
     // Worldwide city search fills lat/lon/tz (tz offset at the gochar date).
     if (global.ABCitySearch) {
@@ -86,10 +90,18 @@
       });
     }
 
-    var bar = h('div', 'mt-3 flex items-center gap-3');
+    var bar = h('div', 'mt-3 flex flex-wrap items-center gap-3');
     var btn = h('button', 'bg-blue-600 text-white rounded px-4 py-2 text-sm font-semibold', 'Show transit');
+    btn.type = 'button';
+    var advBtn = h('button', 'text-sm text-blue-700 font-semibold border border-blue-200 rounded px-3 py-2 hover:bg-blue-50', '⚙ Advanced (Lat/Lon · Timezone)');
+    advBtn.type = 'button';
+    advBtn.setAttribute('aria-expanded', 'false');
+    advBtn.addEventListener('click', function () {
+      var hidden = adv.classList.toggle('hidden');
+      advBtn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+    });
     var status = h('span', 'text-xs text-gray-500');
-    bar.appendChild(btn); bar.appendChild(status);
+    bar.appendChild(btn); bar.appendChild(advBtn); bar.appendChild(status);
     inRoot.appendChild(bar);
 
     // Output: a header row (Gochar (Transit) + date / time / place) then the

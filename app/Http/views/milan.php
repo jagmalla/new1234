@@ -96,6 +96,10 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         .btn { background: var(--accent); color: #fff; border: 0; border-radius: 8px;
             padding: 10px 22px; font: inherit; font-weight: 700; cursor: pointer; }
         .btn:hover { filter: brightness(1.06); }
+        .btn-adv { background: #fff; color: var(--accent); border: 1px solid var(--accent);
+            border-radius: 8px; padding: 9px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+        .btn-adv:hover { background: #faf5ef; }
+        .adv-fields[hidden] { display: none; }
         /* --- result header --- */
         .res-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; }
         .mini { text-align: center; }
@@ -276,11 +280,13 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
                         <input id="<?= $p ?>-place" name="<?= $p ?>_place" value="<?= $h($in['place']) ?>" placeholder="शहर खोजें / Search city…" autocomplete="off">
                         <div id="<?= $p ?>-place-results" class="place-results"></div>
                     </div>
-                    <div class="row2">
-                        <div class="fld"><label>अक्षांश / Latitude</label><input id="<?= $p ?>-lat" name="<?= $p ?>_lat" value="<?= $h($in['lat']) ?>"></div>
-                        <div class="fld"><label>देशांतर / Longitude</label><input id="<?= $p ?>-lon" name="<?= $p ?>_lon" value="<?= $h($in['lon']) ?>"></div>
+                    <div class="adv-fields" hidden>
+                        <div class="row2">
+                            <div class="fld"><label>अक्षांश / Latitude</label><input id="<?= $p ?>-lat" name="<?= $p ?>_lat" value="<?= $h($in['lat']) ?>"></div>
+                            <div class="fld"><label>देशांतर / Longitude</label><input id="<?= $p ?>-lon" name="<?= $p ?>_lon" value="<?= $h($in['lon']) ?>"></div>
+                        </div>
+                        <div class="fld" style="max-width:140px"><label>समय क्षेत्र / TZ</label><input id="<?= $p ?>-tz" name="<?= $p ?>_tz" value="<?= $h($in['tz']) ?>"></div>
                     </div>
-                    <div class="fld" style="max-width:140px"><label>समय क्षेत्र / TZ</label><input id="<?= $p ?>-tz" name="<?= $p ?>_tz" value="<?= $h($in['tz']) ?>"></div>
                 </div>
                 <?php
             };
@@ -290,9 +296,22 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         </div>
         <div class="actions">
             <button class="btn" type="submit">मिलान करें</button>
+            <button class="btn-adv" type="button" id="milan-adv-toggle" aria-expanded="false">⚙ Advanced options (Lat/Lon · TZ)</button>
             <span class="banner">अयनांश: Lahiri</span>
         </div>
     </form>
+    <script>
+    (function () {
+        var t = document.getElementById('milan-adv-toggle');
+        if (!t) { return; }
+        t.addEventListener('click', function () {
+            var advs = document.querySelectorAll('.adv-fields');
+            var willShow = advs.length && advs[0].hidden;
+            advs.forEach(function (a) { a.hidden = !willShow; });
+            t.setAttribute('aria-expanded', willShow ? 'true' : 'false');
+        });
+    })();
+    </script>
 
     <?php if ($milan !== null): ?>
     <?php

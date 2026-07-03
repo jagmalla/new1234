@@ -25,25 +25,40 @@
         <label class="flex flex-col gap-1"><span class="text-gray-500">Time (HH:MM)</span>
             <input name="time" value="<?= $h($in['time']) ?>" placeholder="HH:MM or HH MM" class="border rounded px-2 py-1"></label>
 
-        <label class="flex flex-col gap-1 relative sm:col-span-2 lg:col-span-3"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
+        <label class="flex flex-col gap-1 relative sm:col-span-2 lg:col-span-4"><span class="text-gray-500">Place (search city, state or country — fills lat/lon/timezone)</span>
             <input id="b-place" name="place" value="<?= $h($in['place']) ?>" type="text" autocomplete="off" placeholder="Type a city, e.g. Moga or London…" class="border rounded px-2 py-1">
             <div id="b-place-results" class="absolute z-20 left-0 right-0 top-full mt-1 bg-white border rounded shadow max-h-60 overflow-y-auto hidden"></div></label>
+    </div>
+
+    <!-- Advanced: normally auto-filled by the city search, so hidden by default. -->
+    <div id="b-advanced" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3 hidden">
         <label class="flex flex-col gap-1"><span class="text-gray-500">Ayanamsa</span>
             <select name="ayanamsa" class="border rounded px-2 py-1 bg-white">
                 <?php foreach (['lahiri' => 'Lahiri (Chitrapaksha)', 'raman' => 'B.V. Raman', 'kp' => 'KP (Krishnamurti)', 'fagan_bradley' => 'Fagan-Bradley'] as $av => $al): ?>
                     <option value="<?= $h($av) ?>" <?= $in['ayanamsa'] === $av ? 'selected' : '' ?>><?= $h($al) ?></option>
                 <?php endforeach; ?>
             </select></label>
-
         <label class="flex flex-col gap-1"><span class="text-gray-500">Latitude</span>
             <input id="b-lat" name="lat" value="<?= $h($in['latIn']) ?>" class="border rounded px-2 py-1"></label>
         <label class="flex flex-col gap-1"><span class="text-gray-500">Longitude</span>
             <input id="b-lon" name="lon" value="<?= $h($in['lonIn']) ?>" class="border rounded px-2 py-1"></label>
         <label class="flex flex-col gap-1"><span class="text-gray-500">Timezone (east +)</span>
             <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
-        <div class="flex items-end">
-            <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold w-full">Calculate</button>
-        </div>
     </div>
-    <p class="text-xs text-gray-500 mt-2">Search any city worldwide to fill lat/lon/timezone, or type lat/lon directly (also accept DMS, e.g. 30N48'00). Timezone is the place's offset on the birth date.</p>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 mt-3">
+        <button type="button" id="b-adv-toggle" class="text-sm text-blue-700 font-semibold border border-blue-200 rounded px-3 py-2 hover:bg-blue-50" aria-expanded="false" aria-controls="b-advanced">⚙ Advanced options (Ayanamsa · Lat/Lon · Timezone)</button>
+        <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold">Calculate</button>
+    </div>
+    <p class="text-xs text-gray-500 mt-2">Search any city worldwide to fill lat/lon/timezone automatically. To type lat/lon or timezone by hand (also DMS, e.g. 30N48'00), open <b>Advanced options</b>. Timezone is the place's offset on the birth date.</p>
 </form>
+<script>
+(function () {
+    var t = document.getElementById('b-adv-toggle'), a = document.getElementById('b-advanced');
+    if (!t || !a) { return; }
+    t.addEventListener('click', function () {
+        var open = a.classList.toggle('hidden') === false;
+        t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+})();
+</script>
