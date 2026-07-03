@@ -112,6 +112,10 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .topbar-inner { max-width: 1400px; margin: 0 auto; padding: 10px 16px;
             display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
         .topbar .brand { font-family: 'Martel', serif; font-weight: 800; font-size: 1.25rem; line-height: 1.3; }
+        /* "Under testing" banner in the top-bar gap. */
+        .test-banner { flex: 1 1 220px; text-align: center; font-size: .82rem; font-weight: 600;
+            color: #F6C177; line-height: 1.35; min-width: 0; }
+        .test-banner a { color: #FFE3B3; text-decoration: underline; }
         .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
             flex-wrap: wrap; font-size: .85rem; color: #C9C2B4; }
         .topbar .meta b { color: #FFFFFF; font-weight: 600; }
@@ -389,6 +393,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 <header class="topbar">
     <div class="topbar-inner">
         <h1 class="brand" style="margin:0">Analysis of Karma</h1>
+        <div class="test-banner">System is Under Testing — Not Finalized Yet.<br>Feedback: <a href="mailto:analysisofkarma@gmail.com">analysisofkarma@gmail.com</a></div>
         <div class="meta">
             <span><b><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></b></span>
             <span><?= $h($in['date']) ?>, <?= $h($in['time']) ?></span>
