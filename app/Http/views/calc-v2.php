@@ -270,6 +270,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .saham-facts { font-size: .85rem; color: #453F37; margin-bottom: 4px; }
         .saham-phal { font-size: 1rem; line-height: 1.6; margin: 2px 0; }
         .saham-timing { font-size: .85rem; color: var(--haldi); margin-top: 5px; border-top: 1px dashed var(--line); padding-top: 5px; }
+        /* ताजिक योग pane (shares the saham card look). */
+        .tajik-matrix { border-collapse: collapse; font-size: .78rem; white-space: nowrap; }
+        .tajik-matrix th, .tajik-matrix td { border: 1px solid var(--line); padding: 3px 8px; text-align: center; }
+        .tajik-matrix thead th { background: #F4F1EA; }
+        .tajik-matrix .tm-sneha { background: #e2f0e8; color: #1c5138; font-weight: 700; }
+        .tajik-matrix .tm-vair  { background: #f4d9d4; color: #8A2F2F; font-weight: 700; }
+        .tajik-matrix .tm-none  { color: #9ca3af; }
+        .tajik-matrix .tm-self  { color: #d1d5db; }
         /* अष्टकवर्ग मत — the SAV/BAV opinion block inside each house card. */
         .av-mat { border-top: 1px dashed var(--line); padding-top: 8px; }
         .av-mat-title { font-weight: 700; font-size: 1rem; color: #7c3aed; margin-bottom: 4px; }
@@ -1487,8 +1495,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                     <span class="pick-tag">Varshaphal Prediction ▾</span>
                     <select id="vp-pred-type" class="l2-select">
                         <option value="saham">सहम — Sahams (50)</option>
+                        <option value="tajik">ताजिक योग — Tajik Yoga (16)</option>
                     </select>
                 </div>
+                <div id="vp-pred-saham">
                 <?php
                     $sah = $view['saham'] ?? null;
                     $sahams = ($sah && !empty($sah['sahams'])) ? $sah['sahams'] : [];
@@ -1566,6 +1576,11 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                     <div class="gps-sub"><?= $h((string) ($sah['error'] ?? 'वर्ष कुंडली गणना के बाद 50 सहम यहाँ दिखेंगे।')) ?></div>
                 </div>
                 <?php endif; ?>
+                </div><!-- /vp-pred-saham -->
+                <!-- ताजिक योग pane (16 Tajik yogas + sphuta drishti, migration 016) -->
+                <div id="vp-pred-tajik" class="hidden">
+                <?php require __DIR__ . '/_tajik_yoga.php'; ?>
+                </div><!-- /vp-pred-tajik -->
             </div>
         </div>
 
@@ -1993,6 +2008,65 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         apply();
       });
     });
+  })();
+
+  // Varshaphal prediction dropdown: switch between the सहम and ताजिक योग panes.
+  (function () {
+    var vpt = document.getElementById('vp-pred-type');
+    if (!vpt) { return; }
+    function applyPane() {
+      var v = vpt.value;
+      var s = document.getElementById('vp-pred-saham');
+      var t = document.getElementById('vp-pred-tajik');
+      if (s) { s.classList.toggle('hidden', v !== 'saham'); }
+      if (t) { t.classList.toggle('hidden', v !== 'tajik'); }
+    }
+    vpt.addEventListener('change', applyPane);
+    applyPane();
+  })();
+
+  // ताजिक योग view selector: "mudda" = the active Mudda-dasha lord's yogas
+  // (default), "main" = munthesh + varsha-lagnesh, "all" = every record,
+  // otherwise a single planet. Chart-level yogas (Ikkabal/Induvar) always show;
+  // the per-planet drishti rows show only in single-planet contexts.
+  (function () {
+    var sel = document.getElementById('tajik-select');
+    if (!sel) { return; }
+    var pane = document.getElementById('tajik-detail-pane');
+    var cards = document.querySelectorAll('#tajik-detail-pane .tajik-card');
+    var rows = document.querySelectorAll('#tajik-detail-pane .tajik-drow');
+    var empty = document.getElementById('tajik-empty');
+    function wanted(v) {
+      if (v === 'all') { return null; }
+      if (v === 'mudda') { return [pane.getAttribute('data-mudda')]; }
+      if (v === 'main') { return [pane.getAttribute('data-munthesh'), pane.getAttribute('data-lagnesh')]; }
+      return [v];
+    }
+    function apply() {
+      var v = sel.value, w = wanted(v), shown = 0;
+      cards.forEach(function (d) {
+        var isChart = d.getAttribute('data-chart') === '1';
+        var parts = (d.getAttribute('data-planets') || '').split(',');
+        var show = w === null || isChart || parts.some(function (p) { return w.indexOf(p) >= 0; });
+        d.classList.toggle('hidden', !show);
+        if (show && !isChart) { shown++; }
+      });
+      rows.forEach(function (r) {
+        var show = w !== null && w.indexOf(r.getAttribute('data-drow')) >= 0;
+        r.classList.toggle('hidden', !show);
+      });
+      if (empty) { empty.classList.toggle('hidden', !(w !== null && shown === 0)); }
+      if (pane) { pane.scrollTop = 0; }
+    }
+    sel.addEventListener('change', apply);
+    // Office-bearer chips jump to that planet's view.
+    document.querySelectorAll('.saham-chip[data-goto-planet]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        sel.value = b.getAttribute('data-goto-planet');
+        apply();
+      });
+    });
+    apply();
   })();
 
   // Karaka copy button (Devanagari-safe).

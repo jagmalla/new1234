@@ -153,6 +153,9 @@ final class CalcController
             // the Varshaphal prediction panel with the active Mudda-mahadasha's
             // related sahams highlighted.
             'saham' => $this->saham($vp ?? null, (float) ($meta['tz'] ?? 0.0), (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Tajik drishti + 16 yogas (migration 016) from the same Varshaphal
+            // chart — the "ताजिक योग" option of the Varshaphal prediction dropdown.
+            'tajik' => $this->tajik($vp ?? null, (float) ($meta['tz'] ?? 0.0), (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.
@@ -323,6 +326,49 @@ final class CalcController
         );
         $data['error'] = \AutoBusiness\Astro\Saham\SahamRepository::lastError();
         $data['active_lord'] = $activeLord;
+        $data['tz'] = $tz;
+        return $data;
+    }
+
+    /**
+     * Build the Tajik-yoga payload for the Varshaphal panel: sphuta drishti
+     * matrix + 16-yoga records from the annual chart, with the active Mudda
+     * mahadasha lord (default view) and the year's office-bearers (मुख्य योग
+     * view). Degrades to an error note when the chart is unavailable.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function tajik(?array $vp, float $tz, string $lang): ?array
+    {
+        if ($vp === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Tajik\TajikRepository::load($lang);   // baked fallback when DB down
+
+        // Active Mudda mahadasha = the annual period containing "now".
+        $nowJd = \AutoBusiness\Astro\Time\JulianDay::fromGregorian(
+            (int) date('Y'), (int) date('m'), (int) date('d'), (int) date('H'), (int) date('i'), 0.0, $tz
+        );
+        $activeLord = null;
+        $activePeriod = null;
+        foreach (($vp['mudda_dasha'] ?? []) as $md) {
+            if ($nowJd >= (float) $md['start_jd'] && $nowJd < (float) $md['end_jd']) {
+                $activeLord = (string) $md['lord'];
+                $activePeriod = $md;
+                break;
+            }
+        }
+        if ($activeLord === null && !empty($vp['mudda_dasha'])) {
+            $activeLord = (string) $vp['mudda_dasha'][0]['lord'];
+            $activePeriod = $vp['mudda_dasha'][0];
+        }
+
+        $data = $this->safe(
+            static fn() => \AutoBusiness\Astro\Tajik\TajikYogaEngine::compute($vp, $rules, $activeLord),
+            ['chart_yogas' => [], 'yogas' => [], 'chips' => [], 'drishti' => [], 'roles' => [], 'is_day' => true]
+        );
+        $data['error'] = \AutoBusiness\Astro\Tajik\TajikRepository::lastError();
+        $data['active_period'] = $activePeriod;
         $data['tz'] = $tz;
         return $data;
     }
