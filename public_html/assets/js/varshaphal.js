@@ -126,17 +126,24 @@
         .then(function (v) {
           if (v.error) { status.textContent = 'Error: ' + v.error; return; }
           status.textContent = '';
-          var varshesh = v.varshesh
-            ? '<div><b>Varshesh (Year Lord)</b> ' + v.varshesh.lord
-                + ' <span class="text-gray-500">(Panchavargeeya Bala ' + (v.varshesh.bala20 != null ? v.varshesh.bala20 : v.varshesh.bala) + ')</span></div>'
-            : '';
+          // Compact, colourful summary — only the four essentials the owner
+          // asked to keep (Year / Varshesh / Age / Varshaphal Date). The
+          // Varshesh value is tinted with that planet's colour.
+          var pcolS = (global.ABDasha && ABDasha.PCOL) || {};
+          var ylLord = v.varshesh ? v.varshesh.lord : '—';
+          var ylColor = pcolS[ylLord] || '#b45309';
+          function sumItem(label, value, color) {
+            return '<div class="vp-sum-item" style="border-left-color:' + color + '">'
+              + '<span class="vp-sum-lab">' + label + '</span>'
+              + '<span class="vp-sum-val" style="color:' + color + '">' + value + '</span></div>';
+          }
           summary.innerHTML =
-              '<div><b>Year</b> ' + v.year + '</div>'
-            + '<div><b>Varsha Lagna</b> ' + v.varsha_lagna.sign + ' (lord ' + v.varsha_lagna.lord + ')</div>'
-            + '<div><b>Muntha</b> ' + v.muntha.sign + ' (lord ' + v.muntha.lord + ')</div>'
-            + varshesh
-            + '<div><b>Age</b> ' + v.age_completed + '</div>'
-            + '<div><b>Varshaphal Date</b>: ' + (v.varsha_start || '—') + '</div>';
+              '<div class="vp-sum-grid">'
+            + sumItem('वर्ष / Year', v.year, '#2563eb')
+            + sumItem('वर्षेश / Varshesh', ylLord, ylColor)
+            + sumItem('आयु / Age', v.age_completed, '#7c3aed')
+            + sumItem('वर्षारंभ / Date', (v.varsha_start || '—'), '#0f766e')
+            + '</div>';
           // Show the Muntha as a "MUN" marker in its house on the Varsha chart.
           var chart = v.chart;
           if (v.muntha_sign_index != null) {

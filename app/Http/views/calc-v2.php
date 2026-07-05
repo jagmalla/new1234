@@ -270,6 +270,15 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .saham-facts { font-size: .85rem; color: #453F37; margin-bottom: 4px; }
         .saham-phal { font-size: 1rem; line-height: 1.6; margin: 2px 0; }
         .saham-timing { font-size: .85rem; color: var(--haldi); margin-top: 5px; border-top: 1px dashed var(--line); padding-top: 5px; }
+        /* Varshaphal year summary (top-right of the year box) — big, colourful. */
+        .vp-sum-grid { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: stretch; }
+        .vp-sum-item { display: flex; flex-direction: column; justify-content: center;
+            border: 1px solid var(--line); border-left-width: 5px; border-radius: 10px;
+            padding: 6px 16px; min-width: 118px; background: #fff; }
+        .vp-sum-lab { font-size: .72rem; font-weight: 700; letter-spacing: .01em; color: var(--ink-soft);
+            text-transform: uppercase; margin-bottom: 1px; }
+        .vp-sum-val { font-size: 1.4rem; font-weight: 800; line-height: 1.15; }
+        @media (max-width: 480px) { .vp-sum-val { font-size: 1.2rem; } .vp-sum-item { min-width: 104px; padding: 5px 12px; } }
         /* ताजिक योग pane (shares the saham card look). */
         .tajik-matrix { border-collapse: collapse; font-size: .78rem; white-space: nowrap; }
         .tajik-matrix th, .tajik-matrix td { border: 1px solid var(--line); padding: 3px 8px; text-align: center; }
@@ -1483,8 +1492,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <!-- Varshaphal year selection + summary details -->
         <div id="card-vpbox" class="bg-white rounded-lg shadow p-4">
             <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
-            <div id="vp-box" class="mb-3"></div>
-            <div id="vp-summary" class="text-sm"></div>
+            <!-- Year selector on the LEFT, the colourful year summary fills the
+                 empty space on the RIGHT (moved up here from below the box). -->
+            <div class="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-10">
+                <div id="vp-box"></div>
+                <div id="vp-summary" class="flex-1"></div>
+            </div>
         </div>
 
         <!-- ROW 1: Varsha (Annual) chart on the LEFT + Varshaphal prediction
