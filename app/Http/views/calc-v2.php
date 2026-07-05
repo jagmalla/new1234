@@ -1527,6 +1527,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         <option value="saham">सहम — Sahams (50)</option>
                         <option value="tajik">ताजिक योग — Tajik Yoga (16)</option>
                         <option value="varshesh">वर्षेश फल — Year Lord</option>
+                        <option value="muntha">मुंथा फल — Muntha</option>
                     </select>
                 </div>
                 <div id="vp-pred-saham">
@@ -1540,6 +1541,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div id="vp-pred-varshesh" class="hidden">
                 <?php require __DIR__ . '/_varshesh_phal.php'; ?>
                 </div><!-- /vp-pred-varshesh -->
+                <!-- मुंथा फल pane (Muntha bhava/graha/Rahu + specials, migration 019) -->
+                <div id="vp-pred-muntha" class="hidden">
+                <?php require __DIR__ . '/_muntha_phal.php'; ?>
+                </div><!-- /vp-pred-muntha -->
             </div>
         </div>
 
@@ -1943,9 +1948,11 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         var s = document.getElementById('vp-pred-saham');
         var t = document.getElementById('vp-pred-tajik');
         var w = document.getElementById('vp-pred-varshesh');
+        var m = document.getElementById('vp-pred-muntha');
         if (s) { s.classList.toggle('hidden', v !== 'saham'); }
         if (t) { t.classList.toggle('hidden', v !== 'tajik'); }
         if (w) { w.classList.toggle('hidden', v !== 'varshesh'); }
+        if (m) { m.classList.toggle('hidden', v !== 'muntha'); }
       };
       vpt.onchange = applyPane;
       applyPane();
