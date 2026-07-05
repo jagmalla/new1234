@@ -571,7 +571,7 @@ final class CalcController
             $lang = (string) ($_GET['lang'] ?? 'hi');
             $rules = \AutoBusiness\Astro\Gochar\GocharRepository::load($lang);
             $gp = $this->safe(
-                static fn() => \AutoBusiness\Astro\Gochar\GocharPhalEngine::compute($natal, $gochar['transits'], $rules),
+                static fn() => \AutoBusiness\Astro\Gochar\GocharPhalEngine::compute($natal, $gochar['transits'], $rules, $jdG),
                 null
             );
             if (is_array($gp)) {

@@ -35,8 +35,43 @@ if ($gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']))):
     </div>
 
     <div id="gochar-detail-pane" class="overflow-y-auto pr-1" style="max-height:460px">
+        <?php $ss = $gp['shani_special'] ?? null; if ($ss !== null):
+            $sevTone = static fn(int $s): string => $s <= 1 ? 'gc-shubh' : ($s === 2 ? 'gc-mishrit' : 'gc-ashubh');
+        ?>
+        <!-- LAYER 4 — Shani Sade Sati / Paya (additive; separate from Layer 1) -->
+        <div class="gph-section-title">शनि विशेष <span class="text-xs text-gray-400 font-normal">(Layer 4 · साढ़े साती / ढैय्या / पंचम + पाया)</span></div>
+        <?php if (!empty($ss['active'])): ?>
+        <div class="saham-card" style="border-left:4px solid #1d4ed8">
+            <div class="saham-card-head">
+                <span class="saham-name" style="color:#1d4ed8">🪐 <?= $h($ss['type_hi']) ?></span>
+                <span class="gc-chip <?= $sevTone((int) $ss['severity']) ?>">तीव्रता: <?= $h($ss['severity_hi']) ?> (<?= (int) $ss['severity'] ?>/3)</span>
+                <span class="text-xs text-gray-500">शनि चन्द्र-राशि से <?= (int) $ss['house'] ?>वें · <?= (int) $ss['occurrence'] ?>री बार · नक्षत्र-स्वामी <?= $h($ss['nak_lord']) ?></span>
+            </div>
+            <?php if (!empty($ss['phal'])): ?><div class="saham-phal">● <?= $h($ss['phal']) ?></div><?php endif; ?>
+            <?php if (!empty($ss['general'])): ?><div class="saham-facts"><?= $h($ss['general']) ?></div><?php endif; ?>
+            <?php foreach (($ss['severity_why'] ?? []) as $w): ?>
+                <div class="gph-note gph-info"><?= $h($w) ?></div>
+            <?php endforeach; ?>
+            <?php if (!empty($ss['events'])): ?>
+            <div class="saham-facts" style="margin-top:4px">प्रभावित जन्म-ग्रह (युति/दृष्टि):
+                <?php foreach ($ss['events'] as $ev): ?><b style="color:<?= $pcolor($ev['planet']) ?>"><?= $h($ev['planet_hi']) ?></b> (<?= $h($ev['how']) ?>) <?php endforeach; ?></div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($ss['paya'])): $py = $ss['paya']; ?>
+        <div class="saham-card">
+            <div class="saham-card-head">
+                <span class="saham-name">शनि पाया — <?= $h($py['metal']) ?></span>
+                <span class="gc-chip <?= $py['shubh'] ? 'gc-shubh' : 'gc-ashubh' ?>"><?= $py['shubh'] ? 'शुभ' : 'अशुभ' ?></span>
+            </div>
+            <div class="saham-phal">● <?= $h($py['effect']) ?></div>
+            <div class="gph-note gph-info">पाया शनि के राशि-प्रवेश का स्वतन्त्र संकेत है — ऊपर के भाव-फल (Layer 1) से अलग; इनके अंक जोड़े नहीं जाते।</div>
+        </div>
+        <?php endif; ?>
+        <?php endif; ?>
+
         <!-- LAYER 1 + 2 -->
-        <div class="gph-section-title">चन्द्र-लग्न भाव-फल <span class="text-xs text-gray-400 font-normal">(Layer 1 · भाव-गोचर)</span></div>
+        <div class="gph-section-title" style="margin-top:10px">चन्द्र-लग्न भाव-फल <span class="text-xs text-gray-400 font-normal">(Layer 1 · भाव-गोचर)</span></div>
         <?php foreach ($l1 as $e): ?>
         <div class="saham-card gochar-card" data-planet="<?= $h($e['planet']) ?>">
             <div class="saham-card-head">

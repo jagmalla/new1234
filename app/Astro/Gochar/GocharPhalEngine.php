@@ -34,7 +34,7 @@ final class GocharPhalEngine
      * @param array<string,mixed> $rules   GocharRepository::load output
      * @return array<string,mixed>
      */
-    public static function compute(array $natal, array $transits, array $rules): array
+    public static function compute(array $natal, array $transits, array $rules, ?float $transitJd = null): array
     {
         $cfg = $rules['config'] ?? [];
         $housePhal = $rules['house_phal'] ?? [];
@@ -145,11 +145,30 @@ final class GocharPhalEngine
             $layer3 = self::layer3($transits, $natalPlanets, $rules['natal_combo'] ?? [], $tSign);
         }
 
+        // ---------------- LAYER 4 — Shani Sade Sati / Paya (additive overlay) ----------------
+        // Detection + severity + Paya from the natal Moon vs transit Saturn. This
+        // does NOT alter any Layer-1 Saturn text (C16); the Paya score is kept
+        // separate (C15).
+        $shaniSpecial = null;
+        if (isset($transits['Saturn']) && ($cfg['sadesati_show'] ?? '1') === '1') {
+            $ssRules = SadeSatiRepository::load((string) ($cfg['lang'] ?? 'hi'));
+            $running = null; $age = 0.0;
+            $natalJd = (float) ($natal['meta']['jd_ut'] ?? 0.0);
+            $moonLon = (float) ($natalPlanets['Moon']['sidereal_lon'] ?? 0.0);
+            if ($transitJd !== null && $natalJd > 0.0) {
+                $age = ($transitJd - $natalJd) / 365.2425;
+                $chain = \AutoBusiness\Astro\Calc\VimshottariDasha::running($moonLon, $natalJd, $transitJd);
+                $running = $chain['maha'] ?? null;   // running Mahadasha lord at the transit date
+            }
+            $shaniSpecial = SadeSatiEngine::compute($natal, $transits['Saturn'], $running, $age, $ssRules);
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
             'layer1' => $layer1,
             'layer3' => $layer3,
+            'shani_special' => $shaniSpecial,
             'has_av' => $bav !== [],
         ];
     }
