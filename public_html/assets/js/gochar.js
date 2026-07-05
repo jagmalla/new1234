@@ -159,6 +159,13 @@
     }
 
     btn.addEventListener('click', fetchGochar);
+    // Changing the date or time (or the advanced lat/lon/tz) recomputes at once,
+    // so the transit chart AND the Gochar Phal predictions follow the new
+    // moment without needing the button. 'change' fires on commit/blur, not on
+    // every keystroke, so this is one fetch per change.
+    [fDate, fTime, fLat, fLon, fTz].forEach(function (i) {
+      i.addEventListener('change', fetchGochar);
+    });
 
     // Default to the viewer's IP location — city, state, country + lat/lon/tz —
     // and the current date/time, then compute (no permission prompt).
