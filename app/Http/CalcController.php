@@ -156,6 +156,9 @@ final class CalcController
             // Tajik drishti + 16 yogas (migration 016) from the same Varshaphal
             // chart — the "ताजिक योग" option of the Varshaphal prediction dropdown.
             'tajik' => $this->tajik($vp ?? null, (float) ($meta['tz'] ?? 0.0), (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Varshesh (year-lord) selection + phal (migration 018) — the
+            // "वर्षेश फल" option of the Varshaphal prediction dropdown.
+            'varshesh' => $this->varshesh($vp ?? null, $chart, (float) ($meta['tz'] ?? 0.0), (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.
@@ -374,6 +377,37 @@ final class CalcController
     }
 
     /**
+     * Build the Varshesh (year-lord) payload for the Varshaphal panel: the
+     * classical selection trail + band-graded phal + shloka 37–44 modifiers.
+     * Needs the natal chart (shloka-37 natal band) and the Tajik rules (lagna
+     * drishti + yoga detection). @return array<string,mixed>|null
+     */
+    private function varshesh(?array $vp, ?array $chart, float $tz, string $lang): ?array
+    {
+        if ($vp === null || $chart === null) {
+            return null;
+        }
+        $tajik = \AutoBusiness\Astro\Tajik\TajikRepository::load($lang);
+        $rules = \AutoBusiness\Astro\Varshesh\VarsheshRepository::load($lang);
+        $nowJd = \AutoBusiness\Astro\Time\JulianDay::fromGregorian(
+            (int) date('Y'), (int) date('m'), (int) date('d'), (int) date('H'), (int) date('i'), 0.0, $tz
+        );
+        $activeLord = null;
+        foreach (($vp['mudda_dasha'] ?? []) as $md) {
+            if ($nowJd >= (float) $md['start_jd'] && $nowJd < (float) $md['end_jd']) { $activeLord = (string) $md['lord']; break; }
+        }
+        $data = $this->safe(
+            static fn() => \AutoBusiness\Astro\Varshesh\VarsheshEngine::compute($vp, $chart, $tajik, $rules, $activeLord),
+            null
+        );
+        if (is_array($data)) {
+            $data['error'] = \AutoBusiness\Astro\Varshesh\VarsheshRepository::lastError();
+            $data['tz'] = $tz;
+        }
+        return $data;
+    }
+
+    /**
      * Build the Planet Prediction payload: for each planet, the house(s) it
      * rules (with the Bhavesh Phal text for "lord of that house placed in its
      * current house") and its placement (Graha-in-Bhava, populated later).
@@ -568,6 +602,7 @@ final class CalcController
             $view = [
                 'saham' => $this->saham($vp, $tz, $lang),
                 'tajik' => $this->tajik($vp, $tz, $lang),
+                'varshesh' => $this->varshesh($vp, $natal, $tz, $lang),
             ];
             $chart = $natal;
             $views = dirname(__DIR__) . '/Http/views/';
@@ -592,6 +627,7 @@ final class CalcController
                 'mudda_dasha' => $vp['mudda_dasha'],
                 'saham_html' => $frag('_saham_pane.php'),
                 'tajik_html' => $frag('_tajik_yoga.php'),
+                'varshesh_html' => $frag('_varshesh_phal.php'),
                 'row3_html' => $frag('_varsha_bala_cards.php'),
                 'positions_html' => $frag('_varsha_positions.php'),
             ], JSON_UNESCAPED_UNICODE);

@@ -1526,6 +1526,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                     <select id="vp-pred-type" class="l2-select">
                         <option value="saham">सहम — Sahams (50)</option>
                         <option value="tajik">ताजिक योग — Tajik Yoga (16)</option>
+                        <option value="varshesh">वर्षेश फल — Year Lord</option>
                     </select>
                 </div>
                 <div id="vp-pred-saham">
@@ -1535,6 +1536,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div id="vp-pred-tajik" class="hidden">
                 <?php require __DIR__ . '/_tajik_yoga.php'; ?>
                 </div><!-- /vp-pred-tajik -->
+                <!-- वर्षेश फल pane (year-lord selection + phal, migration 018) -->
+                <div id="vp-pred-varshesh" class="hidden">
+                <?php require __DIR__ . '/_varshesh_phal.php'; ?>
+                </div><!-- /vp-pred-varshesh -->
             </div>
         </div>
 
@@ -1937,8 +1942,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         var v = vpt.value;
         var s = document.getElementById('vp-pred-saham');
         var t = document.getElementById('vp-pred-tajik');
+        var w = document.getElementById('vp-pred-varshesh');
         if (s) { s.classList.toggle('hidden', v !== 'saham'); }
         if (t) { t.classList.toggle('hidden', v !== 'tajik'); }
+        if (w) { w.classList.toggle('hidden', v !== 'varshesh'); }
       };
       vpt.onchange = applyPane;
       applyPane();
