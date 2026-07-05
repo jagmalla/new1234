@@ -135,19 +135,30 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             border-radius: 2px; box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor; }
         #menu-overlay { position: fixed; inset: 0; background: rgba(20,16,10,.5); z-index: 55; }
 
-        /* ---- Overview tiles (compact; birth info included) ---- */
-        .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); gap: 8px; }
+        /* ---- Overview tiles (colourful, larger; birth info included) ---- */
+        .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px; }
         @media (max-width: 699px) { .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        .ov-tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(38,34,28,.08); padding: 6px 10px; min-width: 0; }
-        .ov-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-soft);
+        .ov-tile { background: var(--ov-bg, #fff); border: 1px solid var(--line);
+            border-left: 5px solid var(--ov-acc, var(--sindoor)); border-radius: 12px;
+            box-shadow: 0 2px 7px rgba(38,34,28,.10); padding: 9px 14px; min-width: 0;
+            transition: transform .12s ease, box-shadow .12s ease; }
+        .ov-tile:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(38,34,28,.16); }
+        .ov-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .6px; font-weight: 800;
+            color: var(--ov-acc, var(--ink-soft)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ov-value { font-size: 1.32rem; font-weight: 800; color: var(--ov-acc, var(--ink)); line-height: 1.22;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ov-value { font-size: .98rem; font-weight: 700; color: var(--ink); line-height: 1.4;
+        .ov-sub { font-size: .76rem; font-weight: 600; color: var(--ink-soft);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ov-value.acc-dasha { color: var(--sindoor); }
-        .ov-value.acc-yoga  { color: var(--shubh); }
-        .ov-sub { font-size: .72rem; color: var(--ink-soft);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 480px) { .ov-value { font-size: 1.14rem; } }
+        /* Per-tile accent + soft tinted background (Name·DOB·Place·Lagna·Moon·Sun·Dasha·Yoga). */
+        .ov-tile:nth-child(1) { --ov-acc:#475569; --ov-bg:#f1f5f9; }
+        .ov-tile:nth-child(2) { --ov-acc:#0f766e; --ov-bg:#ecfdf5; }
+        .ov-tile:nth-child(3) { --ov-acc:#b45309; --ov-bg:#fdf6e9; }
+        .ov-tile:nth-child(4) { --ov-acc:#7c3aed; --ov-bg:#f6f1ff; }
+        .ov-tile:nth-child(5) { --ov-acc:#0891b2; --ov-bg:#ecfeff; }
+        .ov-tile:nth-child(6) { --ov-acc:#dc2626; --ov-bg:#fef2f2; }
+        .ov-tile:nth-child(7) { --ov-acc:#c2410c; --ov-bg:#fff3ec; }
+        .ov-tile:nth-child(8) { --ov-acc:#16a34a; --ov-bg:#f0fdf4; }
 
         /* ---- Three-column shell (Phase 2) ---- */
         .l2-wrap { max-width: 1400px; }

@@ -34,6 +34,20 @@
   function sel(x) { return (typeof x === 'string') ? document.querySelector(x) : x; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  // Date is entered/shown as DD-MM-YYYY; the endpoint + Date() need YYYY-MM-DD.
+  function ddmmToISO(s) {
+    var m = String(s || '').trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);
+    return m ? (m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2)) : String(s || '');
+  }
+  // Time is entered/shown as 24-hour HH:MM; tolerate a stray am/pm on input.
+  function norm24(s) {
+    s = String(s || '').trim();
+    var m = s.match(/^(\d{1,2}):(\d{2})\s*([ap]m)?$/i);
+    if (!m) { return s; }
+    var h = parseInt(m[1], 10), mm = m[2];
+    if (m[3]) { var pm = /p/i.test(m[3]); if (pm && h < 12) { h += 12; } if (!pm && h === 12) { h = 0; } }
+    return ('0' + h).slice(-2) + ':' + mm;
+  }
 
   function init(cfg) {
     cfg = cfg || {};
@@ -45,12 +59,15 @@
     inRoot.innerHTML = '';
     var now = new Date();
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-    var today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+    // DD-MM-YYYY date and 24-hour HH:MM time (matches the birth form's format).
+    var today = pad(now.getDate()) + '-' + pad(now.getMonth() + 1) + '-' + now.getFullYear();
     var hhmm = pad(now.getHours()) + ':' + pad(now.getMinutes());
 
     var form = h('div', 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm');
-    var fDate = h('input'); fDate.type = 'date'; fDate.value = today;
-    var fTime = h('input'); fTime.type = 'time'; fTime.value = hhmm;
+    var fDate = h('input'); fDate.type = 'text'; fDate.value = today;
+    fDate.placeholder = 'DD-MM-YYYY'; fDate.setAttribute('inputmode', 'numeric');
+    var fTime = h('input'); fTime.type = 'text'; fTime.value = hhmm;
+    fTime.placeholder = 'HH:MM'; fTime.setAttribute('inputmode', 'numeric');
     [fDate, fTime].forEach(function (i) { i.className = 'border rounded px-2 py-1'; });
     var fPlace = h('input', 'border rounded px-2 py-1'); fPlace.type = 'text';
     fPlace.placeholder = 'Type a city…'; fPlace.autocomplete = 'off';
@@ -65,8 +82,8 @@
       l.appendChild(h('span', 'text-gray-500', text)); l.appendChild(node); return l;
     }
 
-    form.appendChild(lab('Date', fDate));
-    form.appendChild(lab('Time', fTime));
+    form.appendChild(lab('Date (DD-MM-YYYY)', fDate));
+    form.appendChild(lab('Time (24h HH:MM)', fTime));
     var placeCell = lab('Place (search city)', fPlace, 'relative col-span-2');
     placeCell.appendChild(fResults);
     form.appendChild(placeCell);
@@ -84,7 +101,7 @@
       global.ABCitySearch.init({
         input: fPlace, results: fResults, lat: fLat, lon: fLon, tz: fTz,
         getDate: function () {
-          var dt = new Date(fDate.value + 'T' + (fTime.value || '12:00') + ':00');
+          var dt = new Date(ddmmToISO(fDate.value) + 'T' + (norm24(fTime.value) || '12:00') + ':00');
           return isNaN(dt) ? new Date() : dt;
         }
       });
@@ -115,7 +132,7 @@
     function fetchGochar() {
       status.textContent = 'calculating…';
       var q = new URLSearchParams({
-        date: fDate.value, time: fTime.value,
+        date: ddmmToISO(fDate.value), time: norm24(fTime.value),
         lat: fLat.value, lon: fLon.value, tz: fTz.value,
         bdate: birth.date || '', btime: birth.time || '',
         blat: birth.lat != null ? birth.lat : '', blon: birth.lon != null ? birth.lon : '',
