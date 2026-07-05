@@ -566,7 +566,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         $ovPrat  = (string) ($dashaNow['pratyantar']['lord'] ?? '');
     ?>
     <?php $ovSun = (string) ($chart['planets']['Sun']['sign'] ?? ''); ?>
-    <div class="ov-tiles">
+    <div id="ov-strip" class="ov-tiles">
         <div class="ov-tile">
             <div class="ov-label">Name</div>
             <div class="ov-value"><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></div>
@@ -2202,6 +2202,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   function showSection(key, focusPred) {
     var homeMode = key === 'home';
     var customMode = key === 'custom';
+    // Hide the top overview strip (Name/DOB/Lagna/… tiles) on New / Profile and
+    // Custom Screen — those pages don't want the summary header.
+    var ov = document.getElementById('ov-strip');
+    if (ov) { ov.classList.toggle('hidden', key === 'profile' || key === 'custom'); }
     var cp = document.getElementById('chart-panel');
     var pp = document.getElementById('pred-panel');
     if (cp) cp.classList.toggle('hidden', !homeMode);
