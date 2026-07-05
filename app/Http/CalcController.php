@@ -541,6 +541,25 @@ final class CalcController
             $natalAscSign = (int) $natal['ascendant']['sign_index'];
             $munthaSignIndex = (($natalAscSign + (int) $vp['age_completed']) % 12 + 12) % 12;
 
+            // Year-dependent page fragments: the prediction panes (सहम, ताजिक
+            // योग), the Panchavargeeya-Bala/Year-Lord cards and the annual
+            // positions table are re-rendered server-side with the SAME
+            // partials calc-v2 uses, so a year change updates every
+            // prediction/calculation, not just the chart and Mudda dasha.
+            $lang = (string) ($_GET['lang'] ?? 'hi');
+            $view = [
+                'saham' => $this->saham($vp, $tz, $lang),
+                'tajik' => $this->tajik($vp, $tz, $lang),
+            ];
+            $chart = $natal;
+            $views = dirname(__DIR__) . '/Http/views/';
+            require $views . '_varsha_helpers.php';   // $h/$pcolor/$grahaHi/$rashiHi
+            $frag = static function (string $file) use ($views, $view, $vp, $chart, $forYear, $h, $pcolor, $grahaHi, $rashiHi): string {
+                ob_start();
+                require $views . $file;
+                return (string) ob_get_clean();
+            };
+
             echo json_encode([
                 'year' => $forYear,
                 'age_completed' => $vp['age_completed'],
@@ -553,6 +572,10 @@ final class CalcController
                 'chart' => $engine->northPayload($vp['varsha_chart']),
                 'ascendant_formatted' => $vp['varsha_chart']['ascendant']['formatted'],
                 'mudda_dasha' => $vp['mudda_dasha'],
+                'saham_html' => $frag('_saham_pane.php'),
+                'tajik_html' => $frag('_tajik_yoga.php'),
+                'row3_html' => $frag('_varsha_bala_cards.php'),
+                'positions_html' => $frag('_varsha_positions.php'),
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(400);

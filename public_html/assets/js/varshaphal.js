@@ -128,7 +128,7 @@
           status.textContent = '';
           var varshesh = v.varshesh
             ? '<div><b>Varshesh (Year Lord)</b> ' + v.varshesh.lord
-                + ' <span class="text-gray-500">(Panchavargeeya Bala ' + v.varshesh.bala + ')</span></div>'
+                + ' <span class="text-gray-500">(Panchavargeeya Bala ' + (v.varshesh.bala20 != null ? v.varshesh.bala20 : v.varshesh.bala) + ')</span></div>'
             : '';
           summary.innerHTML =
               '<div><b>Year</b> ' + v.year + '</div>'
@@ -152,6 +152,16 @@
           // the current period is highlighted and its Mahadasha auto-expands.
           ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, now: nowJd });
           setTimeout(syncMuddaHeight, 160);
+          // Year-dependent page fragments (server-rendered by the endpoint):
+          // सहम + ताजिक योग prediction panes, Panchavargeeya-Bala / Year-Lord
+          // cards and the annual positions table all follow the selected year.
+          [['vp-pred-saham', v.saham_html], ['vp-pred-tajik', v.tajik_html],
+           ['vp-row3', v.row3_html], ['card-varshadet', v.positions_html]]
+            .forEach(function (f) {
+              var el = document.getElementById(f[0]);
+              if (el && f[1] != null) { el.innerHTML = f[1]; }
+            });
+          if (global.ABBindVarshaPred) { global.ABBindVarshaPred(); }
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }

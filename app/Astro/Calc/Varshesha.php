@@ -49,45 +49,64 @@ final class Varshesha
         'Sun' => 10.0, 'Moon' => 33.0, 'Mars' => 298.0, 'Mercury' => 165.0,
         'Jupiter' => 95.0, 'Venus' => 357.0, 'Saturn' => 200.0,
     ];
-    private const MALE = ['Sun', 'Mars', 'Jupiter'];
-    private const NEUTER = ['Mercury', 'Saturn'];
-    private const FEMALE = ['Moon', 'Venus'];
 
     /**
      * @param array<string,mixed> $varshaChart CalculationEngine::computeChart output
      * @param int $munthaSign      Muntha sign index
      * @param int $varshaLagnaSign annual ascendant sign index
      * @param int $janmaLagnaSign  birth ascendant sign index
-     * @return array{lord:string, lord_hi:string, bala:float, candidates:list<array<string,mixed>>}
+     * @return array{lord:string, lord_hi:string, bala:float, bala20:float,
+     *   candidates:list<array<string,mixed>>, offices:list<array<string,mixed>>,
+     *   table:array<string,array<string,float>>}
      */
     public static function compute(array $varshaChart, int $munthaSign, int $varshaLagnaSign, int $janmaLagnaSign): array
     {
         $planets = $varshaChart['planets'] ?? [];
         $isDay = (bool) ($varshaChart['is_day'] ?? true);
 
+        // Full Panchavargeeya strength table (all 7 planets, PL "Varshaphala
+        // strengths" layout) — computed once, reused for every office-bearer.
+        $table = [];
+        foreach (array_keys(self::PLANET_HI) as $pl) {
+            if (isset($planets[$pl])) {
+                $table[$pl] = self::components($pl, $planets);
+            }
+        }
+
         // ---- the five office-bearers (Panchadhikari), in tie-break priority ----
         $offices = [
-            ['office' => 'मुन्थेश (मुन्था स्वामी)',       'planet' => Charts::signLord($munthaSign)],
-            ['office' => 'वर्ष-लग्नेश (वर्ष लग्न स्वामी)', 'planet' => Charts::signLord($varshaLagnaSign)],
-            ['office' => 'जन्म-लग्नेश (जन्म लग्न स्वामी)',  'planet' => Charts::signLord($janmaLagnaSign)],
-            ['office' => 'त्रिराशि-पति',                   'planet' => self::trirashiLord($varshaLagnaSign, $isDay)],
-            ['office' => 'दिन-रात्रि पति',                 'planet' => $isDay ? 'Sun' : 'Moon'],
+            ['key' => 'muntha',       'office' => 'मुन्थेश (मुन्था स्वामी)',        'office_en' => 'Muntha Pati',       'planet' => Charts::signLord($munthaSign)],
+            ['key' => 'varsha_lagna', 'office' => 'वर्ष-लग्नेश (वर्ष लग्न स्वामी)', 'office_en' => 'Varsha Lagna Pati', 'planet' => Charts::signLord($varshaLagnaSign)],
+            ['key' => 'janma_lagna',  'office' => 'जन्म-लग्नेश (जन्म लग्न स्वामी)',  'office_en' => 'Janma Lagna Pati',  'planet' => Charts::signLord($janmaLagnaSign)],
+            ['key' => 'trirashi',     'office' => 'त्रिराशि-पति',                    'office_en' => 'Trirashi Pati',     'planet' => self::trirashiLord($varshaLagnaSign, $isDay)],
+            ['key' => 'dinaratri',    'office' => 'दिन-रात्रि पति',                  'office_en' => 'Dinaratri Pati',    'planet' => self::varaLord($varshaChart)],
         ];
 
-        $candidates = [];
+        $officeRows = [];   // all five rows, PL-style (a planet may repeat)
+        $candidates = [];   // merged per planet (existing consumers)
         $seen = [];
         foreach ($offices as $o) {
             $pl = $o['planet'];
-            $bala = self::panchavargeeya($pl, $planets);
-            $offices_for = $o['office'];
+            $bala = (float) ($table[$pl]['total'] ?? self::panchavargeeya($pl, $planets));
+            $officeRows[] = [
+                'key' => $o['key'],
+                'office' => $o['office'],
+                'office_en' => $o['office_en'],
+                'planet' => $pl,
+                'planet_hi' => self::PLANET_HI[$pl] ?? $pl,
+                'bala' => round($bala, 2),
+                // PL prints total ÷ 4 (out of 20) — reuse the table's value so
+                // both cards show the identical figure.
+                'bala20' => (float) ($table[$pl]['total20'] ?? round($bala / 4.0, 2)),
+            ];
             if (isset($seen[$pl])) {
                 // same planet holds more than one office — merge the labels.
-                $candidates[$seen[$pl]]['office'] .= ' · ' . $offices_for;
+                $candidates[$seen[$pl]]['office'] .= ' · ' . $o['office'];
                 continue;
             }
             $seen[$pl] = count($candidates);
             $candidates[] = [
-                'office' => $offices_for,
+                'office' => $o['office'],
                 'planet' => $pl,
                 'planet_hi' => self::PLANET_HI[$pl] ?? $pl,
                 'bala' => round($bala, 2),
@@ -102,13 +121,35 @@ final class Varshesha
         $win = $candidates[$winIdx];
         foreach ($candidates as $i => &$c) { $c['is_varshesh'] = $i === $winIdx; }
         unset($c);
+        foreach ($officeRows as &$r) { $r['is_varshesh'] = $r['planet'] === $win['planet']; }
+        unset($r);
 
         return [
             'lord' => $win['planet'],
             'lord_hi' => $win['planet_hi'],
             'bala' => $win['bala'],
+            'bala20' => (float) ($table[$win['planet']]['total20'] ?? round($win['bala'] / 4.0, 2)),
             'candidates' => $candidates,
+            'offices' => $officeRows,
+            'table' => $table,
         ];
+    }
+
+    /**
+     * Vara (weekday) lord at the Varsha Pravesh — the Dina-ratri pati shown by
+     * Parashara's Light (e.g. a Tuesday entry → Mars). Weekday from the chart's
+     * own instant converted to local mean time by the place longitude.
+     *
+     * @param array<string,mixed> $varshaChart
+     */
+    private static function varaLord(array $varshaChart): string
+    {
+        $jdUt = (float) ($varshaChart['meta']['jd_ut'] ?? 0.0);
+        $lonEast = (float) ($varshaChart['meta']['longitude_east'] ?? 0.0);
+        $jdLocal = $jdUt + $lonEast / 360.0;
+        $dow = ((int) floor($jdLocal + 1.5)) % 7;          // 0 = Sunday
+        if ($dow < 0) { $dow += 7; }
+        return ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'][$dow];
     }
 
     /** Triplicity (Trirashi) lord of a sign, by day/night. */
@@ -127,12 +168,26 @@ final class Varshesha
      */
     private static function panchavargeeya(string $planet, array $planets): float
     {
+        return self::components($planet, $planets)['total'];
+    }
+
+    /**
+     * The five Panchavargeeya components for one planet (the "Varshaphala
+     * strengths" table of Parashara's Light): Kshetra/Griha 30 + Uchcha 20 +
+     * Hadda 15 + Drekkana 10 + Navamsa 5 = 80 vishwas; PL's printed Total is
+     * the sum ÷ 4 (out of 20).
+     *
+     * @param array<string,array<string,mixed>> $planets
+     * @return array{kshetra:float,uchcha:float,hadda:float,drekkana:float,navamsa:float,total:float,total20:float}
+     */
+    public static function components(string $planet, array $planets): array
+    {
         $p = $planets[$planet] ?? [];
         $lon = (float) ($p['sidereal_lon'] ?? 0.0);
         $sign = (int) ($p['sign_index'] ?? Charts::signIndex($lon));
         $deg = (float) ($p['deg_in_sign'] ?? Charts::degInSign($lon));
 
-        // 1) Kshetra bala (max 30) — relation to the rashi lord.
+        // 1) Kshetra/Griha bala (max 30) — relation to the rashi lord.
         $kshetra = self::relationFraction($planet, Charts::signLord($sign), $planets) * 30.0;
 
         // 2) Uchcha bala (max 20) — distance from the deep debilitation point.
@@ -144,16 +199,24 @@ final class Varshesha
         // 3) Hadda bala (max 15) — relation to the term (hadda) lord.
         $hadda = self::relationFraction($planet, self::haddaLord($sign, $deg), $planets) * 15.0;
 
-        // 4) Drekkana bala (max 10) — gender-appropriate decanate.
-        $decan = (int) floor($deg / 10.0);       // 0,1,2
-        $want = in_array($planet, self::MALE, true) ? 0 : (in_array($planet, self::NEUTER, true) ? 1 : 2);
-        $drekkana = $decan === $want ? 10.0 : 0.0;
+        // 4) Drekkana bala (max 10) — relation to the CHALDEAN decanate lord
+        // (Mars,Sun,Venus,Mercury,Moon,Saturn,Jupiter cycling from Aries 0°) —
+        // the Tajik drekkana convention Parashara's Light uses here.
+        $decan = (int) floor($deg / 10.0);
+        $chaldean = ['Mars', 'Sun', 'Venus', 'Mercury', 'Moon', 'Saturn', 'Jupiter'];
+        $drekkana = self::relationFraction($planet, $chaldean[($sign * 3 + $decan) % 7], $planets) * 10.0;
 
         // 5) Navamsa bala (max 5) — relation to the navamsa lord.
         $navLord = Charts::signLord(Charts::navamsaSignIndex($lon));
         $navamsa = self::relationFraction($planet, $navLord, $planets) * 5.0;
 
-        return $kshetra + $uchcha + $hadda + $drekkana + $navamsa;
+        $total = $kshetra + $uchcha + $hadda + $drekkana + $navamsa;
+        return [
+            'kshetra' => round($kshetra, 2), 'uchcha' => round($uchcha, 2),
+            'hadda' => round($hadda, 2), 'drekkana' => round($drekkana, 2),
+            'navamsa' => round($navamsa, 2),
+            'total' => round($total, 2), 'total20' => round($total / 4.0, 2),
+        ];
     }
 
     private static function haddaLord(int $sign, float $deg): string
@@ -165,32 +228,22 @@ final class Varshesha
     }
 
     /**
-     * Compound (panchadha maitri) relation of $planet to a varga lord, as a
-     * fraction of full strength: own 1.0, great-friend .75, friend .5,
-     * neutral .25, enemy .125, great-enemy .0625.
+     * TAJIK positional maitri of $planet toward a varga lord, as a fraction of
+     * full strength — the Varshaphal convention (Tajik Neelkanthi shloka 13,
+     * matched cell-by-cell against Parashara's Light "Varshaphala strengths"):
+     * lord is the planet itself → own 1.0; lord placed 3/5/9/11 from the
+     * planet → मित्र 0.75; 2/6/8/12 → सम 0.50; 1/4/7/10 → शत्रु 0.25.
      *
      * @param array<string,array<string,mixed>> $planets
      */
     private static function relationFraction(string $planet, string $lord, array $planets): float
     {
         if ($planet === $lord) { return 1.0; }
-        $natural = PlanetCondition::naturalRelationDirected($planet, $lord); // F/N/E
-        $temp = self::temporaryRelation($planet, $lord, $planets);           // F/E
-
-        // panchadha combination table
-        if ($natural === 'F') { $comp = $temp === 'F' ? 'gf' : 'n'; }
-        elseif ($natural === 'N') { $comp = $temp === 'F' ? 'f' : 'e'; }
-        else { $comp = $temp === 'F' ? 'n' : 'ge'; } // natural enemy
-
-        return ['gf' => 0.75, 'f' => 0.5, 'n' => 0.25, 'e' => 0.125, 'ge' => 0.0625][$comp];
-    }
-
-    /** Temporary (tatkalika) friendship inside the chart: 2,3,4,10,11,12 = friend. */
-    private static function temporaryRelation(string $a, string $b, array $planets): string
-    {
-        $sa = (int) ($planets[$a]['sign_index'] ?? 0);
-        $sb = (int) ($planets[$b]['sign_index'] ?? 0);
-        $dist = (($sb - $sa) % 12 + 12) % 12 + 1; // 1..12
-        return in_array($dist, [2, 3, 4, 10, 11, 12], true) ? 'F' : 'E';
+        $sa = (int) ($planets[$planet]['sign_index'] ?? 0);
+        $sb = (int) ($planets[$lord]['sign_index'] ?? 0);
+        $dist = (($sb - $sa) % 12 + 12) % 12 + 1; // house of the lord from the planet, 1..12
+        if (in_array($dist, [3, 5, 9, 11], true)) { return 0.75; }
+        if (in_array($dist, [2, 6, 8, 12], true)) { return 0.5; }
+        return 0.25; // 1, 4, 7, 10 — Tajik वैर
     }
 }
