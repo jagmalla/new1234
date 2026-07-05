@@ -204,6 +204,11 @@ final class CalculationEngine
                 'sign' => Charts::signName($sid),
                 'sign_index' => Charts::signIndex($sid),
                 'deg' => (int) floor(Charts::degInSign($sid)),
+                // Raw fields (additive) for the Gochar prediction engine — the
+                // browser panel ignores them; GocharPhalEngine needs them for
+                // the ksheen-Moon and degree-timing rules.
+                'deg_in_sign' => round(Charts::degInSign($sid), 4),
+                'sidereal_lon' => round($sid, 4),
                 'retro' => $p['retro'],
                 'house_from_lagna' => Charts::houseFromAsc($sid, $natalAscSign),
                 'house_from_moon' => Charts::houseFromAsc($sid, $natalMoonSign),

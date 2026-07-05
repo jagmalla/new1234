@@ -127,6 +127,15 @@
           if (g.error) { status.textContent = 'Error: ' + g.error; return; }
           status.textContent = '';
           renderResult(g);
+          // Gochar Phal panel (server-rendered) — inject beside the chart and
+          // (re)bind its planet filter, so predictions follow the date/place.
+          if (g.phal_html != null) {
+            var box = document.getElementById('gochar-phal');
+            if (box) {
+              box.innerHTML = g.phal_html;
+              if (global.ABBindGocharPhal) { global.ABBindGocharPhal(); }
+            }
+          }
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }

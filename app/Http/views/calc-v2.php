@@ -270,6 +270,20 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .saham-facts { font-size: .85rem; color: #453F37; margin-bottom: 4px; }
         .saham-phal { font-size: 1rem; line-height: 1.6; margin: 2px 0; }
         .saham-timing { font-size: .85rem; color: var(--haldi); margin-top: 5px; border-top: 1px dashed var(--line); padding-top: 5px; }
+        /* गोचर फल pane (shares the saham card look). */
+        .gph-section-title { font-weight: 800; font-size: .92rem; color: var(--sindoor);
+            border-bottom: 1px solid var(--line); padding-bottom: 3px; margin: 4px 0 8px; }
+        .gph-house { font-size: .78rem; font-weight: 700; background: #EEF2FF; color: #3730a3; border-radius: 999px; padding: 1px 9px; }
+        .gochar-card .saham-card-head { gap: 6px; }
+        .gph-note { font-size: .82rem; line-height: 1.5; border-left: 3px solid var(--line);
+            padding: 2px 8px; margin: 3px 0; border-radius: 3px; }
+        .gph-note.gph-pos { border-left-color: #1c5138; background: #eef6f0; color: #1c5138; }
+        .gph-note.gph-neg { border-left-color: #8A2F2F; background: #f9ecea; color: #8A2F2F; }
+        .gph-note.gph-info { border-left-color: #C9A227; background: #f7f2e3; color: #6b5600; }
+        .gph-shubh { font-size: .75rem; color: var(--ink-soft); margin-top: 4px; }
+        .gph-l3ev { border-top: 1px dashed var(--line); padding-top: 5px; margin-top: 5px; }
+        .gph-l3head { font-size: .85rem; color: #453F37; margin-bottom: 2px; }
+        .gph-cond { color: #7A5C00; }
         /* Varshaphal year summary (top-right of the year box) — big, colourful. */
         .vp-sum-grid { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: stretch; }
         .vp-sum-item { display: flex; flex-direction: column; justify-content: center;
@@ -1444,10 +1458,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
                     <span class="font-semibold text-gray-800">Gochar Phal <span class="text-xs text-gray-400 font-normal">(गोचर फल)</span></span>
                 </div>
-                <div class="gochar-pred-soon">
-                    <div class="gps-icon">🔮</div>
-                    <div class="gps-title">भविष्यफल शीघ्र आ रहा है — Predictions coming soon</div>
-                    <div class="gps-sub">इस भाग में शीघ्र ही गोचर-आधारित भविष्यफल जोड़ा जाएगा।<br>Gochar-based predictions will be added here soon.</div>
+                <div id="gochar-phal" class="flex-1">
+                    <div class="gochar-pred-soon">
+                        <div class="gps-icon">🔮</div>
+                        <div class="gps-title">गोचर फल की गणना हो रही है…</div>
+                        <div class="gps-sub">तिथि/स्थान चुनते ही यहाँ चन्द्र-लग्न भाव-फल और जन्म-ग्रहों पर गोचर दिखेगा।</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1995,6 +2011,29 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   }
   window.ABBindVarshaPred = bindVarshaPredPanels;
   bindVarshaPredPanels();
+
+  // गोचर फल filter — the panel HTML is (re)injected by gochar.js on every
+  // transit fetch, so gochar.js calls this after each inject. "all" shows
+  // every planet's Layer-1/Layer-3 card; otherwise a single planet.
+  window.ABBindGocharPhal = function () {
+    var sel = document.getElementById('gochar-select');
+    if (!sel) { return; }
+    var pane = document.getElementById('gochar-detail-pane');
+    var cards = document.querySelectorAll('#gochar-detail-pane .gochar-card');
+    var empty = document.getElementById('gochar-empty');
+    function apply() {
+      var v = sel.value, shown = 0;
+      cards.forEach(function (d) {
+        var show = v === 'all' || d.getAttribute('data-planet') === v;
+        d.classList.toggle('hidden', !show);
+        if (show) { shown++; }
+      });
+      if (empty) { empty.classList.toggle('hidden', !(v !== 'all' && shown === 0)); }
+      if (pane) { pane.scrollTop = 0; }
+    }
+    sel.onchange = apply;
+    apply();
+  };
 
   // Karaka copy button (Devanagari-safe).
   (function () {

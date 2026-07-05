@@ -506,6 +506,24 @@ final class CalcController
             $gochar = $engine->gochar($natal, $jdG, $lat, $lon);
             $gochar['label'] = sprintf('%04d-%02d-%02d %02d:%02d', $gy, $gm, $gd, $gH, $gMi);
 
+            // Gochar Phal (migration 017): 3-layer transit predictions from the
+            // natal chart + this transit snapshot, rendered with the shared view
+            // partial so the panel updates whenever the date/place changes.
+            $lang = (string) ($_GET['lang'] ?? 'hi');
+            $rules = \AutoBusiness\Astro\Gochar\GocharRepository::load($lang);
+            $gp = $this->safe(
+                static fn() => \AutoBusiness\Astro\Gochar\GocharPhalEngine::compute($natal, $gochar['transits'], $rules),
+                null
+            );
+            if (is_array($gp)) {
+                $gp['error'] = \AutoBusiness\Astro\Gochar\GocharRepository::lastError();
+            }
+            $views = dirname(__DIR__) . '/Http/views/';
+            require $views . '_varsha_helpers.php';   // $h/$pcolor/$grahaHi/$rashiHi
+            ob_start();
+            require $views . '_gochar_phal.php';
+            $gochar['phal_html'] = (string) ob_get_clean();
+
             echo json_encode($gochar, JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(400);
