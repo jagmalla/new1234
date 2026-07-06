@@ -297,6 +297,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gph-l3ev { border-top: 1px dashed var(--line); padding-top: 5px; margin-top: 5px; }
         .gph-l3head { font-size: .85rem; color: #453F37; margin-bottom: 2px; }
         .gph-cond { color: #7A5C00; }
+        /* ताजिक भाव-फल pane chips + condition line. */
+        .gc-chip.tb-mrityu { background: #4c0519; color: #fecdd3; }
+        .gc-chip.tb-niyam { background: #e5e7eb; color: #374151; }
+        .gc-chip.tb-off { background: #eef2f7; color: #64748b; }
+        .gc-chip.tb-ref { background: #fbf7ef; color: #9a8149; border: 1px solid #ece3cf; }
+        .tb-card .saham-card-head { gap: 6px; flex-wrap: wrap; }
+        .tb-cond { font-size: .82rem; color: #4b5563; margin: 3px 0; line-height: 1.5; }
+        .tb-cond b { color: #334155; }
         /* Varshaphal year summary (top-right of the year box) — big, colourful. */
         .vp-sum-grid { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: stretch; }
         .vp-sum-item { display: flex; flex-direction: column; justify-content: center;
@@ -1541,6 +1549,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         <option value="tajik">ताजिक योग — Tajik Yoga (16)</option>
                         <option value="varshesh">वर्षेश फल — Year Lord</option>
                         <option value="muntha">मुंथा फल — Muntha</option>
+                        <option value="bhava">भाव-फल — Bhava Phal (262)</option>
                     </select>
                 </div>
                 <div id="vp-pred-saham">
@@ -1558,6 +1567,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div id="vp-pred-muntha" class="hidden">
                 <?php require __DIR__ . '/_muntha_phal.php'; ?>
                 </div><!-- /vp-pred-muntha -->
+                <!-- भाव-फल pane (Tajik-Neelakanthi 262 bhava rules, migration 023) -->
+                <div id="vp-pred-bhava" class="hidden">
+                <?php require __DIR__ . '/_tajik_bhava.php'; ?>
+                </div><!-- /vp-pred-bhava -->
             </div>
         </div>
 
@@ -1966,10 +1979,47 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         if (t) { t.classList.toggle('hidden', v !== 'tajik'); }
         if (w) { w.classList.toggle('hidden', v !== 'varshesh'); }
         if (m) { m.classList.toggle('hidden', v !== 'muntha'); }
+        var b = document.getElementById('vp-pred-bhava');
+        if (b) { b.classList.toggle('hidden', v !== 'bhava'); }
       };
       vpt.onchange = applyPane;
       applyPane();
     }
+
+    // भाव-फल (Tajik-Neelakanthi) filters: भाव dropdown · श्रेणी dropdown ·
+    // "केवल इस वर्ष लागू" checkbox. Composed so a rule shows only if it passes
+    // all three; house group titles hide when they have no visible card.
+    (function () {
+      var hs = document.getElementById('tb-house');
+      var cs = document.getElementById('tb-cat');
+      var mo = document.getElementById('tb-matched');
+      if (!hs && !cs && !mo) { return; }
+      var pane = document.getElementById('tb-detail-pane');
+      var empty = document.getElementById('tb-empty');
+      function apply() {
+        var hv = hs ? hs.value : 'all';
+        var cv = cs ? cs.value : 'all';
+        var mv = mo ? mo.checked : false;
+        var shown = 0;
+        document.querySelectorAll('#tb-detail-pane .tb-card').forEach(function (d) {
+          var ok = (hv === 'all' || d.getAttribute('data-house') === hv)
+                && (cv === 'all' || d.getAttribute('data-cat') === cv)
+                && (!mv || d.getAttribute('data-matched') === '1');
+          d.classList.toggle('hidden', !ok);
+          if (ok) { shown++; }
+        });
+        document.querySelectorAll('#tb-detail-pane .tb-hgroup').forEach(function (g) {
+          var any = g.querySelector('.tb-card:not(.hidden)');
+          g.classList.toggle('hidden', !any);
+        });
+        if (empty) { empty.classList.toggle('hidden', shown !== 0); }
+        if (pane) { pane.scrollTop = 0; }
+      }
+      if (hs) { hs.onchange = apply; }
+      if (cs) { cs.onchange = apply; }
+      if (mo) { mo.onchange = apply; }
+      apply();
+    })();
 
     // Saham selector: "active" shows every saham tied to the running
     // Mudda-dasha, "all" shows all 50, otherwise a single saham by key.

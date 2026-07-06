@@ -164,6 +164,7 @@
           // cards and the annual positions table all follow the selected year.
           [['vp-pred-saham', v.saham_html], ['vp-pred-tajik', v.tajik_html],
            ['vp-pred-varshesh', v.varshesh_html], ['vp-pred-muntha', v.muntha_html],
+           ['vp-pred-bhava', v.bhava_html],
            ['vp-row3', v.row3_html], ['card-varshadet', v.positions_html]]
             .forEach(function (f) {
               var el = document.getElementById(f[0]);

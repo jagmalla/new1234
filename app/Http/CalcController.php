@@ -162,6 +162,10 @@ final class CalcController
             // Muntha phal (migration 019) — the "मुंथा फल" option of the
             // Varshaphal prediction dropdown.
             'muntha' => $this->muntha($vp ?? null, $chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Tajik-Neelakanthi Bhava-Phal (migration 023) — the "भाव-फल" option
+            // of the Varshaphal prediction dropdown; 262 rules with the
+            // computable subset auto-marked against the varsha chart.
+            'tajik_bhava' => $this->tajikBhava($vp ?? null, $chart, (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.
@@ -433,6 +437,28 @@ final class CalcController
     }
 
     /**
+     * Build the Tajik-Neelakanthi Bhava-Phal payload (migration 023): all 262
+     * bhava rules grouped by house, with the reliably-computable subset
+     * auto-marked against the varsha chart. Needs the natal chart (pad = janma
+     * rashi). @return array<string,mixed>|null
+     */
+    private function tajikBhava(?array $vp, ?array $natal, string $lang): ?array
+    {
+        if ($vp === null || $natal === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Varshaphal\TajikBhavaRepository::load($lang);
+        $data = $this->safe(
+            static fn() => \AutoBusiness\Astro\Varshaphal\TajikBhavaEngine::compute($vp, $natal, $rules),
+            null
+        );
+        if (is_array($data)) {
+            $data['error'] = \AutoBusiness\Astro\Varshaphal\TajikBhavaRepository::lastError();
+        }
+        return $data;
+    }
+
+    /**
      * Build the Planet Prediction payload: for each planet, the house(s) it
      * rules (with the Bhavesh Phal text for "lord of that house placed in its
      * current house") and its placement (Graha-in-Bhava, populated later).
@@ -634,6 +660,7 @@ final class CalcController
                 'tajik' => $this->tajik($vp, $tz, $lang),
                 'varshesh' => $this->varshesh($vp, $natal, $tz, $lang),
                 'muntha' => $this->muntha($vp, $natal, $lang),
+                'tajik_bhava' => $this->tajikBhava($vp, $natal, $lang),
             ];
             $chart = $natal;
             $views = dirname(__DIR__) . '/Http/views/';
@@ -660,6 +687,7 @@ final class CalcController
                 'tajik_html' => $frag('_tajik_yoga.php'),
                 'varshesh_html' => $frag('_varshesh_phal.php'),
                 'muntha_html' => $frag('_muntha_phal.php'),
+                'bhava_html' => $frag('_tajik_bhava.php'),
                 'row3_html' => $frag('_varsha_bala_cards.php'),
                 'positions_html' => $frag('_varsha_positions.php'),
             ], JSON_UNESCAPED_UNICODE);
