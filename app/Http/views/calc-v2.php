@@ -136,7 +136,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         #menu-overlay { position: fixed; inset: 0; background: rgba(20,16,10,.5); z-index: 55; }
 
         /* ---- Overview tiles (colourful, larger; birth info included) ---- */
-        .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px; }
+        /* All 8 tiles on ONE row on wide screens; graceful wrap below. */
+        .ov-tiles { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; }
+        @media (max-width: 1200px) { .ov-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
         @media (max-width: 699px) { .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         .ov-tile { background: var(--ov-bg, #fff); border: 1px solid var(--line);
             border-left: 5px solid var(--ov-acc, var(--sindoor)); border-radius: 12px;
