@@ -149,6 +149,10 @@ final class CalcController
             // placements — presentation layer only, no engine changes. Wrapped so
             // a detector edge-case can never blank the whole chart page.
             'yogas' => $this->safe(static fn() => $chart !== null ? \AutoBusiness\Astro\Phala\YogaFinder::find($chart) : [], []),
+            // Phaladeepika 106-yoga catalogue (migration 025) — grouped by
+            // category, computable subset auto-detected. Shown under the same
+            // "योग" prediction option with a category dropdown.
+            'phala_yoga' => $this->phalaYoga($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
             // Saham (50 Tajik sahams) computed from the Varshaphal chart, shown in
             // the Varshaphal prediction panel with the active Mudda-mahadasha's
             // related sahams highlighted.
@@ -458,6 +462,27 @@ final class CalcController
         );
         if (is_array($data)) {
             $data['error'] = \AutoBusiness\Astro\Varshaphal\TajikBhavaRepository::lastError();
+        }
+        return $data;
+    }
+
+    /**
+     * Build the Phaladeepika yoga payload (migration 025): the 106-yoga
+     * catalogue grouped by category with the computable subset auto-detected
+     * from the D1 chart. @return array<string,mixed>|null
+     */
+    private function phalaYoga(?array $chart, string $lang): ?array
+    {
+        if ($chart === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Phala\PhaladeepikaYogaRepository::load($lang);
+        $data = $this->safe(
+            static fn() => \AutoBusiness\Astro\Phala\PhaladeepikaYogaEngine::compute($chart, $rules),
+            null
+        );
+        if (is_array($data)) {
+            $data['error'] = \AutoBusiness\Astro\Phala\PhaladeepikaYogaRepository::lastError();
         }
         return $data;
     }

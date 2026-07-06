@@ -358,6 +358,15 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .yoga-why b { color: var(--ink-soft); }
         .yoga-res b { color: var(--shubh); }
         .yoga-bad .yoga-res b { color: var(--ashubh); }
+        /* Phaladeepika yoga catalogue */
+        .yoga-sec-title { font-weight: 800; font-size: .95rem; color: var(--sindoor);
+            border-bottom: 1px solid var(--line); padding-bottom: 3px; margin: 4px 0 8px; }
+        .yoga-cat-head { font-weight: 700; font-size: .86rem; color: #1e293b; margin: 12px 0 5px; }
+        .py-card { padding: 8px 11px; margin-bottom: 8px; }
+        .py-card .yoga-title { font-size: .98rem; }
+        .py-card .yoga-why, .py-card .yoga-res { font-size: .84rem; line-height: 1.5; }
+        .py-card.py-on { border-left-color: #15803d; background: #f6fef9; }
+        .py-card.yoga-bad.py-on { border-left-color: #15803d; }
         /* भावेश फल cards */
         .bh-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
             margin-bottom: 12px; background: var(--card); }
@@ -1238,9 +1247,11 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <?php endforeach; endif; ?>
             </div><!-- /pred-view bhavesh -->
 
-            <!-- योग — classical yogas detected from the computed placements. -->
+            <!-- योग — classical yogas detected from the placements + the full
+                 Phaladeepika catalogue (106) with a category dropdown. -->
             <div class="pred-view hidden" data-pred="yoga">
                 <?php $yogas = $view['yogas'] ?? []; ?>
+                <div class="yoga-sec-title">इस कुंडली में मिले प्रमुख योग <span class="text-xs text-gray-400 font-normal">(सारांश)</span></div>
                 <?php if (empty($yogas)): ?>
                     <div class="text-gray-500 italic p-3">इस कुंडली में कोई प्रमुख योग नहीं मिला।</div>
                 <?php else: foreach ($yogas as $y): ?>
@@ -1250,6 +1261,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         <div class="yoga-res"><b>फल:</b> <?= $h((string) $y['result']) ?></div>
                     </div>
                 <?php endforeach; endif; ?>
+
+                <?php require __DIR__ . '/_phala_yoga.php'; ?>
             </div><!-- /pred-view yoga -->
 
             </div>
@@ -2168,6 +2181,36 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     if (cat) { cat.onchange = apply; }
     apply();
   };
+
+  // फलदीपिका योग catalogue filters — श्रेणी · प्रकार · "केवल बने योग".
+  (function () {
+    var cat = document.getElementById('py-cat');
+    var typ = document.getElementById('py-type');
+    var det = document.getElementById('py-detected');
+    if (!cat && !typ && !det) { return; }
+    var empty = document.getElementById('py-empty');
+    function apply() {
+      var cv = cat ? cat.value : 'all';
+      var tv = typ ? typ.value : 'all';
+      var dv = det ? det.checked : false;
+      var shown = 0;
+      document.querySelectorAll('#py-detail-pane .py-card').forEach(function (d) {
+        var ok = (cv === 'all' || d.getAttribute('data-cat') === cv)
+              && (tv === 'all' || d.getAttribute('data-type') === tv)
+              && (!dv || d.getAttribute('data-detected') === '1');
+        d.classList.toggle('hidden', !ok);
+        if (ok) { shown++; }
+      });
+      document.querySelectorAll('#py-detail-pane .py-group').forEach(function (g) {
+        g.classList.toggle('hidden', !g.querySelector('.py-card:not(.hidden)'));
+      });
+      if (empty) { empty.classList.toggle('hidden', shown !== 0); }
+    }
+    if (cat) { cat.onchange = apply; }
+    if (typ) { typ.onchange = apply; }
+    if (det) { det.onchange = apply; }
+    apply();
+  })();
 
   // Karaka copy button (Devanagari-safe).
   (function () {
