@@ -305,6 +305,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .tb-card .saham-card-head { gap: 6px; flex-wrap: wrap; }
         .tb-cond { font-size: .82rem; color: #4b5563; margin: 3px 0; line-height: 1.5; }
         .tb-cond b { color: #334155; }
+        /* दशा-फल pane — Patyayini timeline. */
+        .dp-timeline { display: flex; flex-direction: column; gap: 3px; }
+        .dp-trow { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+            background: #fbfcfe; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px;
+            font-size: .82rem; cursor: pointer; transition: background .1s; }
+        .dp-trow:hover { background: #eef2ff; }
+        .dp-trow.dp-now { background: #f0fdf4; border-color: #86efac; }
+        .dp-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+        .dp-trow-dates { color: var(--ink-soft); font-size: .76rem; margin-left: auto; }
+        .dp-trow-days { color: #94a3b8; font-size: .72rem; min-width: 52px; text-align: right; }
         /* Varshaphal year summary (top-right of the year box) — big, colourful. */
         .vp-sum-grid { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: stretch; }
         .vp-sum-item { display: flex; flex-direction: column; justify-content: center;
@@ -1550,6 +1560,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         <option value="varshesh">वर्षेश फल — Year Lord</option>
                         <option value="muntha">मुंथा फल — Muntha</option>
                         <option value="bhava">भाव-फल — Bhava Phal (262)</option>
+                        <option value="dasha">दशा-फल — Dasha Phal</option>
                     </select>
                 </div>
                 <div id="vp-pred-saham">
@@ -1571,6 +1582,10 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div id="vp-pred-bhava" class="hidden">
                 <?php require __DIR__ . '/_tajik_bhava.php'; ?>
                 </div><!-- /vp-pred-bhava -->
+                <!-- दशा-फल pane (Patyayini dasha + antardasha selector, migration 024) -->
+                <div id="vp-pred-dasha" class="hidden">
+                <?php require __DIR__ . '/_dasha_phal.php'; ?>
+                </div><!-- /vp-pred-dasha -->
             </div>
         </div>
 
@@ -1981,10 +1996,39 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         if (m) { m.classList.toggle('hidden', v !== 'muntha'); }
         var b = document.getElementById('vp-pred-bhava');
         if (b) { b.classList.toggle('hidden', v !== 'bhava'); }
+        var dd = document.getElementById('vp-pred-dasha');
+        if (dd) { dd.classList.toggle('hidden', v !== 'dasha'); }
       };
       vpt.onchange = applyPane;
       applyPane();
     }
+
+    // दशा-फल (Patyayini): दशा dropdown switches the visible dasha block; each
+    // block has its own अन्तर्दशा dropdown; timeline rows jump to a dasha.
+    (function () {
+      var ds = document.getElementById('dp-dasha');
+      if (!ds) { return; }
+      var pane = document.getElementById('dp-detail-pane');
+      function showDasha(v) {
+        document.querySelectorAll('#dp-detail-pane .dp-block').forEach(function (bl) {
+          bl.classList.toggle('hidden', bl.getAttribute('data-dasha') !== v);
+        });
+        if (pane) { pane.scrollTop = 0; }
+      }
+      ds.onchange = function () { showDasha(ds.value); };
+      document.querySelectorAll('.dp-antar-sel').forEach(function (sel) {
+        sel.onchange = function () {
+          var dd = sel.getAttribute('data-dasha');
+          document.querySelectorAll('.dp-antar-card[data-dasha="' + dd + '"]').forEach(function (c) {
+            c.classList.toggle('hidden', c.getAttribute('data-antar') !== sel.value);
+          });
+        };
+      });
+      document.querySelectorAll('.dp-trow').forEach(function (row) {
+        row.onclick = function () { ds.value = row.getAttribute('data-goto'); showDasha(ds.value); };
+      });
+      showDasha(ds.value);
+    })();
 
     // भाव-फल (Tajik-Neelakanthi) filters: भाव dropdown · श्रेणी dropdown ·
     // "केवल इस वर्ष लागू" checkbox. Composed so a rule shows only if it passes

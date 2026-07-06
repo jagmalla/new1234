@@ -166,6 +166,10 @@ final class CalcController
             // of the Varshaphal prediction dropdown; 262 rules with the
             // computable subset auto-marked against the varsha chart.
             'tajik_bhava' => $this->tajikBhava($vp ?? null, $chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Tajik-Neelakanthi Dasha-Phal (migration 024) — the "दशा-फल" option
+            // of the Varshaphal prediction dropdown; Patyayini dasha with a
+            // dasha/antardasha selector.
+            'dasha_phal' => $this->dashaPhal($vp ?? null, $chart, (float) ($meta['tz'] ?? 0.0), (string) ($_GET['phala_lang'] ?? 'hi')),
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.
@@ -459,6 +463,32 @@ final class CalcController
     }
 
     /**
+     * Build the Tajik-Neelakanthi Dasha-Phal payload (migration 024): the
+     * Patyayini annual dasha with per-dasha strength phal, antardasha grading
+     * and the bhavastha-graha layer. The pane lets the client pick any dasha /
+     * antardasha. @return array<string,mixed>|null
+     */
+    private function dashaPhal(?array $vp, ?array $natal, float $tz, string $lang): ?array
+    {
+        if ($vp === null || $natal === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Varshaphal\DashaPhalRepository::load($lang);
+        $nowJd = JulianDay::fromGregorian(
+            (int) date('Y'), (int) date('m'), (int) date('d'), (int) date('H'), (int) date('i'), 0.0, $tz
+        );
+        $data = $this->safe(
+            static fn() => \AutoBusiness\Astro\Varshaphal\DashaPhalEngine::compute($vp, $natal, $rules, $nowJd),
+            null
+        );
+        if (is_array($data)) {
+            $data['error'] = \AutoBusiness\Astro\Varshaphal\DashaPhalRepository::lastError();
+            $data['tz'] = $tz;
+        }
+        return $data;
+    }
+
+    /**
      * Build the Planet Prediction payload: for each planet, the house(s) it
      * rules (with the Bhavesh Phal text for "lord of that house placed in its
      * current house") and its placement (Graha-in-Bhava, populated later).
@@ -661,6 +691,7 @@ final class CalcController
                 'varshesh' => $this->varshesh($vp, $natal, $tz, $lang),
                 'muntha' => $this->muntha($vp, $natal, $lang),
                 'tajik_bhava' => $this->tajikBhava($vp, $natal, $lang),
+                'dasha_phal' => $this->dashaPhal($vp, $natal, $tz, $lang),
             ];
             $chart = $natal;
             $views = dirname(__DIR__) . '/Http/views/';
@@ -688,6 +719,7 @@ final class CalcController
                 'varshesh_html' => $frag('_varshesh_phal.php'),
                 'muntha_html' => $frag('_muntha_phal.php'),
                 'bhava_html' => $frag('_tajik_bhava.php'),
+                'dasha_phal_html' => $frag('_dasha_phal.php'),
                 'row3_html' => $frag('_varsha_bala_cards.php'),
                 'positions_html' => $frag('_varsha_positions.php'),
             ], JSON_UNESCAPED_UNICODE);
