@@ -163,14 +163,104 @@ final class GocharPhalEngine
             $shaniSpecial = SadeSatiEngine::compute($natal, $transits['Saturn'], $running, $age, $ssRules);
         }
 
+        // ---------------- Gochar Ashtakavarga phal (bindu / kaksha / SAV) ----------------
+        // Additive categories (migration 021) — separate from the Layer-1 house
+        // text; the bindu note in Layer 2 stays, this adds the full classical phal.
+        $av = self::avPhal($natal, $transits, GocharAvRepository::load('hi'));
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
             'layer1' => $layer1,
             'layer3' => $layer3,
             'shani_special' => $shaniSpecial,
+            'av' => $av,
             'has_av' => $bav !== [],
         ];
+    }
+
+    /**
+     * Gochar Ashtakavarga phal (Gochar Vichar Ch.7):
+     *   bindu — the transit sign's bindu count in the transit planet's own BAV
+     *           → the 0–8 phal (Part 1).
+     *   kaksha — the 3°45' kaksha the planet occupies; if that kaksha's lord
+     *            gave a bindu to the transit sign = शुभ, else रेखा (Part 2);
+     *            suppressed when the transit planet is debil/combust/enemy.
+     *   sav — the transit sign's Sarvashtakavarga total vs the 28 threshold
+     *         (Part 3), with the 9/10/11-from-lagna note.
+     *
+     * @param array<string,mixed> $natal
+     * @param array<string,array<string,mixed>> $transits
+     * @param array<string,mixed> $rules  GocharAvRepository::load
+     * @return array<string,mixed>
+     */
+    private static function avPhal(array $natal, array $transits, array $rules): array
+    {
+        $cfg = $rules['config'] ?? [];
+        $natalPlanets = $natal['planets'] ?? [];
+        $ascSign = (int) ($natal['ascendant']['sign_index'] ?? 0);
+        $bav = $natal['ashtakavarga']['bav'] ?? [];
+        $sav = $natal['ashtakavarga']['sav'] ?? [];
+        $natalSign = ['Lagna' => $ascSign];
+        foreach (self::CLASSICAL as $p) { $natalSign[$p] = (int) ($natalPlanets[$p]['sign_index'] ?? 0); }
+
+        $bindu = []; $kaksha = []; $savOut = [];
+        foreach (self::CLASSICAL as $p) {
+            if (!isset($transits[$p], $bav[$p])) { continue; }
+            $tSign = (int) $transits[$p]['sign_index'];
+            $tDeg = (float) ($transits[$p]['deg_in_sign'] ?? 0.0);
+            $b = (int) ($bav[$p][$tSign] ?? 0);
+
+            // Part 1 — bindu-count phal.
+            if (($cfg['gochar_av_bindu_phal'] ?? '1') === '1') {
+                $bindu[] = [
+                    'planet' => $p, 'planet_hi' => self::hi($p),
+                    'sign_hi' => self::rashiHi($tSign), 'bindu' => $b,
+                    'tone' => $b >= 5 ? 'pos' : ($b <= 3 ? 'neg' : 'info'),
+                    'phal' => (string) ($rules['bindu'][$p][$b] ?? ''),
+                ];
+            }
+
+            // Part 2 — kaksha phal (each kaksha = 30/8 = 3.75°).
+            if (($cfg['gochar_kaksha_phal'] ?? '1') === '1') {
+                $ki = min(7, (int) floor($tDeg / 3.75));
+                $lord = \AutoBusiness\Astro\Calc\Ashtakavarga::KAKSHA_ORDER[$ki];
+                $gives = \AutoBusiness\Astro\Calc\Ashtakavarga::contributes($p, $lord, $tSign, $natalSign[$lord]);
+                $kind = $gives ? 'shubh' : 'rekha';
+                // Condition: transit planet not debil / combust / enemy sign.
+                $dig = PlanetCondition::dignity($p, $tSign, $tDeg, $transits, $ascSign)['tier'] ?? 'neutral';
+                $comb = PlanetCondition::combustion($p, $transits);
+                $applicable = !in_array($dig, ['debil', 'enemy', 'great_enemy'], true)
+                    && !($comb !== null && (int) $comb['pct'] >= 40);
+                $kaksha[] = [
+                    'planet' => $p, 'planet_hi' => self::hi($p),
+                    'kaksha_no' => $ki + 1, 'lord' => $lord, 'lord_hi' => self::hi($lord === 'Lagna' ? 'Lagna' : $lord),
+                    'kind' => $kind, 'tone' => $gives ? 'pos' : 'neg', 'applicable' => $applicable,
+                    'phal' => (string) ($rules['kaksha'][$p][$lord][$kind] ?? ''),
+                ];
+            }
+
+            // Part 3 — SAV of the transit sign.
+            if (($cfg['gochar_sav_hint'] ?? '1') === '1' && $sav !== []) {
+                $s = (int) ($sav[$tSign] ?? 0);
+                $house = (($tSign - $ascSign) % 12 + 12) % 12 + 1;
+                $band = $s >= 28 ? '28 से अधिक' : '28 से कम';
+                $hint = (string) ($rules['sav'][$band] ?? '');
+                if (in_array($house, [9, 10, 11], true) && isset($rules['sav']['विशेष'])) {
+                    $hint .= ' ' . (string) $rules['sav']['विशेष'];
+                }
+                $savOut[] = [
+                    'planet' => $p, 'planet_hi' => self::hi($p), 'sign_hi' => self::rashiHi($tSign),
+                    'sav' => $s, 'house' => $house, 'tone' => $s >= 28 ? 'pos' : 'neg', 'hint' => $hint,
+                ];
+            }
+        }
+        return ['bindu' => $bindu, 'kaksha' => $kaksha, 'sav' => $savOut];
+    }
+
+    private static function rashiHi(int $s): string
+    {
+        return ['मेष', 'वृषभ', 'मिथुन', 'कर्क', 'सिंह', 'कन्या', 'तुला', 'वृश्चिक', 'धनु', 'मकर', 'कुंभ', 'मीन'][$s] ?? '';
     }
 
     /**
@@ -291,6 +381,7 @@ final class GocharPhalEngine
 
     private static function hi(string $planet): string
     {
+        if ($planet === 'Lagna') { return 'लग्न'; }
         return GocharRepository::PLANET_HI[$planet] ?? $planet;
     }
 

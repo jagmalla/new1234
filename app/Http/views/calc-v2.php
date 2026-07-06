@@ -2041,22 +2041,34 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   // transit fetch, so gochar.js calls this after each inject. "all" shows
   // every planet's Layer-1/Layer-3 card; otherwise a single planet.
   window.ABBindGocharPhal = function () {
-    var sel = document.getElementById('gochar-select');
-    if (!sel) { return; }
+    var sel = document.getElementById('gochar-select');   // planet filter
+    var cat = document.getElementById('gochar-cat');      // category filter
+    if (!sel && !cat) { return; }
     var pane = document.getElementById('gochar-detail-pane');
+    var sections = document.querySelectorAll('#gochar-detail-pane .gochar-cat');
     var cards = document.querySelectorAll('#gochar-detail-pane .gochar-card');
     var empty = document.getElementById('gochar-empty');
     function apply() {
-      var v = sel.value, shown = 0;
+      var cv = cat ? cat.value : 'all';        // selected category
+      var pv = sel ? sel.value : 'all';        // selected planet
+      // Category: show only the chosen section(s).
+      sections.forEach(function (s) {
+        s.classList.toggle('hidden', cv !== 'all' && s.getAttribute('data-cat') !== cv);
+      });
+      // Planet: filter cards inside the visible section(s).
+      var shown = 0;
       cards.forEach(function (d) {
-        var show = v === 'all' || d.getAttribute('data-planet') === v;
+        var secOk = cv === 'all' || (d.closest('.gochar-cat') && d.closest('.gochar-cat').getAttribute('data-cat') === cv);
+        var planetOk = pv === 'all' || d.getAttribute('data-planet') === pv;
+        var show = secOk && planetOk;
         d.classList.toggle('hidden', !show);
         if (show) { shown++; }
       });
-      if (empty) { empty.classList.toggle('hidden', !(v !== 'all' && shown === 0)); }
+      if (empty) { empty.classList.toggle('hidden', shown !== 0); }
       if (pane) { pane.scrollTop = 0; }
     }
-    sel.onchange = apply;
+    if (sel) { sel.onchange = apply; }
+    if (cat) { cat.onchange = apply; }
     apply();
   };
 
