@@ -153,6 +153,9 @@ final class CalcController
             // category, computable subset auto-detected. Shown under the same
             // "योग" prediction option with a category dropdown.
             'phala_yoga' => $this->phalaYoga($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Poorva-Shaap (BPHS ch.86) santaan rules + remedies (migration 026)
+            // — a separate "शाप-दोष / सन्तान योग" prediction option.
+            'shaap' => $this->shaap($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
             // Saham (50 Tajik sahams) computed from the Varshaphal chart, shown in
             // the Varshaphal prediction panel with the active Mudda-mahadasha's
             // related sahams highlighted.
@@ -462,6 +465,28 @@ final class CalcController
         );
         if (is_array($data)) {
             $data['error'] = \AutoBusiness\Astro\Varshaphal\TajikBhavaRepository::lastError();
+        }
+        return $data;
+    }
+
+    /**
+     * Build the Poorva-Shaap payload (migration 026): the 105 santaan rules
+     * grouped by category with the computable subset auto-detected, plus the
+     * traditional remedies for any dosha category that fired. Presented as
+     * informational/traditional reference. @return array<string,mixed>|null
+     */
+    private function shaap(?array $chart, string $lang): ?array
+    {
+        if ($chart === null) {
+            return null;
+        }
+        $rules = \AutoBusiness\Astro\Phala\ShaapRepository::load($lang);
+        $data = $this->safe(
+            static fn() => \AutoBusiness\Astro\Phala\ShaapEngine::compute($chart, $rules),
+            null
+        );
+        if (is_array($data)) {
+            $data['error'] = \AutoBusiness\Astro\Phala\ShaapRepository::lastError();
         }
         return $data;
     }

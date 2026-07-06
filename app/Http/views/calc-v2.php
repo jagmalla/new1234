@@ -367,6 +367,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .py-card .yoga-why, .py-card .yoga-res { font-size: .84rem; line-height: 1.5; }
         .py-card.py-on { border-left-color: #15803d; background: #f6fef9; }
         .py-card.yoga-bad.py-on { border-left-color: #15803d; }
+        /* शाप-दोष pane */
+        .sh-card { padding: 8px 11px; margin-bottom: 8px; }
+        .sh-card .yoga-title { font-size: .95rem; }
+        .sh-card .yoga-why, .sh-card .yoga-res { font-size: .84rem; line-height: 1.5; }
+        .sh-card.py-on { border-left-color: #b45309 !important; background: #fff8ef; }
+        .shaap-note { font-size: .8rem; line-height: 1.55; background: #fdf6e9; border: 1px solid #f0e2c6;
+            border-radius: 8px; padding: 8px 11px; color: #6b5600; }
+        .shaap-remedy-box { background: #f0f7ff; border: 1px solid #cfe0f5; border-radius: 8px; padding: 6px 11px; margin-top: 8px; }
+        .shaap-remedy { font-size: .82rem; line-height: 1.55; padding: 5px 0; border-top: 1px dashed #cfe0f5; }
+        .shaap-remedy:first-of-type { border-top: 0; }
         /* भावेश फल cards */
         .bh-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
             margin-bottom: 12px; background: var(--card); }
@@ -813,6 +823,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                     <option value="bhav">Bhava Phaladesh (भाव फलादेश)</option>
                     <option value="karak">Karaka Phal (कारक फल)</option>
                     <option value="yoga">Yoga (योग)</option>
+                    <option value="shaap">Shaap / Santaan (शाप-दोष / सन्तान योग)</option>
                 </select>
                 </div>
                 <button type="button" id="pred-expand" class="pred-expand" aria-label="Expand" title="Expand">⤢</button>
@@ -1264,6 +1275,11 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 
                 <?php require __DIR__ . '/_phala_yoga.php'; ?>
             </div><!-- /pred-view yoga -->
+
+            <!-- शाप-दोष / सन्तान योग — Poorva Shaap (BPHS ch.86) catalogue + remedies. -->
+            <div class="pred-view hidden" data-pred="shaap">
+                <?php require __DIR__ . '/_shaap.php'; ?>
+            </div><!-- /pred-view shaap -->
 
             </div>
         </section>
@@ -2212,6 +2228,36 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     apply();
   })();
 
+  // शाप-दोष / सन्तान योग catalogue filters — श्रेणी · प्रकार · "केवल संगणित".
+  (function () {
+    var cat = document.getElementById('sh-cat');
+    var typ = document.getElementById('sh-type');
+    var det = document.getElementById('sh-detected');
+    if (!cat && !typ && !det) { return; }
+    var empty = document.getElementById('sh-empty');
+    function apply() {
+      var cv = cat ? cat.value : 'all';
+      var tv = typ ? typ.value : 'all';
+      var dv = det ? det.checked : false;
+      var shown = 0;
+      document.querySelectorAll('#sh-detail-pane .sh-card').forEach(function (d) {
+        var ok = (cv === 'all' || d.getAttribute('data-cat') === cv)
+              && (tv === 'all' || d.getAttribute('data-type') === tv)
+              && (!dv || d.getAttribute('data-detected') === '1');
+        d.classList.toggle('hidden', !ok);
+        if (ok) { shown++; }
+      });
+      document.querySelectorAll('#sh-detail-pane .sh-group').forEach(function (g) {
+        g.classList.toggle('hidden', !g.querySelector('.sh-card:not(.hidden)'));
+      });
+      if (empty) { empty.classList.toggle('hidden', shown !== 0); }
+    }
+    if (cat) { cat.onchange = apply; }
+    if (typ) { typ.onchange = apply; }
+    if (det) { det.onchange = apply; }
+    apply();
+  })();
+
   // Karaka copy button (Devanagari-safe).
   (function () {
     var kc = document.getElementById('karaka-copy');
@@ -2568,9 +2614,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     var grid = document.getElementById('custom-grid');
     if (!grid) { return; }
     var START_SLOTS = 6;
-    var PRED_LABELS = { dasha: 'Dasha Phal', bhavesh: 'Bhavesh Phal', grah: 'Graha Phal',
+    var PRED_LABELS = { shaap: 'Shaap / Santaan', dasha: 'Dasha Phal', bhavesh: 'Bhavesh Phal', grah: 'Graha Phal',
       bhav: 'Bhava Phaladesh', karak: 'Karaka Phal', yoga: 'Yoga' };
-    var PRED_ORDER = ['dasha', 'bhavesh', 'grah', 'bhav', 'karak', 'yoga'];
+    var PRED_ORDER = ['dasha', 'bhavesh', 'grah', 'bhav', 'karak', 'yoga', 'shaap'];
 
     function chartOptions() {
       var out = [], V = window.AB_VARGAS || {};
