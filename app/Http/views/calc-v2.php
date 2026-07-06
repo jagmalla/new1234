@@ -2059,7 +2059,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       var shown = 0;
       cards.forEach(function (d) {
         var secOk = cv === 'all' || (d.closest('.gochar-cat') && d.closest('.gochar-cat').getAttribute('data-cat') === cv);
-        var planetOk = pv === 'all' || d.getAttribute('data-planet') === pv;
+        var dp = d.getAttribute('data-planet');
+        var planetOk = pv === 'all' || dp === 'all' || dp === pv;
         var show = secOk && planetOk;
         d.classList.toggle('hidden', !show);
         if (show) { shown++; }

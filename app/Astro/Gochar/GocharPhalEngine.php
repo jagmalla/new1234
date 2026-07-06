@@ -34,7 +34,7 @@ final class GocharPhalEngine
      * @param array<string,mixed> $rules   GocharRepository::load output
      * @return array<string,mixed>
      */
-    public static function compute(array $natal, array $transits, array $rules, ?float $transitJd = null): array
+    public static function compute(array $natal, array $transits, array $rules, ?float $transitJd = null, ?int $weekday = null): array
     {
         $cfg = $rules['config'] ?? [];
         $housePhal = $rules['house_phal'] ?? [];
@@ -168,6 +168,21 @@ final class GocharPhalEngine
         // text; the bindu note in Layer 2 stays, this adds the full classical phal.
         $av = self::avPhal($natal, $transits, GocharAvRepository::load('hi'));
 
+        // ---------------- मुहूर्त (Gochar Vichar Ch.8) — additive overlay ----------------
+        // Rahu Kaal, Disha Shul, Tithi, janma-nakshatra weekday phal, combustion
+        // warnings and the Shani-AV kashta rashi. The civil weekday (0=Sun..6=Sat)
+        // is passed in when known, else derived from the transit JD (UT).
+        $muhurat = null;
+        if (($cfg['muhurat_show'] ?? '1') === '1') {
+            $wd = $weekday;
+            if ($wd === null && $transitJd !== null) {
+                $wd = ((int) floor($transitJd + 0.5) + 1) % 7;   // 0=Sun..6=Sat
+            }
+            if ($wd !== null) {
+                $muhurat = MuhuratEngine::compute($natal, $transits, MuhuratRepository::load((string) ($cfg['lang'] ?? 'hi')), $wd);
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -176,6 +191,7 @@ final class GocharPhalEngine
             'shani_special' => $shaniSpecial,
             'av' => $av,
             'has_av' => $bav !== [],
+            'muhurat' => $muhurat,
         ];
     }
 

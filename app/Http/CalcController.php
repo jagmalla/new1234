@@ -570,8 +570,13 @@ final class CalcController
             // partial so the panel updates whenever the date/place changes.
             $lang = (string) ($_GET['lang'] ?? 'hi');
             $rules = \AutoBusiness\Astro\Gochar\GocharRepository::load($lang);
+            // Civil weekday (0=Sun..6=Sat) of the muhurat's LOCAL date — passed to
+            // the Muhurat rules so Rahu Kaal / Disha Shul / janma-nakshatra phal
+            // use the day the user actually selected (not the UT date).
+            $wdJd = JulianDay::fromGregorian($gy, $gm, $gd, 12, 0, 0.0, 0.0);
+            $weekday = ((int) floor($wdJd + 0.5) + 1) % 7;
             $gp = $this->safe(
-                static fn() => \AutoBusiness\Astro\Gochar\GocharPhalEngine::compute($natal, $gochar['transits'], $rules, $jdG),
+                static fn() => \AutoBusiness\Astro\Gochar\GocharPhalEngine::compute($natal, $gochar['transits'], $rules, $jdG, $weekday),
                 null
             );
             if (is_array($gp)) {

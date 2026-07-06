@@ -18,7 +18,8 @@ $toneChip = static function (string $t) use ($h): string {
 $noteCls = static fn(string $t): string => $t === 'pos' ? 'gph-pos' : ($t === 'neg' ? 'gph-neg' : 'gph-info');
 $av = $gp['av'] ?? ['bindu' => [], 'kaksha' => [], 'sav' => []];
 $ss = $gp['shani_special'] ?? null;
-$hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null);
+$mu = $gp['muhurat'] ?? null;
+$hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null || $mu !== null);
 if ($hasAny):
     $l1 = $gp['layer1'] ?? [];
     $l3 = $gp['layer3'] ?? [];
@@ -32,11 +33,12 @@ if ($hasAny):
     if (!empty($av['sav'])) { $cats['sav'] = 'सर्वाष्टकवर्ग संकेत'; }
     if ($l3 !== []) { $cats['natal'] = 'जन्म-ग्रह पर गोचर'; }
     if ($ss !== null) { $cats['shani'] = 'शनि विशेष (साढ़े साती)'; }
+    if ($mu !== null) { $cats['muhurat'] = 'मुहूर्त (राहु काल · दिशा शूल · तिथि)'; }
 ?>
     <div class="saham-active">
         <div><b>गोचर आधार:</b> चन्द्र लग्न (जन्म राशि) <b style="color:<?= $pcolor('Moon') ?>"><?= $h($moonSignHi) ?></b> से गिना गया·
             <span class="text-xs text-gray-500"><?= ($gp['moon_ksheen'] ?? false) ? 'गोचर चन्द्र क्षीण' : 'गोचर चन्द्र बली' ?></span></div>
-        <div class="text-xs text-gray-500" style="margin-top:3px">भाव-फल · अष्टकवर्ग बिन्दु व कक्षा · सर्वाष्टकवर्ग · जन्म-ग्रहों पर गोचर · शनि साढ़े साती — नीचे "श्रेणी" से चुनें।</div>
+        <div class="text-xs text-gray-500" style="margin-top:3px">भाव-फल · अष्टकवर्ग बिन्दु व कक्षा · सर्वाष्टकवर्ग · जन्म-ग्रहों पर गोचर · शनि साढ़े साती · मुहूर्त (राहु काल/दिशा शूल/तिथि) — नीचे "श्रेणी" से चुनें।</div>
     </div>
 
     <div class="pred-picker" style="margin-top:8px;gap:8px">
@@ -185,6 +187,94 @@ if ($hasAny):
                 <?php foreach (($grp['all_notes'] ?? []) as $an): ?><div class="gph-note gph-info"><?= $h($an) ?></div><?php endforeach; ?>
             </div>
             <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- CATEGORY: मुहूर्त (Ch.8) -->
+        <?php if ($mu !== null): ?>
+        <div class="gochar-cat" data-cat="muhurat">
+            <div class="gph-section-title">मुहूर्त <span class="text-xs text-gray-400 font-normal">(राहु काल · दिशा शूल · तिथि · जन्म-नक्षत्र वारफल · अस्त · कष्ट-राशि)</span></div>
+            <div class="text-xs text-gray-500" style="margin:2px 0 6px">वार: <b><?= $h($mu['weekday_hi']) ?></b> · गोचर चन्द्र नक्षत्र: <b><?= $h($mu['nakshatra']['transit']['name']) ?></b> पाद <?= (int) $mu['nakshatra']['transit']['pada'] ?> · जन्म-नक्षत्र: <b><?= $h($mu['nakshatra']['janma']['name']) ?></b></div>
+
+            <?php if (!empty($mu['rahu_kaal'])): $rk = $mu['rahu_kaal']; ?>
+            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #6b21a8">
+                <div class="saham-card-head">
+                    <span class="saham-name" style="color:#6b21a8">🕒 राहु काल</span>
+                    <span class="gph-house"><?= $h($rk['start']) ?> – <?= $h($rk['end']) ?></span>
+                    <span class="gc-chip gc-ashubh">वर्ज्य काल</span>
+                </div>
+                <div class="saham-phal">● <?= $h($rk['note']) ?></div>
+                <?php if (!empty($rk['approx'])): ?><div class="gph-note gph-info">समय लगभग (सूर्योदय 6:00 व सूर्यास्त 18:00 मानकर); सटीक हेतु स्थान का वास्तविक दिनमान ÷ 8।</div><?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($mu['disha_shul'])): $ds = $mu['disha_shul']; ?>
+            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #b45309">
+                <div class="saham-card-head">
+                    <span class="saham-name" style="color:#b45309">🧭 दिशा शूल</span>
+                    <span class="gph-house">वर्जित दिशा: <?= $h($ds['dir']) ?></span>
+                    <span class="gc-chip gc-ashubh">यात्रा वर्ज्य</span>
+                </div>
+                <div class="saham-phal">● <?= $h($ds['note']) ?></div>
+                <div class="gph-note gph-info"><?= $h($ds['principle']) ?></div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($mu['tithi'])): $ti = $mu['tithi']; ?>
+            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #0e7490">
+                <div class="saham-card-head">
+                    <span class="saham-name" style="color:#0e7490">🌙 तिथि — <?= $h($ti['name']) ?></span>
+                    <span class="gph-house">तिथि <?= (int) $ti['num'] ?> · <?= $h($ti['paksha_hi']) ?> · स्वामी <?= $h($ti['lord']) ?></span>
+                    <span class="gc-chip <?= $ti['tone'] === 'pos' ? 'gc-shubh' : ($ti['tone'] === 'neg' ? 'gc-ashubh' : 'gc-mishrit') ?>"><?= $h($ti['group_label']) ?>: <?= $h($ti['grade']) ?></span>
+                </div>
+                <div class="saham-phal">● <?= $h($ti['meaning']) ?></div>
+                <div class="gph-note gph-info"><?= $h($ti['note']) ?></div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($mu['janma_nak_phal'])): $jn = $mu['janma_nak_phal']; ?>
+            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #15803d">
+                <div class="saham-card-head">
+                    <span class="saham-name" style="color:#15803d">⭐ जन्म-नक्षत्र वारफल</span>
+                    <span class="gph-house"><?= $h($jn['janma_nak']) ?> · <?= $h($jn['weekday_hi']) ?></span>
+                    <?php if (!empty($jn['active'])): ?><span class="gc-chip gc-shubh">इस समय सक्रिय</span><?php endif; ?>
+                </div>
+                <div class="saham-phal">● <?= $h($jn['phal']) ?></div>
+                <?php if (!empty($jn['cond'])): ?><div class="gph-note gph-info">शर्त: <?= $h($jn['cond']) ?></div><?php endif; ?>
+                <?php if (!empty($jn['bonus_note'])): ?><div class="gph-note gph-pos"><?= $h($jn['bonus_note']) ?></div><?php endif; ?>
+                <div class="gph-note gph-info">नियम: जिस मास में जन्म-नक्षत्र इस वार को पड़े, उस मास पर यह प्रभाव। (गोचर चन्द्र इस समय जन्म-नक्षत्र में हो तो तत्काल प्रभावी।)</div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($mu['combust']['warns'])): foreach ($mu['combust']['warns'] as $cw): ?>
+            <div class="saham-card gochar-card" data-planet="<?= $h($cw['planet']) ?>" style="border-left:4px solid #b91c1c">
+                <div class="saham-card-head">
+                    <span class="saham-name" style="color:<?= $pcolor($cw['planet']) ?>">☀ अस्त — <?= $h($cw['planet_hi']) ?></span>
+                    <span class="gph-house">सूर्य से <?= $h(number_format((float) $cw['sep'], 1)) ?>°</span>
+                    <span class="gc-chip gc-ashubh">विवाह में वर्ज्य</span>
+                </div>
+                <div class="saham-phal">● <?= $h($cw['warn']) ?></div>
+            </div>
+            <?php endforeach; endif; ?>
+            <?php if ($mu['combust']['warns'] === []): ?>
+            <div class="saham-card gochar-card" data-planet="all">
+                <div class="saham-card-head"><span class="saham-name" style="color:#15803d">☀ अस्त-ग्रह</span><span class="gc-chip gc-shubh">कोई अस्त नहीं</span></div>
+                <div class="saham-phal">● गोचर में गुरु व शुक्र अस्त नहीं — विवाह मुहूर्त हेतु इस दृष्टि से बाधा नहीं।</div>
+                <div class="gph-note gph-info"><?= $h($mu['combust']['note']) ?></div>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($mu['kashta_rashi'])): $kr = $mu['kashta_rashi']; ?>
+            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #1d4ed8">
+                <div class="saham-card-head">
+                    <span class="saham-name" style="color:#1d4ed8">🪐 शनि-अष्टकवर्ग कष्ट-राशि</span>
+                    <span class="gph-house"><?= $h(implode(', ', $kr['signs'])) ?> · <?= (int) $kr['bindu'] ?> बिन्दु</span>
+                    <span class="gc-chip <?= !empty($kr['sun_here']) ? 'gc-ashubh' : 'gc-mishrit' ?>"><?= !empty($kr['sun_here']) ? 'सूर्य यहाँ — कष्ट मास' : 'सतर्कता' ?></span>
+                </div>
+                <div class="saham-phal">● <?= $h($kr['note']) ?></div>
+                <div class="gph-note <?= !empty($kr['sun_here']) ? 'gph-neg' : 'gph-info' ?>"><?= $h($kr['sun_note']) ?></div>
+            </div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
 
