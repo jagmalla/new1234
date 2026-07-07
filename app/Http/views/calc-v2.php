@@ -393,6 +393,17 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .ez-term { font-size: .84rem; line-height: 1.55; margin: 4px 0; color: #334155; }
         .ez-term b { color: #15803d; }
         .ez-note { font-size: .76rem; color: #64748b; margin-top: 6px; border-top: 1px dashed #bbf7d0; padding-top: 5px; }
+        /* सामान्य (General) summary — plain conclusion cards */
+        .gen-title { font-weight: 800; font-size: 1rem; color: var(--sindoor); margin: 6px 0 8px; }
+        .gen-card { border: 1px solid var(--line); border-left: 4px solid #6b21a8; border-radius: 10px;
+            padding: 8px 12px; margin-bottom: 9px; background: #fff; }
+        .gen-h { font-weight: 700; font-size: .92rem; color: #6b21a8; margin-bottom: 4px; }
+        .gen-line { font-size: .92rem; line-height: 1.6; margin: 3px 0; color: #2b2620; }
+        .gen-line.gen-pos { color: #166534; } .gen-line.gen-neg { color: #9a1b1b; }
+        .gen-sub { font-size: .78rem; color: #6b6459; margin-top: 3px; }
+        .gen-concl { border-radius: 10px; padding: 10px 13px; font-size: .96rem; line-height: 1.6; margin-top: 4px; }
+        .gen-concl.gen-pos { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
+        .gen-concl.gen-mix { background: #fef9ec; border: 1px solid #f5e2b8; color: #7a5c00; }
         /* शाप-दोष pane */
         .sh-card { padding: 8px 11px; margin-bottom: 8px; }
         .sh-card .yoga-title { font-size: .95rem; }
@@ -845,6 +856,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div class="l2-picker" style="flex:1; margin-bottom:0">
                 <span class="pick-tag">Select Prediction ▾</span>
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0">
+                    <option value="general" selected>सामान्य — General (सारांश)</option>
                     <option value="dasha">Dasha Phal (दशा फल)</option>
                     <option value="bhavesh">Bhavesh Phal (भावेश फल)</option>
                     <option value="grah">Graha Phal (ग्रह फल)</option>
@@ -858,7 +870,12 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             </div>
             <div id="pred-scroll">
 
-            <div class="pred-view" data-pred="dasha">
+            <!-- सामान्य (General) — default: conclusion of all birth-chart layers. -->
+            <div class="pred-view" data-pred="general">
+                <?php require __DIR__ . '/_general_summary.php'; ?>
+            </div><!-- /pred-view general -->
+
+            <div class="pred-view hidden" data-pred="dasha">
     <!-- Dasha Prediction (दशा फल): Maha/Antar dropdowns default to the running
          dasha; text comes from the editable dasha_phala table. Shown in both views. -->
     <?php
@@ -1601,6 +1618,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div class="l2-picker" style="margin-bottom:10px">
                     <span class="pick-tag">Varshaphal Prediction ▾</span>
                     <select id="vp-pred-type" class="l2-select">
+                        <option value="general" selected>सामान्य — General (सारांश)</option>
                         <option value="saham">सहम — Sahams (50)</option>
                         <option value="tajik">ताजिक योग — Tajik Yoga (16)</option>
                         <option value="varshesh">वर्षेश फल — Year Lord</option>
@@ -1609,7 +1627,11 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         <option value="dasha">दशा-फल — Dasha Phal</option>
                     </select>
                 </div>
-                <div id="vp-pred-saham">
+                <!-- सामान्य (General) — default varshaphal summary of all layers. -->
+                <div id="vp-pred-general">
+                <?php require __DIR__ . '/_vp_general.php'; ?>
+                </div><!-- /vp-pred-general -->
+                <div id="vp-pred-saham" class="hidden">
                 <?php require __DIR__ . '/_saham_pane.php'; ?>
                 </div><!-- /vp-pred-saham -->
                 <!-- ताजिक योग pane (16 Tajik yogas + sphuta drishti, migration 016) -->
@@ -2032,6 +2054,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     if (vpt) {
       var applyPane = function () {
         var v = vpt.value;
+        var gn = document.getElementById('vp-pred-general');
+        if (gn) { gn.classList.toggle('hidden', v !== 'general'); }
         var s = document.getElementById('vp-pred-saham');
         var t = document.getElementById('vp-pred-tajik');
         var w = document.getElementById('vp-pred-varshesh');
@@ -2659,9 +2683,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     var grid = document.getElementById('custom-grid');
     if (!grid) { return; }
     var START_SLOTS = 6;
-    var PRED_LABELS = { shaap: 'Shaap / Santaan', dasha: 'Dasha Phal', bhavesh: 'Bhavesh Phal', grah: 'Graha Phal',
+    var PRED_LABELS = { general: 'General (सारांश)', shaap: 'Shaap / Santaan', dasha: 'Dasha Phal', bhavesh: 'Bhavesh Phal', grah: 'Graha Phal',
       bhav: 'Bhava Phaladesh', karak: 'Karaka Phal', yoga: 'Yoga' };
-    var PRED_ORDER = ['dasha', 'bhavesh', 'grah', 'bhav', 'karak', 'yoga', 'shaap'];
+    var PRED_ORDER = ['general', 'dasha', 'bhavesh', 'grah', 'bhav', 'karak', 'yoga', 'shaap'];
 
     function chartOptions() {
       var out = [], V = window.AB_VARGAS || {};

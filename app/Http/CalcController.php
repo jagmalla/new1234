@@ -770,6 +770,7 @@ final class CalcController
                 'muntha_html' => $frag('_muntha_phal.php'),
                 'bhava_html' => $frag('_tajik_bhava.php'),
                 'dasha_phal_html' => $frag('_dasha_phal.php'),
+                'general_html' => $frag('_vp_general.php'),
                 'row3_html' => $frag('_varsha_bala_cards.php'),
                 'positions_html' => $frag('_varsha_positions.php'),
             ], JSON_UNESCAPED_UNICODE);

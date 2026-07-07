@@ -162,7 +162,7 @@
           // Year-dependent page fragments (server-rendered by the endpoint):
           // सहम + ताजिक योग prediction panes, Panchavargeeya-Bala / Year-Lord
           // cards and the annual positions table all follow the selected year.
-          [['vp-pred-saham', v.saham_html], ['vp-pred-tajik', v.tajik_html],
+          [['vp-pred-general', v.general_html], ['vp-pred-saham', v.saham_html], ['vp-pred-tajik', v.tajik_html],
            ['vp-pred-varshesh', v.varshesh_html], ['vp-pred-muntha', v.muntha_html],
            ['vp-pred-bhava', v.bhava_html], ['vp-pred-dasha', v.dasha_phal_html],
            ['vp-row3', v.row3_html], ['card-varshadet', v.positions_html]]

@@ -45,6 +45,7 @@ if ($hasAny):
     <div class="pred-picker" style="margin-top:8px;gap:8px">
         <label class="pred-picker-label" for="gochar-cat">श्रेणी चुनें</label>
         <select id="gochar-cat" class="pred-inline-select" size="1">
+            <option value="general" selected>सामान्य — General (सारांश)</option>
             <option value="all">सभी श्रेणियाँ (All)</option>
             <?php foreach ($cats as $ck => $cl): ?><option value="<?= $h($ck) ?>"><?= $h($cl) ?></option><?php endforeach; ?>
         </select>
@@ -60,6 +61,37 @@ if ($hasAny):
     </div>
 
     <div id="gochar-detail-pane" class="overflow-y-auto pr-1" style="max-height:460px">
+
+        <!-- CATEGORY: सामान्य (General summary — default) -->
+        <?php
+            $goodT = []; $badT = [];
+            foreach ($l1 as $e) {
+                $nm = $h($e['planet_hi']) . ' (भाव ' . (int) $e['house'] . ')';
+                if (($e['tone'] ?? '') === 'pos') { $goodT[] = $nm; }
+                elseif (($e['tone'] ?? '') === 'neg') { $badT[] = $nm; }
+            }
+            $gTone = count($goodT) >= count($badT) && ($ss === null || empty($ss['active'])) ? 'pos' : 'mix';
+        ?>
+        <div class="gochar-cat" data-cat="general">
+            <div class="gph-section-title">सामान्य सारांश <span class="text-xs text-gray-400 font-normal">(गोचर के मुख्य निष्कर्ष — सरल भाषा में)</span></div>
+            <div class="saham-card gochar-card" data-planet="all">
+                <div class="saham-phal">● <b>आधार:</b> जन्म-राशि <b style="color:<?= $pcolor('Moon') ?>"><?= $h($moonSignHi) ?></b> से गोचर देखा गया। गोचर चन्द्रमा अभी <?= ($gp['moon_ksheen'] ?? false) ? '<b style="color:#b91c1c">क्षीण (कमजोर)</b>' : '<b style="color:#15803d">बली (मजबूत)</b>' ?>।</div>
+                <?php if ($goodT !== []): ?><div class="gph-note gph-pos"><b>अभी अनुकूल ग्रह-गोचर:</b> <?= $h(implode(' · ', array_slice($goodT, 0, 6))) ?> — इन क्षेत्रों में शुभ फल।</div><?php endif; ?>
+                <?php if ($badT !== []): ?><div class="gph-note gph-neg"><b>अभी सावधानी योग्य:</b> <?= $h(implode(' · ', array_slice($badT, 0, 6))) ?> — इन क्षेत्रों में सतर्कता रखें।</div><?php endif; ?>
+                <?php if ($ss !== null && !empty($ss['active'])): ?>
+                <div class="gph-note gph-neg"><b>शनि साढ़े साती / ढैय्या:</b> <?= $h($ss['type_hi'] ?? '') ?> चल रही है (तीव्रता <?= $h($ss['severity_hi'] ?? '') ?>) — धैर्य व शनि-उपाय लाभकारी।</div>
+                <?php elseif ($ss !== null): ?>
+                <div class="gph-note gph-pos">शनि की साढ़े साती/ढैय्या इस समय नहीं — इस दृष्टि से राहत।</div>
+                <?php endif; ?>
+                <div class="saham-phal" style="margin-top:6px"><b>निष्कर्ष:</b>
+                    <?= $gTone === 'pos'
+                        ? 'कुल मिलाकर गोचर अनुकूल — शुभ ग्रहों का प्रभाव अधिक। महत्त्वपूर्ण कार्यों हेतु समय ठीक है।'
+                        : 'गोचर मिश्रित — कुछ अनुकूल, कुछ प्रतिकूल प्रभाव। बड़े निर्णय सोच-समझकर लें।' ?>
+                </div>
+                <div class="gph-shubh">विस्तार हेतु ऊपर "श्रेणी" से भाव-फल · अष्टकवर्ग · साढ़े साती · मुहूर्त चुनें।</div>
+            </div>
+        </div>
+
 
         <!-- CATEGORY: शनि विशेष (Layer 4) -->
         <?php if ($ss !== null): $sevTone = static fn(int $s): string => $s <= 1 ? 'gc-shubh' : ($s === 2 ? 'gc-mishrit' : 'gc-ashubh'); ?>
