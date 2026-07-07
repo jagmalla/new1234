@@ -134,7 +134,7 @@ INSERT INTO av_gochar_rules (rule_key,language,situation,phal_text) VALUES
 ('g_bav4','hi','बिंदु 4','गोचर के फल साधारण।'),
 ('g_bav3','hi','बिंदु ≤3','शुभ दिखने वाला गोचर भी फीका/प्रतिकूल रहेगा।'),
 ('g_malefic_low','hi','शनि/मंगल/राहु का गोचर <25 SAV वाले भाव से','कष्ट की तीव्रता अधिक — वह अवधि सावधानी की।'),
-('g_malefic_high','hi','क्रूर ग्रह का गोचर 30+ SAV वाले भाव से','हानि बहुत घट जाती है।'),
+('g_malefic_high','hi','अशुभ ग्रह का गोचर 30+ SAV वाले भाव से','हानि बहुत घट जाती है।'),
 ('g_sadesati','hi','साढ़े साती की तीव्रता','12वें, 1ले, 2रे भावों का SAV जितना ऊँचा, साढ़े साती उतनी सहनीय।')
 ON DUPLICATE KEY UPDATE situation=VALUES(situation),phal_text=VALUES(phal_text);
 

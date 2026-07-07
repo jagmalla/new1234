@@ -83,8 +83,8 @@ INSERT INTO yuti_rules (rule_key,language,with_planet,sentence_template,good_bad
 ('benefic_with_ketu','hi','Ketu','शुभ ग्रह {planet} केतु के साथ युति में है — फलों में विच्छेद, अलगाव और अचानक रुकावट की प्रवृत्ति आती है।','अशुभ',-1.00),
 ('benefic_with_saturn','hi','Saturn','शुभ ग्रह {planet} शनि के साथ युति में है — फल मिलते हैं परन्तु विलंब, दबाव और अधिक परिश्रम के बाद।','अशुभ',-0.75),
 ('benefic_with_mars','hi','Mars','शुभ ग्रह {planet} मंगल के साथ युति में है — आवेश, जल्दबाजी और विवाद से शुभ फल दूषित होते हैं।','अशुभ',-0.75),
-('malefic_with_benefic','hi',NULL,'पाप ग्रह {planet} शुभ ग्रह {benefic} की युति से संयमित हो जाता है — हानि की मात्रा घटती है।','शुभ',0.50),
-('two_malefics_in_house','hi',NULL,'{house} भाव में एक से अधिक पाप ग्रहों की युति है — भाव पीड़ित होकर संघर्ष, विलंब और हानि देता है।','अशुभ',-1.50),
+('malefic_with_benefic','hi',NULL,'अशुभ ग्रह {planet} शुभ ग्रह {benefic} की युति से संयमित हो जाता है — हानि की मात्रा घटती है।','शुभ',0.50),
+('two_malefics_in_house','hi',NULL,'{house} भाव में एक से अधिक अशुभ ग्रहों की युति है — भाव पीड़ित होकर संघर्ष, विलंब और हानि देता है।','अशुभ',-1.50),
 ('moon_with_rahu','hi','Rahu','चन्द्रमा राहु के साथ है (ग्रहण योग) — मानसिक अशांति, भ्रम और निर्णय-दुविधा देता है।','अशुभ',-1.25),
 ('moon_with_ketu','hi','Ketu','चन्द्रमा केतु के साथ है (ग्रहण योग) — मन में वैराग्य, अकारण भय और अस्थिरता देता है।','अशुभ',-1.25)
 ON DUPLICATE KEY UPDATE with_planet=VALUES(with_planet),sentence_template=VALUES(sentence_template),

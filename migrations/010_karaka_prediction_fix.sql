@@ -34,7 +34,7 @@ INSERT INTO karaka_yuti_rules (rule_key,language,karaka,with_planet,sentence_tem
 ('k_with_shubh_moon','hi',NULL,'Moon','कारक {karaka} के साथ शुभ (बलवान) चन्द्रमा की युति है — मानसिक अनुकूलता और पोषण से {signifies} सुखद होते हैं।','शुभ',0.75),
 -- generic malefic companions
 ('k_with_saturn','hi',NULL,'Saturn','कारक {karaka} के साथ शनि की युति है — {signifies} के फल मिलते हैं परन्तु विलंब, दूरी और परिश्रम के साथ।','अशुभ',-0.75),
-('k_with_mars','hi',NULL,'Mars','कारक {karaka} के साथ मंगल की युति है — {signifies} में आवेश, कलह और जल्दबाजी का दोष आता है।','अशुभ',-0.75),
+('k_with_mars','hi',NULL,'Mars','कारक {karaka} के साथ मंगल की युति है — {signifies} में आवेश, झगड़ा और जल्दबाजी का दोष आता है।','अशुभ',-0.75),
 ('k_with_rahu','hi',NULL,'Rahu','कारक {karaka} के साथ राहु की युति है — {signifies} में भ्रम, अपरंपरागत स्थिति और अचानक उतार-चढ़ाव आते हैं।','अशुभ',-1.00),
 ('k_with_ketu','hi',NULL,'Ketu','कारक {karaka} के साथ केतु की युति है — {signifies} में विच्छेद, अलगाव या वैराग्य की प्रवृत्ति आती है।','अशुभ',-1.00),
 -- classical SPECIAL combinations — override the generic row for that pair
@@ -59,9 +59,9 @@ INSERT INTO karaka_sentences (rule_key,language,situation,sentence_template) VAL
 ('KCM','hi','Karaka combust 40-75%','कारक {karaka} अस्त है ({pct}% अस्त) — {loss_text} की शक्ति स्पष्ट रूप से घटती है।'),
 ('KCP','hi','Karaka partially combust <40%','कारक {karaka} आंशिक अस्त है ({pct}% अस्त) — {loss_text} में कुछ कमी रहती है।'),
 ('KOB','hi','Benefic occupant in house counted from karaka','{karaka} से {n}वें भाव में शुभ ग्रह {planet} स्थित है — {inner_meaning} को भीतर से समर्थन मिलता है।'),
-('KOM','hi','Malefic occupant in house counted from karaka','{karaka} से {n}वें भाव में पाप ग्रह {planet} स्थित है — {inner_meaning} में भीतर से बाधा और कमी आती है।'),
+('KOM','hi','Malefic occupant in house counted from karaka','{karaka} से {n}वें भाव में अशुभ ग्रह {planet} स्थित है — {inner_meaning} में भीतर से बाधा और कमी आती है।'),
 ('KDB','hi','Benefic drishti on house counted from karaka','{karaka} से {n}वें भाव पर शुभ ग्रह {planet} की दृष्टि है — आंतरिक अनुभव को बल मिलता है।'),
-('KDM','hi','Malefic drishti on house counted from karaka','{karaka} से {n}वें भाव पर पाप ग्रह {planet} की दृष्टि है — आंतरिक अनुभव में संघर्ष आता है।'),
+('KDM','hi','Malefic drishti on house counted from karaka','{karaka} से {n}वें भाव पर अशुभ ग्रह {planet} की दृष्टि है — आंतरिक अनुभव में संघर्ष आता है।'),
 ('KBN','hi','Karako bhavo nashaya','कारक {karaka} स्वयं {house} भाव (अपने ही कारक-भाव) में बैठा है — "कारको भावो नाशाय": इस भाव के विषयों में अति-सक्रियता से हानि/विलंब संभव; सावधानी रखें।'),
 ('KBN_SAT8','hi','Exception: Saturn in 8th','आयु कारक शनि स्वयं अष्टम भाव में है — यह अपवाद है: दीर्घायु देता है, परन्तु जीवन में परिश्रम और वैराग्य का अनुभव भी।')
 ON DUPLICATE KEY UPDATE situation=VALUES(situation),sentence_template=VALUES(sentence_template);

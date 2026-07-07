@@ -82,8 +82,8 @@ INSERT INTO graha_yuti_sentences (rule_key,language,companion_nature,maitri,sent
 ('g_ben_friend','hi','benefic','friend','{planet} के साथ शुभ एवं मित्र ग्रह {companion} की युति है — {planet} के फल पुष्ट, सहज और वर्धित होते हैं।',1.25),
 ('g_ben_neutral','hi','benefic','neutral','{planet} के साथ शुभ ग्रह {companion} (सम संबंध) की युति है — फलों में सामान्य वृद्धि होती है।',0.75),
 ('g_ben_enemy','hi','benefic','enemy','{planet} के साथ शुभ ग्रह {companion} की युति है, परन्तु दोनों में शत्रुता है — फल शुभ तो हैं पर सहज नहीं; खींचतान के साथ मिलते हैं।',0.25),
-('g_mal_friend','hi','malefic','friend','{planet} के साथ पाप ग्रह {companion} की युति है, परन्तु मित्रता होने से हानि सीमित रहती है — ऊर्जा और बल भी मिलता है।',-0.50),
-('g_mal_neutral','hi','malefic','neutral','{planet} के साथ पाप ग्रह {companion} (सम संबंध) की युति है — फलों में बाधा, विलंब और कठोरता आती है।',-0.75),
+('g_mal_friend','hi','malefic','friend','{planet} के साथ अशुभ ग्रह {companion} की युति है, परन्तु मित्रता होने से हानि सीमित रहती है — ऊर्जा और बल भी मिलता है।',-0.50),
+('g_mal_neutral','hi','malefic','neutral','{planet} के साथ अशुभ ग्रह {companion} (सम संबंध) की युति है — फलों में बाधा, विलंब और कठोरता आती है।',-0.75),
 ('g_mal_enemy','hi','malefic','enemy','{planet} के साथ पाप एवं शत्रु ग्रह {companion} की युति है — फल दूषित होते हैं; संघर्ष, हानि और तनाव का योग।',-1.25)
 ON DUPLICATE KEY UPDATE sentence_template=VALUES(sentence_template),score=VALUES(score),
 companion_nature=VALUES(companion_nature),maitri=VALUES(maitri);
