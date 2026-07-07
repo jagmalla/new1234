@@ -86,7 +86,14 @@
 
     // Match the Mudda dasha column height to the Varsha chart card (lg layout).
     function syncMuddaHeight() {
-      if (split) { dashaCell.style.height = ''; return; }
+      if (split) {
+        // Split layout (Varshaphal section): the Annual Chart and Mudda Dasha
+        // boxes sit in the same left column of adjacent rows — keep them the
+        // SAME height so the two boxes look symmetric; the dasha list scrolls.
+        var ch = chartCell.getBoundingClientRect().height;
+        if (ch > 60) { dashaCell.style.height = ch + 'px'; dashaCell.style.maxHeight = ch + 'px'; }
+        return;
+      }
       if (global.matchMedia('(min-width: 1024px)').matches) {
         dashaCell.style.height = chartCell.getBoundingClientRect().height + 'px';
       } else {

@@ -404,6 +404,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gen-concl { border-radius: 10px; padding: 10px 13px; font-size: .96rem; line-height: 1.6; margin-top: 4px; }
         .gen-concl.gen-pos { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
         .gen-concl.gen-mix { background: #fef9ec; border: 1px solid #f5e2b8; color: #7a5c00; }
+        /* Varshaphal prediction card: cap height + scroll long panes. */
+        .vp-pred-scroll { flex: 1 1 auto; min-height: 0; max-height: 620px; overflow-y: auto; padding-right: 4px; }
+        .vp-pred-scroll::-webkit-scrollbar { width: 8px; }
+        .vp-pred-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+        .vp-pred-scroll::-webkit-scrollbar-thumb:hover { background: #cbb9a3; }
         /* शाप-दोष pane */
         .sh-card { padding: 8px 11px; margin-bottom: 8px; }
         .sh-card .yoga-title { font-size: .95rem; }
@@ -1627,6 +1632,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                         <option value="dasha">दशा-फल — Dasha Phal</option>
                     </select>
                 </div>
+                <div id="vp-pred-scroll" class="vp-pred-scroll">
                 <!-- सामान्य (General) — default varshaphal summary of all layers. -->
                 <div id="vp-pred-general">
                 <?php require __DIR__ . '/_vp_general.php'; ?>
@@ -1654,6 +1660,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <div id="vp-pred-dasha" class="hidden">
                 <?php require __DIR__ . '/_dasha_phal.php'; ?>
                 </div><!-- /vp-pred-dasha -->
+                </div><!-- /vp-pred-scroll -->
             </div>
         </div>
 

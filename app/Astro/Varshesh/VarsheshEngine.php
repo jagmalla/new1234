@@ -94,11 +94,29 @@ final class VarsheshEngine
         }
         $trail = array_values($trail);
 
-        // ---- selection (shloka 10–12) ----
+        // ---- selection ----
+        // DEFAULT = Parashara's Light rule: the Varshesh is simply the graha with
+        // the greatest Panchavargeeya bala among the five Panchadhikari — NO
+        // lagna-drishti filter. This keeps the Varshesh-phal panel consistent with
+        // the header tile and the Year-Lord card (both use Varshesha::compute) and
+        // matches Parashara's Light. The classical Tajik-Neelkanthi lagna-drishti
+        // method stays available behind the `varshesh_method` config flag.
+        $methodMode = (string) ($cfg['varshesh_method'] ?? 'parashara');
         $aspecting = array_values(array_filter($trail, static fn($c) => $c['aspects']));
         $method = '';
         $winner = null;
-        if ($aspecting !== []) {
+
+        if ($methodMode !== 'tajik_lagna_drishti') {
+            // Parashara: the panchadhikari with the highest Panchavargeeya bala
+            // (= Varshesha::compute's winner, already on $vp['varshesh']['lord']).
+            $winner = (string) ($vp['varshesh']['lord'] ?? '');
+            if ($winner === '' && $trail !== []) {
+                $byBala = $trail;
+                usort($byBala, static fn($a, $b) => $b['bala'] <=> $a['bala']);
+                $winner = $byBala[0]['planet'];
+            }
+            $method = 'पंचाधिकारियों में सर्वाधिक पंचवर्गीय बली वाला ग्रह वर्षेश (पराशरी रीति — Parashara\'s Light अनुरूप)';
+        } elseif ($aspecting !== []) {
             $maxBala = max(array_map(static fn($c) => $c['bala'], $aspecting));
             $tied = array_values(array_filter($aspecting, static fn($c) => abs($c['bala'] - $maxBala) < 0.01));
             $allHeen = array_filter($aspecting, static fn($c) => $c['band'] !== 'heen') === [];
@@ -109,7 +127,6 @@ final class VarsheshEngine
                 $winner = $tied[0]['planet'];
                 $method = 'लग्न-द्रष्टाओं में सर्वाधिक पंचवर्गीय बली (श्लोक 10)';
             } else {
-                // tie → varsha lagnesh (default) if tied, else the first tied.
                 $pick = null;
                 if ($tieRule === 'varsha_lagnesh' && $lagneshPlanet !== null) {
                     foreach ($tied as $t) { if ($t['planet'] === $lagneshPlanet) { $pick = $t['planet']; } }
@@ -133,9 +150,15 @@ final class VarsheshEngine
 
         // mark the trail
         foreach ($trail as &$c) {
-            if ($c['planet'] === $winner) { $c['reason'] = '✓ वर्षेश — ' . $method; $c['selected'] = true; }
-            elseif (!$c['aspects']) { $c['reason'] = 'लग्न को ताजिक दृष्टि नहीं — अपात्र'; $c['selected'] = false; }
-            else { $c['reason'] = 'लग्न-द्रष्टा, पर बल में पीछे'; $c['selected'] = false; }
+            if ($c['planet'] === $winner) {
+                $c['reason'] = '✓ वर्षेश — ' . $method; $c['selected'] = true;
+            } elseif ($methodMode !== 'tajik_lagna_drishti') {
+                $c['reason'] = 'पंचवर्गीय बल में पीछे'; $c['selected'] = false;
+            } elseif (!$c['aspects']) {
+                $c['reason'] = 'लग्न को ताजिक दृष्टि नहीं — अपात्र'; $c['selected'] = false;
+            } else {
+                $c['reason'] = 'लग्न-द्रष्टा, पर बल में पीछे'; $c['selected'] = false;
+            }
         }
         unset($c);
 
