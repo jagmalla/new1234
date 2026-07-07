@@ -152,10 +152,10 @@ final class CalcController
             // Phaladeepika 106-yoga catalogue (migration 025) — grouped by
             // category, computable subset auto-detected. Shown under the same
             // "योग" prediction option with a category dropdown.
-            'phala_yoga' => $this->phalaYoga($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            'phala_yoga' => $this->phalaYoga($chart, (string) ($_GET['phala_lang'] ?? 'hi'), (float) ($meta['tz'] ?? 0.0)),
             // Poorva-Shaap (BPHS ch.86) santaan rules + remedies (migration 026)
             // — a separate "शाप-दोष / सन्तान योग" prediction option.
-            'shaap' => $this->shaap($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            'shaap' => $this->shaap($chart, (string) ($_GET['phala_lang'] ?? 'hi'), (float) ($meta['tz'] ?? 0.0)),
             // Saham (50 Tajik sahams) computed from the Varshaphal chart, shown in
             // the Varshaphal prediction panel with the active Mudda-mahadasha's
             // related sahams highlighted.
@@ -475,14 +475,14 @@ final class CalcController
      * traditional remedies for any dosha category that fired. Presented as
      * informational/traditional reference. @return array<string,mixed>|null
      */
-    private function shaap(?array $chart, string $lang): ?array
+    private function shaap(?array $chart, string $lang, float $tz = 0.0): ?array
     {
         if ($chart === null) {
             return null;
         }
         $rules = \AutoBusiness\Astro\Phala\ShaapRepository::load($lang);
         $data = $this->safe(
-            static fn() => \AutoBusiness\Astro\Phala\ShaapEngine::compute($chart, $rules),
+            static fn() => \AutoBusiness\Astro\Phala\ShaapEngine::compute($chart, $rules, $tz),
             null
         );
         if (is_array($data)) {
@@ -496,14 +496,14 @@ final class CalcController
      * catalogue grouped by category with the computable subset auto-detected
      * from the D1 chart. @return array<string,mixed>|null
      */
-    private function phalaYoga(?array $chart, string $lang): ?array
+    private function phalaYoga(?array $chart, string $lang, float $tz = 0.0): ?array
     {
         if ($chart === null) {
             return null;
         }
         $rules = \AutoBusiness\Astro\Phala\PhaladeepikaYogaRepository::load($lang);
         $data = $this->safe(
-            static fn() => \AutoBusiness\Astro\Phala\PhaladeepikaYogaEngine::compute($chart, $rules),
+            static fn() => \AutoBusiness\Astro\Phala\PhaladeepikaYogaEngine::compute($chart, $rules, $tz),
             null
         );
         if (is_array($data)) {

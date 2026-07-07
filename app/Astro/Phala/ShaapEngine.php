@@ -34,20 +34,28 @@ final class ShaapEngine
      * @param array<string,mixed> $rules ShaapRepository::load output
      * @return array<string,mixed>
      */
-    public static function compute(array $chart, array $rules): array
+    public static function compute(array $chart, array $rules, float $tz = 0.0): array
     {
         $cfg = $rules['config'] ?? [];
         $auto = ($cfg['shaap_autodetect'] ?? '1') === '1';
         $remedies = $rules['remedies'] ?? [];
         $ctx = self::context($chart);
+        $yk = Yogakaraka::classify($chart);
+
+        // Santaan-yoga karakas: पुत्रकारक गुरु + पंचमेश + लग्नेश — the result
+        // manifests in their Vimshottari dasha.
+        $L5 = (string) (($chart['houses'][5]['lord']) ?? '');
+        $L1 = (string) (($chart['houses'][1]['lord']) ?? '');
+        $phalDasha = self::phalDasha(array_values(array_unique(array_filter(['Jupiter', $L5, $L1]))), $yk, $chart, $tz);
 
         $groups = [];
         $detectedCount = 0;
         $detectedCats = [];
         foreach (($rules['rules'] ?? []) as $r) {
             $d = $auto ? self::detect((string) $r['id'], $ctx) : null;
-            if ($d === true) { $detectedCount++; $detectedCats[$r['cat']] = true; }
-            $groups[$r['cat']][] = $r + ['detected' => $d];
+            $row = $r + ['detected' => $d];
+            if ($d === true) { $detectedCount++; $detectedCats[$r['cat']] = true; $row['phal_dasha'] = $phalDasha; }
+            $groups[$r['cat']][] = $row;
         }
 
         // Remedies for dosha categories that fired.
@@ -67,6 +75,27 @@ final class ShaapEngine
             'remedies' => array_values($activeRemedies),
             'total' => count($rules['rules'] ?? []),
         ];
+    }
+
+    /**
+     * @param list<string> $karakas
+     * @return array{planets:list<array<string,mixed>>, note:string}
+     */
+    private static function phalDasha(array $karakas, array $yk, array $chart, float $tz): array
+    {
+        $roles = $yk['roles'] ?? [];
+        $out = [];
+        foreach ($karakas as $p) {
+            $period = Yogakaraka::dashaPeriod($chart, $p);
+            $out[] = [
+                'planet' => $p, 'planet_hi' => Yogakaraka::planetHi($p),
+                'role' => $roles[$p]['role'] ?? 'neutral', 'role_hi' => $roles[$p]['role_hi'] ?? 'सम',
+                'dasha' => $period !== null
+                    ? \AutoBusiness\Astro\Time\JulianDay::toDmy($period[0], $tz) . ' – ' . \AutoBusiness\Astro\Time\JulianDay::toDmy($period[1], $tz)
+                    : null,
+            ];
+        }
+        return ['planets' => $out, 'note' => 'दोष/योग का प्रभाव पुत्रकारक गुरु व पंचमेश-लग्नेश की महादशा/अन्तर्दशा में सम्भावित।'];
     }
 
     /** @return array<string,mixed> */

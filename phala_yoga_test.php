@@ -69,6 +69,37 @@ check('exactly one Nabhasa yoga detected', $nb === 1, (string) $nb);
 $ch = 0; foreach (['CH01', 'CH02', 'CH03', 'CH04'] as $k) { if (($flat[$k] ?? null) === true) { $ch++; } }
 check('at most one of Sunapha/Anapha/Durudhara/Kemadruma', $ch <= 1, (string) $ch);
 
+echo "\n=== Part D: Yogakaraka + active summary + फल-दशा ===\n";
+use AutoBusiness\Astro\Phala\Yogakaraka;
+$yk = $o['yogakaraka'] ?? null;
+check('yogakaraka classification present (9 grahas)', $yk !== null && count($yk['roles']) >= 7, (string) count($yk['roles'] ?? []));
+// Moga 1980 is a कुम्भ (Aquarius, index 10) lagna → Venus is the raja-yogakaraka.
+check('Aquarius lagna → Venus योगकारक', ($yk['roles']['Venus']['role'] ?? '') === 'yogakaraka', $yk['roles']['Venus']['role'] ?? '?');
+check('Jupiter मारक flagged (owns 2)', !empty($yk['roles']['Jupiter']['is_marak']));
+$sum = $o['active_summary'] ?? [];
+check('active_summary sums to detected_count', array_sum($sum) === $o['detected_count'], json_encode($sum));
+// Every detected yoga carries phal_dasha with karaka planets.
+$allHaveDasha = true;
+foreach ($o['groups'] as $ys) {
+    foreach ($ys as $y) {
+        if ($y['detected'] === true && empty($y['phal_dasha']['planets'])) { $allHaveDasha = false; }
+    }
+}
+check('every active yoga has फल-दशा karakas', $allHaveDasha);
+// Gajakesari karakas = Jupiter + Moon, each with a dasha window.
+$gk = null;
+foreach ($o['groups'] as $ys) { foreach ($ys as $y) { if ($y['id'] === 'CY01') { $gk = $y; } } }
+$gkPl = array_column($gk['phal_dasha']['planets'] ?? [], 'planet');
+check('Gajakesari फल-दशा = Jupiter + Moon', in_array('Jupiter', $gkPl, true) && in_array('Moon', $gkPl, true), implode(',', $gkPl));
+check('फल-दशा cites a Vimshottari window', ($gk['phal_dasha']['planets'][0]['dasha'] ?? null) !== null);
+// Standalone classify on a synthetic Cancer chart → Mars yogakaraka (owns 5,10).
+$cancer = ['ascendant' => ['sign_index' => 3], 'is_day' => true,
+    'planets' => ['Moon' => ['sidereal_lon' => 200.0, 'house' => 1], 'Sun' => ['sidereal_lon' => 40.0]],
+    'houses' => []];
+for ($hh = 1; $hh <= 12; $hh++) { $cancer['houses'][$hh] = ['lord' => \AutoBusiness\Astro\Calc\Charts::signLord((3 + $hh - 1) % 12)]; }
+$ykc = Yogakaraka::classify($cancer);
+check('Cancer lagna → Mars योगकारक (5+10 lord)', ($ykc['roles']['Mars']['role'] ?? '') === 'yogakaraka', $ykc['roles']['Mars']['role'] ?? '?');
+
 echo "\n=== detected yogas ===\n";
 foreach ($o['groups'] as $cat => $ys) {
     foreach ($ys as $y) {

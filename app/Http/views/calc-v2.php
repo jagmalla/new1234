@@ -367,6 +367,20 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .py-card .yoga-why, .py-card .yoga-res { font-size: .84rem; line-height: 1.5; }
         .py-card.py-on { border-left-color: #15803d; background: #f6fef9; }
         .py-card.yoga-bad.py-on { border-left-color: #15803d; }
+        /* Yogakaraka (Adhyaya 32) classification box + role chips + फल-दशा */
+        .yk-box { background: #f6f1ff; border: 1px solid #e0d4f7; border-radius: 10px; padding: 8px 11px; margin: 8px 0; }
+        .yk-head { font-size: .82rem; font-weight: 700; color: #6b21a8; margin-bottom: 6px; }
+        .yk-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+        .yk-pill { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid var(--line);
+            border-radius: 999px; padding: 2px 8px; font-size: .8rem; }
+        .gc-chip.yk-yoga { background: #ede9fe; color: #5b21b6; }
+        .gc-chip.yk-marak { background: #fde2e4; color: #9d174d; }
+        .yk-ref { font-size: .74rem; color: #7c6f5a; margin-top: 6px; line-height: 1.5; }
+        .yoga-dasha { margin-top: 6px; padding-top: 5px; border-top: 1px dashed var(--line); font-size: .84rem; }
+        .yoga-dasha > b { color: #6b21a8; }
+        .yoga-dasha-pill { display: inline-flex; align-items: center; gap: 4px; background: #faf7ff; border: 1px solid #ece3fb;
+            border-radius: 7px; padding: 2px 7px; margin: 2px 4px 2px 0; font-size: .82rem; }
+        .yd-dates { color: var(--ink-soft); font-size: .76rem; }
         /* शाप-दोष pane */
         .sh-card { padding: 8px 11px; margin-bottom: 8px; }
         .sh-card .yoga-title { font-size: .95rem; }
@@ -653,15 +667,17 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             <div class="ov-sub"><?= $ovPrat !== '' ? 'प्रत्यंतर: ' . $h($grahaHi[$ovPrat] ?? $ovPrat) : '&nbsp;' ?></div>
         </div>
         <?php
-            $ovYogas = $view['yogas'] ?? [];
-            $ovYGood = array_values(array_filter($ovYogas, static fn($y) => !empty($y['good'])));
+            // Total ACTIVE yogas in the kundali (unified Phaladeepika detection).
+            $ovPY = $view['phala_yoga'] ?? null;
+            $ovYActive = (int) ($ovPY['detected_count'] ?? 0);
+            $ovYSum = $ovPY['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
         ?>
         <div class="ov-tile">
             <div class="ov-label">Yoga (योग)</div>
-            <div class="ov-value acc-yoga"><?= $ovYGood !== [] ? count($ovYGood) . ' शुभ योग' : '—' ?></div>
-            <div class="ov-sub"><?= $ovYGood !== []
-                ? $h(implode(' · ', array_slice(array_map(static fn($y) => (string) $y['name'], $ovYGood), 0, 2)))
-                : 'कोई प्रमुख योग नहीं' ?></div>
+            <div class="ov-value acc-yoga"><?= $ovYActive > 0 ? $ovYActive . ' सक्रिय योग' : '—' ?></div>
+            <div class="ov-sub"><?= $ovYActive > 0
+                ? $h((int) ($ovYSum['shubh'] ?? 0) . ' शुभ · ' . (int) ($ovYSum['ashubh'] ?? 0) . ' अशुभ' . (($ovYSum['mishrit'] ?? 0) ? ' · ' . (int) $ovYSum['mishrit'] . ' मिश्र' : ''))
+                : 'कोई सक्रिय योग नहीं' ?></div>
         </div>
     </div>
     <?php endif; ?>
@@ -1258,21 +1274,9 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
                 <?php endforeach; endif; ?>
             </div><!-- /pred-view bhavesh -->
 
-            <!-- योग — classical yogas detected from the placements + the full
-                 Phaladeepika catalogue (106) with a category dropdown. -->
+            <!-- योग — unified Phaladeepika catalogue (single source; no doubling).
+                 Active yogas + per-lagna Yogakaraka roles + फल-दशा. -->
             <div class="pred-view hidden" data-pred="yoga">
-                <?php $yogas = $view['yogas'] ?? []; ?>
-                <div class="yoga-sec-title">इस कुंडली में मिले प्रमुख योग <span class="text-xs text-gray-400 font-normal">(सारांश)</span></div>
-                <?php if (empty($yogas)): ?>
-                    <div class="text-gray-500 italic p-3">इस कुंडली में कोई प्रमुख योग नहीं मिला।</div>
-                <?php else: foreach ($yogas as $y): ?>
-                    <div class="yoga-card<?= empty($y['good']) ? ' yoga-bad' : '' ?>">
-                        <div class="yoga-title"><?= $h((string) $y['name']) ?><?= empty($y['good']) ? '' : ' ✓' ?></div>
-                        <div class="yoga-why"><b>कारण:</b> <?= $h((string) $y['why']) ?></div>
-                        <div class="yoga-res"><b>फल:</b> <?= $h((string) $y['result']) ?></div>
-                    </div>
-                <?php endforeach; endif; ?>
-
                 <?php require __DIR__ . '/_phala_yoga.php'; ?>
             </div><!-- /pred-view yoga -->
 

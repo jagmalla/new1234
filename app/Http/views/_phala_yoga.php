@@ -10,11 +10,30 @@
 $py = $view['phala_yoga'] ?? null;
 $typeHi = ['shubh' => 'शुभ', 'ashubh' => 'अशुभ', 'mishrit' => 'मिश्र'];
 $typeChip = static fn(string $t): string => $t === 'shubh' ? 'gc-shubh' : ($t === 'ashubh' ? 'gc-ashubh' : 'gc-mishrit');
+$roleChip = static fn(string $r): string => $r === 'yogakaraka' ? 'yk-yoga' : ($r === 'benefic' ? 'gc-shubh' : ($r === 'malefic' ? 'gc-ashubh' : 'gc-mishrit'));
 if ($py !== null && !empty($py['groups'])):
     $cats = $py['categories'];   // hi => slug
+    $sum = $py['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
+    $yk = $py['yogakaraka'] ?? null;
 ?>
-    <div class="yoga-sec-title" style="margin-top:14px">फलदीपिका योग <span class="text-xs text-gray-400 font-normal">(अध्याय 6–7 · कुल <?= (int) $py['total'] ?>)</span>
-        <span class="gc-chip gc-shubh" style="margin-left:6px">इस कुंडली में बने: <?= (int) $py['detected_count'] ?></span></div>
+    <div class="yoga-sec-title">कुंडली के सक्रिय योग
+        <span class="gc-chip gc-shubh" style="margin-left:6px">कुल सक्रिय: <?= (int) $py['detected_count'] ?></span>
+        <span class="text-xs text-gray-400 font-normal" style="margin-left:4px"><?= (int) ($sum['shubh'] ?? 0) ?> शुभ · <?= (int) ($sum['ashubh'] ?? 0) ?> अशुभ<?= ($sum['mishrit'] ?? 0) ? ' · ' . (int) $sum['mishrit'] . ' मिश्र' : '' ?></span>
+    </div>
+
+    <?php if ($yk !== null && !empty($yk['roles'])): ?>
+    <!-- Yogakaraka classification for this lagna (BPHS Adhyaya 32). -->
+    <div class="yk-box">
+        <div class="yk-head">इस लग्न (<b><?= $h($yk['lagna_hi']) ?></b>) हेतु ग्रह-वर्गीकरण <span class="text-xs text-gray-400 font-normal">(बृ.पा.हो.शा. अध्याय 32)</span></div>
+        <div class="yk-grid">
+            <?php foreach ($yk['roles'] as $pl => $r): ?>
+            <span class="yk-pill" title="<?= $h($r['note']) ?>"><b><?= $h($r['planet_hi']) ?></b>
+                <span class="gc-chip <?= $roleChip($r['role']) ?>"><?= $h($r['role_hi']) ?></span><?= !empty($r['is_marak']) ? '<span class="gc-chip yk-marak">मारक</span>' : '' ?></span>
+            <?php endforeach; ?>
+        </div>
+        <?php if (!empty($yk['table']['yogakaraka'])): ?><div class="yk-ref">ग्रन्थ-सन्दर्भ: योगकारक — <?= $h($yk['table']['yogakaraka']) ?>; मारक — <?= $h($yk['table']['marak'] ?? '—') ?> (श्लोक <?= $h($yk['table']['shloka'] ?? '') ?>)।</div><?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <div class="pred-picker" style="margin-top:8px;gap:8px;flex-wrap:wrap">
         <label class="pred-picker-label" for="py-cat">श्रेणी</label>
@@ -51,6 +70,14 @@ if ($py !== null && !empty($py['groups'])):
                 </div>
                 <div class="yoga-why"><b>नियम:</b> <?= $h($y['rule']) ?></div>
                 <div class="yoga-res"><b>फल:</b> <?= $h($y['result']) ?></div>
+                <?php if (!empty($y['phal_dasha']['planets'])): ?>
+                <div class="yoga-dasha"><b>फल-दशा:</b>
+                    <?php foreach ($y['phal_dasha']['planets'] as $pd): ?>
+                    <span class="yoga-dasha-pill"><?= $h($pd['planet_hi']) ?> <span class="gc-chip <?= $roleChip($pd['role']) ?>"><?= $h($pd['role_hi']) ?></span><?= $pd['dasha'] !== null ? ' <span class="yd-dates">' . $h($pd['dasha']) . '</span>' : '' ?></span>
+                    <?php endforeach; ?>
+                    <div class="text-xs text-gray-400" style="margin-top:2px">इन ग्रहों की महादशा/अन्तर्दशा में योग-फल प्रकट होने की सम्भावना (बलाबल-सापेक्ष)।</div>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>

@@ -64,6 +64,14 @@ if ($sh !== null && !empty($sh['groups'])):
                 </div>
                 <div class="yoga-why"><b>नियम:</b> <?= $h($r['rule']) ?></div>
                 <div class="yoga-res"><b>फल:</b> <?= $h($r['result']) ?></div>
+                <?php if (!empty($r['phal_dasha']['planets'])): ?>
+                <div class="yoga-dasha"><b>फल-दशा:</b>
+                    <?php foreach ($r['phal_dasha']['planets'] as $pd): $rc = $pd['role'] === 'yogakaraka' ? 'yk-yoga' : ($pd['role'] === 'benefic' ? 'gc-shubh' : ($pd['role'] === 'malefic' ? 'gc-ashubh' : 'gc-mishrit')); ?>
+                    <span class="yoga-dasha-pill"><?= $h($pd['planet_hi']) ?> <span class="gc-chip <?= $rc ?>"><?= $h($pd['role_hi']) ?></span><?= $pd['dasha'] !== null ? ' <span class="yd-dates">' . $h($pd['dasha']) . '</span>' : '' ?></span>
+                    <?php endforeach; ?>
+                    <div class="text-xs text-gray-400" style="margin-top:2px">दोष/योग-फल पुत्रकारक गुरु व पंचमेश-लग्नेश की महादशा/अन्तर्दशा में सम्भावित।</div>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>

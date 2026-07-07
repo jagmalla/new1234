@@ -36,26 +36,121 @@ final class PhaladeepikaYogaEngine
      * @param array<string,mixed> $rules PhaladeepikaYogaRepository::load output
      * @return array<string,mixed>
      */
-    public static function compute(array $chart, array $rules): array
+    public static function compute(array $chart, array $rules, float $tz = 0.0): array
     {
         $cfg = $rules['config'] ?? [];
         $auto = ($cfg['phala_yoga_autodetect'] ?? '1') === '1';
         $ctx = self::context($chart);
+        $yk = Yogakaraka::classify($chart);          // per-lagna planet roles (Adhyaya 32)
 
         $groups = [];
         $detectedCount = 0;
+        $summary = ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
         foreach (($rules['yogas'] ?? []) as $y) {
             $d = $auto ? self::detect((string) $y['id'], $ctx) : null;
-            if ($d === true) { $detectedCount++; }
-            $groups[$y['cat']][] = $y + ['detected' => $d];
+            $row = $y + ['detected' => $d];
+            if ($d === true) {
+                $detectedCount++;
+                $summary[$y['type']] = ($summary[$y['type']] ?? 0) + 1;
+                $row['phal_dasha'] = self::phalDasha(self::karakas((string) $y['id'], $ctx), $yk, $chart, $tz);
+            }
+            $groups[$y['cat']][] = $row;
         }
 
         return [
             'categories' => PhaladeepikaYogaData::CATEGORIES,
             'groups' => $groups,
             'detected_count' => $detectedCount,
+            'active_summary' => $summary,
+            'yogakaraka' => $yk,
             'total' => count($rules['yogas'] ?? []),
         ];
+    }
+
+    /**
+     * The planets that FORM a given detected yoga (its karakas) — the yoga
+     * fructifies in their Vimshottari dasha.
+     *
+     * @return list<string>
+     */
+    private static function karakas(string $id, array $c): array
+    {
+        /** @var callable $sign */ $sign = $c['sign'];
+        /** @var callable $house */ $house = $c['house'];
+        /** @var callable $houseFrom */ $houseFrom = $c['houseFrom'];
+        /** @var callable $lordOfHouse */ $lordOfHouse = $c['lordOfHouse'];
+        /** @var callable $ownExalt */ $ownExalt = $c['ownExalt'];
+        $benefics = $c['benefics']; $malefics = $c['malefics'];
+        $moonSign = $sign('Moon'); $sunSign = $sign('Sun');
+        $inHouse = static function (int $h, array $who) use ($house): array {
+            return array_values(array_filter($who, static fn($p) => $house($p) === $h));
+        };
+        $atFrom = static function (int $fromSign, array $rels, array $who) use ($sign): array {
+            $targets = array_map(static fn($r) => ($fromSign + $r - 1) % 12, $rels);
+            return array_values(array_filter($who, static fn($p) => in_array($sign($p), $targets, true)));
+        };
+        $classical = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+
+        $out = match (true) {
+            $id === 'PMP01' => ['Mars'],
+            $id === 'PMP02' => ['Mercury'],
+            $id === 'PMP03' => ['Jupiter'],
+            $id === 'PMP04' => ['Venus'],
+            $id === 'PMP05' => ['Saturn'],
+            in_array($id, ['CH01', 'CH03'], true) => array_merge(['Moon'], $atFrom($moonSign, [2, 12], ['Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'])),
+            $id === 'CH02' => array_merge(['Moon'], $atFrom($moonSign, [12], ['Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'])),
+            $id === 'CH04' => ['Moon'],
+            in_array($id, ['SU01', 'SU02', 'SU03'], true) => array_merge(['Sun'], $atFrom($sunSign, [2, 12], $benefics)),
+            in_array($id, ['SU04', 'SU05', 'SU06'], true) => array_merge(['Sun'], $atFrom($sunSign, [2, 12], ['Mars', 'Saturn'])),
+            $id === 'LG01' => array_merge($inHouse(2, $benefics), $inHouse(12, $benefics)),
+            $id === 'LG02' => array_merge($inHouse(2, $malefics), $inHouse(12, $malefics)),
+            in_array($id, ['CY01', 'CY02'], true) => ['Jupiter', 'Moon'],
+            in_array($id, ['CY03', 'CY04', 'CY05'], true) => ['Moon', 'Sun'],
+            in_array($id, ['MB01', 'MB02'], true) => ['Sun', 'Moon'],
+            $id === 'VA01' => $benefics,
+            $id === 'VA02' => array_merge($inHouse(10, $benefics), $atFrom($moonSign, [10], $benefics)),
+            $id === 'ML01' => $benefics,
+            $id === 'ML02' => $classical,
+            $id === 'AD01' => ['Mercury', 'Jupiter', 'Venus'],
+            str_starts_with($id, 'NB') => $classical,
+            str_starts_with($id, 'BV') => (function () use ($id, $lordOfHouse, $inHouse, $benefics) {
+                $n = (int) substr($id, 2);
+                return array_values(array_unique(array_merge($inHouse($n, $benefics), [$lordOfHouse($n)])));
+            })(),
+            str_starts_with($id, 'DR') => [$lordOfHouse((int) substr($id, 2))],
+            $id === 'KP03' => [$lordOfHouse(9), $lordOfHouse(10)],
+            $id === 'RY01' => array_values(array_filter($classical, static fn($p) => $ownExalt($p) && in_array($house($p), [1, 4, 7, 10], true))),
+            $id === 'RY03' => array_values(array_filter(['Mercury', 'Jupiter', 'Moon', 'Venus', 'Saturn', 'Sun', 'Mars'],
+                static fn($p) => $house($p) === ['Mercury' => 1, 'Jupiter' => 1, 'Moon' => 4, 'Venus' => 4, 'Saturn' => 7, 'Sun' => 10, 'Mars' => 10][$p])),
+            $id === 'NBR04' => array_values(array_filter($classical, static fn($p) => $sign($p) === (self::DEBIL[$p] ?? -1))),
+            default => [],
+        };
+        return array_values(array_unique(array_filter($out, static fn($p) => $p !== '')));
+    }
+
+    /**
+     * Build the फल-दशा info for a yoga: each karaka planet + its Adhyaya-32 role
+     * and (if found) its Vimshottari Mahadasha window.
+     *
+     * @param list<string> $karakas
+     * @return array{planets:list<array<string,mixed>>, note:string}
+     */
+    private static function phalDasha(array $karakas, array $yk, array $chart, float $tz): array
+    {
+        $roles = $yk['roles'] ?? [];
+        $out = [];
+        foreach ($karakas as $p) {
+            $period = Yogakaraka::dashaPeriod($chart, $p);
+            $out[] = [
+                'planet' => $p, 'planet_hi' => Yogakaraka::planetHi($p),
+                'role' => $roles[$p]['role'] ?? 'neutral',
+                'role_hi' => $roles[$p]['role_hi'] ?? 'सम',
+                'dasha' => $period !== null
+                    ? \AutoBusiness\Astro\Time\JulianDay::toDmy($period[0], $tz) . ' – ' . \AutoBusiness\Astro\Time\JulianDay::toDmy($period[1], $tz)
+                    : null,
+            ];
+        }
+        return ['planets' => $out, 'note' => 'योग का फल इन ग्रहों की महादशा/अन्तर्दशा में प्रकट होने की सम्भावना (बलाबल-सापेक्ष)।'];
     }
 
     /** @return array<string,mixed> */
