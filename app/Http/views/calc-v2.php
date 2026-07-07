@@ -1759,7 +1759,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     <!-- Shadbala -->
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-1">Shadbala (Six-fold Strength)</h2>
-        <p class="text-xs text-gray-500 mb-2">Sthana, Dig and Naisargika match Parashara's Light to ±0.01. Kaala, Chesta and Drig follow the BPHS/PL method — Sun's Ayana Bala and the Moon's Paksha Bala doubled, a waning Moon taking the malefic Paksha/Drig share, and Chesta from the textbook Chesta-Kendra (Seeghrochcha − (Madhya+Spashta)/2).</p>
+        <p class="text-xs text-gray-500 mb-2">Sthana, Dig, Naisargika, Ayana and Ishta/Kashta match Parashara's Light. Kaala, Chesta and Drig follow the PL method — the Moon always takes the benefic Paksha share; Ayana/Paksha are counted once in Kaala and once in Chesta (not doubled); Ishta = (Uchcha + Chesta)/2, Kashta = 60 − Ishta; Drig treats the Moon and Mercury as benefics. The five star planets' Chesta uses the Seeghra-Kendra (Seeghrochcha − Madhyama); PL's internal anomaly model leaves a small residual there.</p>
         <table class="w-full">
             <thead><tr class="text-left border-b">
                 <th class="py-1 pr-2">Planet</th><th class="pr-2">Sthana</th><th class="pr-2">Dig</th>

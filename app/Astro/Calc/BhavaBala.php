@@ -119,13 +119,15 @@ final class BhavaBala
             $dayStrong = in_array($sign, self::SIRSHODAYA, true);
             $dayNight = ($dayStrong === $isDay) ? 15.0 : 0.0;
 
-            // Dig Bala: bhava strongest at the Lagna degree, falling to the 7th.
-            $cuspMadhya = Charts::norm($ascLon + ($h - 1) * 30.0);
-            $sep = abs($cuspMadhya - $ascLon);
-            if ($sep > 180.0) {
-                $sep = 360.0 - $sep;
-            }
-            $digbala = 60.0 - $sep / 3.0;
+            // Bhava Dig Bala (Parashara's Light): depends on the RASHI in the
+            // house. Classify the sign (Nara/Chatushpada/Keeta/Jalachara), find
+            // its strong house, then Dig Bala = 60 − 10 × d, where d is the
+            // shortest circular house-distance (0–6) from that strong house.
+            $cuspDeg = fmod($ascLon, 30.0);            // equal houses share the asc degree
+            $strong = self::bhavaDigStrongHouse($sign, $cuspDeg);
+            $hd = abs($h - $strong);
+            $hd = min($hd, 12 - $hd);                  // 0..6
+            $digbala = 60.0 - 10.0 * $hd;
 
             // Drishti: weighted Sphuta drishti at the WHOLE-SIGN cusp (0° of the sign).
             $cusp = $sign * 30.0;
@@ -164,5 +166,26 @@ final class BhavaBala
             ];
         }
         return $out;
+    }
+
+    /**
+     * Strong house for a rashi's Bhava Dig Bala (Parashara's Light):
+     *   Nara (human)     → 1st   : Gemini, Virgo, Libra, Aquarius, Sagittarius 0°–15°
+     *   Chatushpada      → 10th  : Aries, Taurus, Leo, Sagittarius 15°–30°, Capricorn 0°–15°
+     *   Keeta (insect)   → 7th   : Cancer, Scorpio
+     *   Jalachara (water)→ 4th   : Pisces, Capricorn 15°–30°
+     * Sagittarius (8) and Capricorn (9) split by the cusp degree within the sign.
+     */
+    private static function bhavaDigStrongHouse(int $sign, float $cuspDeg): int
+    {
+        return match ($sign) {
+            2, 5, 6, 10 => 1,                       // Gemini, Virgo, Libra, Aquarius — Nara
+            0, 1, 4     => 10,                      // Aries, Taurus, Leo — Chatushpada
+            3, 7        => 7,                       // Cancer, Scorpio — Keeta
+            11          => 4,                       // Pisces — Jalachara
+            8           => $cuspDeg < 15.0 ? 1 : 10, // Sagittarius: 1st half Nara, 2nd Chatushpada
+            9           => $cuspDeg < 15.0 ? 10 : 4, // Capricorn: 1st half Chatushpada, 2nd Jalachara
+            default     => 1,
+        };
     }
 }
