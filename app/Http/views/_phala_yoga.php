@@ -16,6 +16,7 @@ if ($py !== null && !empty($py['groups'])):
     $sum = $py['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
     $yk = $py['yogakaraka'] ?? null;
 ?>
+    <?php $glossaryScope = 'birth'; require __DIR__ . '/_glossary.php'; ?>
     <div class="yoga-sec-title">कुंडली के सक्रिय योग
         <span class="gc-chip gc-shubh" style="margin-left:6px">कुल सक्रिय: <?= (int) $py['detected_count'] ?></span>
         <span class="text-xs text-gray-400 font-normal" style="margin-left:4px"><?= (int) ($sum['shubh'] ?? 0) ?> शुभ · <?= (int) ($sum['ashubh'] ?? 0) ?> अशुभ<?= ($sum['mishrit'] ?? 0) ? ' · ' . (int) $sum['mishrit'] . ' मिश्र' : '' ?></span>

@@ -145,6 +145,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             box-shadow: 0 2px 7px rgba(38,34,28,.10); padding: 9px 14px; min-width: 0;
             transition: transform .12s ease, box-shadow .12s ease; }
         .ov-tile:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(38,34,28,.16); }
+        .ov-tile[data-nav] { cursor: pointer; }
+        .ov-tile[data-nav]:focus-visible { outline: 2px solid var(--ov-acc, var(--sindoor)); outline-offset: 2px; }
         .ov-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .6px; font-weight: 800;
             color: var(--ov-acc, var(--ink-soft)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .ov-value { font-size: 1.32rem; font-weight: 800; color: var(--ov-acc, var(--ink)); line-height: 1.22;
@@ -381,6 +383,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .yoga-dasha-pill { display: inline-flex; align-items: center; gap: 4px; background: #faf7ff; border: 1px solid #ece3fb;
             border-radius: 7px; padding: 2px 7px; margin: 2px 4px 2px 0; font-size: .82rem; }
         .yd-dates { color: var(--ink-soft); font-size: .76rem; }
+        /* आसान भाषा — plain-language glossary (collapsible) */
+        .ez-gloss { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; margin: 6px 0 10px; overflow: hidden; }
+        .ez-gloss > summary { cursor: pointer; padding: 8px 12px; font-size: .86rem; font-weight: 700; color: #166534; list-style: none; }
+        .ez-gloss > summary::-webkit-details-marker { display: none; }
+        .ez-gloss > summary::after { content: ' ▾'; color: #16a34a; }
+        .ez-gloss[open] > summary::after { content: ' ▴'; }
+        .ez-gloss-body { padding: 4px 12px 10px; }
+        .ez-term { font-size: .84rem; line-height: 1.55; margin: 4px 0; color: #334155; }
+        .ez-term b { color: #15803d; }
+        .ez-note { font-size: .76rem; color: #64748b; margin-top: 6px; border-top: 1px dashed #bbf7d0; padding-top: 5px; }
         /* शाप-दोष pane */
         .sh-card { padding: 8px 11px; margin-bottom: 8px; }
         .sh-card .yoga-title { font-size: .95rem; }
@@ -631,37 +643,37 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     ?>
     <?php $ovSun = (string) ($chart['planets']['Sun']['sign'] ?? ''); ?>
     <div id="ov-strip" class="ov-tiles">
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="profile" role="button" tabindex="0" title="संपादित करें — New / Profile">
             <div class="ov-label">Name</div>
             <div class="ov-value"><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></div>
             <div class="ov-sub"><?= $in['gender'] !== '' ? $h($in['gender']) : '&nbsp;' ?></div>
         </div>
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="profile" role="button" tabindex="0" title="संपादित करें — New / Profile">
             <div class="ov-label">DOB / Time</div>
             <div class="ov-value"><?= $h($in['date']) ?></div>
             <div class="ov-sub"><?= $h($in['time']) ?></div>
         </div>
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="profile" role="button" tabindex="0" title="संपादित करें — New / Profile">
             <div class="ov-label">Birth Place</div>
             <div class="ov-value" title="<?= $h($pobTop) ?>"><?= $h($pobTop) ?></div>
             <div class="ov-sub"><?= $h($in['latIn']) ?>, <?= $h($in['lonIn']) ?></div>
         </div>
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="chart" role="button" tabindex="0" title="जन्म कुंडली (D1) देखें">
             <div class="ov-label">Lagna (Asc)</div>
             <div class="ov-value"><?= $h($rashiHi[$ovLagna] ?? $ovLagna) ?></div>
             <div class="ov-sub"><?= $h($ovLagna) ?> · <?= $h((string) ($chart['ascendant']['formatted'] ?? '')) ?></div>
         </div>
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="chart" role="button" tabindex="0" title="जन्म कुंडली (D1) देखें">
             <div class="ov-label">Moon Sign (राशि)</div>
             <div class="ov-value"><?= $h($rashiHi[$ovMoon] ?? $ovMoon) ?></div>
             <div class="ov-sub">चंद्र राशि · <?= $h($ovMoon) ?></div>
         </div>
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="chart" role="button" tabindex="0" title="जन्म कुंडली (D1) देखें">
             <div class="ov-label">Sun Sign</div>
             <div class="ov-value"><?= $h($rashiHi[$ovSun] ?? $ovSun) ?></div>
             <div class="ov-sub">Sun Sign · <?= $h($ovSun) ?></div>
         </div>
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="dasha" role="button" tabindex="0" title="दशा देखें">
             <div class="ov-label">Current Dasha</div>
             <div class="ov-value acc-dasha"><?= $h(($grahaHi[$ovMaha] ?? $ovMaha) . ($ovAntar !== '' ? ' – ' . ($grahaHi[$ovAntar] ?? $ovAntar) : '')) ?></div>
             <div class="ov-sub"><?= $ovPrat !== '' ? 'प्रत्यंतर: ' . $h($grahaHi[$ovPrat] ?? $ovPrat) : '&nbsp;' ?></div>
@@ -672,7 +684,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             $ovYActive = (int) ($ovPY['detected_count'] ?? 0);
             $ovYSum = $ovPY['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
         ?>
-        <div class="ov-tile">
+        <div class="ov-tile" data-nav="yoga" role="button" tabindex="0" title="योग फलादेश देखें">
             <div class="ov-label">Yoga (योग)</div>
             <div class="ov-value acc-yoga"><?= $ovYActive > 0 ? $ovYActive . ' सक्रिय योग' : '—' ?></div>
             <div class="ov-sub"><?= $ovYActive > 0
@@ -1585,6 +1597,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div id="vp-chart-cell"></div>
             <div class="bg-white rounded-lg shadow p-4 flex flex-col" id="varsha-pred-card">
+                <?php $glossaryScope = 'varsha'; require __DIR__ . '/_glossary.php'; ?>
                 <div class="l2-picker" style="margin-bottom:10px">
                     <span class="pick-tag">Varshaphal Prediction ▾</span>
                     <select id="vp-pred-type" class="l2-select">
@@ -2518,6 +2531,30 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       }
     });
   });
+
+  // Overview tiles are shortcuts: Name/DOB/Place → New/Profile (edit); Lagna/
+  // Moon/Sun → Birth (D1) chart; Current Dasha → Dasha; Yoga → Yoga prediction.
+  // Each just clicks the matching side-menu button so all state/scroll logic is
+  // reused.
+  (function () {
+    var menuBtn = function (sel) { return document.querySelector('#side-menu ' + sel); };
+    var routes = {
+      profile: function () { var b = menuBtn('[data-sec="profile"]'); if (b) { b.click(); } },
+      chart: function () { var b = menuBtn('[data-sec="home"][data-target="chart-panel"]'); if (b) { b.click(); } },
+      dasha: function () { var b = menuBtn('[data-sec="dasha"]'); if (b) { b.click(); } },
+      yoga: function () {
+        var b = menuBtn('[data-sec="home"][data-target="pred-panel"]'); if (b) { b.click(); }
+        var ps = document.getElementById('pred-select');
+        if (ps) { ps.value = 'yoga'; ps.dispatchEvent(new Event('change')); }
+      }
+    };
+    document.querySelectorAll('#ov-strip .ov-tile[data-nav]').forEach(function (tile) {
+      tile.style.cursor = 'pointer';
+      var go = function () { var fn = routes[tile.getAttribute('data-nav')]; if (fn) { fn(); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
+      tile.addEventListener('click', go);
+      tile.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
+  })();
 
   // ---- Mobile / tablet menu drawer (☰ Menu button) ----
   (function () {
