@@ -2198,63 +2198,67 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     apply();
   };
 
-  // फलदीपिका योग catalogue filters — श्रेणी · प्रकार · "केवल बने योग".
+  // फलदीपिका योग catalogue filters — श्रेणी (default "सक्रिय" = detected only) · प्रकार.
   (function () {
     var cat = document.getElementById('py-cat');
     var typ = document.getElementById('py-type');
-    var det = document.getElementById('py-detected');
-    if (!cat && !typ && !det) { return; }
+    if (!cat && !typ) { return; }
     var empty = document.getElementById('py-empty');
     function apply() {
-      var cv = cat ? cat.value : 'all';
+      var cv = cat ? cat.value : 'active';
       var tv = typ ? typ.value : 'all';
-      var dv = det ? det.checked : false;
+      var activeOnly = cv === 'active';
       var shown = 0;
       document.querySelectorAll('#py-detail-pane .py-card').forEach(function (d) {
-        var ok = (cv === 'all' || d.getAttribute('data-cat') === cv)
+        var catOk = (cv === 'all' || cv === 'active') || d.getAttribute('data-cat') === cv;
+        var ok = catOk
               && (tv === 'all' || d.getAttribute('data-type') === tv)
-              && (!dv || d.getAttribute('data-detected') === '1');
+              && (!activeOnly || d.getAttribute('data-detected') === '1');
         d.classList.toggle('hidden', !ok);
         if (ok) { shown++; }
       });
       document.querySelectorAll('#py-detail-pane .py-group').forEach(function (g) {
         g.classList.toggle('hidden', !g.querySelector('.py-card:not(.hidden)'));
       });
-      if (empty) { empty.classList.toggle('hidden', shown !== 0); }
+      if (empty) {
+        empty.classList.toggle('hidden', shown !== 0);
+        empty.textContent = activeOnly ? 'इस कुंडली में कोई प्रमुख फलदीपिका योग संगणित नहीं हुआ।' : 'इस चयन के लिए कोई योग नहीं।';
+      }
     }
     if (cat) { cat.onchange = apply; }
     if (typ) { typ.onchange = apply; }
-    if (det) { det.onchange = apply; }
     apply();
   })();
 
-  // शाप-दोष / सन्तान योग catalogue filters — श्रेणी · प्रकार · "केवल संगणित".
+  // शाप-दोष / सन्तान योग catalogue filters — श्रेणी (default "सक्रिय" = detected only) · प्रकार.
   (function () {
     var cat = document.getElementById('sh-cat');
     var typ = document.getElementById('sh-type');
-    var det = document.getElementById('sh-detected');
-    if (!cat && !typ && !det) { return; }
+    if (!cat && !typ) { return; }
     var empty = document.getElementById('sh-empty');
     function apply() {
-      var cv = cat ? cat.value : 'all';
+      var cv = cat ? cat.value : 'active';
       var tv = typ ? typ.value : 'all';
-      var dv = det ? det.checked : false;
+      var activeOnly = cv === 'active';
       var shown = 0;
       document.querySelectorAll('#sh-detail-pane .sh-card').forEach(function (d) {
-        var ok = (cv === 'all' || d.getAttribute('data-cat') === cv)
+        var catOk = (cv === 'all' || cv === 'active') || d.getAttribute('data-cat') === cv;
+        var ok = catOk
               && (tv === 'all' || d.getAttribute('data-type') === tv)
-              && (!dv || d.getAttribute('data-detected') === '1');
+              && (!activeOnly || d.getAttribute('data-detected') === '1');
         d.classList.toggle('hidden', !ok);
         if (ok) { shown++; }
       });
       document.querySelectorAll('#sh-detail-pane .sh-group').forEach(function (g) {
         g.classList.toggle('hidden', !g.querySelector('.sh-card:not(.hidden)'));
       });
-      if (empty) { empty.classList.toggle('hidden', shown !== 0); }
+      if (empty) {
+        empty.classList.toggle('hidden', shown !== 0);
+        empty.textContent = activeOnly ? 'इस कुंडली में कोई शाप-दोष / सन्तान योग संगणित नहीं हुआ।' : 'इस चयन के लिए कोई नियम नहीं।';
+      }
     }
     if (cat) { cat.onchange = apply; }
     if (typ) { typ.onchange = apply; }
-    if (det) { det.onchange = apply; }
     apply();
   })();
 

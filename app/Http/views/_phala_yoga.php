@@ -19,6 +19,7 @@ if ($py !== null && !empty($py['groups'])):
     <div class="pred-picker" style="margin-top:8px;gap:8px;flex-wrap:wrap">
         <label class="pred-picker-label" for="py-cat">श्रेणी</label>
         <select id="py-cat" class="pred-inline-select" size="1">
+            <option value="active" selected>✓ सक्रिय — इस कुंडली में बने</option>
             <option value="all">सभी श्रेणियाँ (All)</option>
             <?php foreach ($cats as $chi => $slug): ?><option value="<?= $h($chi) ?>"><?= $h($chi) ?></option><?php endforeach; ?>
         </select>
@@ -31,9 +32,6 @@ if ($py !== null && !empty($py['groups'])):
             <option value="ashubh">अशुभ</option>
             <option value="mishrit">मिश्र</option>
         </select>
-        <label class="text-xs text-gray-600" style="display:flex;align-items:center;gap:5px;white-space:nowrap">
-            <input type="checkbox" id="py-detected"> केवल बने योग
-        </label>
     </div>
 
     <div id="py-detail-pane" style="margin-top:8px">

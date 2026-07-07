@@ -23,6 +23,7 @@ if ($sh !== null && !empty($sh['groups'])):
     <div class="pred-picker" style="margin-top:8px;gap:8px;flex-wrap:wrap">
         <label class="pred-picker-label" for="sh-cat">श्रेणी</label>
         <select id="sh-cat" class="pred-inline-select" size="1">
+            <option value="active" selected>✓ सक्रिय — इस कुंडली में संगणित</option>
             <option value="all">सभी श्रेणियाँ (All)</option>
             <?php foreach ($cats as $chi => $slug): ?><option value="<?= $h($chi) ?>"><?= $h($chi) ?></option><?php endforeach; ?>
         </select>
@@ -35,9 +36,6 @@ if ($sh !== null && !empty($sh['groups'])):
             <option value="mishrit">मिश्र (विलम्ब/दत्तक)</option>
             <option value="shubh">शुभ (बहुपुत्र)</option>
         </select>
-        <label class="text-xs text-gray-600" style="display:flex;align-items:center;gap:5px;white-space:nowrap">
-            <input type="checkbox" id="sh-detected"> केवल संगणित
-        </label>
     </div>
 
     <?php if (!empty($sh['remedies'])): ?>
