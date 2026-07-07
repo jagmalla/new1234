@@ -13,7 +13,10 @@ use AutoBusiness\Astro\Time\JulianDay;
  *   1. Sthana  — Uchcha + Saptavargaja + Ojha-Yugma + Kendradi + Drekkana  (validated ±0.01 vs PL)
  *   2. Dig     — directional, via Lagna/MC cusps                            (validated ±0.01 vs PL)
  *   3. Kaala   — Nathonnata + Paksha + Tribhaga + Vara + Hora + Masa + Abda + Ayana + Yuddha
- *   4. Chesta  — Sun=Ayana, Moon=Paksha, star planets = seeghra (motional)
+ *                (BPHS doublings applied: Sun's Ayana ×2, Moon's Paksha ×2;
+ *                 waning Moon takes the malefic Paksha share)
+ *   4. Chesta  — Sun=Ayana(×2), Moon=Paksha(×2); star planets by the textbook
+ *                Chesta Kendra = Seeghrochcha − (Madhya + Spashta)/2, ÷3
  *   5. Naisargika — fixed natural strength                                  (PL values)
  *   6. Drig    — net benefic-minus-malefic aspect (Sphuta Drishti)
  *
@@ -111,9 +114,19 @@ final class Shadbala
         // Shared Paksha + Ayana (also reused by Chesta).
         $elong = Charts::norm($siderealLon['Moon'] - $siderealLon['Sun']);
         $pakshaBen = (180.0 - abs(180.0 - $elong)) / 3.0;
+        // Paksha benefics: Jupiter/Venus/Mercury always; the Moon only when
+        // WAXING (shukla). A waning Moon takes the malefic share (BPHS/PL).
+        $moonWaxing = $elong < 180.0;
+        $pakshaBenefics = $moonWaxing
+            ? ['Jupiter', 'Venus', 'Mercury', 'Moon']
+            : ['Jupiter', 'Venus', 'Mercury'];
         $ayana = [];
         foreach (self::PLANETS as $p) {
             $ayana[$p] = self::ayanaBala($p, $decl[$p]);
+            // BPHS: the Sun's Ayana Bala is DOUBLED (PL follows this).
+            if ($p === 'Sun') {
+                $ayana[$p] *= 2.0;
+            }
         }
 
         $out = [];
@@ -124,10 +137,14 @@ final class Shadbala
             $dig = self::digBala($planet, $lon, $cusps);
             $naisargika = self::NAISARGIKA[$planet];
 
-            $paksha = in_array($planet, self::BENEFIC, true) ? $pakshaBen : (60.0 - $pakshaBen);
+            $paksha = in_array($planet, $pakshaBenefics, true) ? $pakshaBen : (60.0 - $pakshaBen);
+            // BPHS: the MOON's Paksha Bala is DOUBLED (PL follows this).
+            if ($planet === 'Moon') {
+                $paksha *= 2.0;
+            }
             $kaala = self::kaalaBala($planet, $paksha, $ayana[$planet], $ctx);
             $chesta = self::chestaBala($planet, $ayana[$planet], $paksha, $jdUt, $tropical);
-            $drig = self::drigBala($planet, $siderealLon);
+            $drig = self::drigBala($planet, $siderealLon, $moonWaxing);
 
             $total = $sthana['total'] + $dig + $kaala + $chesta + $naisargika + $drig;
             $rupas = $total / 60.0;
@@ -338,6 +355,15 @@ final class Shadbala
     // =====================================================================
 
     /**
+     * Chesta Bala (BPHS/Raman — the method Parashara's Light uses):
+     *   Sun  = Ayana Bala (already doubled), Moon = Paksha Bala (already doubled).
+     *   Star planets: Chesta Kendra = Seeghrochcha − (Madhya + Spashta)/2,
+     *   reduced to <=180; Chesta Bala = Kendra / 3.
+     *   For Mars/Jupiter/Saturn the Seeghrochcha is the MEAN SUN and the Madhya
+     *   is the planet's own mean longitude; for Mercury/Venus the Seeghrochcha is
+     *   the planet's own mean (seeghra) longitude and the Madhya is the mean Sun.
+     *   Spashta is the planet's TRUE (tropical) longitude.
+     *
      * @param array<string,float> $tropical
      */
     private static function chestaBala(string $planet, float $ayana, float $paksha, float $jdUt, array $tropical): float
@@ -348,15 +374,22 @@ final class Shadbala
         if ($planet === 'Moon') {
             return $paksha;
         }
-        // Star planets: Chesta = seeghra (synodic) kendra / 3.
         $d = $jdUt - 2451545.0;
         $meanSun = Charts::norm(self::MEAN_LON['Sun'][0] + self::MEAN_LON['Sun'][1] * $d);
         $meanPl = Charts::norm(self::MEAN_LON[$planet][0] + self::MEAN_LON[$planet][1] * $d);
+        $spashta = $tropical[$planet];
 
-        // Superior planets reckon from the Sun; inferior from the planet.
-        $kendra = in_array($planet, ['Mars', 'Jupiter', 'Saturn'], true)
-            ? Charts::norm($meanSun - $meanPl)
-            : Charts::norm($meanPl - $meanSun);
+        if (in_array($planet, ['Mars', 'Jupiter', 'Saturn'], true)) {
+            $seeghra = $meanSun;   // superior: seeghrochcha = mean Sun
+            $madhya = $meanPl;
+        } else {
+            $seeghra = $meanPl;    // inferior: seeghrochcha = own mean (seeghra) lon
+            $madhya = $meanSun;
+        }
+
+        // Circular midpoint of Madhya and Spashta (shortest arc).
+        $half = $madhya + 0.5 * (fmod($spashta - $madhya + 540.0, 360.0) - 180.0);
+        $kendra = Charts::norm($seeghra - $half);
         if ($kendra > 180.0) {
             $kendra = 360.0 - $kendra;
         }
@@ -370,9 +403,11 @@ final class Shadbala
     /**
      * @param array<string,float> $siderealLon
      */
-    private static function drigBala(string $aspected, array $siderealLon): float
+    private static function drigBala(string $aspected, array $siderealLon, bool $moonWaxing = true): float
     {
-        $benefics = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+        $benefics = $moonWaxing
+            ? ['Jupiter', 'Venus', 'Mercury', 'Moon']
+            : ['Jupiter', 'Venus', 'Mercury'];   // waning Moon aspects count malefic
         $sum = 0.0;
         foreach (self::PLANETS as $aspecting) {
             if ($aspecting === $aspected) {

@@ -1759,7 +1759,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     <!-- Shadbala -->
     <div class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
         <h2 class="font-semibold mb-1">Shadbala (Six-fold Strength)</h2>
-        <p class="text-xs text-gray-500 mb-2">Sthana, Dig and Naisargika match Parashara's Light to ±0.01. Kaala, Chesta and Drig follow PL's method (Chesta/Drig are the most program-specific components); the per-planet Total/Rupas/Ratio are close to PL.</p>
+        <p class="text-xs text-gray-500 mb-2">Sthana, Dig and Naisargika match Parashara's Light to ±0.01. Kaala, Chesta and Drig follow the BPHS/PL method — Sun's Ayana Bala and the Moon's Paksha Bala doubled, a waning Moon taking the malefic Paksha/Drig share, and Chesta from the textbook Chesta-Kendra (Seeghrochcha − (Madhya+Spashta)/2).</p>
         <table class="w-full">
             <thead><tr class="text-left border-b">
                 <th class="py-1 pr-2">Planet</th><th class="pr-2">Sthana</th><th class="pr-2">Dig</th>
