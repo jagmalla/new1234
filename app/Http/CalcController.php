@@ -24,6 +24,11 @@ final class CalcController
         AdminGuard::require();
         \AutoBusiness\Core\Asset::noCacheHtml(); // HTML always revalidated (cache-busting)
 
+        // Access log: record this visit (location / date / time / IP + per-IP
+        // repeat counter). Fail-safe — never throws into the page. The returned
+        // visit id is handed to the page so its heartbeat can report duration.
+        $accessVid = \AutoBusiness\Core\AccessLog::begin();
+
         // Defaults = the Moga reference birth (matches calc_test.php).
         // Birth date is entered DD-MM-YYYY.
         $date = (string) ($_GET['date'] ?? '01-12-1980');
@@ -180,8 +185,22 @@ final class CalcController
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.
+        $view['accessVid'] = $accessVid ?? '';
         $tpl = (($_GET['layout'] ?? '') === 'old') ? 'calc.php' : 'calc-v2.php';
         require dirname(__DIR__) . '/Http/views/' . $tpl;
+    }
+
+    /**
+     * Access-log heartbeat endpoint (GET|POST calc/ping?vid=…). The page pings
+     * this every so often (and on unload) so the visit's duration in the log is
+     * kept current. Returns 204 with no body; always succeeds silently.
+     */
+    public function ping(): void
+    {
+        $vid = (string) ($_REQUEST['vid'] ?? '');
+        \AutoBusiness\Core\AccessLog::ping($vid);
+        http_response_code(204);
+        header('Content-Type: text/plain');
     }
 
     /**

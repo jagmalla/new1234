@@ -5,6 +5,10 @@
 /vendor/
 *.log
 
+# Access-log runtime state (regenerated on the host; never committed)
+/storage/.visits.json
+/storage/.geo_cache.json
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

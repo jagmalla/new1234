@@ -34,6 +34,11 @@ try {
             (new CalcController())->gocharJson();
             break;
 
+        case 'GET calc/ping':
+        case 'POST calc/ping':
+            (new CalcController())->ping();
+            break;
+
         case 'GET calc/varshaphal':
             (new CalcController())->varshaphalJson();
             break;

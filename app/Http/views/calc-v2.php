@@ -2819,5 +2819,29 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 })();
 </script>
 <?php endif; ?>
+
+<?php $abVid = (string) ($view['accessVid'] ?? ''); if ($abVid !== ''): ?>
+<script>
+/* Access-log heartbeat: keeps this visit's "duration" in the server log current.
+ * Pings on load, then every 30s while the tab is visible, and once more on
+ * unload (via sendBeacon) so the final duration is recorded. Fully optional —
+ * a failed ping never affects the page. */
+(function () {
+  'use strict';
+  var vid = <?= json_encode($abVid) ?>;
+  var url = '/calc/ping?vid=' + encodeURIComponent(vid);
+  function ping() {
+    try {
+      if (navigator.sendBeacon) { navigator.sendBeacon(url); }
+      else { fetch(url, { method: 'POST', keepalive: true }); }
+    } catch (e) { /* ignore */ }
+  }
+  ping();
+  setInterval(function () { if (!document.hidden) { ping(); } }, 30000);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) { ping(); } });
+  window.addEventListener('pagehide', ping);
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
