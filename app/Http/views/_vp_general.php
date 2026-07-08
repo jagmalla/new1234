@@ -18,7 +18,6 @@ $run = ($dp !== null && !empty($dp['periods'])) ? $dp['periods'][(int) ($dp['run
 $matched = (int) ($tb['matched_count'] ?? 0);
 ?>
 <div class="gen-wrap">
-    <?php $glossaryScope = 'varsha'; require __DIR__ . '/_glossary.php'; ?>
     <div class="gen-title">वर्षफल सारांश <?= $vpYear !== '' ? '<span class="text-xs text-gray-400 font-normal">(वर्ष ' . $h($vpYear) . ' — मुख्य निष्कर्ष)</span>' : '' ?></div>
 
     <?php if ($ctx !== null): ?>

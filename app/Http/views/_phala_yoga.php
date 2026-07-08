@@ -16,11 +16,11 @@ if ($py !== null && !empty($py['groups'])):
     $sum = $py['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
     $yk = $py['yogakaraka'] ?? null;
 ?>
-    <?php $glossaryScope = 'birth'; require __DIR__ . '/_glossary.php'; ?>
     <div class="yoga-sec-title">कुंडली के सक्रिय योग
-        <span class="gc-chip gc-shubh" style="margin-left:6px">कुल सक्रिय: <?= (int) $py['detected_count'] ?></span>
+        <span class="gc-chip tb-niyam" style="margin-left:6px">कुल सक्रिय: <?= (int) $py['detected_count'] ?></span>
         <span class="text-xs text-gray-400 font-normal" style="margin-left:4px"><?= (int) ($sum['shubh'] ?? 0) ?> शुभ · <?= (int) ($sum['ashubh'] ?? 0) ?> अशुभ<?= ($sum['mishrit'] ?? 0) ? ' · ' . (int) $sum['mishrit'] . ' मिश्र' : '' ?></span>
     </div>
+    <div class="gc-legend"><span class="gc-chip gc-shubh">शुभ</span> हरा · <span class="gc-chip gc-ashubh">अशुभ</span> लाल · <span class="gc-chip gc-mishrit">मिश्र</span> नीला</div>
 
     <?php if ($yk !== null && !empty($yk['roles'])): ?>
     <!-- Yogakaraka classification for this lagna (BPHS Adhyaya 32). -->
@@ -59,12 +59,12 @@ if ($py !== null && !empty($py['groups'])):
         <div class="py-group" data-cat="<?= $h($cat) ?>">
             <div class="yoga-cat-head"><?= $h($cat) ?> <span class="text-xs text-gray-400 font-normal">(<?= count($ys) ?>)</span></div>
             <?php foreach ($ys as $y): $d = $y['detected']; ?>
-            <div class="yoga-card py-card<?= $y['type'] === 'ashubh' ? ' yoga-bad' : '' ?><?= $d === true ? ' py-on' : '' ?>"
+            <div class="yoga-card py-card py-<?= $h($y['type']) ?><?= $y['type'] === 'ashubh' ? ' yoga-bad' : '' ?><?= $d === true ? ' py-on' : '' ?>"
                  data-cat="<?= $h($cat) ?>" data-type="<?= $h($y['type']) ?>" data-detected="<?= $d === true ? '1' : ($d === false ? '0' : 'ref') ?>">
                 <div class="yoga-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                     <span><?= $h($y['hi']) ?><?= $y['en'] !== '' ? ' — ' . $h($y['en']) : '' ?></span>
                     <span class="gc-chip <?= $typeChip($y['type']) ?>"><?= $h($typeHi[$y['type']] ?? $y['type']) ?></span>
-                    <?php if ($d === true): ?><span class="gc-chip gc-shubh">✓ इस कुंडली में</span>
+                    <?php if ($d === true): ?><span class="gc-chip <?= $typeChip($y['type']) ?>">✓ इस कुंडली में</span>
                     <?php elseif ($d === false): ?><span class="gc-chip tb-off">नहीं बना</span>
                     <?php else: ?><span class="gc-chip tb-ref">सन्दर्भ</span><?php endif; ?>
                     <span class="text-xs text-gray-400 font-normal"><?= $h($y['id']) ?> · <?= $h($y['ref']) ?></span>

@@ -33,7 +33,6 @@ $concl = $tone === 'pos'
     : 'कुंडली में शुभ के साथ कुछ अशुभ योग/दोष भी हैं — सावधानी व उचित उपाय से कठिनाइयाँ कम की जा सकती हैं। शुभ ग्रहों की दशा में अनुकूल समय।';
 ?>
 <div class="gen-wrap">
-    <?php $glossaryScope = 'birth'; require __DIR__ . '/_glossary.php'; ?>
 
     <div class="gen-title">सामान्य सारांश <span class="text-xs text-gray-400 font-normal">(जन्म-कुंडली के मुख्य निष्कर्ष — सरल भाषा में)</span></div>
 

@@ -14,7 +14,6 @@ $typeChip = static fn(string $t): string => $t === 'shubh' ? 'gc-shubh' : ($t ==
 if ($sh !== null && !empty($sh['groups'])):
     $cats = $sh['categories'];
 ?>
-    <?php $glossaryScope = 'birth'; require __DIR__ . '/_glossary.php'; ?>
     <div class="shaap-note">⚠ यह <b>बृहत्पाराशरहोराशास्त्र (अध्याय 86)</b> का शास्त्रीय/परम्परागत पाठ है — केवल <b>सूचनात्मक व सांस्कृतिक सन्दर्भ</b> हेतु। इसे चिकित्सा, प्रजनन या किसी व्यक्तिगत निर्णय का आधार <b>न बनाएँ</b>। उपाय धार्मिक-परम्परागत आस्था पर आधारित हैं।</div>
 
     <div class="yoga-sec-title" style="margin-top:10px">पूर्वशाप व सन्तान योग <span class="text-xs text-gray-400 font-normal">(अध्याय 86 · कुल <?= (int) $sh['total'] ?>)</span>

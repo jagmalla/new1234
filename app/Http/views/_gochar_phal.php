@@ -35,7 +35,6 @@ if ($hasAny):
     if ($ss !== null) { $cats['shani'] = 'शनि विशेष (साढ़े साती)'; }
     if ($mu !== null) { $cats['muhurat'] = 'मुहूर्त (राहु काल · दिशा शूल · तिथि)'; }
 ?>
-    <?php $glossaryScope = 'gochar'; require __DIR__ . '/_glossary.php'; ?>
     <div class="saham-active">
         <div><b>गोचर आधार:</b> चन्द्र लग्न (जन्म राशि) <b style="color:<?= $pcolor('Moon') ?>"><?= $h($moonSignHi) ?></b> से गिना गया·
             <span class="text-xs text-gray-500"><?= ($gp['moon_ksheen'] ?? false) ? 'गोचर चन्द्र क्षीण' : 'गोचर चन्द्र बली' ?></span></div>

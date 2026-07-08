@@ -57,14 +57,13 @@ if ($tb !== null && !empty($tb['groups'])):
             <div class="gph-section-title"><?= $h($bhavaHi[$hn] ?? ('भाव ' . $hn)) ?>
                 <span class="text-xs text-gray-400 font-normal">(<?= count($rows) ?> नियम)</span></div>
             <?php foreach ($rows as $r): $m = $r['matched']; ?>
-            <div class="saham-card tb-card" data-house="<?= (int) $hn ?>" data-cat="<?= $h($r['cat']) ?>"
-                 data-matched="<?= $m === true ? '1' : ($m === false ? '0' : 'ref') ?>"
-                 <?= $m === true ? 'style="border-left:4px solid #15803d;background:#f6fef9"' : '' ?>>
+            <div class="saham-card tb-card tbc-<?= $h($r['cat']) ?><?= $m === true ? ' tbc-on' : '' ?>" data-house="<?= (int) $hn ?>" data-cat="<?= $h($r['cat']) ?>"
+                 data-matched="<?= $m === true ? '1' : ($m === false ? '0' : 'ref') ?>">
                 <div class="saham-card-head">
                     <span class="saham-name" style="font-size:12.5px;color:#334155"><?= $h($r['id']) ?>
                         <span class="text-xs text-gray-400 font-normal">श्लोक <?= $h($r['sh']) ?></span></span>
                     <span class="gc-chip <?= $catChip($r['cat']) ?>"><?= $h($catHi[$r['cat']] ?? $r['cat']) ?></span>
-                    <?php if ($m === true): ?><span class="gc-chip gc-shubh">✔ इस वर्ष लागू</span>
+                    <?php if ($m === true): ?><span class="gc-chip <?= $catChip($r['cat']) ?>">✔ इस वर्ष लागू</span>
                     <?php elseif ($m === false): ?><span class="gc-chip tb-off">संगणित · लागू नहीं</span>
                     <?php else: ?><span class="gc-chip tb-ref">शास्त्र-सन्दर्भ</span><?php endif; ?>
                 </div>

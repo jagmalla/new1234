@@ -82,8 +82,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             --sindoor:      #B3341C;   /* accent: active menu, links, pills, buttons */
             --sindoor-soft: #F6E3DD;   /* accent tint: active/hover backgrounds */
             --haldi:        #C98A1B;   /* remedy label, small highlights only */
-            --shubh:        #2E6E4E;   /* positive / benefic */
-            --ashubh:       #8A2F2F;   /* negative / malefic */
+            --shubh:        #2E6E4E;   /* positive / benefic (green) */
+            --ashubh:       #B91C1C;   /* negative / malefic (red)   */
+            --mishra:       #1D4ED8;   /* mixed / neutral   (blue)   */
             --header-bg:    #1F2A33;   /* top bar */
         }
         body {
@@ -367,8 +368,15 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .py-card { padding: 8px 11px; margin-bottom: 8px; }
         .py-card .yoga-title { font-size: .98rem; }
         .py-card .yoga-why, .py-card .yoga-res { font-size: .84rem; line-height: 1.5; }
-        .py-card.py-on { border-left-color: #15803d; background: #f6fef9; }
-        .py-card.yoga-bad.py-on { border-left-color: #15803d; }
+        /* Colour-code every yoga by TYPE: green = शुभ, red = अशुभ, blue = मिश्र.
+           The left border shows the type; when the yoga is active in this chart
+           (.py-on) the card gets a matching light tint. */
+        .py-card.py-shubh   { border-left-color: var(--shubh); }
+        .py-card.py-ashubh  { border-left-color: var(--ashubh); }
+        .py-card.py-mishrit { border-left-color: var(--mishra); }
+        .py-card.py-shubh.py-on   { background: #f2fbf6; }
+        .py-card.py-ashubh.py-on  { background: #fdf3f2; }
+        .py-card.py-mishrit.py-on { background: #eef3ff; }
         /* Yogakaraka (Adhyaya 32) classification box + role chips + फल-दशा */
         .yk-box { background: #f6f1ff; border: 1px solid #e0d4f7; border-radius: 10px; padding: 8px 11px; margin: 8px 0; }
         .yk-head { font-size: .82rem; font-weight: 700; color: #6b21a8; margin-bottom: 6px; }
@@ -383,16 +391,6 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .yoga-dasha-pill { display: inline-flex; align-items: center; gap: 4px; background: #faf7ff; border: 1px solid #ece3fb;
             border-radius: 7px; padding: 2px 7px; margin: 2px 4px 2px 0; font-size: .82rem; }
         .yd-dates { color: var(--ink-soft); font-size: .76rem; }
-        /* आसान भाषा — plain-language glossary (collapsible) */
-        .ez-gloss { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; margin: 6px 0 10px; overflow: hidden; }
-        .ez-gloss > summary { cursor: pointer; padding: 8px 12px; font-size: .86rem; font-weight: 700; color: #166534; list-style: none; }
-        .ez-gloss > summary::-webkit-details-marker { display: none; }
-        .ez-gloss > summary::after { content: ' ▾'; color: #16a34a; }
-        .ez-gloss[open] > summary::after { content: ' ▴'; }
-        .ez-gloss-body { padding: 4px 12px 10px; }
-        .ez-term { font-size: .84rem; line-height: 1.55; margin: 4px 0; color: #334155; }
-        .ez-term b { color: #15803d; }
-        .ez-note { font-size: .76rem; color: #64748b; margin-top: 6px; border-top: 1px dashed #bbf7d0; padding-top: 5px; }
         /* सामान्य (General) summary — plain conclusion cards */
         .gen-title { font-weight: 800; font-size: 1rem; color: var(--sindoor); margin: 6px 0 8px; }
         .gen-card { border: 1px solid var(--line); border-left: 4px solid #6b21a8; border-radius: 10px;
@@ -531,11 +529,25 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gc-line.gc-yoga { font-weight: 600; }
         .gc-chip { font-size: .75rem; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
         .gc-vshubh { background: #cfe9d9; color: #1c5138; }
-        .gc-shubh  { background: #e2f0e8; color: #1c5138; }
-        .gc-mishrit{ background: #f2e6c9; color: #8a6412; }
+        .gc-shubh  { background: #dff0e6; color: #15803d; }
+        .gc-mishrit{ background: #dce8ff; color: #1d4ed8; }
         .gc-pratikul { background: #f4d9d4; color: #8A2F2F; }
         .gc-ati    { background: #e7b3ac; color: #5f1a1a; }
-        .gc-ashubh { background: #f4d9d4; color: #8A2F2F; }
+        .gc-ashubh { background: #fbdcd7; color: #b91c1c; }
+        .gc-legend { font-size: .74rem; color: #94a3b8; margin: 0 0 8px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .gc-legend .gc-chip { font-size: .68rem; padding: 1px 7px; }
+        /* Tajik भाव-फल rules — colour-code the left border by type (green/red/
+           blue/मृत्यु), with a light tint when the rule applies this year. */
+        .tb-card.tbc-shubh   { border-left: 4px solid var(--shubh); }
+        .tb-card.tbc-ashubh  { border-left: 4px solid var(--ashubh); }
+        .tb-card.tbc-mishrit { border-left: 4px solid var(--mishra); }
+        .tb-card.tbc-mrityu  { border-left: 4px solid #4c0519; }
+        .tb-card.tbc-niyam   { border-left: 4px solid #94a3b8; }
+        .tb-card.tbc-on.tbc-shubh   { background: #f2fbf6; }
+        .tb-card.tbc-on.tbc-ashubh  { background: #fdf3f2; }
+        .tb-card.tbc-on.tbc-mishrit { background: #eef3ff; }
+        .tb-card.tbc-on.tbc-mrityu  { background: #fdf2f5; }
+        .tb-card.tbc-on.tbc-niyam   { background: #f8fafc; }
 
         /* ---- Calculated Dasha engine cards (दशा फल v2) ---- */
         .de-overall { display: flex; align-items: flex-start; gap: 8px; background: #fffdf9;
@@ -1619,7 +1631,6 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div id="vp-chart-cell"></div>
             <div class="bg-white rounded-lg shadow p-4 flex flex-col" id="varsha-pred-card">
-                <?php $glossaryScope = 'varsha'; require __DIR__ . '/_glossary.php'; ?>
                 <div class="l2-picker" style="margin-bottom:10px">
                     <span class="pick-tag">Varshaphal Prediction ▾</span>
                     <select id="vp-pred-type" class="l2-select">
