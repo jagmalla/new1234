@@ -585,11 +585,18 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .cs-toolbtn { border: 1px solid var(--line); background: var(--card); color: var(--ink);
             font-weight: 700; font-size: .82rem; padding: 7px 12px; border-radius: 8px; }
         .cs-toolbtn:hover { background: var(--sindoor-soft); border-color: var(--sindoor); color: var(--sindoor); }
-        .cs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-            gap: 14px; align-items: start; }
+        .cs-grid { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
         .cs-slot { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(38,34,28,.08); min-height: 320px; display: flex; flex-direction: column;
-            overflow: hidden; }
+            box-shadow: 0 1px 3px rgba(38,34,28,.08); display: flex; flex-direction: column;
+            overflow: hidden; position: relative;
+            /* Drag the bottom-right corner to resize width & height. */
+            width: 380px; height: 360px; min-width: 260px; min-height: 200px; max-width: 100%;
+            resize: both; }
+        .cs-slot.cs-empty { resize: none; height: 300px; }
+        /* Hint grip in the corner so users know panels are resizable. */
+        .cs-slot:not(.cs-empty)::after { content: ''; position: absolute; right: 2px; bottom: 2px;
+            width: 12px; height: 12px; pointer-events: none; opacity: .5;
+            background: linear-gradient(135deg, transparent 50%, var(--sindoor) 50%, var(--sindoor) 62%, transparent 62%, transparent 74%, var(--sindoor) 74%, var(--sindoor) 86%, transparent 86%); }
         .cs-slot.cs-empty { border: 2px dashed var(--line); box-shadow: none; align-items: center; justify-content: center;
             cursor: pointer; background: #FBF8F2; }
         .cs-slot.cs-empty:hover { border-color: var(--sindoor); background: var(--sindoor-soft); }
@@ -606,7 +613,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             background: var(--card); color: var(--ink-soft); font-size: .9rem; display: inline-flex;
             align-items: center; justify-content: center; }
         .cs-iconbtn:hover { border-color: var(--sindoor); color: var(--sindoor); background: var(--sindoor-soft); }
-        .cs-body { padding: 10px; overflow: auto; flex: 1 1 auto; max-height: 560px; }
+        .cs-body { padding: 10px; overflow: auto; flex: 1 1 auto; min-height: 0; }
         .cs-body .pred-view { font-size: 13px; }
         /* picker modal */
         .cs-modal { position: fixed; inset: 0; z-index: 100; background: rgba(31,42,51,.55);
@@ -1403,7 +1410,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
         <div id="sec-custom" class="l2-section l2-full hidden">
             <div class="cs-bar">
                 <span class="cs-title">Custom Screen <span class="cs-title-hi">— अपनी स्क्रीन</span></span>
-                <span class="cs-hint">Press <b>+</b> in any panel, then pick a chart or a prediction. Change or remove it any time.</span>
+                <span class="cs-hint">Press <b>+</b> to add a chart / prediction (D1, Gochar, Varshaphal, Dasha, Shadbala…). <b>Drag the bottom-right corner</b> to resize any panel. Logged-in users' layout is remembered.</span>
                 <span style="margin-left:auto"></span>
                 <button type="button" id="cs-add" class="cs-toolbtn">+ Panel</button>
                 <button type="button" id="cs-reset" class="cs-toolbtn">Reset</button>
@@ -1416,11 +1423,8 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
             <div class="cs-modal-box">
                 <div class="cs-modal-head"><span>Select a panel — पैनल चुनें</span>
                     <button type="button" class="cs-modal-x" aria-label="Close">✕</button></div>
-                <div class="cs-modal-body">
-                    <div class="cs-group-title">📊 Charts / कुंडली</div>
-                    <div class="cs-opts" id="cs-opts-chart"></div>
-                    <div class="cs-group-title">📜 Predictions / फलादेश</div>
-                    <div class="cs-opts" id="cs-opts-pred"></div>
+                <div class="cs-modal-body" id="cs-opts-all">
+                    <!-- Grouped panel options are injected here by the Custom Screen JS. -->
                 </div>
             </div>
         </div>
@@ -2765,87 +2769,167 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
     }
   })();
 
-  // ---- Custom Screen: user drops chart / prediction panels into a grid ----
+  // ---- Custom Screen: user builds a free grid of chart / prediction panels ---
   (function () {
     var grid = document.getElementById('custom-grid');
     if (!grid) { return; }
     var START_SLOTS = 6;
-    var PRED_LABELS = { general: 'General (सारांश)', shaap: 'Shaap / Santaan', dasha: 'Dasha Phal', bhavesh: 'Bhavesh Phal', grah: 'Graha Phal',
-      bhav: 'Bhava Phaladesh', karak: 'Karaka Phal', yoga: 'Yoga' };
-    var PRED_ORDER = ['general', 'dasha', 'bhavesh', 'grah', 'bhav', 'karak', 'yoga', 'shaap'];
 
-    function chartOptions() {
+    // Groups (display order in the picker + in-panel dropdown).
+    var GROUPS = [
+      { id: 'chart', label: '📊 Charts / कुंडली' },
+      { id: 'd1',    label: '📜 D1 Birth-Chart Predictions / जन्म-कुंडली फल' },
+      { id: 'vp',    label: '🎯 Varshaphal Predictions / वर्षफल' },
+      { id: 'go',    label: '🌌 Gochar Predictions / गोचर फल' },
+      { id: 'dasha', label: '⏳ Dasha / दशा' },
+      { id: 'bala',  label: '💪 Bala / बल' },
+      { id: 'other', label: '✨ Other / अन्य' }
+    ];
+
+    // Static (non-chart) panels. kind:'clone' copies a server-rendered source
+    // element; kind:'dasha' draws a dasha tree from page data; kind:'link' opens
+    // another page. Charts are added dynamically in chartPanels().
+    var STATIC = [
+      { g:'d1', key:'p_general',  label:'General (सारांश)',    kind:'clone', sel:'#pred-scroll .pred-view[data-pred="general"]' },
+      { g:'d1', key:'p_dasha',    label:'Dasha Phal',          kind:'clone', sel:'#pred-scroll .pred-view[data-pred="dasha"]' },
+      { g:'d1', key:'p_bhavesh',  label:'Bhavesh Phal',        kind:'clone', sel:'#pred-scroll .pred-view[data-pred="bhavesh"]' },
+      { g:'d1', key:'p_grah',     label:'Graha Phal',          kind:'clone', sel:'#pred-scroll .pred-view[data-pred="grah"]' },
+      { g:'d1', key:'p_bhav',     label:'Bhava Phaladesh',     kind:'clone', sel:'#pred-scroll .pred-view[data-pred="bhav"]' },
+      { g:'d1', key:'p_karak',    label:'Karaka Phal',         kind:'clone', sel:'#pred-scroll .pred-view[data-pred="karak"]' },
+      { g:'d1', key:'p_yoga',     label:'Yoga (योग)',          kind:'clone', sel:'#pred-scroll .pred-view[data-pred="yoga"]' },
+      { g:'d1', key:'p_shaap',    label:'Shaap / Santaan',     kind:'clone', sel:'#pred-scroll .pred-view[data-pred="shaap"]' },
+      { g:'vp', key:'vp_general', label:'Varshphal — General', kind:'clone', sel:'#vp-pred-general' },
+      { g:'vp', key:'vp_saham',   label:'Saham (सहम)',         kind:'clone', sel:'#vp-pred-saham' },
+      { g:'vp', key:'vp_tajik',   label:'Tajik Yoga',          kind:'clone', sel:'#vp-pred-tajik' },
+      { g:'vp', key:'vp_varshesh',label:'Varshesh (वर्षेश)',   kind:'clone', sel:'#vp-pred-varshesh' },
+      { g:'vp', key:'vp_muntha',  label:'Muntha (मुंथा)',      kind:'clone', sel:'#vp-pred-muntha' },
+      { g:'vp', key:'vp_bhava',   label:'Bhava-Phal (भाव-फल)', kind:'clone', sel:'#vp-pred-bhava' },
+      { g:'vp', key:'vp_dasha',   label:'Dasha-Phal (दशा-फल)', kind:'clone', sel:'#vp-pred-dasha' },
+      { g:'go', key:'go_phal',    label:'Gochar Phal (गोचर फल)', kind:'clone', sel:'#gochar-phal', needs:'Gochar' },
+      { g:'dasha', key:'vimshottari', label:'Vimshottari Dasha', kind:'dasha', data:'AB_DASHA' },
+      { g:'dasha', key:'mudda',       label:'Mudda Dasha',       kind:'dasha', data:'AB_MUDDA' },
+      { g:'bala', key:'shadbala',   label:'Shadbala',        kind:'clone', sel:'.bal-tab[data-bal="shad"]' },
+      { g:'bala', key:'bhavabala',  label:'Bhava Bala',      kind:'clone', sel:'.bal-tab[data-bal="bb"]' },
+      { g:'bala', key:'av',         label:'Ashtakavarga',    kind:'clone', sel:'.bal-tab[data-bal="av"]' },
+      { g:'bala', key:'vimshopaka', label:'Vimshopaka Bala', kind:'clone', sel:'.bal-tab[data-bal="vim"]' },
+      { g:'other', key:'milan', label:'Kundali Milan (मिलान)', kind:'link', url:'/milan' }
+    ];
+
+    function chartPanels() {
       var out = [], V = window.AB_VARGAS || {};
-      Object.keys(V).forEach(function (k) { if (V[k] && V[k].planets) { out.push({ key: k, label: k + ' — ' + (V[k].label || k) }); } });
-      if (window.AB_GOCHAR && window.AB_GOCHAR.transits) { out.push({ key: 'gochar', label: 'Gochar (Transit)' }); }
-      if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { out.push({ key: 'varsha', label: 'Varsha Kundali' }); }
+      Object.keys(V).forEach(function (k) { if (V[k] && V[k].planets) { out.push({ g:'chart', key:k, kind:'chart', label: k + ' — ' + (V[k].label || k) }); } });
+      if (window.AB_GOCHAR && window.AB_GOCHAR.transits) { out.push({ g:'chart', key:'gochar', kind:'chart', label:'Gochar (Transit)' }); }
+      if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { out.push({ g:'chart', key:'varsha', kind:'chart', label:'Varsha Kundali' }); }
       return out;
     }
-    function predOptions() {
-      return PRED_ORDER.filter(function (p) { return document.querySelector('#pred-scroll .pred-view[data-pred="' + p + '"]'); })
-        .map(function (p) { return { key: p, label: PRED_LABELS[p] }; });
+    function available(p) {
+      if (p.kind === 'dasha') { var d = window[p.data]; return !!(d && d.length); }
+      if (p.kind === 'clone') { return !!document.querySelector(p.sel); }
+      return true;
     }
-    function renderChart(body, key) {
-      body.innerHTML = ''; var host = document.createElement('div'); host.className = 'w-full'; body.appendChild(host);
+    function catalog() { return chartPanels().concat(STATIC.filter(available)); }
+    function panelByKey(key) { var c = catalog(); for (var i = 0; i < c.length; i++) { if (c[i].key === key) { return c[i]; } } return null; }
+
+    function renderChart(host, key) {
       if (!window.ABChart) { return; }
       if (key === 'gochar') {
         var g = window.AB_GOCHAR || {};
         if (!g.transits || !g.ascendant) { host.innerHTML = '<div class="text-gray-400 italic">Gochar not available.</div>'; return; }
-        var AB = { Sun: 'Su', Moon: 'Mo', Mars: 'Ma', Mercury: 'Me', Jupiter: 'Ju', Venus: 'Ve', Saturn: 'Sa', Rahu: 'Ra', Ketu: 'Ke' };
-        var pls = Object.keys(g.transits).map(function (n) { var t = g.transits[n]; return { abbr: AB[n] || n.slice(0, 2), sign: t.sign_index, deg: Math.floor(t.deg), retro: !!t.retro }; });
-        window.ABChart.renderNorth(host, { asc_sign: g.ascendant.sign_index, planets: pls }, { showDeg: true });
+        var AB = { Sun:'Su',Moon:'Mo',Mars:'Ma',Mercury:'Me',Jupiter:'Ju',Venus:'Ve',Saturn:'Sa',Rahu:'Ra',Ketu:'Ke' };
+        var pls = Object.keys(g.transits).map(function (n) { var t=g.transits[n]; return { abbr:AB[n]||n.slice(0,2), sign:t.sign_index, deg:Math.floor(t.deg), retro:!!t.retro }; });
+        window.ABChart.renderNorth(host, { asc_sign:g.ascendant.sign_index, planets:pls }, { showDeg:true });
       } else if (key === 'varsha') {
-        if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg: true }); }
+        if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg:true }); }
       } else {
         var V = window.AB_VARGAS || {};
-        if (V[key]) { window.ABChart.renderNorth(host, V[key], { showDeg: true, big: key === 'D1', outer: key === 'D1' ? (window.AB_HOUSES || null) : null }); }
+        if (V[key]) { window.ABChart.renderNorth(host, V[key], { showDeg:true, big:key==='D1', outer:key==='D1'?(window.AB_HOUSES||null):null }); }
       }
     }
-    function renderPred(body, pred) {
-      var src = document.querySelector('#pred-scroll .pred-view[data-pred="' + pred + '"]');
-      if (!src) { body.innerHTML = '<div class="text-gray-400 italic">Not available.</div>'; return; }
+    function renderPanel(body, key) {
+      body.innerHTML = '';
+      var p = panelByKey(key);
+      if (!p) { body.innerHTML = '<div class="text-gray-400 italic">उपलब्ध नहीं / Not available.</div>'; return; }
+      if (p.kind === 'chart') { var host = document.createElement('div'); host.className = 'w-full'; body.appendChild(host); renderChart(host, key); return; }
+      if (p.kind === 'dasha') {
+        var d = window[p.data];
+        if (window.ABDasha && d && d.length) { ABDasha.render(body, d, { tz: window.AB_TZ, datesInline: true }); }
+        else { body.innerHTML = '<div class="text-gray-400 italic">दशा उपलब्ध नहीं।</div>'; }
+        return;
+      }
+      if (p.kind === 'link') {
+        body.innerHTML = '<div style="text-align:center;padding:26px 14px">' +
+          '<div style="font-size:2rem">💑</div>' +
+          '<div style="font-weight:700;margin:6px 0 4px">' + p.label + '</div>' +
+          '<div style="font-size:.82rem;color:#64748b;margin-bottom:12px">दो कुंडलियों का मिलान एक अलग पेज पर खुलता है।</div>' +
+          '<a href="' + p.url + '" class="ab-btn" style="text-decoration:none;display:inline-block">खोलें / Open</a></div>';
+        return;
+      }
+      var src = document.querySelector(p.sel);
+      if (!src || !src.textContent.trim() || src.querySelector('.gochar-pred-soon')) {
+        body.innerHTML = '<div class="text-gray-400 italic" style="padding:6px;line-height:1.5">' +
+          'इस पैनल की सामग्री अभी तैयार नहीं है। कृपया ऊपर मेन्यू से एक बार <b>' + (p.needs || p.g) +
+          '</b> सेक्शन खोलें, फिर यहाँ यह पैनल जोड़ें।</div>';
+        return;
+      }
       var clone = src.cloneNode(true);
       clone.classList.remove('hidden');
-      clone.querySelectorAll('.pred-picker').forEach(function (e) { e.remove(); });      // inner dropdown not needed
-      clone.querySelectorAll('.hidden').forEach(function (e) { e.classList.remove('hidden'); }); // show all details
-      clone.querySelectorAll('[id]').forEach(function (e) { e.removeAttribute('id'); });   // avoid duplicate ids
-      body.innerHTML = ''; body.appendChild(clone);
+      clone.querySelectorAll('.pred-picker, .l2-picker, .pred-expand').forEach(function (e) { e.remove(); });
+      clone.querySelectorAll('.hidden').forEach(function (e) { e.classList.remove('hidden'); });
+      clone.querySelectorAll('[id]').forEach(function (e) { e.removeAttribute('id'); });
+      body.appendChild(clone);
     }
 
     function emptySlot(slot) {
       slot.className = 'cs-slot cs-empty';
-      slot.removeAttribute('data-kind'); slot.removeAttribute('data-key');
+      slot.removeAttribute('data-key'); slot.style.width = ''; slot.style.height = '';
       slot.innerHTML = '<div style="text-align:center"><div class="cs-plus">+</div><div class="cs-plus-lbl">Add panel</div></div>';
       slot.onclick = function () { openPicker(slot); };
     }
-    function fillSlot(slot, kind, key) {
+    function fillSlot(slot, key, size) {
       slot.className = 'cs-slot'; slot.onclick = null; slot.innerHTML = '';
+      if (size && size.w) { slot.style.width = size.w; }
+      if (size && size.h) { slot.style.height = size.h; }
       var head = document.createElement('div'); head.className = 'cs-head';
       var sel = document.createElement('select'); sel.className = 'cs-sel';
-      (kind === 'chart' ? chartOptions() : predOptions()).forEach(function (o) {
-        var op = document.createElement('option'); op.value = o.key; op.textContent = o.label;
-        if (o.key === key) { op.selected = true; } sel.appendChild(op);
+      var cat = catalog();
+      GROUPS.forEach(function (grp) {
+        var items = cat.filter(function (p) { return p.g === grp.id; });
+        if (!items.length) { return; }
+        var og = document.createElement('optgroup'); og.label = grp.label;
+        items.forEach(function (p) { var op = document.createElement('option'); op.value = p.key; op.textContent = p.label; if (p.key === key) { op.selected = true; } og.appendChild(op); });
+        sel.appendChild(og);
       });
       var rep = document.createElement('button'); rep.className = 'cs-iconbtn'; rep.title = 'Replace panel'; rep.innerHTML = '⟳';
       var del = document.createElement('button'); del.className = 'cs-iconbtn'; del.title = 'Remove panel'; del.innerHTML = '✕';
       head.appendChild(sel); head.appendChild(rep); head.appendChild(del);
       var body = document.createElement('div'); body.className = 'cs-body';
       slot.appendChild(head); slot.appendChild(body);
-      slot.dataset.kind = kind;
-      function draw() { slot.dataset.key = sel.value; if (kind === 'chart') { renderChart(body, sel.value); } else { renderPred(body, sel.value); } }
+      function draw() { slot.dataset.key = sel.value; renderPanel(body, sel.value); saveLayout(); }
       sel.addEventListener('change', draw);
       rep.addEventListener('click', function (e) { e.stopPropagation(); openPicker(slot); });
-      del.addEventListener('click', function (e) { e.stopPropagation(); emptySlot(slot); });
+      del.addEventListener('click', function (e) { e.stopPropagation(); emptySlot(slot); saveLayout(); });
+      observeResize(slot);
       draw();
     }
 
     var modal = document.getElementById('cs-picker'), targetSlot = null;
     function openPicker(slot) {
       targetSlot = slot; if (!modal) { return; }
-      var oc = document.getElementById('cs-opts-chart'), op = document.getElementById('cs-opts-pred');
-      oc.innerHTML = ''; op.innerHTML = '';
-      chartOptions().forEach(function (o) { var b = document.createElement('button'); b.className = 'cs-opt'; b.textContent = o.label; b.onclick = function () { fillSlot(targetSlot, 'chart', o.key); closePicker(); }; oc.appendChild(b); });
-      predOptions().forEach(function (o) { var b = document.createElement('button'); b.className = 'cs-opt'; b.textContent = o.label; b.onclick = function () { fillSlot(targetSlot, 'pred', o.key); closePicker(); }; op.appendChild(b); });
+      var host = document.getElementById('cs-opts-all'); if (!host) { return; }
+      host.innerHTML = '';
+      var cat = catalog();
+      GROUPS.forEach(function (grp) {
+        var items = cat.filter(function (p) { return p.g === grp.id; });
+        if (!items.length) { return; }
+        var t = document.createElement('div'); t.className = 'cs-group-title'; t.textContent = grp.label; host.appendChild(t);
+        var wrap = document.createElement('div'); wrap.className = 'cs-opts';
+        items.forEach(function (p) {
+          var b = document.createElement('button'); b.className = 'cs-opt'; b.textContent = p.label;
+          b.onclick = function () { fillSlot(targetSlot, p.key); closePicker(); saveLayout(); };
+          wrap.appendChild(b);
+        });
+        host.appendChild(wrap);
+      });
       modal.classList.remove('hidden');
     }
     function closePicker() { if (modal) { modal.classList.add('hidden'); } }
@@ -2854,10 +2938,49 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
       var mx = modal.querySelector('.cs-modal-x'); if (mx) { mx.addEventListener('click', closePicker); }
     }
 
+    // ---- Layout persistence — logged-in users only (else default screen) ----
+    function layoutKey() { var u = window.AB_USER; return u ? 'ab_custom_layout_v1__' + u.id : null; }
+    var saveT;
+    function saveLayout() {
+      var k = layoutKey(); if (!k) { return; }
+      var slots = [].slice.call(grid.children).map(function (s) {
+        return { key: s.dataset.key || '', w: s.style.width || '', h: s.style.height || '' };
+      });
+      clearTimeout(saveT);
+      saveT = setTimeout(function () { try { localStorage.setItem(k, JSON.stringify(slots)); } catch (e) {} }, 250);
+    }
+    function loadLayout() {
+      var k = layoutKey(); if (!k) { return null; }
+      try { var a = JSON.parse(localStorage.getItem(k) || 'null'); return Array.isArray(a) ? a : null; } catch (e) { return null; }
+    }
+    var ro = window.ResizeObserver ? new ResizeObserver(function () { saveLayout(); }) : null;
+    function observeResize(slot) { if (ro) { try { ro.observe(slot); } catch (e) {} } }
+
+    function newSlot() { var s = document.createElement('div'); grid.appendChild(s); return s; }
+
     var built = false;
-    function ensure() { if (built) { return; } built = true; for (var i = 0; i < START_SLOTS; i++) { var s = document.createElement('div'); grid.appendChild(s); emptySlot(s); } }
-    var add = document.getElementById('cs-add'); if (add) { add.addEventListener('click', function () { var s = document.createElement('div'); grid.appendChild(s); emptySlot(s); }); }
-    var rst = document.getElementById('cs-reset'); if (rst) { rst.addEventListener('click', function () { grid.innerHTML = ''; built = false; ensure(); }); }
+    function ensure() {
+      if (built) { return; }
+      built = true;
+      var saved = loadLayout();
+      if (saved && saved.length) {
+        saved.forEach(function (rec) {
+          var s = newSlot();
+          if (rec.key && panelByKey(rec.key)) { fillSlot(s, rec.key, { w: rec.w, h: rec.h }); }
+          else { emptySlot(s); }
+        });
+      } else {
+        for (var i = 0; i < START_SLOTS; i++) { emptySlot(newSlot()); }
+      }
+    }
+    var add = document.getElementById('cs-add'); if (add) { add.addEventListener('click', function () { emptySlot(newSlot()); saveLayout(); }); }
+    var rst = document.getElementById('cs-reset'); if (rst) {
+      rst.addEventListener('click', function () {
+        grid.innerHTML = ''; built = false;
+        var k = layoutKey(); if (k) { try { localStorage.removeItem(k); } catch (e) {} }
+        ensure();
+      });
+    }
     window.ABCustom = { ensure: ensure };
   })();
   // "Birth Chart (D1)" top-bar button → leave the Custom Screen.
