@@ -84,14 +84,36 @@
       outRoot.appendChild(grid);
     }
 
-    // Match the Mudda dasha column height to the Varsha chart card (lg layout).
+    // Keep each Varshaphal ROW's two cards the SAME height (professional grid):
+    //   Row 1  = Varsha chart  |  Prediction panel  → both match the chart.
+    //   Row 2  = Mudda dasha    |  Annual positions   → both match the table.
+    // The list-heavy card in each row scrolls inside the fixed height so the two
+    // columns always bottom-align with no ragged edges.
+    // Two cards are "on the same row" only when they sit side by side (same top,
+    // different left). When the grid collapses to a single column (narrow screen
+    // or before CSS loads) they stack, and we must NOT force equal heights.
+    function sameRow(leftEl, rightEl) {
+      if (!leftEl || !rightEl) { return false; }
+      var a = leftEl.getBoundingClientRect(), b = rightEl.getBoundingClientRect();
+      return a.width > 0 && b.width > 0 && Math.abs(a.top - b.top) < 40 && (b.left - a.left) > 40;
+    }
     function syncMuddaHeight() {
+      var pred = global.document.getElementById('varsha-pred-card');   // row 1, right
+      var pos  = global.document.getElementById('card-varshadet');     // row 2, right
       if (split) {
-        // Split layout (Varshaphal section): the Annual Chart and Mudda Dasha
-        // boxes sit in the same left column of adjacent rows — keep them the
-        // SAME height so the two boxes look symmetric; the dasha list scrolls.
-        var ch = chartCell.getBoundingClientRect().height;
-        if (ch > 60) { dashaCell.style.height = ch + 'px'; dashaCell.style.maxHeight = ch + 'px'; }
+        // Row 1: prediction panel = Varsha chart height (its list scrolls) —
+        // only when the two are actually side by side.
+        if (pred) {
+          if (sameRow(chartCell, pred)) { pred.style.height = chartCell.getBoundingClientRect().height + 'px'; }
+          else { pred.style.height = ''; }
+        }
+        // Row 2: Mudda dasha = annual-positions table height (dasha list scrolls).
+        if (sameRow(dashaCell, pos)) {
+          var posH = pos.getBoundingClientRect().height;
+          dashaCell.style.height = posH + 'px'; dashaCell.style.maxHeight = posH + 'px';
+        } else {
+          dashaCell.style.height = ''; dashaCell.style.maxHeight = '';
+        }
         return;
       }
       if (global.matchMedia('(min-width: 1024px)').matches) {
@@ -102,6 +124,19 @@
     }
     var rT;
     global.addEventListener('resize', function () { clearTimeout(rT); rT = setTimeout(syncMuddaHeight, 150); });
+
+    // Keep the rows matched reactively: whenever the Varsha chart finishes
+    // scaling (its SVG is width-responsive) or the annual-positions table
+    // changes size, re-run the height sync. This removes any dependence on
+    // fixed timers and keeps the two columns bottom-aligned at all times.
+    if (global.ResizeObserver) {
+      var ro = new global.ResizeObserver(function () {
+        clearTimeout(rT); rT = setTimeout(syncMuddaHeight, 30);
+      });
+      ro.observe(chartCell);
+      var posEl = global.document.getElementById('card-varshadet');
+      if (posEl) { ro.observe(posEl); }
+    }
 
     // Build the three current-dasha header lines for the Mudda chain at "now".
     var LEVLAB = ['MahaDasha', 'AntarDasha', 'Pratyantar'];
@@ -165,7 +200,6 @@
           // No maxRows: the column height is synced to the chart and scrolls;
           // the current period is highlighted and its Mahadasha auto-expands.
           ABDasha.render(dashaBox, v.mudda_dasha, { tz: tz, datesInline: true, now: nowJd });
-          setTimeout(syncMuddaHeight, 160);
           // Year-dependent page fragments (server-rendered by the endpoint):
           // सहम + ताजिक योग prediction panes, Panchavargeeya-Bala / Year-Lord
           // cards and the annual positions table all follow the selected year.
@@ -178,6 +212,10 @@
               if (el && f[1] != null) { el.innerHTML = f[1]; }
             });
           if (global.ABBindVarshaPred) { global.ABBindVarshaPred(); }
+          // Sync row heights AFTER the chart + positions table are in the DOM
+          // (twice, to catch late reflow from the chart SVG / fonts).
+          setTimeout(syncMuddaHeight, 80);
+          setTimeout(syncMuddaHeight, 350);
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }
