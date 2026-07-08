@@ -624,6 +624,60 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .cs-opt { text-align: left; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
             background: var(--card); color: var(--ink); font-weight: 600; font-size: .85rem; }
         .cs-opt:hover { border-color: var(--sindoor); background: var(--sindoor-soft); color: var(--sindoor); }
+
+        /* ---- Save / Open charts: top-bar Save button, modals, toast ---- */
+        .btn-save { background: #0f766e; color: #fff; border: none; border-radius: 8px;
+            padding: 7px 13px; font-weight: 700; font-size: .82rem; cursor: pointer; white-space: nowrap; }
+        .btn-save:hover { background: #0b5c55; }
+        .ab-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 1000;
+            display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .ab-modal-overlay.hidden { display: none; }
+        .ab-modal { background: #fff; border-radius: 14px; box-shadow: 0 20px 50px rgba(0,0,0,.3);
+            width: 100%; max-width: 420px; overflow: hidden; animation: abpop .16s ease-out; }
+        .ab-modal.ab-modal-lg { max-width: 640px; display: flex; flex-direction: column; max-height: 84vh; }
+        @keyframes abpop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+        .ab-modal-head { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1rem;
+            color: var(--ink); padding: 13px 16px; border-bottom: 1px solid var(--line); }
+        .ab-modal-x { margin-left: auto; background: none; border: none; font-size: 1rem; color: #94a3b8;
+            cursor: pointer; line-height: 1; padding: 4px; }
+        .ab-modal-x:hover { color: #475569; }
+        .ab-modal-body { padding: 15px 16px; font-size: .9rem; line-height: 1.6; color: var(--ink); }
+        .ab-modal-sub { color: #64748b; font-size: .82rem; margin: 0 0 8px; }
+        .ab-modal-note { color: #0f766e; font-size: .78rem; margin: 0; background: #f0fdfa;
+            border: 1px solid #ccfbf1; border-radius: 8px; padding: 7px 10px; }
+        .ab-modal-foot { padding: 12px 16px; border-top: 1px solid var(--line); text-align: right; }
+        .ab-btn { background: var(--sindoor); color: #fff; border: none; border-radius: 8px; padding: 8px 16px;
+            font-weight: 700; font-size: .84rem; cursor: pointer; }
+        .ab-btn:hover { filter: brightness(.94); }
+        .ab-btn-ghost { background: #f1f5f9; color: #b91c1c; }
+        .ab-btn-sm { padding: 5px 11px; font-size: .78rem; }
+        .ab-open-count { font-size: .78rem; font-weight: 600; color: #94a3b8; }
+        .ab-open-search { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+        .ab-open-search input { width: 100%; border: 1px solid var(--line); border-radius: 9px;
+            padding: 9px 12px; font-size: .9rem; }
+        .ab-open-search input:focus { outline: 2px solid var(--sindoor); outline-offset: 1px; border-color: var(--sindoor); }
+        .ab-open-list { overflow-y: auto; padding: 6px 10px; flex: 1 1 auto; min-height: 120px; }
+        .ab-open-row { display: flex; align-items: center; gap: 10px; padding: 9px 8px;
+            border-bottom: 1px solid #f1f5f9; }
+        .ab-open-row:hover { background: #f8fafc; }
+        .ab-open-main { flex: 1 1 auto; min-width: 0; }
+        .ab-open-name { font-weight: 700; font-size: .92rem; color: var(--ink); }
+        .ab-open-g { font-weight: 500; font-size: .74rem; color: #94a3b8; }
+        .ab-open-meta { font-size: .78rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ab-open-acts { display: flex; gap: 6px; flex: none; }
+        .ab-open-when { font-size: .7rem; color: #cbd5e1; flex: none; width: 70px; text-align: right; }
+        .ab-open-empty { text-align: center; color: #94a3b8; font-size: .88rem; padding: 30px 12px; }
+        .ab-open-tip { font-size: .74rem; color: #94a3b8; padding: 10px 16px; border-top: 1px solid var(--line); background: #fafafa; }
+        .ab-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 1100;
+            padding: 11px 18px; border-radius: 10px; font-weight: 700; font-size: .86rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,.22); max-width: 90vw; text-align: center; }
+        .ab-toast.hidden { display: none; }
+        .ab-toast-ok  { background: #ecfdf5; color: #15803d; border: 1px solid #a7f3d0; }
+        .ab-toast-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        @media (max-width: 640px) {
+            .ab-open-meta { white-space: normal; }
+            .ab-open-when { display: none; }
+        }
     </style>
 </head>
 <body class="text-gray-900">
@@ -648,6 +702,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <option value="hi" <?= $phalaLang === 'hi' ? 'selected' : '' ?>>हिन्दी</option>
                 <option value="en" <?= $phalaLang === 'en' ? 'selected' : '' ?>>English</option>
             </select>
+            <?php if ($chart !== null): ?><button type="button" data-ab-save class="btn-save" title="इस चार्ट को सहेजें">💾 Save Chart</button><?php endif; ?>
             <button type="button" id="new-kundli" class="btn-sindoor">New Kundli</button>
         </div>
     </div>
@@ -1918,12 +1973,22 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
   window.AB_GOCHAR = <?= json_encode($gochar ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
   window.AB_VARSHAN = <?= json_encode($view['varshaNorth'] ?? null, JSON_UNESCAPED_UNICODE) ?>;
 </script>
-<?php $asset = static fn(string $p): string => \AutoBusiness\Core\Asset::url($p); ?>
+<?php
+    $asset = static fn(string $p): string => \AutoBusiness\Core\Asset::url($p);
+    // Current logged-in user for the Save/Open feature. Null until the login
+    // system (future) populates $_SESSION['user_id']; while null, Save/Open show
+    // the "please register" message instead of storing charts.
+    $abUser = !empty($_SESSION['user_id'])
+        ? ['id' => (string) $_SESSION['user_id'], 'name' => (string) ($_SESSION['user_name'] ?? '')]
+        : null;
+?>
+<script>window.AB_USER = <?= json_encode($abUser, JSON_UNESCAPED_UNICODE) ?>;</script>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/gochar.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/varshaphal.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/saved_charts.js')) ?>"></script>
 <script>
 (function () {
   // Auto-correct the date/time fields to canonical form when the user leaves
@@ -2858,5 +2923,32 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 })();
 </script>
 <?php endif; ?>
+
+<!-- ============ Save / Open charts: register-gate + search window ============ -->
+<div id="ab-register-modal" class="ab-modal-overlay hidden" aria-hidden="true">
+    <div class="ab-modal" role="dialog" aria-modal="true">
+        <div class="ab-modal-head">🔒 केवल रजिस्टर्ड उपयोगकर्ता <button type="button" class="ab-modal-x" data-close aria-label="बंद करें">✕</button></div>
+        <div class="ab-modal-body">
+            <p style="margin:0 0 6px">चार्ट सहेजने की सुविधा केवल <b>रजिस्टर्ड उपयोगकर्ताओं</b> के लिए है। कृपया अपने प्रोफ़ाइल में चार्ट सहेजने हेतु <b>रजिस्टर</b> करें।</p>
+            <p class="ab-modal-sub">Only registered users can save charts under their profile. Please register to save the charts.</p>
+            <p class="ab-modal-note">रजिस्ट्रेशन/लॉगिन जल्द ही उपलब्ध होगा — तब सहेजे गए चार्ट यहीं दिखेंगे।</p>
+        </div>
+        <div class="ab-modal-foot"><button type="button" class="ab-btn" data-close>ठीक है / OK</button></div>
+    </div>
+</div>
+
+<div id="ab-open-modal" class="ab-modal-overlay hidden" aria-hidden="true">
+    <div class="ab-modal ab-modal-lg" role="dialog" aria-modal="true">
+        <div class="ab-modal-head">📂 सहेजे गए चार्ट <span id="ab-open-count" class="ab-open-count"></span>
+            <button type="button" class="ab-modal-x" data-close aria-label="बंद करें">✕</button></div>
+        <div class="ab-open-search">
+            <input id="ab-open-q" type="text" autocomplete="off" placeholder="🔎 नाम, स्थान या तारीख़ से खोजें… (search by name, place or date)">
+        </div>
+        <div id="ab-open-list" class="ab-open-list"></div>
+        <div class="ab-open-tip">कोई चार्ट खोलने पर वह D1 (जन्म-कुंडली) पेज पर खुलेगा। नया चार्ट बनाने हेतु ऊपर “New Kundli / New / Profile” पर जाएँ।</div>
+    </div>
+</div>
+
+<div id="ab-toast" class="ab-toast hidden" role="status" aria-live="polite"></div>
 </body>
 </html>
