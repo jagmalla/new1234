@@ -505,6 +505,24 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         }
         @media (min-width: 1100px) { #menu-overlay { display: none !important; } }
         @media (prefers-reduced-motion: reduce) { .l2-menu { transition: none; } }
+
+        /* Short button labels (New / Save) are shown on phones only. */
+        .btn-lbl-short { display: none; }
+        /* ---- Phone top bar: keep only the controls on ONE compact row ----
+           Hide the brand title, the "under testing" banner and the name/date/
+           place text so the working area isn't eaten by the header. */
+        @media (max-width: 640px) {
+            .topbar .brand { display: none; }
+            .test-banner { display: none; }
+            .topbar .meta > span { display: none; }        /* name / date / place */
+            .topbar-inner { flex-wrap: nowrap; gap: 8px; padding: 8px 10px; }
+            .topbar .meta { margin-left: auto; gap: 6px; flex-wrap: nowrap; align-items: center; }
+            .topbar select { min-height: 40px; padding: 6px 22px 6px 8px; font-size: .8rem; }
+            .btn-sindoor, .btn-save { min-height: 40px; padding: 7px 11px; font-size: .82rem; }
+            #menu-btn { min-height: 40px; padding: 7px 11px; font-size: .82rem; }
+            .btn-lbl-full { display: none; }
+            .btn-lbl-short { display: inline; }
+        }
         /* Detail-view cards: gentle tint + definition; headers get a colour accent. */
         #details-view > div { background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%); border: 1px solid #e6edf6; }
         #details-view h2 {
@@ -709,19 +727,22 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <option value="hi" <?= $phalaLang === 'hi' ? 'selected' : '' ?>>हिन्दी</option>
                 <option value="en" <?= $phalaLang === 'en' ? 'selected' : '' ?>>English</option>
             </select>
-            <?php if ($chart !== null): ?><button type="button" data-ab-save class="btn-save" title="इस चार्ट को सहेजें">💾 Save Chart</button><?php endif; ?>
-            <button type="button" id="new-kundli" class="btn-sindoor">New Kundli</button>
+            <?php if ($chart !== null): ?><button type="button" data-ab-save class="btn-save" title="इस चार्ट को सहेजें">💾 <span class="btn-lbl-full">Save Chart</span><span class="btn-lbl-short">Save</span></button><?php endif; ?>
+            <button type="button" id="new-kundli" class="btn-sindoor"><span class="btn-lbl-full">New Kundli</span><span class="btn-lbl-short">New</span></button>
         </div>
     </div>
 </header>
 <script>
-// Top-bar language switch: swap the phala_lang param and reload (keeps layout=new).
-document.getElementById('topbar-lang').addEventListener('change', function () {
-    var u = new URL(window.location.href);
-    u.searchParams.set('phala_lang', this.value);
-    u.searchParams.set('layout', 'new');
-    window.location.href = u.toString();
-});
+// Top-bar language switch — translates ONLY the prediction text (via ABTranslate);
+// the UI (buttons, menu, dropdowns, titles) stays as-is. No page reload.
+(function () {
+    var sel = document.getElementById('topbar-lang');
+    if (!sel) { return; }
+    try { var saved = localStorage.getItem('ab_pred_lang'); if (saved) { sel.value = saved; } } catch (e) {}
+    sel.addEventListener('change', function () {
+        if (window.ABTranslate) { window.ABTranslate.setLang(this.value); }
+    });
+})();
 </script>
 
 <main class="l2-wrap mx-auto space-y-4 p-3 sm:p-4">
@@ -1993,6 +2014,7 @@ document.getElementById('topbar-lang').addEventListener('change', function () {
 <script src="<?= $h($asset('/assets/js/gochar.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/varshaphal.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/saved_charts.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/translate.js')) ?>"></script>
 <script>
 (function () {
   // Auto-correct the date/time fields to canonical form when the user leaves
