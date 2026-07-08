@@ -36,7 +36,7 @@ $matched = (int) ($tb['matched_count'] ?? 0);
     <?php if ($run !== null): ?>
     <div class="gen-card">
         <div class="gen-h">🗓️ इस समय चल रही वार्षिक दशा</div>
-        <div class="gen-line"><b style="color:<?= $pcolor((string) $run['lord']) ?>"><?= $h($run['lord_hi']) ?></b> की पात्यायिनी दशा (बल: <?= $h($run['tier_hi'] ?? '') ?>) — <?= ($run['cat'] ?? '') === 'shubh' ? '<b style="color:#15803d">शुभ अवधि</b>' : (($run['cat'] ?? '') === 'mishrit' ? '<b style="color:#a16207">मध्यम अवधि</b>' : '<b style="color:#b91c1c">सावधानी की अवधि</b>') ?>। विस्तार हेतु "दशा-फल" चुनें।</div>
+        <div class="gen-line"><b style="color:<?= $pcolor((string) $run['lord']) ?>"><?= $h($run['lord_hi']) ?></b> की पात्यायिनी दशा (बल: <?= $h($run['tier_hi'] ?? '') ?>) — <?= ($run['cat'] ?? '') === 'shubh' ? '<b style="color:#15803d">शुभ अवधि</b>' : (($run['cat'] ?? '') === 'mishrit' ? '<b style="color:#1d4ed8">मध्यम अवधि</b>' : '<b style="color:#b91c1c">सावधानी की अवधि</b>') ?>। विस्तार हेतु "दशा-फल" चुनें।</div>
     </div>
     <?php endif; ?>
 

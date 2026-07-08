@@ -293,9 +293,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gochar-card .saham-card-head { gap: 6px; }
         .gph-note { font-size: .82rem; line-height: 1.5; border-left: 3px solid var(--line);
             padding: 2px 8px; margin: 3px 0; border-radius: 3px; }
-        .gph-note.gph-pos { border-left-color: #1c5138; background: #eef6f0; color: #1c5138; }
-        .gph-note.gph-neg { border-left-color: #8A2F2F; background: #f9ecea; color: #8A2F2F; }
-        .gph-note.gph-info { border-left-color: #C9A227; background: #f7f2e3; color: #6b5600; }
+        .gph-note.gph-pos { border-left-color: #15803d; background: #eef6f0; color: #15803d; }
+        .gph-note.gph-neg { border-left-color: #b91c1c; background: #fbeae7; color: #b91c1c; }
+        .gph-note.gph-info { border-left-color: #1d4ed8; background: #eff4ff; color: #1e40af; }
         .gph-shubh { font-size: .75rem; color: var(--ink-soft); margin-top: 4px; }
         .gph-l3ev { border-top: 1px dashed var(--line); padding-top: 5px; margin-top: 5px; }
         .gph-l3head { font-size: .85rem; color: #453F37; margin-bottom: 2px; }
@@ -331,8 +331,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .tajik-matrix { border-collapse: collapse; font-size: .78rem; white-space: nowrap; }
         .tajik-matrix th, .tajik-matrix td { border: 1px solid var(--line); padding: 3px 8px; text-align: center; }
         .tajik-matrix thead th { background: #F4F1EA; }
-        .tajik-matrix .tm-sneha { background: #e2f0e8; color: #1c5138; font-weight: 700; }
-        .tajik-matrix .tm-vair  { background: #f4d9d4; color: #8A2F2F; font-weight: 700; }
+        .tajik-matrix .tm-sneha { background: #dff0e6; color: #15803d; font-weight: 700; }
+        .tajik-matrix .tm-vair  { background: #fbdcd7; color: #b91c1c; font-weight: 700; }
         .tajik-matrix .tm-none  { color: #9ca3af; }
         .tajik-matrix .tm-self  { color: #d1d5db; }
         /* अष्टकवर्ग मत — the SAV/BAV opinion block inside each house card. */
@@ -397,11 +397,12 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             padding: 8px 12px; margin-bottom: 9px; background: #fff; }
         .gen-h { font-weight: 700; font-size: .92rem; color: #6b21a8; margin-bottom: 4px; }
         .gen-line { font-size: .92rem; line-height: 1.6; margin: 3px 0; color: #2b2620; }
-        .gen-line.gen-pos { color: #166534; } .gen-line.gen-neg { color: #9a1b1b; }
+        .gen-line.gen-pos { color: #15803d; } .gen-line.gen-neg { color: #b91c1c; }
         .gen-sub { font-size: .78rem; color: #6b6459; margin-top: 3px; }
         .gen-concl { border-radius: 10px; padding: 10px 13px; font-size: .96rem; line-height: 1.6; margin-top: 4px; }
         .gen-concl.gen-pos { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
-        .gen-concl.gen-mix { background: #fef9ec; border: 1px solid #f5e2b8; color: #7a5c00; }
+        /* mixed conclusion → blue (matches the शुभ/मिश्र/अशुभ = green/blue/red code) */
+        .gen-concl.gen-mix { background: #eff4ff; border: 1px solid #cdddff; color: #1e40af; }
         /* Varshaphal prediction card: cap height + scroll long panes. */
         .vp-pred-scroll { flex: 1 1 auto; min-height: 0; max-height: 620px; overflow-y: auto; padding-right: 4px; }
         .vp-pred-scroll::-webkit-scrollbar { width: 8px; }
@@ -411,7 +412,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .sh-card { padding: 8px 11px; margin-bottom: 8px; }
         .sh-card .yoga-title { font-size: .95rem; }
         .sh-card .yoga-why, .sh-card .yoga-res { font-size: .84rem; line-height: 1.5; }
-        .sh-card.py-on { border-left-color: #b45309 !important; background: #fff8ef; }
+        .sh-card.py-on { border-left-color: #b91c1c !important; background: #fdf3f2; }
         .shaap-note { font-size: .8rem; line-height: 1.55; background: #fdf6e9; border: 1px solid #f0e2c6;
             border-radius: 8px; padding: 8px 11px; color: #6b5600; }
         .shaap-remedy-box { background: #f0f7ff; border: 1px solid #cfe0f5; border-radius: 8px; padding: 6px 11px; margin-top: 8px; }
@@ -528,11 +529,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gc-line.gc-bad { color: var(--ashubh); }
         .gc-line.gc-yoga { font-weight: 600; }
         .gc-chip { font-size: .75rem; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
-        .gc-vshubh { background: #cfe9d9; color: #1c5138; }
+        /* Verdict scale — green (favourable) · blue (mixed) · red (adverse).
+           Gochar uses a finer 5-step ramp but stays inside the same 3 colours:
+           very-shubh/shubh = green, mishrit = blue, pratikul/ati/ashubh = red. */
+        .gc-vshubh { background: #cbead8; color: #14532d; }
         .gc-shubh  { background: #dff0e6; color: #15803d; }
         .gc-mishrit{ background: #dce8ff; color: #1d4ed8; }
-        .gc-pratikul { background: #f4d9d4; color: #8A2F2F; }
-        .gc-ati    { background: #e7b3ac; color: #5f1a1a; }
+        .gc-pratikul { background: #fbdcd7; color: #c0392b; }
+        .gc-ati    { background: #f4b8ae; color: #7f1d1d; }
         .gc-ashubh { background: #fbdcd7; color: #b91c1c; }
         .gc-legend { font-size: .74rem; color: #94a3b8; margin: 0 0 8px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         .gc-legend .gc-chip { font-size: .68rem; padding: 1px 7px; }

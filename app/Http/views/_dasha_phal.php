@@ -32,7 +32,7 @@ if ($dp !== null && !empty($dp['periods'])):
 
     <!-- Whole-year timeline (click a row to jump to that dasha). -->
     <div class="dp-timeline" style="margin-top:8px">
-        <?php foreach ($periods as $i => $d): $tclr = $d['tone'] === 'pos' ? '#15803d' : ($d['tone'] === 'neg' ? '#b91c1c' : '#a16207'); ?>
+        <?php foreach ($periods as $i => $d): $tclr = $d['tone'] === 'pos' ? '#15803d' : ($d['tone'] === 'neg' ? '#b91c1c' : '#1d4ed8'); ?>
         <button type="button" class="dp-trow<?= $i === $runD ? ' dp-now' : '' ?>" data-goto="<?= (int) $i ?>">
             <span class="dp-dot" style="background:<?= $tclr ?>"></span>
             <b style="color:<?= $pcolor($d['lord'] === 'Lagna' ? 'Sun' : $d['lord']) ?>"><?= $h($d['lord_hi']) ?></b>
@@ -56,7 +56,7 @@ if ($dp !== null && !empty($dp['periods'])):
             $runA = $i === $runD ? (int) ($dp['running']['antar'] ?? 0) : 0; ?>
         <div class="dp-block<?= $i === $runD ? '' : ' hidden' ?>" data-dasha="<?= (int) $i ?>">
             <!-- Dasha phal card -->
-            <div class="saham-card" style="border-left:4px solid <?= $d['tone'] === 'pos' ? '#15803d' : ($d['tone'] === 'neg' ? '#b91c1c' : '#a16207') ?>">
+            <div class="saham-card" style="border-left:4px solid <?= $d['tone'] === 'pos' ? '#15803d' : ($d['tone'] === 'neg' ? '#b91c1c' : '#1d4ed8') ?>">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:<?= $pcolor($d['lord'] === 'Lagna' ? 'Sun' : $d['lord']) ?>"><?= $h($d['lord_hi']) ?> दशा</span>
                     <span class="gph-house">बल <?= $h((string) $d['bala']) ?>/20 · <?= $h($d['tier_hi']) ?></span>
