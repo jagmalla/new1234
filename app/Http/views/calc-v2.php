@@ -508,15 +508,22 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         /* Short button labels (New / Save) are shown on phones only. */
         .btn-lbl-short { display: none; }
-        /* ---- Phone top bar: keep only the controls on ONE compact row ----
-           Hide the brand title, the "under testing" banner and the name/date/
-           place text so the working area isn't eaten by the header. */
-        @media (max-width: 640px) {
+        /* ---- Tablet + phone (≤1099px) top bar: keep only the controls on ONE
+           compact row. Hide the brand title, the "under testing" banner and the
+           name/date/place text so the header doesn't eat the working screen.
+           (≤1099px is also where the side menu becomes the ☰ drawer.) */
+        @media (max-width: 1099px) {
             .topbar .brand { display: none; }
             .test-banner { display: none; }
             .topbar .meta > span { display: none; }        /* name / date / place */
-            .topbar-inner { flex-wrap: nowrap; gap: 8px; padding: 8px 10px; }
-            .topbar .meta { margin-left: auto; gap: 6px; flex-wrap: nowrap; align-items: center; }
+            .topbar-inner { flex-wrap: nowrap; gap: 10px; padding: 8px 14px; }
+            .topbar .meta { margin-left: auto; gap: 10px; flex-wrap: nowrap; align-items: center; }
+        }
+        /* Phone (≤640px): tighten further and use short button labels so Menu ·
+           language · Save · New still fit one row on the narrowest screens. */
+        @media (max-width: 640px) {
+            .topbar-inner { gap: 8px; padding: 8px 10px; }
+            .topbar .meta { gap: 6px; }
             .topbar select { min-height: 40px; padding: 6px 22px 6px 8px; font-size: .8rem; }
             .btn-sindoor, .btn-save { min-height: 40px; padding: 7px 11px; font-size: .82rem; }
             #menu-btn { min-height: 40px; padding: 7px 11px; font-size: .82rem; }
