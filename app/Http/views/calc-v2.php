@@ -594,8 +594,28 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         #planet-phala-card .pp-sub  { font-size: 1.1rem;  font-weight: 700; }
 
         /* ---- Custom Screen ---- */
-        .l2-grid.custom-active > #side-menu { display: none; }
         .l2-grid.custom-active > #sec-custom { grid-column: 1 / 4; }
+        /* On the Custom Screen the side menu is not a permanent column — it opens
+           as an off-canvas drawer via the ☰ Menu button (works on phone AND
+           laptop, since the button is force-shown by body.cs-mode below). */
+        body.cs-mode #menu-btn { display: inline-flex !important; }
+        .l2-grid.custom-active > #side-menu {
+            display: block; position: fixed; top: 0; left: 0; z-index: 60;
+            width: min(84vw, 320px); height: 100dvh; overflow-y: auto;
+            border-radius: 0; margin: 0; padding: 8px 0;
+            box-shadow: 2px 0 18px rgba(0,0,0,.28);
+            transform: translateX(-100%); transition: transform .22s ease;
+        }
+        body.menu-open .l2-grid.custom-active > #side-menu { transform: translateX(0); }
+        body.cs-mode.menu-open #menu-overlay { display: block !important; }
+        @media (prefers-reduced-motion: reduce) { .l2-grid.custom-active > #side-menu { transition: none; } }
+        /* Reduce wasted space at the top of the Custom Screen: no overview tiles,
+           a compact banner, and minimal padding above the panel grid. */
+        body.cs-mode #ov-strip { display: none !important; }
+        body.cs-mode main.l2-wrap { padding-top: 6px; }
+        body.cs-mode #sec-home { margin-top: 0 !important; }   /* drop the space-y-4 gap */
+        body.cs-mode .cs-bar { margin-top: 0; margin-bottom: 8px; }
+        body.cs-mode .test-banner { font-size: .8rem; line-height: 1.2; padding: 3px 8px; flex-basis: 200px; }
         .cs-bar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; }
         .cs-title { font-size: 1.15rem; font-weight: 800; color: var(--ink); }
         .cs-title-hi { color: var(--ink-soft); font-weight: 600; font-size: .95rem; }
@@ -2591,7 +2611,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     var pp = document.getElementById('pred-panel');
     if (cp) cp.classList.toggle('hidden', !homeMode);
     if (pp) pp.classList.toggle('hidden', !homeMode);
-    // Custom Screen: full-width (hide the side menu) + show the "Birth Chart" jump.
+    // Custom Screen: full-width work area; the side menu becomes an off-canvas
+    // drawer (reachable via the ☰ Menu button, which we force-show at all widths
+    // through body.cs-mode) + show the "Birth Chart" jump.
+    document.body.classList.toggle('cs-mode', customMode);
+    if (!customMode) { document.body.classList.remove('menu-open'); }   // close drawer on leave
     var grid = document.getElementById('sec-home');
     if (grid) { grid.classList.toggle('custom-active', customMode); }
     var back = document.getElementById('cs-back');
