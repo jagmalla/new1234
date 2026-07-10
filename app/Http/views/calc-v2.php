@@ -507,6 +507,15 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             .l2-panel { min-height: 0; height: auto !important; margin-bottom: 16px; }
             #pred-scroll { max-height: 70vh; }
             .l2-section { margin-top: 12px; }
+            /* Prediction picker: keep it compact and inside the panel on phones
+               (a <select> won't shrink below its option text, so we size it to
+               content, cap at 100%, and let the row wrap as a safety net so the
+               ⤢ button never gets pushed off-screen). */
+            .pred-head { flex-wrap: wrap; }
+            .l2-picker { flex-wrap: wrap; gap: 6px 8px; }
+            .l2-picker .pick-tag { font-size: .95rem; }
+            .l2-picker .l2-select { flex: 0 1 auto; width: auto; max-width: 100%; min-width: 0;
+                font-size: .86rem; padding: 6px 26px 6px 10px; min-height: 36px; }
         }
         @media (min-width: 1100px) { #menu-overlay { display: none !important; } }
         @media (prefers-reduced-motion: reduce) { .l2-menu { transition: none; } }
@@ -995,7 +1004,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <section id="pred-panel" class="l2-card l2-panel" aria-label="फलादेश">
             <div class="pred-head">
                 <div class="l2-picker" style="flex:1; margin-bottom:0">
-                <span class="pick-tag">Select Prediction ▾</span>
+                <span class="pick-tag">Select ▾</span>
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0">
                     <option value="general" selected>सामान्य — General (सारांश)</option>
                     <option value="dasha">Dasha Phal (दशा फल)</option>
@@ -2632,7 +2641,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     // drawer (reachable via the ☰ Menu button, which we force-show at all widths
     // through body.cs-mode) + show the "Birth Chart" jump.
     document.body.classList.toggle('cs-mode', customMode);
-    if (!customMode) { document.body.classList.remove('menu-open'); }   // close drawer on leave
+    // Selecting any section fully closes the mobile/tablet drawer AND its dim
+    // backdrop. Without hiding the overlay here, a parent-menu tap (which keeps
+    // the drawer logic from calling close()) would slide the drawer away but
+    // leave the dark #menu-overlay hanging over the page — the "black shadow"
+    // that only cleared when tapped. Hiding it here keeps the two in sync.
+    document.body.classList.remove('menu-open');
+    var _menuOv = document.getElementById('menu-overlay');
+    if (_menuOv) { _menuOv.hidden = true; }
+    var _menuBtn = document.getElementById('menu-btn');
+    if (_menuBtn) { _menuBtn.setAttribute('aria-expanded', 'false'); }
     var grid = document.getElementById('sec-home');
     if (grid) { grid.classList.toggle('custom-active', customMode); }
     var back = document.getElementById('cs-back');
