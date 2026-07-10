@@ -56,8 +56,21 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     <title>Auto Business — Chart Calculator (test)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Soft page background so the white cards don't look flat. */
-        body { background: linear-gradient(160deg, #eef2ff 0%, #f5f7fb 45%, #fdf2f8 100%); background-attachment: fixed; }
+        /* Never let a control (e.g. the chart / prediction selectors) push past the
+           screen edge on phones & tablets. Tables keep their own scroll wrappers. */
+        html, body { max-width: 100%; overflow-x: hidden; }
+        *, *::before, *::after { box-sizing: border-box; }
+        select, input, textarea, button { max-width: 100%; }
+
+        /* Soft page background so the white cards don't look flat. A viewport-fixed
+           gradient via `background-attachment: fixed` triggers a repaint bug on
+           mobile Chrome/Safari (a black "shadow" band that clears on the next tap).
+           Painting it on a fixed pseudo-element instead keeps the look, no glitch. */
+        body { background: #f5f7fb; }
+        body::before {
+            content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background: linear-gradient(160deg, #eef2ff 0%, #f5f7fb 45%, #fdf2f8 100%);
+        }
         /* Detail-view cards: gentle tint + definition; headers get a colour accent. */
         #details-view > div { background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%); border: 1px solid #e6edf6; }
         #details-view h2 {
