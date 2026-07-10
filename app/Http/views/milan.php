@@ -60,6 +60,45 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         .btn-sindoor { background: var(--sindoor); color: #fff; font-weight: 600; font-size: .9rem;
             padding: 8px 16px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; }
         .btn-sindoor:hover { filter: brightness(1.1); }
+        /* ☰ Menu button + drawer overlay + language select — same chrome as /calc. */
+        #menu-btn { display: none; align-items: center; gap: 8px; background: #2A3742;
+            color: #F7F3EA; border: 1px solid #3B4854; border-radius: 8px; font-weight: 700;
+            font-size: .9rem; padding: 8px 14px; min-height: 44px; cursor: pointer; }
+        #menu-btn:hover { background: #34424F; }
+        #menu-btn .menu-btn-bars { position: relative; width: 18px; height: 2px; background: currentColor;
+            border-radius: 2px; box-shadow: 0 -6px 0 currentColor, 0 6px 0 currentColor; }
+        #menu-overlay { position: fixed; inset: 0; background: rgba(20,16,10,.5); z-index: 55; }
+        .topbar select { background: #2A3742; color: #F7F3EA; border: 1px solid #3B4854;
+            padding: 6px 10px; min-height: 44px; font-size: .85rem; border-radius: 6px; }
+        .btn-lbl-short { display: none; }
+        /* Tablet + phone (≤1099px): compact one-row top bar; the side nav becomes
+           an off-canvas drawer opened by the ☰ Menu button (matches /calc). */
+        @media (max-width: 1099px) {
+            #menu-btn { display: inline-flex; }
+            .topbar .brand, .test-banner { display: none; }
+            .topbar .meta > span { display: none; }
+            .topbar-inner { flex-wrap: nowrap; gap: 10px; padding: 8px 14px; }
+            .topbar .meta { margin-left: auto; gap: 10px; flex-wrap: nowrap; align-items: center; }
+            .layout { grid-template-columns: 1fr; }
+            #milan-side {
+                position: fixed; top: 0; left: 0; z-index: 60;
+                width: min(84vw, 300px); height: 100dvh; overflow-y: auto;
+                margin: 0; border-radius: 0; padding: 8px 0;
+                box-shadow: 2px 0 18px rgba(0,0,0,.28);
+                transform: translateX(-100%); transition: transform .22s ease; display: block;
+            }
+            body.menu-open { overflow: hidden; }
+            body.menu-open #milan-side { transform: translateX(0); }
+        }
+        @media (min-width: 1100px) { #menu-overlay { display: none !important; } }
+        @media (prefers-reduced-motion: reduce) { #milan-side { transition: none; } }
+        @media (max-width: 640px) {
+            .topbar-inner { gap: 8px; padding: 8px 10px; }
+            .topbar .meta { gap: 6px; }
+            .topbar select { min-height: 40px; font-size: .8rem; }
+            .btn-sindoor, #menu-btn { min-height: 40px; padding: 7px 11px; font-size: .82rem; }
+            .btn-lbl-full { display: none; } .btn-lbl-short { display: inline; }
+        }
         /* Overview tiles (same format as the main site) — Milan info. */
         .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 8px; margin-bottom: 16px; }
@@ -179,6 +218,9 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
 <!-- ============ DARK TOP BAR (same chrome as the main calculator) ============ -->
 <header class="topbar">
     <div class="topbar-inner">
+        <button type="button" id="menu-btn" aria-label="मेन्यू / Menu" aria-expanded="false" aria-controls="milan-side">
+            <span class="menu-btn-bars" aria-hidden="true"></span>Menu
+        </button>
         <h1 class="brand">Analysis of Karma</h1>
         <div class="test-banner">System is Under Testing — Not Finalized Yet.<br>Feedback: <a href="mailto:analysisofkarma@gmail.com">analysisofkarma@gmail.com</a></div>
         <div class="meta">
@@ -187,10 +229,15 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
                 <span>वर <b><?= $h($milan['boy']['rashi_hi']) ?></b> · कन्या <b><?= $h($milan['girl']['rashi_hi']) ?></b></span>
                 <span>गुण <b><?= $h($num((float) $milan['total'])) ?>/36</b></span>
             <?php endif; ?>
+            <select id="topbar-lang" aria-label="भाषा / Language">
+                <option value="hi">हिन्दी</option>
+                <option value="en">English</option>
+            </select>
+            <a class="btn-sindoor" href="<?= $h($asset('/calc')) ?>"><span class="btn-lbl-full">New Kundli</span><span class="btn-lbl-short">New</span></a>
         </div>
-        <a class="btn-sindoor" href="<?= $h($asset('/calc')) ?>">New Kundli</a>
     </div>
 </header>
+<div id="menu-overlay" hidden></div>
 
 <main class="wrap">
 
@@ -242,7 +289,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
 
     <div class="layout">
         <!-- Left menu — mirrors the main calculator so Milan opens beside it. -->
-        <nav class="side noprint" aria-label="Sections">
+        <nav id="milan-side" class="side noprint" aria-label="Sections">
             <?php $calc = $h($asset('/calc')); ?>
             <a href="<?= $calc ?>">New / Profile</a>
             <a href="<?= $calc ?>">Birth Chart</a>
@@ -255,7 +302,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
             <a href="<?= $h($asset('/milan')) ?>" class="active">Kundali Milan</a>
         </nav>
 
-        <div class="content">
+        <div class="content" id="milan-content">
 
     <?php if ($error !== null): ?>
         <div class="warn"><?= $h($error) ?></div>
@@ -525,6 +572,30 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
   document.querySelectorAll('.fmt-time').forEach(function (el) {
     el.addEventListener('blur', function () { if (el.value.trim()) { el.value = normTime(el.value); } });
   });
+})();
+</script>
+
+<!-- Prediction-text translation (same as /calc) so the language toggle works here too. -->
+<script src="<?= $h($asset('/assets/js/translate.js')) ?>"></script>
+<script>
+// Top-bar chrome shared with /calc: ☰ Menu opens the side nav as a drawer on
+// phone/tablet, and the हिन्दी/English switch translates the Milan result text.
+(function () {
+    var btn = document.getElementById('menu-btn'), overlay = document.getElementById('menu-overlay'),
+        menu = document.getElementById('milan-side');
+    if (btn && overlay && menu) {
+        function open() { document.body.classList.add('menu-open'); overlay.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
+        function close() { document.body.classList.remove('menu-open'); overlay.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
+        btn.addEventListener('click', function () { document.body.classList.contains('menu-open') ? close() : open(); });
+        overlay.addEventListener('click', close);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { close(); } });
+        menu.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', close); });
+    }
+    var sel = document.getElementById('topbar-lang');
+    if (sel) {
+        try { var s = localStorage.getItem('ab_pred_lang'); if (s) { sel.value = s; } } catch (e) {}
+        sel.addEventListener('change', function () { if (window.ABTranslate) { window.ABTranslate.setLang(this.value); } });
+    }
 })();
 </script>
 </body>

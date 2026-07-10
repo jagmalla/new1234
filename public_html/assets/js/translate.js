@@ -19,7 +19,8 @@
     '#pred-scroll',            // D1 birth-chart predictions
     '#planet-detail-pane', '#house-detail-pane', '#karaka-detail-pane',
     '#gochar-phal', '#gochar-detail-pane',   // Gochar predictions
-    '#vp-pred-scroll'          // Varshaphal predictions
+    '#vp-pred-scroll',         // Varshaphal predictions
+    '#milan-content'           // Kundali Milan result text
   ];
 
   var CACHE = {};                 // hi string -> en string (session)
