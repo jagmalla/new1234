@@ -38,7 +38,12 @@
         if (!v || !v.trim()) { return NodeFilter.FILTER_REJECT; }
         if (!/[ऀ-ॿ]/.test(v)) { return NodeFilter.FILTER_REJECT; }   // must contain Devanagari
         var p = n.parentNode;
-        if (p) { var t = p.nodeName; if (t === 'SCRIPT' || t === 'STYLE' || t === 'SELECT' || t === 'OPTION' || t === 'TEXTAREA') { return NodeFilter.FILTER_REJECT; } }
+        if (!p || p.nodeType !== 1) { return NodeFilter.FILTER_REJECT; }
+        var t = p.nodeName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'SELECT' || t === 'OPTION' || t === 'TEXTAREA') { return NodeFilter.FILTER_REJECT; }
+        // Only translate what is actually on screen — skip hidden panes so we
+        // don't translate hundreds of off-screen strings (fast + fewer calls).
+        if (!p.offsetParent) { return NodeFilter.FILTER_REJECT; }
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -48,20 +53,22 @@
 
   function chunk(a, n) { var o = []; for (var i = 0; i < a.length; i += n) { o.push(a.slice(i, i + n)); } return o; }
 
-  // Batch-translate uncached strings via the free gtx endpoint.
+  // Batch-translate uncached strings via OUR server (same origin → no CORS).
+  // The browser cannot call the public translation service directly, so the
+  // PHP endpoint /calc/translate fetches the English server-side and returns it.
   function fetchTranslations(strings) {
     var todo = strings.filter(function (s) { return !(s in CACHE); });
     if (!todo.length) { return Promise.resolve(); }
-    var batches = chunk(todo, 30);
+    var batches = chunk(todo, 40);
     return Promise.all(batches.map(function (b) {
-      var qs = b.map(function (s) { return 'q=' + encodeURIComponent(s); }).join('&');
-      var url = 'https://translate.googleapis.com/translate_a/t?client=gtx&sl=hi&tl=en&' + qs;
-      return fetch(url).then(function (r) { return r.json(); }).then(function (data) {
-        // Multiple q -> [["en1"],["en2"],…]; single q -> ["en1"].
-        var arr = (b.length === 1) ? [data] : data;
+      return fetch('/calc/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ q: b })
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        var t = (data && data.t) || [];
         b.forEach(function (s, i) {
-          var seg = arr[i];
-          var en = Array.isArray(seg) ? seg[0] : seg;
+          var en = t[i];
           CACHE[s] = (typeof en === 'string' && en) ? en : s;
         });
       });
@@ -123,9 +130,11 @@
   doc.addEventListener('DOMContentLoaded', function () {
     if (global.MutationObserver) {
       var mo = new MutationObserver(function () {
-        if (state === 'en' && !busy) { clearTimeout(refreshT); refreshT = setTimeout(refresh, 300); }
+        if (state === 'en' && !busy) { clearTimeout(refreshT); refreshT = setTimeout(refresh, 250); }
       });
-      roots().forEach(function (r) { try { mo.observe(r, { childList: true, subtree: true }); } catch (e) {} });
+      // Watch childList (AJAX re-renders) AND class changes (switching the
+      // visible prediction pane) so the newly shown pane gets translated too.
+      roots().forEach(function (r) { try { mo.observe(r, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); } catch (e) {} });
     }
     var saved = null; try { saved = global.localStorage.getItem('ab_pred_lang'); } catch (e) {}
     if (saved === 'en') { setTimeout(function () { setLang('en'); }, 400); }

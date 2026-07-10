@@ -153,10 +153,15 @@
     // An optional outer ring shows Ashtakavarga (AV) and Bhava Bala (BB) per
     // house just outside the chart; it widens the viewBox to make room.
     var ring = opts.outer || null;
-    var svg = el('svg', {
-      viewBox: ring ? '-10.6 -10.6 121.2 121.2' : '0 0 100 100',
-      width: '100%', height: 'auto', 'class': 'rounded'
-    });
+    // Default: scale to the container WIDTH (height follows, keeping the square).
+    // fit:true → scale to fit BOTH width and height (contain), so the chart
+    // always fits inside a freely-resized panel without overflowing or clipping.
+    var svg = el('svg', opts.fit
+      ? { viewBox: ring ? '-10.6 -10.6 121.2 121.2' : '0 0 100 100',
+          width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet',
+          'class': 'rounded', style: 'display:block' }
+      : { viewBox: ring ? '-10.6 -10.6 121.2 121.2' : '0 0 100 100',
+          width: '100%', height: 'auto', 'class': 'rounded' });
 
     if (ring) { drawOuterRing(svg, ring); }
 

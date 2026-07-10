@@ -204,6 +204,73 @@ final class CalcController
     }
 
     /**
+     * Translate proxy (POST calc/translate). The browser cannot call the public
+     * translation service directly (CORS blocks it), so it POSTs the Hindi
+     * strings here and we fetch the English server-side (same origin → no CORS).
+     * Body: {"q":["…","…"]}  →  {"t":["…","…"]} in the same order. On any failure
+     * the original strings are returned so the caller degrades gracefully.
+     */
+    public function translateJson(): void
+    {
+        header('Content-Type: application/json');
+        $raw = file_get_contents('php://input') ?: '';
+        $in = json_decode($raw, true);
+        $q = (is_array($in) && isset($in['q']) && is_array($in['q'])) ? array_values($in['q']) : [];
+        // Coerce to strings + cap the request size.
+        $q = array_slice(array_map(static fn($s): string => (string) $s, $q), 0, 200);
+        if ($q === []) {
+            echo json_encode(['t' => []]);
+            return;
+        }
+        $sl = (string) ($_GET['sl'] ?? 'hi');
+        $tl = (string) ($_GET['tl'] ?? 'en');
+        if (!preg_match('/^[a-z]{2}$/', $sl)) { $sl = 'hi'; }
+        if (!preg_match('/^[a-z]{2}$/', $tl)) { $tl = 'en'; }
+
+        $out = [];
+        foreach (array_chunk($q, 40) as $batch) {
+            $qs = implode('&', array_map(static fn(string $s): string => 'q=' . rawurlencode($s), $batch));
+            $url = "https://translate.googleapis.com/translate_a/t?client=gtx&sl={$sl}&tl={$tl}&{$qs}";
+            $resp = self::httpGet($url);
+            $data = $resp !== null ? json_decode($resp, true) : null;
+            if (is_array($data) && count($batch) > 1) {
+                // Multiple q → flat array of translations (["en1","en2",…]).
+                foreach ($batch as $i => $orig) {
+                    $t = $data[$i] ?? null;
+                    $out[] = is_string($t) ? $t : (is_array($t) && isset($t[0]) && is_string($t[0]) ? $t[0] : $orig);
+                }
+            } elseif (is_array($data) && count($batch) === 1) {
+                // Single q → the API returns just the translated string (or ["en"]).
+                $t = is_string($data) ? $data : ($data[0] ?? null);
+                $out[] = is_string($t) ? $t : $batch[0];
+            } else {
+                foreach ($batch as $orig) { $out[] = $orig; }   // failed → echo originals
+            }
+        }
+        echo json_encode(['t' => $out], JSON_UNESCAPED_UNICODE);
+    }
+
+    /** Simple HTTPS GET (cURL preferred — respects proxies; stream fallback). */
+    private static function httpGet(string $url): ?string
+    {
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_USERAGENT => 'Mozilla/5.0',
+            ]);
+            $r = curl_exec($ch);
+            $ok = ($r !== false && curl_getinfo($ch, CURLINFO_HTTP_CODE) < 400);
+            curl_close($ch);
+            if ($ok) { return (string) $r; }
+        }
+        $ctx = stream_context_create(['http' => ['timeout' => 8, 'ignore_errors' => true, 'header' => "User-Agent: Mozilla/5.0\r\n"]]);
+        $r = @file_get_contents($url, false, $ctx);
+        return $r === false ? null : $r;
+    }
+
+    /**
      * Build the Karaka Prediction payload: load the rule tables and generate the
      * per-karaka reading. Degrades to an error note if the DB is unreachable.
      *

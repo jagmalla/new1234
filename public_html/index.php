@@ -39,6 +39,10 @@ try {
             (new CalcController())->ping();
             break;
 
+        case 'POST calc/translate':
+            (new CalcController())->translateJson();
+            break;
+
         case 'GET calc/varshaphal':
             (new CalcController())->varshaphalJson();
             break;

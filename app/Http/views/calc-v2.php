@@ -659,6 +659,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             align-items: center; justify-content: center; }
         .cs-iconbtn:hover { border-color: var(--sindoor); color: var(--sindoor); background: var(--sindoor-soft); }
         .cs-body { padding: 10px; overflow: auto; flex: 1 1 auto; min-height: 0; }
+        /* Chart panels: the chart fills the box and scales to fit on resize. */
+        .cs-body.cs-body-chart { display: flex; overflow: hidden; padding: 8px; }
+        .cs-chart-host { flex: 1 1 auto; width: 100%; height: 100%; min-height: 0; min-width: 0;
+            display: flex; align-items: center; justify-content: center; }
+        .cs-chart-host svg { max-width: 100%; max-height: 100%; }
         .cs-body .pred-view { font-size: 13px; }
         /* picker modal */
         .cs-modal { position: fixed; inset: 0; z-index: 100; background: rgba(31,42,51,.55);
@@ -2885,24 +2890,27 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
     function renderChart(host, key) {
       if (!window.ABChart) { return; }
+      // fit:true → the chart scales to fit the panel (both width & height), so it
+      // always fills a freely-resized box without overflowing or being clipped.
       if (key === 'gochar') {
         var g = window.AB_GOCHAR || {};
         if (!g.transits || !g.ascendant) { host.innerHTML = '<div class="text-gray-400 italic">Gochar not available.</div>'; return; }
         var AB = { Sun:'Su',Moon:'Mo',Mars:'Ma',Mercury:'Me',Jupiter:'Ju',Venus:'Ve',Saturn:'Sa',Rahu:'Ra',Ketu:'Ke' };
         var pls = Object.keys(g.transits).map(function (n) { var t=g.transits[n]; return { abbr:AB[n]||n.slice(0,2), sign:t.sign_index, deg:Math.floor(t.deg), retro:!!t.retro }; });
-        window.ABChart.renderNorth(host, { asc_sign:g.ascendant.sign_index, planets:pls }, { showDeg:true });
+        window.ABChart.renderNorth(host, { asc_sign:g.ascendant.sign_index, planets:pls }, { showDeg:true, fit:true });
       } else if (key === 'varsha') {
-        if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg:true }); }
+        if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg:true, fit:true }); }
       } else {
         var V = window.AB_VARGAS || {};
-        if (V[key]) { window.ABChart.renderNorth(host, V[key], { showDeg:true, big:key==='D1', outer:key==='D1'?(window.AB_HOUSES||null):null }); }
+        if (V[key]) { window.ABChart.renderNorth(host, V[key], { showDeg:true, fit:true, big:key==='D1', outer:key==='D1'?(window.AB_HOUSES||null):null }); }
       }
     }
     function renderPanel(body, key) {
       body.innerHTML = '';
+      body.classList.remove('cs-body-chart');
       var p = panelByKey(key);
       if (!p) { body.innerHTML = '<div class="text-gray-400 italic">उपलब्ध नहीं / Not available.</div>'; return; }
-      if (p.kind === 'chart') { var host = document.createElement('div'); host.className = 'w-full'; body.appendChild(host); renderChart(host, key); return; }
+      if (p.kind === 'chart') { body.classList.add('cs-body-chart'); var host = document.createElement('div'); host.className = 'cs-chart-host'; body.appendChild(host); renderChart(host, key); return; }
       if (p.kind === 'dasha') {
         var d = window[p.data];
         if (window.ABDasha && d && d.length) { ABDasha.render(body, d, { tz: window.AB_TZ, datesInline: true }); }
