@@ -297,6 +297,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gph-note.gph-neg { border-left-color: #b91c1c; background: #fbeae7; color: #b91c1c; }
         .gph-note.gph-info { border-left-color: #1d4ed8; background: #eff4ff; color: #1e40af; }
         .gph-shubh { font-size: .75rem; color: var(--ink-soft); margin-top: 4px; }
+        /* Combined Ashtakvarga card: the three sub-predictions per planet. */
+        .gph-avline { margin: 6px 0 0; padding-top: 6px; border-top: 1px dashed var(--line); }
+        .gph-avline:first-of-type { border-top: 0; padding-top: 2px; }
+        .gph-avhead { font-size: .8rem; color: #475569; margin-bottom: 2px; display: flex;
+            align-items: center; gap: 6px; flex-wrap: wrap; }
         .gph-l3ev { border-top: 1px dashed var(--line); padding-top: 5px; margin-top: 5px; }
         .gph-l3head { font-size: .85rem; color: #453F37; margin-bottom: 2px; }
         .gph-cond { color: #7A5C00; }

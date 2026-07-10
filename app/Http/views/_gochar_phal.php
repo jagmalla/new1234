@@ -28,9 +28,7 @@ if ($hasAny):
     // Category list — only those actually present are offered.
     $cats = [];
     if ($l1 !== []) { $cats['bhava'] = 'चन्द्र-लग्न भाव-फल'; }
-    if (!empty($av['bindu'])) { $cats['bindu'] = 'अष्टकवर्ग बिन्दु-फल'; }
-    if (!empty($av['kaksha'])) { $cats['kaksha'] = 'कक्षा-फल'; }
-    if (!empty($av['sav'])) { $cats['sav'] = 'सर्वाष्टकवर्ग संकेत'; }
+    if (!empty($av['bindu']) || !empty($av['kaksha']) || !empty($av['sav'])) { $cats['ashtak'] = 'अष्टकवर्ग (Ashtakvarga)'; }
     if ($l3 !== []) { $cats['natal'] = 'जन्म-ग्रह पर गोचर'; }
     if ($ss !== null) { $cats['shani'] = 'शनि विशेष (साढ़े साती)'; }
     if ($mu !== null) { $cats['muhurat'] = 'मुहूर्त (राहु काल · दिशा शूल · तिथि)'; }
@@ -143,53 +141,49 @@ if ($hasAny):
         </div>
         <?php endif; ?>
 
-        <!-- CATEGORY: अष्टकवर्ग बिन्दु-फल (Part 1) -->
-        <?php if (!empty($av['bindu'])): ?>
-        <div class="gochar-cat" data-cat="bindu">
-            <div class="gph-section-title">अष्टकवर्ग बिन्दु-फल <span class="text-xs text-gray-400 font-normal">(गोचर-राशि में ग्रह के अपने अष्टकवर्ग-बिन्दु 0–8)</span></div>
-            <?php foreach ($av['bindu'] as $b): ?>
-            <div class="saham-card gochar-card" data-planet="<?= $h($b['planet']) ?>">
+        <!-- CATEGORY: अष्टकवर्ग (Ashtakvarga) — बिन्दु-फल + कक्षा-फल + सर्वाष्टकवर्ग, प्रति ग्रह एक साथ -->
+        <?php if (!empty($av['bindu']) || !empty($av['kaksha']) || !empty($av['sav'])):
+            // Merge the three Ashtakvarga sub-predictions grouped by planet, so each
+            // planet shows its bindu, kaksha and SAV lines together in one card.
+            $avSeq = []; $avMerge = [];
+            foreach (['bindu', 'kaksha', 'sav'] as $t) {
+                foreach (($av[$t] ?? []) as $row) {
+                    $p = $row['planet'] ?? '';
+                    if ($p === '') { continue; }
+                    if (!isset($avMerge[$p])) { $avMerge[$p] = ['bindu' => null, 'kaksha' => null, 'sav' => null, 'hi' => $row['planet_hi'] ?? $p]; $avSeq[] = $p; }
+                    $avMerge[$p][$t] = $row;
+                }
+            }
+        ?>
+        <div class="gochar-cat" data-cat="ashtak">
+            <div class="gph-section-title">अष्टकवर्ग (Ashtakvarga) <span class="text-xs text-gray-400 font-normal">(प्रति ग्रह: बिन्दु-फल · कक्षा-फल · सर्वाष्टकवर्ग — एक साथ)</span></div>
+            <?php foreach ($avSeq as $p): $row = $avMerge[$p]; $b = $row['bindu']; $k = $row['kaksha']; $s = $row['sav']; ?>
+            <div class="saham-card gochar-card" data-planet="<?= $h($p) ?>">
                 <div class="saham-card-head">
-                    <span class="saham-name" style="color:<?= $pcolor($b['planet']) ?>"><?= $h($b['planet_hi']) ?></span>
-                    <span class="gph-house"><?= $h($b['sign_hi']) ?> · <?= (int) $b['bindu'] ?>/8 बिन्दु</span>
-                    <?= $toneChip($b['tone']) ?>
+                    <span class="saham-name" style="color:<?= $pcolor($p) ?>"><?= $h($row['hi']) ?></span>
                 </div>
-                <div class="saham-phal">● <?= $h($b['phal']) ?></div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
 
-        <!-- CATEGORY: कक्षा-फल (Part 2) -->
-        <?php if (!empty($av['kaksha'])): ?>
-        <div class="gochar-cat" data-cat="kaksha">
-            <div class="gph-section-title">कक्षा-फल <span class="text-xs text-gray-400 font-normal">(ग्रह जिस कक्षा में — स्वामी की बिन्दु/रेखा से)</span></div>
-            <?php foreach ($av['kaksha'] as $k): ?>
-            <div class="saham-card gochar-card" data-planet="<?= $h($k['planet']) ?>">
-                <div class="saham-card-head">
-                    <span class="saham-name" style="color:<?= $pcolor($k['planet']) ?>"><?= $h($k['planet_hi']) ?></span>
-                    <span class="gph-house">कक्षा <?= (int) $k['kaksha_no'] ?> — <?= $h($k['lord_hi']) ?></span>
-                    <span class="gc-chip <?= $k['tone'] === 'pos' ? 'gc-shubh' : 'gc-ashubh' ?>"><?= $k['kind'] === 'shubh' ? 'बिन्दु (शुभ)' : 'रेखा (अशुभ)' ?></span>
+                <?php if ($b !== null): ?>
+                <div class="gph-avline">
+                    <div class="gph-avhead"><b>बिन्दु-फल</b> · <?= $h($b['sign_hi']) ?> · <?= (int) $b['bindu'] ?>/8 बिन्दु <?= $toneChip($b['tone']) ?></div>
+                    <div class="saham-phal">● <?= $h($b['phal']) ?></div>
                 </div>
-                <div class="saham-phal">● <?= $h($k['phal']) ?></div>
-                <?php if (empty($k['applicable'])): ?><div class="gph-note gph-info">⚠ गोचर ग्रह नीच/अस्त/शत्रु-राशि में — कक्षा-फल पूर्णतः लागू नहीं (नियम-शर्त)।</div><?php endif; ?>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+                <?php endif; ?>
 
-        <!-- CATEGORY: सर्वाष्टकवर्ग संकेत (Part 3) -->
-        <?php if (!empty($av['sav'])): ?>
-        <div class="gochar-cat" data-cat="sav">
-            <div class="gph-section-title">सर्वाष्टकवर्ग संकेत <span class="text-xs text-gray-400 font-normal">(गोचर-राशि का SAV; सीमा 28)</span></div>
-            <?php foreach ($av['sav'] as $s): ?>
-            <div class="saham-card gochar-card" data-planet="<?= $h($s['planet']) ?>">
-                <div class="saham-card-head">
-                    <span class="saham-name" style="color:<?= $pcolor($s['planet']) ?>"><?= $h($s['planet_hi']) ?></span>
-                    <span class="gph-house"><?= $h($s['sign_hi']) ?> · भाव <?= (int) $s['house'] ?> · SAV <?= (int) $s['sav'] ?></span>
-                    <span class="gc-chip <?= $s['tone'] === 'pos' ? 'gc-shubh' : 'gc-ashubh' ?>"><?= $s['sav'] >= 28 ? 'शुभ (≥28)' : 'अशुभ (<28)' ?></span>
+                <?php if ($k !== null): ?>
+                <div class="gph-avline">
+                    <div class="gph-avhead"><b>कक्षा-फल</b> · कक्षा <?= (int) $k['kaksha_no'] ?> — <?= $h($k['lord_hi']) ?> <span class="gc-chip <?= $k['tone'] === 'pos' ? 'gc-shubh' : 'gc-ashubh' ?>"><?= $k['kind'] === 'shubh' ? 'बिन्दु (शुभ)' : 'रेखा (अशुभ)' ?></span></div>
+                    <div class="saham-phal">● <?= $h($k['phal']) ?></div>
+                    <?php if (empty($k['applicable'])): ?><div class="gph-note gph-info">⚠ गोचर ग्रह नीच/अस्त/शत्रु-राशि में — कक्षा-फल पूर्णतः लागू नहीं (नियम-शर्त)।</div><?php endif; ?>
                 </div>
-                <div class="saham-phal">● <?= $h($s['hint']) ?></div>
+                <?php endif; ?>
+
+                <?php if ($s !== null): ?>
+                <div class="gph-avline">
+                    <div class="gph-avhead"><b>सर्वाष्टकवर्ग</b> · <?= $h($s['sign_hi']) ?> · भाव <?= (int) $s['house'] ?> · SAV <?= (int) $s['sav'] ?> <span class="gc-chip <?= $s['tone'] === 'pos' ? 'gc-shubh' : 'gc-ashubh' ?>"><?= $s['sav'] >= 28 ? 'शुभ (≥28)' : 'अशुभ (<28)' ?></span></div>
+                    <div class="saham-phal">● <?= $h($s['hint']) ?></div>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>
