@@ -408,6 +408,22 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gen-concl.gen-pos { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
         /* mixed conclusion → blue (matches the शुभ/मिश्र/अशुभ = green/blue/red code) */
         .gen-concl.gen-mix { background: #eff4ff; border: 1px solid #cdddff; color: #1e40af; }
+        /* Per-card colour code: शुभ = green, अशुभ = red, मिश्र = blue. The left
+           bar + tinted background + heading colour all follow the card's tone. */
+        .gen-card.gen-c-pos { border-left-color: #15803d; background: #f6fef9; }
+        .gen-card.gen-c-neg { border-left-color: #b91c1c; background: #fef6f6; }
+        .gen-card.gen-c-mix { border-left-color: #1d4ed8; background: #f5f8ff; }
+        .gen-card.gen-c-pos .gen-h { color: #15803d; }
+        .gen-card.gen-c-neg .gen-h { color: #b91c1c; }
+        .gen-card.gen-c-mix .gen-h { color: #1d4ed8; }
+        /* Clickable summary cards jump to the matching detailed prediction. */
+        .gen-card.gen-clickable { cursor: pointer; transition: box-shadow .15s ease, transform .05s ease; }
+        .gen-card.gen-clickable:hover { box-shadow: 0 3px 12px rgba(0,0,0,.12); }
+        .gen-card.gen-clickable:active { transform: translateY(1px); }
+        .gen-jumphint { font-size: .74rem; font-weight: 700; color: var(--sindoor); margin-top: 5px; }
+        .gen-card.gen-c-pos .gen-jumphint { color: #15803d; }
+        .gen-card.gen-c-neg .gen-jumphint { color: #b91c1c; }
+        .gen-card.gen-c-mix .gen-jumphint { color: #1d4ed8; }
         /* Varshaphal prediction card: cap height + scroll long panes. */
         .vp-pred-scroll { flex: 1 1 auto; min-height: 0; max-height: 620px; overflow-y: auto; padding-right: 4px; }
         .vp-pred-scroll::-webkit-scrollbar { width: 8px; }
@@ -2587,6 +2603,37 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       if (ps) { ps.scrollTop = 0; }
     });
   }
+
+  // General Overview cards → click jumps to the matching detailed prediction.
+  // 'pred:<value>' switches the D1 prediction dropdown; 'gochar-sadesati' opens
+  // the Gochar section and selects its Sade-Sati (शनि विशेष) category.
+  (function () {
+    function jump(target) {
+      if (target.indexOf('pred:') === 0) {
+        var sel = document.getElementById('pred-select');
+        if (sel) { sel.value = target.slice(5); sel.dispatchEvent(new Event('change')); }
+        var sc = document.getElementById('pred-scroll'); if (sc) { sc.scrollTop = 0; }
+      } else if (target === 'gochar-sadesati') {
+        var g = document.querySelector('#side-menu [data-sec="gochar"]');
+        if (g) { g.click(); }
+        var tries = 0, iv = setInterval(function () {
+          var c = document.getElementById('gochar-cat');
+          if (c && c.querySelector('option[value="shani"]')) {
+            c.value = 'shani'; c.dispatchEvent(new Event('change')); clearInterval(iv);
+          } else if (++tries > 50) { clearInterval(iv); }
+        }, 150);
+      }
+    }
+    document.addEventListener('click', function (e) {
+      var el = e.target.closest && e.target.closest('.gen-card[data-genjump]');
+      if (el) { jump(el.getAttribute('data-genjump')); }
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') { return; }
+      var el = e.target.closest && e.target.closest('.gen-card[data-genjump]');
+      if (el) { e.preventDefault(); jump(el.getAttribute('data-genjump')); }
+    });
+  })();
 
   // बल tabs: one strength table at a time.
   document.querySelectorAll('.bal-tabbar button').forEach(function (btn) {

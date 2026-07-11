@@ -51,6 +51,7 @@ final class CalcController
 
         $error = null;
         $chart = $vp = $gochar = null;
+        $sadeSati = $manglik = null;
         $meta = [];
 
         try {
@@ -88,6 +89,17 @@ final class CalcController
             $jdG = JulianDay::fromGregorian($gy, $gm, $gd, $gH, $gMi, 0.0, $tz);
             $gochar = $engine->gochar($chart, $jdG, $lat, $lon);
 
+            // Sade-Sati / Dhaiyya timeline (running or next-upcoming window +
+            // dates) and Manglik (Mangal-dosha) status — surfaced in the D1
+            // General Overview. Both are wrapped so an edge-case never blanks
+            // the page.
+            $sadeSati = $this->safe(static fn () => \AutoBusiness\Astro\Gochar\SadeSatiTimeline::compute(
+                (int) $chart['planets']['Moon']['sign_index'],
+                $nowJd,
+                static fn (float $j): float => $engine->planetSiderealLon('Saturn', $j)
+            ), null);
+            $manglik = $this->safe(fn () => $this->manglik($chart), null);
+
             $vargas = $engine->vargaCharts($chart);
             // North-chart payload of the annual chart for the v2 chart selector
             // (render-ready; same shape the varshaphal JSON endpoint returns).
@@ -117,6 +129,10 @@ final class CalcController
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
             'varshaNorth' => $varshaNorth ?? null,
+            // Sade-Sati / Dhaiyya window (current or next, with dates) + Manglik
+            // status — both consumed by the D1 General Overview summary.
+            'sade_sati' => $sadeSati,
+            'manglik' => $manglik,
             // Dasha Prediction: dropdowns default to the running Maha/Antar; the
             // matching phala text (if seeded) is pre-rendered so it shows at once.
             'phala' => [
@@ -188,6 +204,58 @@ final class CalcController
         $view['accessVid'] = $accessVid ?? '';
         $tpl = (($_GET['layout'] ?? '') === 'old') ? 'calc.php' : 'calc-v2.php';
         require dirname(__DIR__) . '/Http/views/' . $tpl;
+    }
+
+    /**
+     * Manglik (Mangal-dosha) status for a single chart. Mars in house 1/2/4/7/8/12
+     * from the Lagna, the Moon or Venus raises the dosha; it is treated as
+     * cancelled (partial) when Mars is in its own/exalted sign, Jupiter aspects
+     * Mars (5/7/9 whole-sign), or Jupiter/Venus sits in the Lagna.
+     *
+     * @param array<string,mixed> $chart
+     * @return array<string,mixed>
+     */
+    private function manglik(array $chart): array
+    {
+        $pl = $chart['planets'] ?? [];
+        $asc = (int) ($chart['ascendant']['sign_index'] ?? 0);
+        $mars = (int) ($pl['Mars']['sign_index'] ?? 0);
+        $moon = (int) ($pl['Moon']['sign_index'] ?? 0);
+        $venus = isset($pl['Venus']) ? (int) $pl['Venus']['sign_index'] : null;
+        $jup = isset($pl['Jupiter']) ? (int) $pl['Jupiter']['sign_index'] : null;
+
+        $houseFrom = static fn (int $from): int => (($mars - $from) % 12 + 12) % 12 + 1;
+        $doshaHouses = [1, 2, 4, 7, 8, 12];
+
+        $hits = [];
+        $hL = $houseFrom($asc);
+        if (in_array($hL, $doshaHouses, true)) { $hits['लग्न'] = $hL; }
+        $hM = $houseFrom($moon);
+        if (in_array($hM, $doshaHouses, true)) { $hits['चन्द्र'] = $hM; }
+        if ($venus !== null) {
+            $hV = $houseFrom($venus);
+            if (in_array($hV, $doshaHouses, true)) { $hits['शुक्र'] = $hV; }
+        }
+        $raw = $hits !== [];
+
+        // ---- cancellation (parihara) ----
+        $cancel = [];
+        if (in_array($mars, [0, 7, 9], true)) { $cancel[] = 'मंगल स्व/उच्च राशि में'; }   // Aries/Scorpio own · Capricorn exalt
+        if ($jup !== null) {
+            $rel = (($mars - $jup) % 12 + 12) % 12 + 1;   // Mars' house from Jupiter
+            if (in_array($rel, [5, 7, 9], true)) { $cancel[] = 'गुरु की दृष्टि मंगल पर'; }
+        }
+        if ($jup === $asc || $venus === $asc) { $cancel[] = 'लग्न में गुरु/शुक्र'; }
+
+        $cancelled = $raw && $cancel !== [];
+        return [
+            'raw' => $raw,
+            'manglik' => $raw && !$cancelled,
+            'partial' => $raw && $cancelled,
+            'hits' => $hits,                 // ref-label => house number
+            'cancel' => $cancel,
+            'mars_house_lagna' => $hL,
+        ];
     }
 
     /**

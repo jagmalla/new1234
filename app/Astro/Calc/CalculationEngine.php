@@ -188,6 +188,19 @@ final class CalculationEngine
      * @param array<string,mixed> $natalChart
      * @return array<string,mixed>
      */
+    /**
+     * Sidereal longitude (deg, 0..360) of one graha at an arbitrary instant.
+     * Lightweight probe for slow-planet transit TIMELINES (e.g. Sade-Sati window
+     * dates) where computing a whole chart per date would be wasteful.
+     */
+    public function planetSiderealLon(string $planet, float $jdUt): float
+    {
+        $ayan = Ayanamsa::degrees($this->ayanamsa, $jdUt);
+        $positions = $this->eph->positions($jdUt);
+        $lon = (float) ($positions[$planet]['lon'] ?? 0.0);
+        return Charts::norm($lon - $ayan);
+    }
+
     public function gochar(array $natalChart, float $atJdUt, float $lat, float $lonEast): array
     {
         $ayan = Ayanamsa::degrees($this->ayanamsa, $atJdUt);
