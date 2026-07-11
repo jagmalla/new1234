@@ -1006,14 +1006,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <div class="l2-picker" style="flex:1; margin-bottom:0">
                 <span class="pick-tag">Select ▾</span>
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0">
-                    <option value="general" selected>सामान्य — General (सारांश)</option>
-                    <option value="dasha">Dasha Phal (दशा फल)</option>
-                    <option value="bhavesh">Bhavesh Phal (भावेश फल)</option>
-                    <option value="grah">Graha Phal (ग्रह फल)</option>
-                    <option value="bhav">Bhava Phaladesh (भाव फलादेश)</option>
-                    <option value="karak">Karaka Phal (कारक फल)</option>
-                    <option value="yoga">Yoga (योग)</option>
-                    <option value="shaap">Shaap / Santaan (शाप-दोष / सन्तान योग)</option>
+                    <option value="general" selected>General Overview</option>
+                    <option value="dasha">Dasha (दशा)</option>
+                    <option value="grah">Planet (ग्रह)</option>
+                    <option value="bhav">House (भाव)</option>
+                    <option value="bhavesh">Bhavesh (भावेश)</option>
+                    <option value="karak">Karak (कारक)</option>
+                    <option value="yoga">Kundali Yog (योग)</option>
+                    <option value="shaap">Shrap (पूर्वशाप व सन्तान)</option>
                 </select>
                 </div>
                 <button type="button" id="pred-expand" class="pred-expand" aria-label="Expand" title="Expand">⤢</button>
@@ -1764,13 +1764,13 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <div class="l2-picker" style="margin-bottom:10px">
                     <span class="pick-tag">Varshaphal Prediction ▾</span>
                     <select id="vp-pred-type" class="l2-select">
-                        <option value="general" selected>सामान्य — General (सारांश)</option>
-                        <option value="saham">सहम — Sahams (50)</option>
-                        <option value="tajik">ताजिक योग — Tajik Yoga (16)</option>
-                        <option value="varshesh">वर्षेश फल — Year Lord</option>
-                        <option value="muntha">मुंथा फल — Muntha</option>
-                        <option value="bhava">भाव-फल — Bhava Phal (262)</option>
-                        <option value="dasha">दशा-फल — Dasha Phal</option>
+                        <option value="general" selected>General Overview</option>
+                        <option value="muntha">Muntha (मुंथा)</option>
+                        <option value="varshesh">Varshesh (वर्षेश)</option>
+                        <option value="dasha">Mudda Dasha (दशा फल)</option>
+                        <option value="tajik">Tajik Yog (ताजिक योग)</option>
+                        <option value="saham">Saham (सहम)</option>
+                        <option value="bhava">House (भाव वर्ष-फल)</option>
                     </select>
                 </div>
                 <div id="vp-pred-scroll" class="vp-pred-scroll">

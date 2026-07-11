@@ -27,11 +27,11 @@ if ($hasAny):
     $moonSignHi = $rashiHi[$moonSignName] ?? $moonSignName;
     // Category list — only those actually present are offered.
     $cats = [];
-    if ($l1 !== []) { $cats['bhava'] = 'चन्द्र-लग्न भाव-फल'; }
-    if (!empty($av['bindu']) || !empty($av['kaksha']) || !empty($av['sav'])) { $cats['ashtak'] = 'अष्टकवर्ग (Ashtakvarga)'; }
-    if ($l3 !== []) { $cats['natal'] = 'जन्म-ग्रह पर गोचर'; }
-    if ($ss !== null) { $cats['shani'] = 'शनि विशेष (साढ़े साती)'; }
-    if ($mu !== null) { $cats['muhurat'] = 'मुहूर्त (राहु काल · दिशा शूल · तिथि)'; }
+    if ($l1 !== []) { $cats['bhava'] = 'Moon Ascendent (चन्द्र-लग्न)'; }
+    if (!empty($av['bindu']) || !empty($av['kaksha']) || !empty($av['sav'])) { $cats['ashtak'] = 'Ashtakvarga (अष्टकवर्ग)'; }
+    if ($ss !== null) { $cats['shani'] = 'Sade-Sati (साढ़े साती)'; }
+    if ($mu !== null) { $cats['muhurat'] = 'Mahurat (मुहूर्त)'; }
+    if ($l3 !== []) { $cats['natal'] = 'Natal Transit (जन्म-ग्रह पर गोचर)'; }
 ?>
     <div class="saham-active">
         <div><b>गोचर आधार:</b> चन्द्र लग्न (जन्म राशि) <b style="color:<?= $pcolor('Moon') ?>"><?= $h($moonSignHi) ?></b> से गिना गया·
@@ -42,8 +42,7 @@ if ($hasAny):
     <div class="pred-picker" style="margin-top:8px;gap:8px">
         <label class="pred-picker-label" for="gochar-cat">श्रेणी चुनें</label>
         <select id="gochar-cat" class="pred-inline-select" size="1">
-            <option value="general" selected>सामान्य — General (सारांश)</option>
-            <option value="all">सभी श्रेणियाँ (All)</option>
+            <option value="general" selected>General Overview</option>
             <?php foreach ($cats as $ck => $cl): ?><option value="<?= $h($ck) ?>"><?= $h($cl) ?></option><?php endforeach; ?>
         </select>
     </div>
@@ -305,7 +304,7 @@ if ($hasAny):
         <?php endif; ?>
 
         <div id="gochar-empty" class="hidden text-sm text-gray-500" style="padding:10px 2px">
-            इस चयन के लिए कोई गोचर-फल नहीं — "सभी श्रेणियाँ" / "सभी ग्रह" चुनें।
+            इस चयन के लिए कोई गोचर-फल नहीं — दूसरी श्रेणी या "सभी ग्रह" चुनें।
         </div>
         <p class="text-xs text-gray-400" style="margin-top:8px">फल-क्रम: भाव-फल → वेध → बिन्दु → तृतीयांश। बिन्दु/कक्षा/SAV गोचर-राशि पर जन्म-अष्टकवर्ग से। राहु शनिवत्, केतु मंगलवत्।</p>
     </div>
