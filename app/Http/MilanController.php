@@ -130,7 +130,7 @@ final class MilanController
      *
      * @return array<string,mixed>
      */
-    private static function milanPerson(string $name, array $chart): array
+    public static function milanPerson(string $name, array $chart): array
     {
         $moon = $chart['planets']['Moon'] ?? [];
         $mars = $chart['planets']['Mars'] ?? [];

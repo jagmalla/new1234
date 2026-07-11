@@ -86,24 +86,29 @@ $satEffect = [
     <?php endif; ?>
 
     <?php
-    // ===== 2) मांगलिक (मंगल दोष) =====
+    // ===== 2) मांगलिक (मंगल दोष) — same calculation as Kundali Milan =====
     if ($mng !== null):
+        $mCancel = [];
+        if (!empty($mng['cancel']['own_or_exalt'])) { $mCancel[] = 'मंगल स्वराशि/उच्च'; }
+        if (!empty($mng['cancel']['jupiter_or_lagna'])) { $mCancel[] = 'गुरु-दृष्टि/लग्न में गुरु-शुक्र'; }
         if (!empty($mng['manglik'])) { $mTone = 'neg'; $mHead = '🔴 मांगलिक (मंगल दोष)'; }
-        elseif (!empty($mng['partial'])) { $mTone = 'mix'; $mHead = '🟦 आंशिक मांगलिक — दोष भंग'; }
-        else { $mTone = 'pos'; $mHead = '🟢 मांगलिक नहीं'; }
+        elseif (!empty($mng['partial'])) { $mTone = 'mix'; $mHead = '🟦 गैर-मांगलिक — दोष-भंग (परिहार)'; }
+        else { $mTone = 'pos'; $mHead = '🟢 गैर-मांगलिक'; }
+        $mMarsSign = $signHi((int) ($mng['mars_sign_index'] ?? 0));
     ?>
-    <div class="gen-card gen-c-<?= $mTone ?>">
+    <div class="gen-card gen-c-<?= $mTone ?> gen-clickable" data-genjump="pred:yoga" role="button" tabindex="0">
         <div class="gen-h"><?= $h($mHead) ?></div>
         <?php if (!empty($mng['raw'])): ?>
-        <div class="gen-line">मंगल <?= $h(implode(', ', array_map(static fn ($k, $v) => $k . ' से भाव ' . $v, array_keys($mng['hits']), array_values($mng['hits'])))) ?> में स्थित।</div>
-            <?php if (!empty($mng['cancel'])): ?>
-            <div class="gen-line gen-pos"><b>दोष-भंग (परिहार):</b> <?= $h(implode(' · ', $mng['cancel'])) ?> — प्रभाव बहुत कम।</div>
+        <div class="gen-line"><b>मंगल:</b> <b style="color:<?= $pcolor('Mars') ?>"><?= $h($mMarsSign) ?></b> राशि · दोष-स्थिति — <?= $h(implode(', ', $mng['hits'])) ?>।</div>
+            <?php if ($mCancel !== []): ?>
+            <div class="gen-line gen-pos"><b>दोष-भंग:</b> <?= $h(implode(' · ', $mCancel)) ?> — प्रभाव बहुत कम।</div>
             <?php else: ?>
             <div class="gen-line gen-neg">विवाह-मिलान में मंगल दोष की जाँच आवश्यक; मंगल-उपाय (हनुमान उपासना, मंगल-शान्ति) लाभकारी।</div>
             <?php endif; ?>
         <?php else: ?>
         <div class="gen-line gen-pos">मंगल किसी दोष-भाव (1·2·4·7·8·12) में नहीं — विवाह हेतु इस दृष्टि से बाधा नहीं।</div>
         <?php endif; ?>
+        <div class="gen-jumphint">मंगल दोष का पूरा विवरण देखें → (योग)</div>
     </div>
     <?php endif; ?>
 

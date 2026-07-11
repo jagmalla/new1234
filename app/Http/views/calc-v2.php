@@ -1472,6 +1472,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             <!-- योग — unified Phaladeepika catalogue (single source; no doubling).
                  Active yogas + per-lagna Yogakaraka roles + फल-दशा. -->
             <div class="pred-view hidden" data-pred="yoga">
+                <?php require __DIR__ . '/_manglik_detail.php';   // मंगल दोष detail (same calc as Milan) ?>
                 <?php require __DIR__ . '/_phala_yoga.php'; ?>
             </div><!-- /pred-view yoga -->
 

@@ -424,45 +424,56 @@ final class GunaMilan
     /**
      * @return array<string,mixed>
      */
-    private static function mangal(array $boy, array $girl, array $rules, array $cfg): array
+    /**
+     * Single-person Mangal (Manglik) test — Mars in house 1/4/7/8/12 (+2 by
+     * config) from the Lagna (and the Moon / Venus per config), with the standard
+     * cancellations (Mars own/exalted, Jupiter aspecting Mars, or Jupiter/Venus in
+     * the Lagna). Public so the D1 birth-chart summary reuses the SAME calculation
+     * Kundali Milan performs, instead of a parallel implementation.
+     *
+     * @param array<string,mixed>  $p   {mars:{from_lagna,from_moon,from_venus,own_or_exalt}, jupiter_aspects_mars, lagna_has_jup_or_venus}
+     * @param array<string,string> $cfg house_engine_config milan_* keys (defaults match Milan)
+     * @return array{manglik:bool,raw:bool,hits:list<string>,cancel:array{own_or_exalt:bool,jupiter_or_lagna:bool}}
+     */
+    public static function mangalPerson(array $p, array $cfg = []): array
     {
-        $second = (string) ($cfg['milan_mangal_second_house'] ?? '1') === '1';
-        $fromMoon = (string) ($cfg['milan_mangal_from_moon'] ?? '1') === '1';
-        $fromVenus = (string) ($cfg['milan_mangal_from_venus'] ?? '0') === '1';
         $houses = [1, 4, 7, 8, 12];
-        if ($second) {
+        if ((string) ($cfg['milan_mangal_second_house'] ?? '1') === '1') {
             $houses[] = 2;
         }
+        $fromMoon = (string) ($cfg['milan_mangal_from_moon'] ?? '1') === '1';
+        $fromVenus = (string) ($cfg['milan_mangal_from_venus'] ?? '0') === '1';
 
-        $person = static function (array $p) use ($houses, $fromMoon, $fromVenus): array {
-            $mars = $p['mars'] ?? [];
-            $refs = ['लग्न' => (int) ($mars['from_lagna'] ?? 0)];
-            if ($fromMoon) {
-                $refs['चन्द्र'] = (int) ($mars['from_moon'] ?? 0);
+        $mars = $p['mars'] ?? [];
+        $refs = ['लग्न' => (int) ($mars['from_lagna'] ?? 0)];
+        if ($fromMoon) {
+            $refs['चन्द्र'] = (int) ($mars['from_moon'] ?? 0);
+        }
+        if ($fromVenus && isset($mars['from_venus'])) {
+            $refs['शुक्र'] = (int) $mars['from_venus'];
+        }
+        $hits = [];
+        foreach ($refs as $label => $house) {
+            if (in_array($house, $houses, true)) {
+                $hits[] = $label . ' (भाव ' . $house . ')';
             }
-            if ($fromVenus && isset($mars['from_venus'])) {
-                $refs['शुक्र'] = (int) $mars['from_venus'];
-            }
-            $hits = [];
-            foreach ($refs as $label => $house) {
-                if (in_array($house, $houses, true)) {
-                    $hits[] = $label . ' (भाव ' . $house . ')';
-                }
-            }
-            $raw = $hits !== [];
-            $c1 = (bool) ($mars['own_or_exalt'] ?? false);
-            $c2 = (bool) ($p['jupiter_aspects_mars'] ?? false) || (bool) ($p['lagna_has_jup_or_venus'] ?? false);
-            $cancelled = $c1 || $c2;
-            return [
-                'manglik' => $raw && !$cancelled,
-                'raw' => $raw,
-                'hits' => $hits,
-                'cancel' => ['own_or_exalt' => $c1, 'jupiter_or_lagna' => $c2],
-            ];
-        };
+        }
+        $raw = $hits !== [];
+        $c1 = (bool) ($mars['own_or_exalt'] ?? false);
+        $c2 = (bool) ($p['jupiter_aspects_mars'] ?? false) || (bool) ($p['lagna_has_jup_or_venus'] ?? false);
+        $cancelled = $c1 || $c2;
+        return [
+            'manglik' => $raw && !$cancelled,
+            'raw' => $raw,
+            'hits' => $hits,
+            'cancel' => ['own_or_exalt' => $c1, 'jupiter_or_lagna' => $c2],
+        ];
+    }
 
-        $b = $person($boy);
-        $g = $person($girl);
+    private static function mangal(array $boy, array $girl, array $rules, array $cfg): array
+    {
+        $b = self::mangalPerson($boy, $cfg);
+        $g = self::mangalPerson($girl, $cfg);
         $key = $b['manglik'] && $g['manglik'] ? 'o_mangal_both'
             : (($b['manglik'] xor $g['manglik']) ? 'o_mangal_mismatch' : 'o_mangal_none');
 
