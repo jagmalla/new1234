@@ -151,6 +151,7 @@
             if (box) {
               box.innerHTML = g.phal_html;
               if (global.ABBindGocharPhal) { global.ABBindGocharPhal(); }
+              if (global.ABBindSadeTimeline) { global.ABBindSadeTimeline(); }
             }
           }
         })

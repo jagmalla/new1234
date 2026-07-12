@@ -90,9 +90,13 @@ if ($hasAny):
 
 
         <!-- CATEGORY: शनि विशेष (Layer 4) -->
-        <?php if ($ss !== null): $sevTone = static fn(int $s): string => $s <= 1 ? 'gc-shubh' : ($s === 2 ? 'gc-mishrit' : 'gc-ashubh'); ?>
+        <?php $hasSadeTl = !empty($gp['sade_timeline']); if ($ss !== null || $hasSadeTl): $sevTone = static fn(int $s): string => $s <= 1 ? 'gc-shubh' : ($s === 2 ? 'gc-mishrit' : 'gc-ashubh'); ?>
         <div class="gochar-cat" data-cat="shani">
-            <div class="gph-section-title">शनि विशेष <span class="text-xs text-gray-400 font-normal">(साढ़े साती / ढैय्या / पंचम + पाया)</span></div>
+            <div class="gph-section-title">साढ़े साती व शनि ढैया <span class="text-xs text-gray-400 font-normal">(सम्पूर्ण timeline — जन्म से भविष्य तक, 5-परत फल)</span></div>
+            <?php if ($hasSadeTl) { require __DIR__ . '/_sade_timeline.php'; } ?>
+            <?php if ($ss !== null): ?>
+            <div class="gph-section-title" style="margin-top:12px;font-size:.9rem">वर्तमान शनि-स्नैपशॉट <span class="text-xs text-gray-400 font-normal">(तीव्रता · प्रभावित ग्रह · पाया)</span></div>
+            <?php endif; ?>
             <?php if (!empty($ss['active'])): ?>
             <div class="saham-card gochar-card" data-planet="Saturn" style="border-left:4px solid #1d4ed8">
                 <div class="saham-card-head">

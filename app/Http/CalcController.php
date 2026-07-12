@@ -810,6 +810,19 @@ final class CalcController
             );
             if (is_array($gp)) {
                 $gp['error'] = \AutoBusiness\Astro\Gochar\GocharRepository::lastError();
+                // Full Sade-Sati / Dhaiyya TIMELINE (all periods birth→future, both
+                // Moon- and Lagna-based, 5-layer detail) for the साढ़े साती category.
+                $gp['sade_timeline'] = $this->safe(static fn () => \AutoBusiness\Astro\Gochar\SadeSatiTimeline::fullTimeline(
+                    (int) ($natal['planets']['Moon']['sign_index'] ?? 0),
+                    (int) ($natal['ascendant']['sign_index'] ?? 0),
+                    $natalJd,
+                    $jdG,
+                    static fn (float $j): float => $engine->planetSiderealLon('Saturn', $j),
+                    $natal['ashtakavarga']['bav']['Saturn'] ?? array_fill(0, 12, 0),
+                    static fn (float $j): float => $engine->planetSiderealLon('Jupiter', $j)
+                ), null);
+                $gp['sade_search_jd'] = $jdG;
+                $gp['sade_tz'] = $tz;
             }
             $views = dirname(__DIR__) . '/Http/views/';
             require $views . '_varsha_helpers.php';   // $h/$pcolor/$grahaHi/$rashiHi

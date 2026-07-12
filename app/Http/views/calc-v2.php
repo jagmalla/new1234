@@ -311,6 +311,42 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gph-avline:first-of-type { border-top: 0; padding-top: 2px; }
         .gph-avhead { font-size: .8rem; color: #475569; margin-bottom: 2px; display: flex;
             align-items: center; gap: 6px; flex-wrap: wrap; }
+        /* ---- Sade-Sati / Dhaiyya full timeline ---- */
+        .sade-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+        .sade-basis { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        .sade-basis-btn { padding: 7px 12px; font-size: .82rem; font-weight: 700; background: var(--card);
+            color: var(--ink-soft); min-height: 38px; border: 0; cursor: pointer; }
+        .sade-basis-btn.active { background: var(--sindoor-soft); color: var(--sindoor); }
+        .sade-card { border: 1px solid var(--line); border-left: 4px solid #94a3b8; border-radius: 10px;
+            padding: 9px 12px; margin-bottom: 10px; background: #fff; }
+        .sade-card.sade-active { border-left-color: #ea580c; background: #fff8f3; }
+        .sade-card.sade-future { border-left-color: #1d4ed8; background: #f5f8ff; }
+        .sade-card.sade-past { border-left-color: #94a3b8; background: #fafafa; }
+        .sade-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .sade-title { font-weight: 800; font-size: .95rem; color: #334155; }
+        .sade-badge { font-size: .72rem; font-weight: 800; padding: 1px 9px; border-radius: 999px; }
+        .sade-b-active { background: #ffedd5; color: #c2410c; }
+        .sade-b-future { background: #dbeafe; color: #1d4ed8; }
+        .sade-b-past { background: #e5e7eb; color: #4b5563; }
+        .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
+        .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
+        .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
+        .sade-prog-note { font-size: .78rem; color: #c2410c; font-weight: 700; margin-bottom: 4px; }
+        .sade-phase { font-size: .84rem; color: #2b2620; margin: 3px 0; line-height: 1.5;
+            display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .sade-ph-dot { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; flex: 0 0 auto; }
+        .sade-ph-active .sade-ph-dot { background: #ea580c; }
+        .sade-ph-future .sade-ph-dot { background: #1d4ed8; }
+        .sade-ph-tag { font-size: .7rem; font-weight: 700; padding: 0 6px; border-radius: 999px; }
+        .sade-ph-bindu { font-size: .72rem; color: #1d4ed8; font-weight: 700; }
+        .sade-detail { margin-top: 6px; }
+        .sade-detail > summary { cursor: pointer; font-size: .82rem; font-weight: 700; color: var(--sindoor);
+            list-style: revert; }
+        .sade-layer { border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 6px; }
+        .sade-layer-h { font-weight: 700; font-size: .84rem; color: #6b21a8; margin-bottom: 3px; }
+        .sade-layer-line { font-size: .84rem; line-height: 1.6; color: #2b2620; margin: 2px 0; }
+        .sade-t-pos { color: #15803d; } .sade-t-neg { color: #b91c1c; } .sade-t-mix { color: #1d4ed8; }
+        .sade-remedy { font-size: .82rem; color: #6b6459; margin-top: 5px; border-top: 1px dashed var(--line); padding-top: 5px; }
         .gph-l3ev { border-top: 1px dashed var(--line); padding-top: 5px; margin-top: 5px; }
         .gph-l3head { font-size: .85rem; color: #453F37; margin-bottom: 2px; }
         .gph-cond { color: #7A5C00; }
@@ -2421,11 +2457,51 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         d.classList.toggle('hidden', !show);
         if (show) { shown++; }
       });
-      if (empty) { empty.classList.toggle('hidden', shown !== 0); }
+      // The साढ़े साती timeline is not a .gochar-card, so treat a visible
+      // .sade-wrap in the active section as content (don't show the empty note).
+      var hasSade = !!document.querySelector('#gochar-detail-pane .gochar-cat:not(.hidden) .sade-wrap');
+      if (empty) { empty.classList.toggle('hidden', shown !== 0 || hasSade); }
       if (pane) { pane.scrollTop = 0; }
     }
     if (sel) { sel.onchange = apply; }
     if (cat) { cat.onchange = apply; }
+    apply();
+  };
+
+  // साढ़े साती / ढैया timeline — basis (चन्द्र/लग्न) toggle + view-mode filter.
+  // The Gochar panel HTML is re-injected on each transit fetch, so gochar.js
+  // calls this after every inject.
+  window.ABBindSadeTimeline = function () {
+    var mode = document.getElementById('sade-mode');
+    var basisBtns = document.querySelectorAll('.sade-basis-btn');
+    var cards = document.querySelectorAll('.sade-card');
+    var empty = document.getElementById('sade-empty');
+    if (!cards.length && !mode) { return; }
+    var basis = 'moon';
+    basisBtns.forEach(function (b) { if (b.classList.contains('active')) { basis = b.getAttribute('data-basis'); } });
+    function apply() {
+      var mv = mode ? mode.value : 'current';   // current | all | past
+      var shown = 0;
+      cards.forEach(function (c) {
+        var st = c.getAttribute('data-status');
+        var basisOk = c.getAttribute('data-basis') === basis;
+        var modeOk = mv === 'all'
+          || (mv === 'current' && (st === 'ACTIVE' || st === 'FUTURE'))
+          || (mv === 'past' && (st === 'PAST' || st === 'ACTIVE'));
+        var show = basisOk && modeOk;
+        c.classList.toggle('hidden', !show);
+        if (show) { shown++; }
+      });
+      if (empty) { empty.classList.toggle('hidden', shown !== 0); }
+    }
+    if (mode) { mode.onchange = apply; }
+    basisBtns.forEach(function (b) {
+      b.onclick = function () {
+        basisBtns.forEach(function (x) { x.classList.toggle('active', x === b); });
+        basis = b.getAttribute('data-basis');
+        apply();
+      };
+    });
     apply();
   };
 
