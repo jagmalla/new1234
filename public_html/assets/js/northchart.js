@@ -143,6 +143,11 @@
     opts = opts || {};
     container.innerHTML = '';
 
+    // Rotation: which house is drawn at position 1 (top-centre). 1 = lagna
+    // (default, no rotation). Value 0..11 is the house-1 offset in signs. The
+    // planets and signs stay in the zodiac; only the house frame turns.
+    var rotate = (((((opts.rotate || 1) - 1) % 12) + 12) % 12);
+
     if (opts.title) {
       var h = document.createElement('div');
       h.className = 'text-xs font-semibold text-center mb-1 text-gray-700';
@@ -153,6 +158,13 @@
     // An optional outer ring shows Ashtakavarga (AV) and Bhava Bala (BB) per
     // house just outside the chart; it widens the viewBox to make room.
     var ring = opts.outer || null;
+    // Rotate the AV/BB/Drishti ring with the signs so each value stays attached
+    // to its own sign/bhava at the new on-screen house position.
+    if (ring && rotate) {
+      var rr = {};
+      for (var rh = 1; rh <= 12; rh++) { rr[rh] = ring[((rh - 1 + rotate) % 12) + 1] || ring[String(((rh - 1 + rotate) % 12) + 1)]; }
+      ring = rr;
+    }
     // Default: scale to the container WIDTH (height follows, keeping the square).
     // fit:true → scale to fit BOTH width and height (contain), so the chart
     // always fits inside a freely-resized panel without overflowing or clipping.
@@ -178,19 +190,23 @@
     line(50,99,1,50); line(1,50,50,1);
 
     var ascSign = ((data.asc_sign % 12) + 12) % 12;
+    // dispAsc = sign shown in house 1 after rotation; the real ascendant then
+    // falls into whatever house now holds it (house 1 when not rotated).
+    var dispAsc = (ascSign + rotate) % 12;
+    var houseOf = function (sign) { return (((sign - dispAsc) % 12) + 12) % 12 + 1; };
 
     // Group planet labels by fixed house.
     var byHouse = {};
     for (var i = 1; i <= 12; i++) { byHouse[i] = []; }
 
-    // Ascendant marker always sits in house 1.
-    byHouse[1].push({
+    // Ascendant marker sits in the house that holds the lagna sign.
+    byHouse[houseOf(ascSign)].push({
       abbr: 'As',
       txt: 'As' + (opts.showDeg && data.asc_deg != null ? ' ' + data.asc_deg + '°' : '')
     });
 
     (data.planets || []).forEach(function (p) {
-      var house = (((p.sign - ascSign) % 12) + 12) % 12 + 1;
+      var house = houseOf(p.sign);
       var d = DIGN[p.abbr];
       var mark = d ? (p.sign === d.ex ? '↑' : (p.sign === d.de ? '↓' : '')) : '';
       var txt = p.abbr + mark
@@ -202,7 +218,7 @@
 
     for (var hh = 1; hh <= 12; hh++) {
       var cx = C[hh][0], cy = C[hh][1];
-      var signNum = ((ascSign + (hh - 1)) % 12);
+      var signNum = ((dispAsc + (hh - 1)) % 12);
 
       var items = byHouse[hh];
       var n = items.length;

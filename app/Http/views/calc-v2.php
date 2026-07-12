@@ -220,6 +220,15 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .pick-tag { font-size: 1.05rem; font-weight: 800; color: var(--sindoor); white-space: nowrap; }
         .l2-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: nowrap; }
         .l2-picker .l2-select { width: auto; flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+        /* Chart header: a smaller "Chart" dropdown + a "Rotate" dropdown share the
+           row. The chart select is trimmed to make room; both wrap on narrow
+           screens so nothing overflows. */
+        .chart-picker { flex-wrap: wrap; gap: 6px 8px; }
+        .chart-picker #chart-select { flex: 1 1 130px; }
+        .chart-picker #chart-rotate { flex: 1 1 120px; }
+        .chart-picker .rot-tag { color: #1d4ed8; }
+        .chart-picker .rot-select { border-color: #1d4ed8; background-color: #eff4ff;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%231d4ed8'><path d='M5 7.5l5 5 5-5z'/></svg>"); }
         /* Dasha strip — pinned to the chart panel bottom (mt-auto + divider). */
         .dasha-strip { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px;
             font-size: .85rem; line-height: 1.6; }
@@ -972,14 +981,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             ];
         ?>
         <section id="chart-panel" class="l2-card l2-panel" aria-label="कुंडली चार्ट">
-            <div class="l2-picker">
-            <span class="pick-tag">Select Chart ▾</span>
+            <div class="l2-picker chart-picker">
+            <span class="pick-tag">Chart ▾</span>
             <select id="chart-select" class="l2-select" aria-label="कुंडली चुनें">
                 <?php foreach ($vargaHi as $vk => $vlbl): if (!isset($vargas[$vk])) { continue; } ?>
                     <option value="<?= $h($vk) ?>"><?= $h($vk) ?> — <?= $h($vlbl) ?></option>
                 <?php endforeach; ?>
                 <?php if ($gochar !== null): ?><option value="gochar">Gochar (Transit)</option><?php endif; ?>
                 <?php if (($view['varshaNorth'] ?? null) !== null): ?><option value="varsha">Varsha Kundali (<?= (int) $in['forYear'] ?>)</option><?php endif; ?>
+            </select>
+            <span class="pick-tag rot-tag" title="किसी भी भाव को प्रथम भाव पर घुमाएँ">Rotate ▾</span>
+            <select id="chart-rotate" class="l2-select rot-select" aria-label="चार्ट घुमाएँ (भाव चुनें)">
+                <option value="1" selected>भाव 1 — लग्न</option>
+                <?php for ($rh = 2; $rh <= 12; $rh++): ?><option value="<?= $rh ?>">भाव <?= $rh ?></option><?php endfor; ?>
             </select>
             </div><!-- /.l2-picker -->
             <div class="l2-legend">
@@ -2556,10 +2570,30 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     });
   }
 
+  // Rotation: value 1..12 = which house is drawn at position 1 (1 = lagna).
+  var HSIGN = ['मेष', 'वृषभ', 'मिथुन', 'कर्क', 'सिंह', 'कन्या', 'तुला', 'वृश्चिक', 'धनु', 'मकर', 'कुंभ', 'मीन'];
+  function rotateVal() {
+    var rs = document.getElementById('chart-rotate');
+    var v = rs ? parseInt(rs.value, 10) : 1;
+    return (v >= 1 && v <= 12) ? v : 1;
+  }
+  // Show each house's actual rashi in the Rotate dropdown for the current chart.
+  function updateRotateLabels(ascSign) {
+    var rs = document.getElementById('chart-rotate');
+    if (!rs || ascSign == null) { return; }
+    for (var hh = 1; hh <= 12; hh++) {
+      var opt = rs.querySelector('option[value="' + hh + '"]');
+      if (!opt) { continue; }
+      var rashi = HSIGN[(((ascSign + hh - 1) % 12) + 12) % 12];
+      opt.textContent = 'भाव ' + hh + ' — ' + rashi + (hh === 1 ? ' (लग्न)' : '');
+    }
+  }
+
   // Chart panel frame: same renderer + payloads as the section charts (protected).
   function renderChartFrame(key) {
     var frame = document.getElementById('chart-frame');
     if (!frame || !window.ABChart) { return; }
+    var rot = rotateVal();
     if (key === 'gochar') {
       var g = window.AB_GOCHAR || {};
       if (!g.transits || !g.ascendant) { return; }
@@ -2568,26 +2602,37 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         var t = g.transits[n];
         return { abbr: ABBR[n] || n.slice(0, 2), sign: t.sign_index, deg: Math.floor(t.deg), retro: !!t.retro };
       });
-      ABChart.renderNorth(frame, { asc_sign: g.ascendant.sign_index, planets: planets }, { showDeg: true });
+      ABChart.renderNorth(frame, { asc_sign: g.ascendant.sign_index, planets: planets }, { showDeg: true, rotate: rot });
+      updateRotateLabels(g.ascendant.sign_index);
       return;
     }
     if (key === 'varsha') {
       if (window.AB_VARSHAN && window.AB_VARSHAN.planets) {
-        ABChart.renderNorth(frame, window.AB_VARSHAN, { showDeg: true });
+        ABChart.renderNorth(frame, window.AB_VARSHAN, { showDeg: true, rotate: rot });
+        updateRotateLabels(window.AB_VARSHAN.asc_sign);
       }
       return;
     }
     if (window.AB_VARGAS && window.AB_VARGAS[key]) {
       ABChart.renderNorth(frame, window.AB_VARGAS[key], {
         title: null, showDeg: true, big: key === 'D1',
-        outer: key === 'D1' ? (window.AB_HOUSES || null) : null
+        outer: key === 'D1' ? (window.AB_HOUSES || null) : null,
+        rotate: rot
       });
+      updateRotateLabels(window.AB_VARGAS[key].asc_sign);
     }
   }
   var chartSel = document.getElementById('chart-select');
   if (chartSel) {
     chartSel.addEventListener('change', function () {
       renderChartFrame(this.value);
+      setPanelHeights();
+    });
+  }
+  var rotSel = document.getElementById('chart-rotate');
+  if (rotSel) {
+    rotSel.addEventListener('change', function () {
+      renderChartFrame(chartSel ? chartSel.value : 'D1');
       setPanelHeights();
     });
   }
