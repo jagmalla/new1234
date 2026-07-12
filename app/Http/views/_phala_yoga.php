@@ -36,6 +36,8 @@ if ($py !== null && !empty($py['groups'])):
     </div>
     <?php endif; ?>
 
+    <?php require __DIR__ . '/_rajayoga.php';   // BPHS-36 राजयोग (below the Ch.32 classification) ?>
+
     <div class="pred-picker" style="margin-top:8px;gap:8px;flex-wrap:wrap">
         <label class="pred-picker-label" for="py-cat">श्रेणी</label>
         <select id="py-cat" class="pred-inline-select" size="1">

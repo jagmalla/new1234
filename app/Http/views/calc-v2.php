@@ -436,6 +436,35 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gc-chip.yk-yoga { background: #ede9fe; color: #5b21b6; }
         .gc-chip.yk-marak { background: #fde2e4; color: #9d174d; }
         .yk-ref { font-size: .74rem; color: #7c6f5a; margin-top: 6px; line-height: 1.5; }
+        /* ---- राजयोग (BPHS 36) ---- */
+        .ry-box { margin: 8px 0 4px; }
+        .ry-karakas { font-size: .8rem; color: #475569; background: #f8fafc; border: 1px solid var(--line);
+            border-radius: 8px; padding: 5px 10px; margin-bottom: 6px; }
+        .ry-grp { font-weight: 800; font-size: .86rem; margin: 8px 0 4px; }
+        .ry-grp-pos { color: #15803d; } .ry-grp-neg { color: #b91c1c; }
+        .ry-card { border: 1px solid var(--line); border-left: 4px solid #94a3b8; border-radius: 9px;
+            padding: 7px 11px; margin-bottom: 7px; background: #fff; }
+        .ry-c-pos { border-left-color: #15803d; background: #f6fef9; }
+        .ry-c-neg { border-left-color: #b91c1c; background: #fef6f6; }
+        .ry-card-h { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+        .ry-name { font-weight: 800; font-size: .9rem; color: #334155; }
+        .ry-src { font-size: .72rem; color: #7c6f5a; font-weight: 700; }
+        .ry-badge { font-size: .72rem; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+        .ry-b-pos { background: #dcfce7; color: #15803d; } .ry-b-neg { background: #fee2e2; color: #b91c1c; }
+        .ry-tag { font-size: .68rem; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #ede9fe; color: #5b21b6; }
+        .ry-matched { font-size: .84rem; color: #2b2620; margin: 3px 0; line-height: 1.55; }
+        .ry-matched i { color: #1d4ed8; font-style: normal; font-weight: 600; }
+        .ry-result { font-size: .84rem; color: #15803d; line-height: 1.55; }
+        .ry-c-neg .ry-result { color: #b91c1c; }
+        .ry-bhanga-note { font-size: .8rem; color: #b45309; margin: 2px 0; line-height: 1.5; }
+        .ry-none { font-size: .84rem; color: #6b6459; background: #fafafa; border: 1px dashed var(--line);
+            border-radius: 8px; padding: 7px 10px; }
+        .ry-unavail { margin: 6px 0; }
+        .ry-unavail > summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: #64748b; }
+        .ry-unavail-item { font-size: .8rem; color: #475569; margin: 3px 0 3px 6px; }
+        .ry-summary { font-size: .86rem; color: #1e40af; background: #eff4ff; border: 1px solid #cdddff;
+            border-radius: 8px; padding: 7px 10px; margin-top: 8px; line-height: 1.55; }
+        .ry-caveat { font-size: .76rem; color: #92400e; margin-top: 5px; line-height: 1.5; }
         .yoga-dasha { margin-top: 6px; padding-top: 5px; border-top: 1px dashed var(--line); font-size: .84rem; }
         .yoga-dasha > b { color: #6b21a8; }
         .yoga-dasha-pill { display: inline-flex; align-items: center; gap: 4px; background: #faf7ff; border: 1px solid #ece3fb;

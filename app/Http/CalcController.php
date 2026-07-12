@@ -631,6 +631,12 @@ final class CalcController
         );
         if (is_array($data)) {
             $data['error'] = \AutoBusiness\Astro\Phala\PhaladeepikaYogaRepository::lastError();
+            // BPHS Adhyaya-36 Raja Yogas (RY/KA/MN + Bhanga), deduped against the
+            // Adhyaya-32 yogakaraka engine. A separate, additive classical set.
+            $data['rajayoga'] = $this->safe(
+                static fn () => \AutoBusiness\Astro\Phala\RajaYoga::compute($chart),
+                null
+            );
         }
         return $data;
     }
