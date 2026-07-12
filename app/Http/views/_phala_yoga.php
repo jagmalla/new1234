@@ -13,6 +13,11 @@ $typeChip = static fn(string $t): string => $t === 'shubh' ? 'gc-shubh' : ($t ==
 $roleChip = static fn(string $r): string => $r === 'yogakaraka' ? 'yk-yoga' : ($r === 'benefic' ? 'gc-shubh' : ($r === 'malefic' ? 'gc-ashubh' : 'gc-mishrit'));
 if ($py !== null && !empty($py['groups'])):
     $cats = $py['categories'];   // hi => slug
+    // राजयोग व मंगल दोष is an additional (BPHS 32/36) category shown as cards in
+    // the same filterable list — register it in the श्रेणी dropdown.
+    if (($py['rajayoga'] ?? null) !== null || ($view['manglik'] ?? null) !== null) {
+        $cats = ['राजयोग व मंगल दोष' => 'rajayoga'] + $cats;
+    }
     $sum = $py['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
     $yk = $py['yogakaraka'] ?? null;
 ?>
@@ -36,8 +41,6 @@ if ($py !== null && !empty($py['groups'])):
     </div>
     <?php endif; ?>
 
-    <?php require __DIR__ . '/_rajayoga.php';   // BPHS-36 राजयोग (below the Ch.32 classification) ?>
-
     <div class="pred-picker" style="margin-top:8px;gap:8px;flex-wrap:wrap">
         <label class="pred-picker-label" for="py-cat">श्रेणी</label>
         <select id="py-cat" class="pred-inline-select" size="1">
@@ -57,6 +60,7 @@ if ($py !== null && !empty($py['groups'])):
     </div>
 
     <div id="py-detail-pane" style="margin-top:8px">
+        <?php require __DIR__ . '/_yoga_raja_manglik.php';   // राजयोग + मंगल दोष as filterable cards ?>
         <?php foreach ($py['groups'] as $cat => $ys): ?>
         <div class="py-group" data-cat="<?= $h($cat) ?>">
             <div class="yoga-cat-head"><?= $h($cat) ?> <span class="text-xs text-gray-400 font-normal">(<?= count($ys) ?>)</span></div>
