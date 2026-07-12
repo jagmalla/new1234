@@ -21,7 +21,27 @@ if ($py !== null && !empty($py['groups'])):
     $sum = $py['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
     $yk = $py['yogakaraka'] ?? null;
 ?>
-    <div class="yoga-sec-title">कुंडली के सक्रिय योग
+    <!-- Filter dropdowns first — everything below (summary, classification, cards)
+         is the filtered content. -->
+    <div class="pred-picker" style="gap:8px;flex-wrap:wrap">
+        <label class="pred-picker-label" for="py-cat">श्रेणी</label>
+        <select id="py-cat" class="pred-inline-select" size="1">
+            <option value="active" selected>✓ सक्रिय — इस कुंडली में बने</option>
+            <option value="all">सभी श्रेणियाँ (All)</option>
+            <?php foreach ($cats as $chi => $slug): ?><option value="<?= $h($chi) ?>"><?= $h($chi) ?></option><?php endforeach; ?>
+        </select>
+    </div>
+    <div class="pred-picker" style="margin-top:6px;gap:8px;flex-wrap:wrap">
+        <label class="pred-picker-label" for="py-type">प्रकार</label>
+        <select id="py-type" class="pred-inline-select" size="1">
+            <option value="all">सभी</option>
+            <option value="shubh">शुभ</option>
+            <option value="ashubh">अशुभ</option>
+            <option value="mishrit">मिश्र</option>
+        </select>
+    </div>
+
+    <div class="yoga-sec-title" style="margin-top:10px">कुंडली के सक्रिय योग
         <span class="gc-chip tb-niyam" style="margin-left:6px">कुल सक्रिय: <?= (int) $py['detected_count'] ?></span>
         <span class="text-xs text-gray-400 font-normal" style="margin-left:4px"><?= (int) ($sum['shubh'] ?? 0) ?> शुभ · <?= (int) ($sum['ashubh'] ?? 0) ?> अशुभ<?= ($sum['mishrit'] ?? 0) ? ' · ' . (int) $sum['mishrit'] . ' मिश्र' : '' ?></span>
     </div>
@@ -40,24 +60,6 @@ if ($py !== null && !empty($py['groups'])):
         <?php if (!empty($yk['table']['yogakaraka'])): ?><div class="yk-ref">ग्रन्थ-सन्दर्भ: योगकारक — <?= $h($yk['table']['yogakaraka']) ?>; मारक — <?= $h($yk['table']['marak'] ?? '—') ?> (श्लोक <?= $h($yk['table']['shloka'] ?? '') ?>)।</div><?php endif; ?>
     </div>
     <?php endif; ?>
-
-    <div class="pred-picker" style="margin-top:8px;gap:8px;flex-wrap:wrap">
-        <label class="pred-picker-label" for="py-cat">श्रेणी</label>
-        <select id="py-cat" class="pred-inline-select" size="1">
-            <option value="active" selected>✓ सक्रिय — इस कुंडली में बने</option>
-            <option value="all">सभी श्रेणियाँ (All)</option>
-            <?php foreach ($cats as $chi => $slug): ?><option value="<?= $h($chi) ?>"><?= $h($chi) ?></option><?php endforeach; ?>
-        </select>
-    </div>
-    <div class="pred-picker" style="margin-top:6px;gap:8px;flex-wrap:wrap">
-        <label class="pred-picker-label" for="py-type">प्रकार</label>
-        <select id="py-type" class="pred-inline-select" size="1">
-            <option value="all">सभी</option>
-            <option value="shubh">शुभ</option>
-            <option value="ashubh">अशुभ</option>
-            <option value="mishrit">मिश्र</option>
-        </select>
-    </div>
 
     <div id="py-detail-pane" style="margin-top:8px">
         <?php require __DIR__ . '/_yoga_raja_manglik.php';   // राजयोग + मंगल दोष as filterable cards ?>
