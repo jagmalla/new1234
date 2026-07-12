@@ -11,7 +11,7 @@ declare(strict_types=1);
  * Run from the project root:  php gochar_av_test.php
  */
 
-require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/../bootstrap.php';
 
 use AutoBusiness\Astro\Calc\Ashtakavarga;
 use AutoBusiness\Astro\Calc\CalculationEngine;

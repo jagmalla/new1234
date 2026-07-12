@@ -9,7 +9,7 @@ declare(strict_types=1);
  * Run from the project root:  php tajik_bhava_test.php
  */
 
-require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/../bootstrap.php';
 
 use AutoBusiness\Astro\Calc\CalculationEngine;
 use AutoBusiness\Astro\Calc\Varshaphal;

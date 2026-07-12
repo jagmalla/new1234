@@ -23,7 +23,7 @@ declare(strict_types=1);
  * HOW TO RUN (from the project root):   php tajik_test.php [--year=2025]
  */
 
-require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/../bootstrap.php';
 
 use AutoBusiness\Astro\Calc\CalculationEngine;
 use AutoBusiness\Astro\Calc\Varshaphal;

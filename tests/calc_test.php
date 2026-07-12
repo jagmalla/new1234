@@ -41,7 +41,7 @@ declare(strict_types=1);
  * longitude and a negative tz (e.g. --lon=-122.85 --tz=-8).
  */
 
-require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/../bootstrap.php';
 
 use AutoBusiness\Astro\Calc\CalculationEngine;
 use AutoBusiness\Astro\Calc\Varshaphal;

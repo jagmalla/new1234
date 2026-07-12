@@ -8,7 +8,7 @@ declare(strict_types=1);
  * verified to ±0.5 virupa. Run:  php shadbala_pl_test.php
  */
 
-require __DIR__ . '/bootstrap.php';
+require __DIR__ . '/../bootstrap.php';
 
 use AutoBusiness\Astro\Calc\CalculationEngine;
 use AutoBusiness\Astro\Calc\Charts;
