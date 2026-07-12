@@ -46,7 +46,7 @@ if ($hasAny):
             <?php foreach ($cats as $ck => $cl): ?><option value="<?= $h($ck) ?>"><?= $h($cl) ?></option><?php endforeach; ?>
         </select>
     </div>
-    <div class="pred-picker" style="margin-top:6px">
+    <div class="pred-picker" id="gochar-planet-pick" style="margin-top:6px">
         <label class="pred-picker-label" for="gochar-select">ग्रह चुनें</label>
         <select id="gochar-select" class="pred-inline-select" size="1">
             <option value="all">सभी ग्रह (All)</option>

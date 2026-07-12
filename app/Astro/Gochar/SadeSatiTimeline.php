@@ -187,10 +187,20 @@ final class SadeSatiTimeline
     public static function fullTimeline(int $moonSign, int $lagnaSign, float $birthJd, float $searchJd, callable $satLonAt, array $satBav, ?callable $jupLonAt = null): array
     {
         $windows = self::saturnWindows($birthJd - 3.0 * self::YEAR_D, $searchJd + 15.0 * self::YEAR_D, $satLonAt);
-        return [
-            'moon' => ['ref_sign' => $moonSign, 'periods' => self::classify($windows, $moonSign, $searchJd, $satBav, $jupLonAt)],
-            'lagna' => ['ref_sign' => $lagnaSign, 'periods' => self::classify($windows, $lagnaSign, $searchJd, $satBav, $jupLonAt)],
-        ];
+        // Classical rule (per the client): साढ़े साती is judged from the natal
+        // MOON (Saturn transiting 12/1/2 from Chandra); शनि ढैया is judged from
+        // the LAGNA (4/8 from Lagna). We take each from its correct reference and
+        // merge them into ONE timeline (no Moon/Lagna toggle).
+        $moonP = self::classify($windows, $moonSign, $searchJd, $satBav, $jupLonAt);
+        $lagnaP = self::classify($windows, $lagnaSign, $searchJd, $satBav, $jupLonAt);
+        $merged = [];
+        foreach ($moonP as $p) { if ($p['type'] === 'SADE_SATI') { $merged[] = $p; } }
+        foreach ($lagnaP as $p) { if ($p['type'] === 'DHAIYA_KANTAK' || $p['type'] === 'DHAIYA_ASHTAM') { $merged[] = $p; } }
+        usort($merged, static fn ($a, $b) => $a['start_jd'] <=> $b['start_jd']);
+        $cyc = 0;
+        foreach ($merged as &$mp) { if ($mp['type'] === 'SADE_SATI') { $mp['cycle'] = ++$cyc; } }
+        unset($mp);
+        return ['periods' => $merged, 'moon_sign' => $moonSign, 'lagna_sign' => $lagnaSign];
     }
 
     /**

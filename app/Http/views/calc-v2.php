@@ -328,6 +328,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .sade-b-active { background: #ffedd5; color: #c2410c; }
         .sade-b-future { background: #dbeafe; color: #1d4ed8; }
         .sade-b-past { background: #e5e7eb; color: #4b5563; }
+        .sade-ref-tag { font-size: .72rem; font-weight: 700; color: #6b21a8; background: #f3e8ff;
+            border-radius: 999px; padding: 1px 8px; }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
@@ -2468,9 +2470,15 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     var sections = document.querySelectorAll('#gochar-detail-pane .gochar-cat');
     var cards = document.querySelectorAll('#gochar-detail-pane .gochar-card');
     var empty = document.getElementById('gochar-empty');
+    var planetPick = document.getElementById('gochar-planet-pick');
     function apply() {
       var cv = cat ? cat.value : 'all';        // selected category
       var pv = sel ? sel.value : 'all';        // selected planet
+      // The "ग्रह चुनें" (planet) filter only applies to per-planet categories.
+      // Hide it for साढ़े साती, general summary and मुहूर्त (no planet to pick).
+      var usesPlanet = (cv === 'bhava' || cv === 'ashtak' || cv === 'natal');
+      if (planetPick) { planetPick.classList.toggle('hidden', !usesPlanet); }
+      if (!usesPlanet && sel) { pv = 'all'; sel.value = 'all'; }
       // Category: show only the chosen section(s).
       sections.forEach(function (s) {
         s.classList.toggle('hidden', cv !== 'all' && s.getAttribute('data-cat') !== cv);
@@ -2501,35 +2509,23 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
   // calls this after every inject.
   window.ABBindSadeTimeline = function () {
     var mode = document.getElementById('sade-mode');
-    var basisBtns = document.querySelectorAll('.sade-basis-btn');
     var cards = document.querySelectorAll('.sade-card');
     var empty = document.getElementById('sade-empty');
     if (!cards.length && !mode) { return; }
-    var basis = 'moon';
-    basisBtns.forEach(function (b) { if (b.classList.contains('active')) { basis = b.getAttribute('data-basis'); } });
     function apply() {
       var mv = mode ? mode.value : 'current';   // current | all | past
       var shown = 0;
       cards.forEach(function (c) {
         var st = c.getAttribute('data-status');
-        var basisOk = c.getAttribute('data-basis') === basis;
         var modeOk = mv === 'all'
           || (mv === 'current' && (st === 'ACTIVE' || st === 'FUTURE'))
           || (mv === 'past' && (st === 'PAST' || st === 'ACTIVE'));
-        var show = basisOk && modeOk;
-        c.classList.toggle('hidden', !show);
-        if (show) { shown++; }
+        c.classList.toggle('hidden', !modeOk);
+        if (modeOk) { shown++; }
       });
       if (empty) { empty.classList.toggle('hidden', shown !== 0); }
     }
     if (mode) { mode.onchange = apply; }
-    basisBtns.forEach(function (b) {
-      b.onclick = function () {
-        basisBtns.forEach(function (x) { x.classList.toggle('active', x === b); });
-        basis = b.getAttribute('data-basis');
-        apply();
-      };
-    });
     apply();
   };
 
