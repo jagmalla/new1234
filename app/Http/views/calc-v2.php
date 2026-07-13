@@ -1173,8 +1173,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         <!-- 7. शास्त्रीय संदर्भ (BPHS) — the existing 81-combo text, collapsed. -->
         <div class="de-classical">
-            <button type="button" id="classical-toggle" class="de-classical-btn" aria-expanded="false">▸ शास्त्रीय संदर्भ (BPHS 81 योग)</button>
-            <div id="classical-body" class="hidden mt-2">
+            <button type="button" id="classical-toggle" class="de-classical-btn" aria-expanded="true">▾ शास्त्रीय संदर्भ (BPHS 81 योग)</button>
+            <div id="classical-body" class="mt-2">
         <div id="phala-sections" class="grid grid-cols-1 md:grid-cols-3 gap-4<?= $pText ? '' : ' hidden' ?>">
             <div>
                 <div class="font-semibold text-green-700 mb-1">सकारात्मक फल <span class="text-gray-400 font-normal">(Positive)</span></div>
@@ -1432,13 +1432,6 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         $kCopyText = implode("\n", $kCopyLines);
     ?>
     <div class="bg-white rounded-lg shadow p-4 text-sm" id="karaka-pred-card">
-        <div class="flex flex-wrap items-end gap-x-6 gap-y-2 mb-3">
-            <h2 class="font-semibold">Karaka Prediction <span class="text-xs text-gray-400 font-normal">(कारक फल)</span></h2>
-            <span class="text-xs text-gray-400">प्रत्येक भाव — लग्न (बाहरी) व कारक (आंतरिक), भाव फल के साथ संयुक्त</span>
-            <button id="karaka-copy" type="button" class="ml-auto text-xs bg-gray-100 hover:bg-gray-200 border rounded px-3 py-1 font-semibold">Copy</button>
-            <button type="button" class="phala-toggle text-xs bg-gray-100 hover:bg-gray-200 border rounded px-2 py-1 font-semibold" data-target="karaka-body" aria-expanded="true">Collapse ▴</button>
-        </div>
-        <pre id="karaka-copy-text" class="hidden"><?= $h($kCopyText) ?></pre>
         <div id="karaka-body">
         <?php if ($kp === null || empty($kp['karakas'])): ?>
             <?php if ($kp !== null && !empty($kp['error'])): ?>

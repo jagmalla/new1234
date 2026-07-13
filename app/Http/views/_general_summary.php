@@ -87,7 +87,9 @@ $satEffect = [
 
     <?php
     // ===== 2) मांगलिक (मंगल दोष) — same calculation as Kundali Milan =====
-    if ($mng !== null):
+    // Show ONLY when the person is actually Manglik (dosha present AND not
+    // cancelled). गैर-मांगलिक / दोष-भंग is not an active finding → hidden.
+    if ($mng !== null && !empty($mng['manglik'])):
         $mCancel = [];
         if (!empty($mng['cancel']['own_or_exalt'])) { $mCancel[] = 'मंगल स्वराशि/उच्च'; }
         if (!empty($mng['cancel']['jupiter_or_lagna'])) { $mCancel[] = 'गुरु-दृष्टि/लग्न में गुरु-शुक्र'; }

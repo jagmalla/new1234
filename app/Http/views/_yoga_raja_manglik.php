@@ -25,8 +25,11 @@ $pct = static fn (float $s): int => (int) round($s * 100);
 
     <?php // ---- मंगल दोष (मांगलिक) card ----
     if ($mng !== null):
+        // "Active/इस कुंडली में बने" = person is truly Manglik. गैर-मांगलिक — whether
+        // no dosha at all OR dosha cancelled (दोष-भंग) — is NOT active (data-detected=0),
+        // so it stays out of the default सक्रिय filter (visible only under सभी/category).
         if (!empty($mng['manglik'])) { $mt = 'ashubh'; $mLabel = 'मांगलिक'; $mDet = '1'; }
-        elseif (!empty($mng['partial'])) { $mt = 'mishrit'; $mLabel = 'गैर-मांगलिक (दोष-भंग)'; $mDet = '1'; }
+        elseif (!empty($mng['partial'])) { $mt = 'mishrit'; $mLabel = 'गैर-मांगलिक (दोष-भंग)'; $mDet = '0'; }
         else { $mt = 'shubh'; $mLabel = 'गैर-मांगलिक'; $mDet = '0'; }
         $marsSignHi = $rashiHi[$signs[(int) ($mng['mars_sign_index'] ?? 0)] ?? ''] ?? '';
         $mCancel = [];
