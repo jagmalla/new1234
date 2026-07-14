@@ -348,6 +348,26 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gov-card.gov-pos .gov-jump { color: #15803d; }
         .gov-card.gov-neg .gov-jump { color: #b91c1c; }
         .gov-card.gov-mix .gov-jump { color: #1d4ed8; }
+        /* ---- आगामी गोचर (Upcoming Gochar) panel ---- */
+        .ug-panel { font-size: .9rem; color: #2b2620; }
+        .ug-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .ug-title { font-weight: 800; font-size: 1rem; color: var(--sindoor); }
+        .ug-sub { font-size: .74rem; color: #9ca3af; font-weight: 400; }
+        .ug-copy { margin-left: auto; font-size: .78rem; font-weight: 700; border: 1px solid var(--line);
+            background: #f8fafc; border-radius: 7px; padding: 5px 11px; cursor: pointer; color: #334155; }
+        .ug-copy:hover { background: #eef2f7; }
+        .ug-highlight { background: #fff7ed; border: 1px solid #fed7aa; border-left: 4px solid #ea580c;
+            border-radius: 8px; padding: 8px 11px; font-size: .9rem; margin-bottom: 10px; color: #7c2d12; }
+        .ug-sec { margin-bottom: 10px; }
+        .ug-sec-h { font-weight: 800; font-size: .82rem; color: #475569; text-transform: none;
+            border-bottom: 1px solid var(--line); padding-bottom: 3px; margin-bottom: 5px; }
+        .ug-line { font-size: .88rem; line-height: 1.6; margin: 3px 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+        .ug-muted { color: #94a3b8; }
+        .ug-date { color: #1d4ed8; font-weight: 700; white-space: nowrap; }
+        .ug-badge { font-size: .68rem; font-weight: 800; padding: 1px 7px; border-radius: 999px; flex: 0 0 auto; }
+        .ug-b-retro { background: #ffedd5; color: #c2410c; }
+        .ug-b-ast { background: #fee2e2; color: #b91c1c; }
+        .ug-sade-active { color: #b91c1c; font-weight: 600; }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
@@ -1582,6 +1602,10 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
              form, shown beside the menu like the Gochar Calculation card ======= -->
         <div id="sec-profile" class="l2-section l2-full hidden space-y-4 md:space-y-6">
             <?php require __DIR__ . '/_birth_form.php'; ?>
+            <!-- आगामी गोचर summary — today's transit, below the birth-details form. -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <?php $ug = $view['upcoming_gochar'] ?? null; require __DIR__ . '/_upcoming_gochar.php'; ?>
+            </div>
         </div>
 
         <!-- ============ CUSTOM SCREEN (full-width, user-arranged panels) ======= -->
@@ -1817,6 +1841,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- आगामी गोचर summary — below the transit chart, above the details table. -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <?php $ug = $view['upcoming_gochar'] ?? null; require __DIR__ . '/_upcoming_gochar.php'; ?>
         </div>
 
         <!-- ROW 2: natal Rasi (D1) chart on the LEFT + the transit detail table
@@ -2595,6 +2624,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     if (mode) { mode.onchange = apply; }
     apply();
   };
+
+  // आगामी गोचर — copy the summary as readable sentences (two panels may exist).
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.ug-copy') : null;
+    if (!btn) { return; }
+    var panel = btn.closest('.ug-panel');
+    var pre = panel ? panel.querySelector('.ug-copytext') : null;
+    var text = pre ? pre.textContent : '';
+    var done = function () { var o = btn.textContent; btn.textContent = '✓ Copied'; setTimeout(function () { btn.textContent = o; }, 1500); };
+    function fb() { var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (x) {} document.body.removeChild(ta); }
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, function () { fb(); done(); }); }
+    else { fb(); done(); }
+  });
 
   // फलदीपिका योग catalogue filters — श्रेणी (default "सक्रिय" = detected only) · प्रकार.
   (function () {

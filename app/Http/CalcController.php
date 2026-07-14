@@ -51,7 +51,7 @@ final class CalcController
 
         $error = null;
         $chart = $vp = $gochar = null;
-        $sadeSati = $manglik = null;
+        $sadeSati = $manglik = $upcomingGochar = null;
         $meta = [];
 
         try {
@@ -99,6 +99,11 @@ final class CalcController
                 static fn (float $j): float => $engine->planetSiderealLon('Saturn', $j)
             ), null);
             $manglik = $this->safe(fn () => $this->manglik($chart), null);
+            // आगामी गोचर summary (next ingress / retro / combustion / paksha /
+            // nakshatra / Sade-Sati) from NOW — shown on the Gochar + Profile screens.
+            $upcomingGochar = $this->safe(static fn () => \AutoBusiness\Astro\Gochar\UpcomingGochar::compute(
+                $engine, $nowJd, $tz, (int) ($chart['planets']['Moon']['sign_index'] ?? 0)
+            ), null);
 
             $vargas = $engine->vargaCharts($chart);
             // North-chart payload of the annual chart for the v2 chart selector
@@ -133,6 +138,7 @@ final class CalcController
             // status — both consumed by the D1 General Overview summary.
             'sade_sati' => $sadeSati,
             'manglik' => $manglik,
+            'upcoming_gochar' => $upcomingGochar,
             // Dasha Prediction: dropdowns default to the running Maha/Antar; the
             // matching phala text (if seeded) is pre-rendered so it shows at once.
             'phala' => [
