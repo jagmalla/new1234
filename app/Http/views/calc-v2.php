@@ -1040,6 +1040,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 </div>
             </div>
             <div class="l2-mi">
+                <button type="button" data-sec="muhurat">Mahurat (मुहूर्त)</button>
+            </div>
+            <div class="l2-mi">
                 <button type="button" data-sec="varsha">Varshaphal</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="varsha" data-target="card-vpbox">Year Selection</button>
@@ -1850,6 +1853,52 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     <?php endif; ?>
         </div>
         </div><!-- /sec-gochar -->
+
+        <!-- ============ मुहूर्त (Mahurat) — dedicated transit+muhurat page ======= -->
+        <div id="sec-muhurat" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+            <!-- Gochar calculation details (change the transit date/time/place;
+                 the muhurat prediction below re-computes with it). -->
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details
+                    <span class="text-xs text-gray-400 font-normal">(मुहूर्त हेतु तिथि / समय / स्थान बदलें)</span></h2>
+                <div id="mah-inputs"></div>
+            </div>
+
+            <!-- ROW 1: transit (gochar) chart + मुहूर्त prediction -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                <div class="bg-white rounded-lg shadow p-2 flex flex-col">
+                    <div id="mah-transit" class="w-full"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
+                        <span class="font-semibold text-gray-800">मुहूर्त फल <span class="text-xs text-gray-400 font-normal">(राहु काल · दिशा शूल · तिथि · वारफल)</span></span>
+                    </div>
+                    <div id="mah-phal" class="flex-1">
+                        <div class="gochar-pred-soon">
+                            <div class="gps-icon">🕒</div>
+                            <div class="gps-title">मुहूर्त फल की गणना हो रही है…</div>
+                            <div class="gps-sub">ऊपर तिथि/समय/स्थान चुनते ही राहु काल, दिशा शूल व तिथि-फल यहाँ दिखेगा।</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 2: natal Rasi (D1) chart + Varsha kundali chart -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                <div class="bg-white rounded-lg shadow p-2 flex flex-col">
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
+                        <span class="font-semibold text-gray-800">Rasi (D1) <span class="text-xs text-gray-400 font-normal">— जन्म कुंडली</span></span>
+                    </div>
+                    <div id="mah-d1" class="w-full"></div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-2 flex flex-col">
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
+                        <span class="font-semibold text-gray-800">Varsha Kundali <span class="text-xs text-gray-400 font-normal">(<?= (int) $in['forYear'] ?>) — वर्ष कुंडली</span></span>
+                    </div>
+                    <div id="mah-varsha" class="w-full"></div>
+                </div>
+            </div>
+        </div><!-- /sec-muhurat -->
 
         <!-- ============ वर्ष कुंडली (full-width section) ============ -->
         <div id="sec-varsha" class="l2-section l2-full hidden space-y-4 md:space-y-6">
@@ -2835,8 +2884,44 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     if (saved === '1') { apply(true); }
   })();
 
+  // मुहूर्त (Mahurat) page — built lazily on first visit. Reuses ABGochar for the
+  // date form + transit chart (skipping the shared phal panel) and renders just
+  // the मुहूर्त cards from the same result; D1 + Varsha charts come from globals.
+  var mahuratBuilt = false;
+  function buildMahuratPage() {
+    if (mahuratBuilt) { return; }
+    mahuratBuilt = true;
+    var d1 = document.getElementById('mah-d1');
+    if (d1 && window.ABChart && window.AB_VARGAS && window.AB_VARGAS.D1) {
+      ABChart.renderNorth(d1, window.AB_VARGAS.D1, { showDeg: true });
+    }
+    var vc = document.getElementById('mah-varsha');
+    if (vc && window.ABChart && window.AB_VARSHAN && window.AB_VARSHAN.planets) {
+      ABChart.renderNorth(vc, window.AB_VARSHAN, { showDeg: true });
+    } else if (vc) {
+      vc.innerHTML = '<div class="text-sm text-gray-400 italic p-4">वर्ष कुंडली उपलब्ध नहीं।</div>';
+    }
+    if (window.ABGochar) {
+      ABGochar.init({
+        inputs: '#mah-inputs', output: '#mah-transit',
+        birth: window.AB_BIRTH,
+        fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ },
+        injectPhal: false,
+        onResult: function (g) {
+          var box = document.getElementById('mah-phal');
+          if (!box || g.phal_html == null) { return; }
+          var tmp = document.createElement('div');
+          tmp.innerHTML = g.phal_html;
+          var mu = tmp.querySelector('.gochar-cat[data-cat="muhurat"]');
+          box.innerHTML = mu ? mu.innerHTML : '<div class="text-sm text-gray-500 p-2">इस तिथि हेतु मुहूर्त विवरण उपलब्ध नहीं।</div>';
+        }
+      });
+    }
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 250);
+  }
+
   // Side-menu section switching: home = three-panel; others span the two panels.
-  var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-varsha'];
+  var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-muhurat', 'sec-varsha'];
   function showSection(key, focusPred) {
     var homeMode = key === 'home';
     var customMode = key === 'custom';
@@ -2871,6 +2956,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       var el = document.getElementById(id);
       if (el) el.classList.toggle('hidden', id !== 'sec-' + key);
     });
+    if (key === 'muhurat') { buildMahuratPage(); }
     if (homeMode) { setTimeout(setPanelHeights, 60); }
     // Cards rendered while their section was hidden (Mudda dasha, gochar pair)
     // measured zero heights — re-run their resize syncs now they are visible.

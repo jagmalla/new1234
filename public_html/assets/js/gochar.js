@@ -146,7 +146,7 @@
           renderResult(g);
           // Gochar Phal panel (server-rendered) — inject beside the chart and
           // (re)bind its planet filter, so predictions follow the date/place.
-          if (g.phal_html != null) {
+          if (g.phal_html != null && cfg.injectPhal !== false) {
             var box = document.getElementById('gochar-phal');
             if (box) {
               box.innerHTML = g.phal_html;
@@ -154,6 +154,9 @@
               if (global.ABBindSadeTimeline) { global.ABBindSadeTimeline(); }
             }
           }
+          // Optional consumer hook (e.g. the Mahurat page renders its own view
+          // from the same transit result without a second server round-trip).
+          if (typeof cfg.onResult === 'function') { try { cfg.onResult(g); } catch (e) {} }
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }
