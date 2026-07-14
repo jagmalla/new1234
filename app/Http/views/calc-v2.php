@@ -330,6 +330,24 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .sade-b-past { background: #e5e7eb; color: #4b5563; }
         .sade-ref-tag { font-size: .72rem; font-weight: 700; color: #6b21a8; background: #f3e8ff;
             border-radius: 999px; padding: 1px 8px; }
+        /* Gochar General Overview — clickable per-category summary cards. */
+        .gov-card { border: 1px solid var(--line); border-left: 4px solid #94a3b8; border-radius: 9px;
+            padding: 7px 11px; margin: 7px 0; background: #fff; cursor: pointer;
+            transition: box-shadow .15s ease, transform .05s ease; }
+        .gov-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.12); }
+        .gov-card:active { transform: translateY(1px); }
+        .gov-card.gov-pos { border-left-color: #15803d; background: #f6fef9; }
+        .gov-card.gov-neg { border-left-color: #b91c1c; background: #fef6f6; }
+        .gov-card.gov-mix { border-left-color: #1d4ed8; background: #f5f8ff; }
+        .gov-h { font-weight: 800; font-size: .88rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .gov-card.gov-pos .gov-h { color: #15803d; }
+        .gov-card.gov-neg .gov-h { color: #b91c1c; }
+        .gov-card.gov-mix .gov-h { color: #1d4ed8; }
+        .gov-sum { font-size: .84rem; color: #2b2620; margin-top: 2px; line-height: 1.5; }
+        .gov-jump { font-size: .74rem; font-weight: 700; color: var(--sindoor); margin-top: 3px; }
+        .gov-card.gov-pos .gov-jump { color: #15803d; }
+        .gov-card.gov-neg .gov-jump { color: #b91c1c; }
+        .gov-card.gov-mix .gov-jump { color: #1d4ed8; }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
@@ -2494,6 +2512,13 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     }
     if (sel) { sel.onchange = apply; }
     if (cat) { cat.onchange = apply; }
+    // General Overview summary cards → jump to that श्रेणी (category).
+    document.querySelectorAll('#gochar-detail-pane [data-gochar-jump]').forEach(function (el) {
+      el.onclick = function () {
+        if (cat) { cat.value = el.getAttribute('data-gochar-jump'); apply(); }
+        if (pane) { pane.scrollTop = 0; }
+      };
+    });
     apply();
   };
 
