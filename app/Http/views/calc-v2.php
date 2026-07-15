@@ -378,6 +378,31 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         #mah-phal::-webkit-scrollbar { width: 8px; }
         #mah-phal::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 8px; }
         #mah-phal::-webkit-scrollbar-track { background: #f5f5f4; }
+        /* Gochar page configurable panes — chart + prediction, each with a
+           dropdown; equal height so the two-column rows stay aligned. */
+        .gpane { --gp-h: 460px; background: #fff; border-radius: .5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column;
+            overflow: hidden; border: 1px solid #eef0f2; }
+        .gp-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            padding: 9px 12px; border-bottom: 1px solid var(--line); background: #fcfcfb; min-height: 46px; }
+        .gp-sel { font-weight: 700; font-size: .92rem; color: #1f2937; cursor: pointer;
+            border: 1px solid var(--line); border-radius: 8px; padding: 6px 30px 6px 11px;
+            background: #f8fafc url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 9px center;
+            -webkit-appearance: none; appearance: none; max-width: 100%; }
+        .gp-sel:hover { background-color: #eef2f7; }
+        .gp-sub { font-size: .72rem; color: #9ca3af; margin-left: auto; white-space: nowrap; }
+        .gp-body { height: var(--gp-h); padding: 12px 14px; }
+        .gp-body-chart { display: flex; align-items: center; justify-content: center; padding: 10px; }
+        .gp-chart-host { width: 100%; height: 100%; max-width: var(--gp-h); }
+        .gp-chart-host svg { display: block; margin: 0 auto; }
+        .gp-body-pred { overflow-y: auto; padding-right: 6px; }
+        .gp-body-pred::-webkit-scrollbar { width: 8px; }
+        .gp-body-pred::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 8px; }
+        .gp-body-pred::-webkit-scrollbar-track { background: #f5f5f4; }
+        /* Inside a pred slot the panel/phal block drops its own outer chrome. */
+        .gp-body-pred .ug-panel { font-size: .9rem; }
+        .gp-body-pred .ug-body { max-height: none; overflow: visible; padding-right: 0; }
+        @media (max-width: 640px) { .gpane { --gp-h: 380px; } }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
@@ -1065,8 +1090,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <button type="button" data-sec="gochar">Gochar (Transit)</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="gochar" data-target="card-gocharcalc">Gochar Calculation</button>
-                    <button type="button" data-sec="gochar" data-target="card-gocharpair">Gochar Chart + Phal</button>
-                    <button type="button" data-sec="gochar" data-target="card-gochardet">D1 + Upcoming Gochar</button>
+                    <button type="button" data-sec="gochar" data-target="card-gocharpair">Chart + Prediction (Row 1)</button>
+                    <button type="button" data-sec="gochar" data-target="card-gochardet">Chart + Prediction (Row 2)</button>
                 </div>
             </div>
             <div class="l2-mi">
@@ -1833,17 +1858,48 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         </div>
 
 
-        <!-- ROW 1: current Gochar (transit) chart on the LEFT + Gochar prediction
-             panel on the RIGHT (rules coming later). -->
-        <div id="card-gocharpair" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
-                <div id="gochar-output" class="w-full"></div>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 flex flex-col">
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
-                    <span class="font-semibold text-gray-800">Gochar Phal <span class="text-xs text-gray-400 font-normal">(गोचर फल)</span></span>
+        <!-- Two rows of two panes each. EVERY pane has a dropdown so the viewer
+             chooses what fills that space: the two left panes are charts, the two
+             right panes are predictions. Panes are equal height & aligned. -->
+        <!-- ROW 1 -->
+        <div id="card-gocharpair" class="gpair grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+            <div class="gpane" data-slot="chart" data-slot-id="c1">
+                <div class="gp-head">
+                    <select class="gp-sel gp-chart-sel" data-slot-id="c1" aria-label="चार्ट चुनें / choose chart"></select>
+                    <span class="gp-sub" data-sub="c1"></span>
                 </div>
-                <div id="gochar-phal" class="flex-1">
+                <div class="gp-body gp-body-chart"><div class="gp-chart-host" data-host="c1"></div></div>
+            </div>
+            <div class="gpane" data-slot="pred" data-slot-id="p1">
+                <div class="gp-head">
+                    <select class="gp-sel gp-pred-sel" data-slot-id="p1" aria-label="फल चुनें / choose prediction"></select>
+                </div>
+                <div class="gp-body gp-body-pred" data-predbody="p1"></div>
+            </div>
+        </div>
+
+        <!-- ROW 2 -->
+        <div id="card-gochardet" class="gpair grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+            <div class="gpane" data-slot="chart" data-slot-id="c2">
+                <div class="gp-head">
+                    <select class="gp-sel gp-chart-sel" data-slot-id="c2" aria-label="चार्ट चुनें / choose chart"></select>
+                    <span class="gp-sub" data-sub="c2"></span>
+                </div>
+                <div class="gp-body gp-body-chart"><div class="gp-chart-host" data-host="c2"></div></div>
+            </div>
+            <div class="gpane" data-slot="pred" data-slot-id="p2">
+                <div class="gp-head">
+                    <select class="gp-sel gp-pred-sel" data-slot-id="p2" aria-label="फल चुनें / choose prediction"></select>
+                </div>
+                <div class="gp-body gp-body-pred" data-predbody="p2"></div>
+            </div>
+        </div>
+
+        <!-- Prediction content blocks — JS moves these singleton nodes into the
+             prediction slots above (swapped when both slots pick the same one). -->
+        <div id="gp-pred-src" class="hidden">
+            <div id="gpblock-phal" data-pred="phal">
+                <div id="gochar-phal">
                     <div class="gochar-pred-soon">
                         <div class="gps-icon">🔮</div>
                         <div class="gps-title">गोचर फल की गणना हो रही है…</div>
@@ -1851,25 +1907,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- ROW 2: natal Rasi (D1) chart on the LEFT + आगामी गोचर (Upcoming
-             Gochar / Transit) summary on the RIGHT, with its own scroll. -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-            <div class="bg-white rounded-lg shadow p-2 flex flex-col">
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
-                    <span class="font-semibold text-gray-800">Rasi (D1)</span>
-                    <span class="ml-auto flex flex-wrap items-center gap-x-4">
-                        <span><?= $h($in['date']) ?></span>
-                        <span><?= $h($in['time']) ?></span>
-                    </span>
-                </div>
-                <div class="w-full" data-varga="D1" data-notitle="1"></div>
-            </div>
-            <div id="card-gochardet" class="bg-white rounded-lg shadow p-4">
+            <div id="gpblock-upcoming" data-pred="upcoming">
                 <?php $ug = $view['upcoming_gochar'] ?? null; require __DIR__ . '/_upcoming_gochar.php'; ?>
             </div>
         </div>
+
+        <!-- gochar.js still fetches transits + injects #gochar-phal here; kept
+             hidden since the visible transit chart is drawn into a chart slot. -->
+        <div id="gochar-output" class="hidden"></div>
         </div><!-- /sec-gochar -->
 
         <!-- ============ मुहूर्त (Mahurat) — dedicated transit+muhurat page ======= -->
@@ -2750,9 +2795,18 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       ABGochar.init({
         inputs: '#gochar-inputs', output: '#gochar-output',
         birth: window.AB_BIRTH,
-        fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ }
+        fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ },
+        // Keep the live transit result in AB_GOCHAR so any chart slot showing
+        // "Gochar (Transit)" re-renders with the new date/place, and remember
+        // the date/place for the transit slot subtitle.
+        onResult: function (g, meta) {
+          window.AB_GOCHAR = g;
+          window.AB_GOCHAR_META = meta || null;
+          if (typeof gpRefreshTransit === 'function') { gpRefreshTransit(); }
+        }
       });
     }
+    initGocharPanes();
     if (window.ABVarsha) {
       ABVarsha.init({
         box: '#vp-box', summary: '#vp-summary',
@@ -2766,6 +2820,112 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     document.querySelectorAll('.overflow-x-auto, #pred-scroll, .overflow-y-auto').forEach(function (el) {
       if (!el.hasAttribute('tabindex')) { el.setAttribute('tabindex', '0'); }
     });
+  }
+
+  // ---- Gochar page: four configurable panes (2 charts + 2 predictions) ----
+  // Each pane carries a dropdown so the viewer chooses what fills that space.
+  // Chart panes render any varga / गोचर / वर्ष कुंडली; prediction panes swap the
+  // Gochar Phal and Upcoming Gochar blocks (singleton nodes, so picking the same
+  // one in both panes swaps them). Charts scale to fit, predictions scroll.
+  var GP_ABBR = { Sun:'Su', Moon:'Mo', Mars:'Ma', Mercury:'Me', Jupiter:'Ju', Venus:'Ve', Saturn:'Sa', Rahu:'Ra', Ketu:'Ke' };
+  var gpChartState = { c1: 'gochar', c2: 'D1' };
+  var gpPredState  = { p1: 'phal',   p2: 'upcoming' };
+
+  function gpChartCatalog() {
+    var out = [], V = window.AB_VARGAS || {};
+    out.push({ key: 'gochar', label: 'गोचर (Transit)' });
+    if (V.D1 && V.D1.planets) { out.push({ key: 'D1', label: 'Rasi (D1) — जन्म कुंडली' }); }
+    Object.keys(V).forEach(function (k) {
+      if (k !== 'D1' && V[k] && V[k].planets) { out.push({ key: k, label: k + ' — ' + (V[k].label || k) }); }
+    });
+    if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { out.push({ key: 'varsha', label: 'Varsha Kundali (वर्ष कुंडली)' }); }
+    return out;
+  }
+  function gpPredCatalog() {
+    return [
+      { key: 'phal',     label: 'Gochar Phal (गोचर फल)' },
+      { key: 'upcoming', label: 'Upcoming Gochar / Transit (आगामी गोचर)' }
+    ];
+  }
+
+  function gpRenderChart(hostId, key) {
+    var host = document.querySelector('.gp-chart-host[data-host="' + hostId + '"]');
+    if (!host || !window.ABChart) { return; }
+    if (key === 'gochar') {
+      var g = window.AB_GOCHAR || {};
+      if (!g.transits || !g.ascendant) { host.innerHTML = '<div class="text-gray-400 italic text-sm">गोचर की गणना हो रही है…</div>'; return; }
+      var pls = Object.keys(g.transits).map(function (n) {
+        var t = g.transits[n];
+        return { abbr: GP_ABBR[n] || n.slice(0, 2), sign: t.sign_index, deg: Math.floor(t.deg), retro: !!t.retro };
+      });
+      window.ABChart.renderNorth(host, { asc_sign: g.ascendant.sign_index, planets: pls }, { showDeg: true, fit: true });
+    } else if (key === 'varsha') {
+      if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg: true, fit: true }); }
+    } else {
+      var V = window.AB_VARGAS || {};
+      if (V[key]) { window.ABChart.renderNorth(host, V[key], { showDeg: true, fit: true }); }
+    }
+  }
+  function gpChartSub(key) {
+    if (key === 'gochar') {
+      var m = window.AB_GOCHAR_META;
+      return m ? [m.date, m.time, m.place].filter(Boolean).join(' · ') : '';
+    }
+    if (key === 'varsha') { return String(window.AB_YEAR || ''); }
+    return '<?= $h($in['date']) ?>';
+  }
+  function gpApplyChart(slotId) {
+    var key = gpChartState[slotId];
+    gpRenderChart(slotId, key);
+    var sub = document.querySelector('.gp-sub[data-sub="' + slotId + '"]');
+    if (sub) { sub.textContent = gpChartSub(key); }
+  }
+  // Live transit updated (date/place changed) — refresh any chart slot on gochar.
+  function gpRefreshTransit() {
+    ['c1', 'c2'].forEach(function (s) { if (gpChartState[s] === 'gochar') { gpApplyChart(s); } });
+  }
+
+  // Move the prediction blocks into their slots per gpPredState.
+  function gpPlacePred() {
+    ['p1', 'p2'].forEach(function (slotId) {
+      var body = document.querySelector('.gp-body-pred[data-predbody="' + slotId + '"]');
+      var block = document.querySelector('[data-pred="' + gpPredState[slotId] + '"]');
+      if (body && block && block.parentNode !== body) { body.appendChild(block); }
+    });
+  }
+  function gpSetPred(slotId, key) {
+    var other = slotId === 'p1' ? 'p2' : 'p1';
+    if (gpPredState[other] === key) { gpPredState[other] = gpPredState[slotId]; } // swap
+    gpPredState[slotId] = key;
+    // Sync both dropdowns to the new assignment, then move the blocks.
+    document.querySelectorAll('.gp-pred-sel').forEach(function (sel) {
+      sel.value = gpPredState[sel.getAttribute('data-slot-id')];
+    });
+    gpPlacePred();
+  }
+
+  var gocharPanesReady = false;
+  function initGocharPanes() {
+    if (gocharPanesReady) { return; }
+    gocharPanesReady = true;
+    var charts = gpChartCatalog(), preds = gpPredCatalog();
+    // Populate + wire the two chart dropdowns.
+    document.querySelectorAll('.gp-chart-sel').forEach(function (sel) {
+      var slotId = sel.getAttribute('data-slot-id');
+      sel.innerHTML = charts.map(function (c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('');
+      if (!charts.some(function (c) { return c.key === gpChartState[slotId]; })) { gpChartState[slotId] = charts[0].key; }
+      sel.value = gpChartState[slotId];
+      sel.addEventListener('change', function () { gpChartState[slotId] = sel.value; gpApplyChart(slotId); });
+      gpApplyChart(slotId);
+    });
+    // Populate + wire the two prediction dropdowns.
+    document.querySelectorAll('.gp-pred-sel').forEach(function (sel) {
+      var slotId = sel.getAttribute('data-slot-id');
+      sel.innerHTML = preds.map(function (p) { return '<option value="' + p.key + '">' + p.label + '</option>'; }).join('');
+      sel.value = gpPredState[slotId];
+      sel.addEventListener('change', function () { gpSetPred(slotId, sel.value); });
+    });
+    gpPlacePred();
   }
 
   // Rotation: value 1..12 = which house is drawn at position 1 (1 = lagna).

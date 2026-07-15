@@ -156,7 +156,12 @@
           }
           // Optional consumer hook (e.g. the Mahurat page renders its own view
           // from the same transit result without a second server round-trip).
-          if (typeof cfg.onResult === 'function') { try { cfg.onResult(g); } catch (e) {} }
+          // Second arg carries the transit moment's date/time/place for subtitles.
+          if (typeof cfg.onResult === 'function') {
+            try {
+              cfg.onResult(g, { date: fDate.value, time: fTime.value, place: (fPlace.value || '').trim() });
+            } catch (e) {}
+          }
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }

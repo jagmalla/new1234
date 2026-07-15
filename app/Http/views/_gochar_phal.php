@@ -36,7 +36,6 @@ if ($hasAny):
     <div class="saham-active">
         <div><b>गोचर आधार:</b> चन्द्र लग्न (जन्म राशि) <b style="color:<?= $pcolor('Moon') ?>"><?= $h($moonSignHi) ?></b> से गिना गया·
             <span class="text-xs text-gray-500"><?= ($gp['moon_ksheen'] ?? false) ? 'गोचर चन्द्र क्षीण' : 'गोचर चन्द्र बली' ?></span></div>
-        <div class="text-xs text-gray-500" style="margin-top:3px">भाव-फल · अष्टकवर्ग बिन्दु व कक्षा · सर्वाष्टकवर्ग · जन्म-ग्रहों पर गोचर · शनि साढ़े साती · मुहूर्त (राहु काल/दिशा शूल/तिथि) — नीचे "श्रेणी" से चुनें।</div>
     </div>
 
     <div class="pred-picker" style="margin-top:8px;gap:8px">
