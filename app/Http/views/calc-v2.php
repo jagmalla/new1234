@@ -380,7 +380,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         #mah-phal::-webkit-scrollbar-track { background: #f5f5f4; }
         /* Gochar page configurable panes — chart + prediction, each with a
            dropdown; equal height so the two-column rows stay aligned. */
-        .gpane { --gp-h: 460px; background: #fff; border-radius: .5rem;
+        .gpane { --gp-h: 560px; background: #fff; border-radius: .5rem;
             box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-direction: column;
             overflow: hidden; border: 1px solid #eef0f2; }
         .gp-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -402,7 +402,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* Inside a pred slot the panel/phal block drops its own outer chrome. */
         .gp-body-pred .ug-panel { font-size: .9rem; }
         .gp-body-pred .ug-body { max-height: none; overflow: visible; padding-right: 0; }
-        @media (max-width: 640px) { .gpane { --gp-h: 380px; } }
+        @media (max-width: 640px) { .gpane { --gp-h: 420px; } }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }

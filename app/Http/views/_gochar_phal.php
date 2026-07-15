@@ -82,7 +82,6 @@ if ($hasAny):
             $muTone = $muTithiTone === 'neg' ? 'neg' : ($muTithiTone === 'pos' ? 'pos' : 'mix');
         ?>
         <div class="gochar-cat" data-cat="general">
-            <div class="gph-section-title">सामान्य सारांश <span class="text-xs text-gray-400 font-normal">(हर श्रेणी का सार — क्लिक करें विस्तार हेतु)</span></div>
             <div class="saham-card gochar-card" data-planet="all">
                 <div class="saham-phal">● <b>आधार:</b> जन्म-राशि <b style="color:<?= $pcolor('Moon') ?>"><?= $h($moonSignHi) ?></b> से गोचर देखा गया। गोचर चन्द्रमा अभी <?= ($gp['moon_ksheen'] ?? false) ? '<b style="color:#b91c1c">क्षीण (कमजोर)</b>' : '<b style="color:#15803d">बली (मजबूत)</b>' ?>।</div>
             </div>
