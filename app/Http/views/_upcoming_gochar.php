@@ -19,9 +19,10 @@ $nak = $ug['nakshatra'];
 ?>
 <div class="ug-panel">
     <div class="ug-head">
-        <span class="ug-title">🔭 आगामी गोचर <span class="ug-sub">(<?= $h($ug['now_dmy']) ?> से — सरल सारांश)</span></span>
+        <span class="ug-title">🔭 Upcoming Gochar / Transit <span class="ug-sub">(आगामी गोचर · <?= $h($ug['now_dmy']) ?> से)</span></span>
         <button type="button" class="ug-copy" aria-label="Copy">📋 Copy</button>
     </div>
+    <div class="ug-body">
 
     <?php if (!empty($ug['nearest'])): $copy[] = 'अगली मुख्य घटना: ' . $ug['nearest']['text'] . ' (आज से ' . $ug['nearest']['days'] . ' दिन बाद)।'; ?>
     <div class="ug-highlight">अगली मुख्य गोचर घटना: <b><?= $h($ug['nearest']['text']) ?></b> (आज से <?= (int) $ug['nearest']['days'] ?> दिन बाद)।</div>
@@ -113,6 +114,8 @@ $nak = $ug['nakshatra'];
         <div class="ug-line <?= $ss['active'] ? 'ug-sade-active' : '' ?>"><span class="ug-badge <?= $ss['active'] ? 'ug-b-ast' : 'ug-b-retro' ?>">शनि</span> <?= $h($s) ?></div>
         <?php endif; ?>
     </div>
+
+    </div><!-- /ug-body -->
 
     <pre class="ug-copytext hidden"><?= $h(implode("\n", $copy)) ?></pre>
 </div>

@@ -351,6 +351,10 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* ---- आगामी गोचर (Upcoming Gochar) panel ---- */
         .ug-panel { font-size: .9rem; color: #2b2620; }
         .ug-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .ug-body { max-height: 460px; overflow-y: auto; padding-right: 6px; }
+        .ug-body::-webkit-scrollbar { width: 8px; }
+        .ug-body::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 8px; }
+        .ug-body::-webkit-scrollbar-track { background: #f5f5f4; }
         .ug-title { font-weight: 800; font-size: 1rem; color: var(--sindoor); }
         .ug-sub { font-size: .74rem; color: #9ca3af; font-weight: 400; }
         .ug-copy { margin-left: auto; font-size: .78rem; font-weight: 700; border: 1px solid var(--line);
@@ -368,6 +372,12 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .ug-b-retro { background: #ffedd5; color: #c2410c; }
         .ug-b-ast { background: #fee2e2; color: #b91c1c; }
         .ug-sade-active { color: #b91c1c; font-weight: 600; }
+        /* Mahurat prediction box scrolls internally, height matched to the
+           transit chart card (max-height set by JS; fallback for narrow view). */
+        #mah-phal { overflow-y: auto; max-height: 460px; padding-right: 6px; }
+        #mah-phal::-webkit-scrollbar { width: 8px; }
+        #mah-phal::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 8px; }
+        #mah-phal::-webkit-scrollbar-track { background: #f5f5f4; }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
@@ -1056,7 +1066,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <div class="l2-sub">
                     <button type="button" data-sec="gochar" data-target="card-gocharcalc">Gochar Calculation</button>
                     <button type="button" data-sec="gochar" data-target="card-gocharpair">Gochar Chart + Phal</button>
-                    <button type="button" data-sec="gochar" data-target="card-gochardet">D1 + Transit Table</button>
+                    <button type="button" data-sec="gochar" data-target="card-gochardet">D1 + Upcoming Gochar</button>
                 </div>
             </div>
             <div class="l2-mi">
@@ -1843,13 +1853,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             </div>
         </div>
 
-        <!-- आगामी गोचर summary — below the transit chart, above the details table. -->
-        <div class="bg-white rounded-lg shadow p-4">
-            <?php $ug = $view['upcoming_gochar'] ?? null; require __DIR__ . '/_upcoming_gochar.php'; ?>
-        </div>
-
-        <!-- ROW 2: natal Rasi (D1) chart on the LEFT + the transit detail table
-             on the RIGHT. -->
+        <!-- ROW 2: natal Rasi (D1) chart on the LEFT + आगामी गोचर (Upcoming
+             Gochar / Transit) summary on the RIGHT, with its own scroll. -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <div class="bg-white rounded-lg shadow p-2 flex flex-col">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
@@ -1861,25 +1866,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 </div>
                 <div class="w-full" data-varga="D1" data-notitle="1"></div>
             </div>
-    <?php if ($gochar !== null): ?>
-            <div id="card-gochardet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
-                <h2 class="font-semibold mb-2">Gochar (Transits) — <?= $h($in['gocharIn'] . ' ' . $in['gocharTimeIn']) ?></h2>
-                <?php if (isset($gochar['ascendant'])): ?>
-                    <div class="mb-2">Transit Lagna: <b><?= $h($gochar['ascendant']['formatted']) ?></b></div>
-                <?php endif; ?>
-                <table class="w-full">
-                    <thead><tr class="text-left border-b"><th class="py-1 pr-3">Planet</th><th class="pr-3">Transit</th><th class="pr-3">House/Lagna</th><th>House/Moon</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($gochar['transits'] as $name => $t): ?>
-                        <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-medium"><?= $h($name) ?><?= $t['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
-                            <td class="pr-3"><?= $h($t['formatted']) ?></td><td class="pr-3"><?= (int) $t['house_from_lagna'] ?></td><td><?= (int) $t['house_from_moon'] ?></td></tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div id="card-gochardet" class="bg-white rounded-lg shadow p-4">
+                <?php $ug = $view['upcoming_gochar'] ?? null; require __DIR__ . '/_upcoming_gochar.php'; ?>
             </div>
-    <?php else: ?>
-            <div id="card-gochardet" class="bg-white rounded-lg shadow p-4 text-sm text-gray-400 italic">Transit table not available.</div>
-    <?php endif; ?>
         </div>
         </div><!-- /sec-gochar -->
 
@@ -2956,10 +2945,32 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
           tmp.innerHTML = g.phal_html;
           var mu = tmp.querySelector('.gochar-cat[data-cat="muhurat"]');
           box.innerHTML = mu ? mu.innerHTML : '<div class="text-sm text-gray-500 p-2">इस तिथि हेतु मुहूर्त विवरण उपलब्ध नहीं।</div>';
+          setTimeout(syncMahPhalHeight, 60);
         }
       });
     }
-    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 250);
+    window.addEventListener('resize', syncMahPhalHeight);
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); syncMahPhalHeight(); }, 250);
+  }
+
+  // Match the मुहूर्त prediction box height to the transit chart card so the two
+  // ROW-1 cards line up; the prediction then scrolls inside that height. On
+  // narrow (stacked) layouts the CSS fallback max-height applies instead.
+  function syncMahPhalHeight() {
+    var box = document.getElementById('mah-phal');
+    var transit = document.getElementById('mah-transit');
+    if (!box || !transit) { return; }
+    var transitCard = transit.closest('.rounded-lg');
+    var phalCard = box.closest('.rounded-lg');
+    if (!transitCard || !phalCard) { return; }
+    // Only align when the cards sit side-by-side (same row top).
+    if (Math.abs(transitCard.getBoundingClientRect().top - phalCard.getBoundingClientRect().top) > 4) {
+      box.style.maxHeight = '';
+      return;
+    }
+    var overhead = phalCard.offsetHeight - box.offsetHeight; // padding + header
+    var target = transitCard.offsetHeight - overhead;
+    box.style.maxHeight = (target > 160 ? target : 160) + 'px';
   }
 
   // Side-menu section switching: home = three-panel; others span the two panels.
