@@ -223,10 +223,19 @@ final class CalculationEngine
                 'deg_in_sign' => round(Charts::degInSign($sid), 4),
                 'sidereal_lon' => round($sid, 4),
                 'retro' => $p['retro'],
+                // Nakshatra + pada of the transit longitude (for the Gochar
+                // Details table); combustion is filled in below (needs the Sun).
+                'nakshatra' => Charts::nakshatra($sid),
                 'house_from_lagna' => Charts::houseFromAsc($sid, $natalAscSign),
                 'house_from_moon' => Charts::houseFromAsc($sid, $natalMoonSign),
             ];
         }
+        // Combustion (अस्त) for each transit planet — read from the Sun's
+        // separation, using the same orbs as the natal Planet Condition block.
+        foreach ($transits as $name => &$t) {
+            $t['combust'] = PlanetCondition::combustion($name, $transits);
+        }
+        unset($t);
 
         // Transit Ascendant for the requested moment + place (so the gochar
         // chart has its own rising sign, like mainstream software).

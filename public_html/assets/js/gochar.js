@@ -82,12 +82,68 @@
       l.appendChild(h('span', 'text-gray-500', text)); l.appendChild(node); return l;
     }
 
-    form.appendChild(lab('Date (DD-MM-YYYY)', fDate));
-    form.appendChild(lab('Time (24h HH:MM)', fTime));
+    var dateCell = lab('Date (DD-MM-YYYY)', fDate);
+    var timeCell = lab('Time (24h HH:MM)', fTime);
+    form.appendChild(dateCell);
+    form.appendChild(timeCell);
     var placeCell = lab('Place (search city)', fPlace, 'relative col-span-2');
     placeCell.appendChild(fResults);
     form.appendChild(placeCell);
     inRoot.appendChild(form);
+
+    // Optional +/- steppers under the date & time fields (day·week·month·year
+    // and minute·10min·hour·12hour). Clicking recomputes the transit at once.
+    if (cfg.steppers) {
+      // Shift the current date+time by a unit and refetch. Building one Date
+      // from both fields lets a ±12h or ±1d step roll cleanly across midnight.
+      var bump = function (unit, amount) {
+        var iso = ddmmToISO(fDate.value).split('-');
+        var tp = (norm24(fTime.value) || '00:00').split(':');
+        var dt = new Date(+iso[0], (+iso[1] - 1), +iso[2], +tp[0], +tp[1], 0);
+        if (isNaN(dt)) { return; }
+        if (unit === 'day') { dt.setDate(dt.getDate() + amount); }
+        else if (unit === 'week') { dt.setDate(dt.getDate() + 7 * amount); }
+        else if (unit === 'month') { dt.setMonth(dt.getMonth() + amount); }
+        else if (unit === 'year') { dt.setFullYear(dt.getFullYear() + amount); }
+        else if (unit === 'minute') { dt.setMinutes(dt.getMinutes() + amount); }
+        else if (unit === 'hour') { dt.setHours(dt.getHours() + amount); }
+        fDate.value = pad(dt.getDate()) + '-' + pad(dt.getMonth() + 1) + '-' + dt.getFullYear();
+        fTime.value = pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+        fetchGochar();
+      };
+      var stepRow = function (specs) {
+        var row = h('div', 'gc-steppers');
+        specs.forEach(function (s) {
+          if (s.gap) { row.appendChild(h('span', 'gc-step-gap')); return; }
+          var b = h('button', 'gc-step', s.label); b.type = 'button'; b.title = s.title || s.label;
+          b.addEventListener('click', function () { bump(s.unit, s.amount); });
+          row.appendChild(b);
+        });
+        return row;
+      };
+      dateCell.appendChild(stepRow([
+        { unit: 'year', amount: -1, label: '−1y', title: '−1 year' },
+        { unit: 'month', amount: -1, label: '−1m', title: '−1 month' },
+        { unit: 'week', amount: -1, label: '−1w', title: '−1 week' },
+        { unit: 'day', amount: -1, label: '−1d', title: '−1 day' },
+        { gap: true },
+        { unit: 'day', amount: 1, label: '+1d', title: '+1 day' },
+        { unit: 'week', amount: 1, label: '+1w', title: '+1 week' },
+        { unit: 'month', amount: 1, label: '+1m', title: '+1 month' },
+        { unit: 'year', amount: 1, label: '+1y', title: '+1 year' }
+      ]));
+      timeCell.appendChild(stepRow([
+        { unit: 'hour', amount: -12, label: '−12h', title: '−12 hours' },
+        { unit: 'hour', amount: -1, label: '−1h', title: '−1 hour' },
+        { unit: 'minute', amount: -10, label: '−10′', title: '−10 minutes' },
+        { unit: 'minute', amount: -1, label: '−1′', title: '−1 minute' },
+        { gap: true },
+        { unit: 'minute', amount: 1, label: '+1′', title: '+1 minute' },
+        { unit: 'minute', amount: 10, label: '+10′', title: '+10 minutes' },
+        { unit: 'hour', amount: 1, label: '+1h', title: '+1 hour' },
+        { unit: 'hour', amount: 12, label: '+12h', title: '+12 hours' }
+      ]));
+    }
 
     // Advanced (lat/lon/tz): auto-filled by the city search, so hidden by default.
     var adv = h('div', 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mt-3 hidden');

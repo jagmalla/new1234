@@ -403,6 +403,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gp-body-pred .ug-panel { font-size: .9rem; }
         .gp-body-pred .ug-body { max-height: none; overflow: visible; padding-right: 0; }
         @media (max-width: 640px) { .gpane { --gp-h: 420px; } }
+        /* Date / time +/- steppers under the Gochar inputs. */
+        .gc-steppers { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 5px; }
+        .gc-step { font-size: .72rem; font-weight: 700; line-height: 1; color: #334155;
+            border: 1px solid var(--line); background: #f8fafc; border-radius: 6px;
+            padding: 5px 7px; cursor: pointer; min-width: 30px; }
+        .gc-step:hover { background: #e0e7ff; border-color: #c7d2fe; color: #1e3a8a; }
+        .gc-step:active { transform: translateY(1px); }
+        .gc-step-gap { width: 8px; }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
@@ -1065,6 +1073,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                     <button type="button" data-sec="grah" data-target="card-native">Birth Details</button>
                     <button type="button" data-sec="grah" data-target="card-housedet">House Details</button>
                     <button type="button" data-sec="grah" data-target="card-d1pos">Positions (D1)</button>
+                    <button type="button" data-sec="grah" data-target="card-gochardetails">Gochar Details</button>
                 </div>
             </div>
             <div class="l2-mi">
@@ -1832,6 +1841,22 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         </table>
     </div>
 
+    <!-- Gochar Details — full transit table for a chosen date/time/place. The
+         date/time inputs carry +/- steppers (day·week·month·year and
+         minute·10min·hour·12hour); the table + Copy button update with them.
+         Built lazily on first visit to Planet Positions. -->
+    <div id="card-gochardetails" class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+        <div class="flex flex-wrap items-center gap-3 mb-3 pb-2 border-b">
+            <h2 class="font-semibold text-gray-800">Gochar Details
+                <span class="text-xs text-gray-400 font-normal">(गोचर विवरण — इस तिथि/समय पर सभी ग्रहों की गोचर स्थिति)</span></h2>
+            <button type="button" id="gd-copy" class="ml-auto text-sm font-semibold border rounded px-3 py-1.5 bg-slate-50 hover:bg-slate-100" aria-label="Copy">📋 Copy</button>
+        </div>
+        <div id="gd-inputs"></div>
+        <div id="gd-hidden" class="hidden"></div>
+        <div id="gd-status" class="text-xs text-gray-500 mt-2"></div>
+        <div id="gd-table" class="mt-3 overflow-x-auto"></div>
+        <pre id="gd-copytext" class="hidden"></pre>
+    </div>
 
         </div>
 
@@ -2796,6 +2821,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         inputs: '#gochar-inputs', output: '#gochar-output',
         birth: window.AB_BIRTH,
         fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ },
+        steppers: true,
         // Keep the live transit result in AB_GOCHAR so any chart slot showing
         // "Gochar (Transit)" re-renders with the new date/place, and remember
         // the date/place for the transit slot subtitle.
@@ -3133,6 +3159,91 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     box.style.maxHeight = (target > 160 ? target : 160) + 'px';
   }
 
+  // ---- Gochar Details (Planet Positions → Gochar Details) ----
+  // A full transit table for a chosen date/time/place. Reuses ABGochar for the
+  // date/time/place form (with +/- steppers) and IP location, but skips the
+  // chart + phal and renders a Nakshatra/Pada/Degree/Rashi/Retro/Combust table.
+  var GD_PCOL = { Sun:'#dc2626', Moon:'#0891b2', Mars:'#ea580c', Mercury:'#16a34a', Jupiter:'#b45309', Venus:'#db2777', Saturn:'#1d4ed8', Rahu:'#3d4554', Ketu:'#3d4554' };
+  var GD_HI = { Sun:'सूर्य', Moon:'चन्द्र', Mars:'मंगल', Mercury:'बुध', Jupiter:'गुरु', Venus:'शुक्र', Saturn:'शनि', Rahu:'राहु', Ketu:'केतु' };
+  function gdEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+  function gdDegMin(degInSign) {
+    var d = Math.floor(degInSign), m = Math.round((degInSign - d) * 60);
+    if (m === 60) { d += 1; m = 0; }
+    return d + '°' + (m < 10 ? '0' : '') + m + "'";
+  }
+
+  function renderGocharDetailsTable(g, meta) {
+    var host = document.getElementById('gd-table');
+    if (!host || !g || !g.transits) { return; }
+    var order = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+    var head = ['ग्रह / Planet', 'राशि / Rashi', 'अंश / Degree', 'नक्षत्र / Nakshatra', 'पद / Pada', 'वक्री / Retro', 'अस्त / Combust', 'अस्त % / Combust %'];
+    var rows = '', copyRows = [head.join('\t')];
+    order.forEach(function (name) {
+      var t = g.transits[name];
+      if (!t) { return; }
+      var deg = gdDegMin(t.deg_in_sign != null ? t.deg_in_sign : t.deg);
+      var nak = (t.nakshatra && t.nakshatra.name) || '—';
+      var pada = (t.nakshatra && t.nakshatra.pada) || '—';
+      var retro = t.retro ? 'वक्री ®' : '—';
+      var combust = t.combust ? 'अस्त (Yes)' : '—';
+      var pct = t.combust ? (t.combust.pct + '%') : '—';
+      var pName = GD_HI[name] ? (name + ' (' + GD_HI[name] + ')') : name;
+      rows +=
+        '<tr class="border-b border-gray-100">' +
+        '<td class="py-1 pr-3 font-semibold" style="color:' + GD_PCOL[name] + '">' + gdEsc(pName) + '</td>' +
+        '<td class="pr-3">' + gdEsc(t.sign) + '</td>' +
+        '<td class="pr-3">' + gdEsc(deg) + '</td>' +
+        '<td class="pr-3">' + gdEsc(nak) + '</td>' +
+        '<td class="pr-3">' + gdEsc(pada) + '</td>' +
+        '<td class="pr-3">' + (t.retro ? '<span style="color:#b91c1c;font-weight:600">' + retro + '</span>' : '<span class="text-gray-300">—</span>') + '</td>' +
+        '<td class="pr-3">' + (t.combust ? '<span style="color:#b45309;font-weight:600">अस्त</span>' : '<span class="text-gray-300">—</span>') + '</td>' +
+        '<td class="pr-3">' + (t.combust ? '<span style="color:#b45309;font-weight:600">' + t.combust.pct + '%</span>' : '<span class="text-gray-300">—</span>') + '</td>' +
+        '</tr>';
+      copyRows.push([pName, t.sign, deg, nak, pada, (t.retro ? 'वक्री' : '—'), (t.combust ? 'अस्त' : '—'), pct].join('\t'));
+    });
+    var when = meta ? [meta.date, meta.time, meta.place].filter(Boolean).join(' · ') : '';
+    var asc = g.ascendant ? ('<div class="text-xs text-gray-500 mt-2">गोचर लग्न / Transit Lagna: <b>' + gdEsc(g.ascendant.formatted) + '</b></div>') : '';
+    host.innerHTML =
+      (when ? '<div class="text-sm font-semibold text-gray-700 mb-2">' + gdEsc(when) + '</div>' : '') +
+      '<table class="w-full text-sm"><thead><tr class="text-left border-b">' +
+      head.map(function (hh) { return '<th class="py-1 pr-3">' + gdEsc(hh) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + rows + '</tbody></table>' + asc;
+    var pre = document.getElementById('gd-copytext');
+    if (pre) { pre.textContent = 'Gochar Details' + (when ? ' — ' + when : '') + '\n\n' + copyRows.join('\n'); }
+    var st = document.getElementById('gd-status');
+    if (st) { st.textContent = ''; }
+  }
+
+  var gocharDetailsBuilt = false;
+  function buildGocharDetails() {
+    if (gocharDetailsBuilt || !window.ABGochar) { return; }
+    if (!document.getElementById('gd-inputs')) { return; }
+    gocharDetailsBuilt = true;
+    var st = document.getElementById('gd-status');
+    if (st) { st.textContent = 'गोचर की गणना हो रही है…'; }
+    ABGochar.init({
+      inputs: '#gd-inputs', output: '#gd-hidden',
+      birth: window.AB_BIRTH,
+      fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ },
+      injectPhal: false,
+      steppers: true,
+      onResult: function (g, meta) { renderGocharDetailsTable(g, meta); }
+    });
+    // Copy the table as tab-separated text (pastes cleanly into Sheets/Docs).
+    var copyBtn = document.getElementById('gd-copy');
+    if (copyBtn && !copyBtn._bound) {
+      copyBtn._bound = true;
+      copyBtn.addEventListener('click', function () {
+        var pre = document.getElementById('gd-copytext');
+        var txt = pre ? pre.textContent : '';
+        if (!txt) { return; }
+        var done = function () { var o = copyBtn.textContent; copyBtn.textContent = '✓ Copied'; setTimeout(function () { copyBtn.textContent = o; }, 1200); };
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).then(done, done); }
+        else { var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); }
+      });
+    }
+  }
+
   // Side-menu section switching: home = three-panel; others span the two panels.
   var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-muhurat', 'sec-varsha'];
   function showSection(key, focusPred) {
@@ -3170,6 +3281,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       if (el) el.classList.toggle('hidden', id !== 'sec-' + key);
     });
     if (key === 'muhurat') { buildMahuratPage(); }
+    if (key === 'grah') { buildGocharDetails(); }
     if (homeMode) { setTimeout(setPanelHeights, 60); }
     // Cards rendered while their section was hidden (Mudda dasha, gochar pair)
     // measured zero heights — re-run their resize syncs now they are visible.
