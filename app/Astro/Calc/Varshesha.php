@@ -6,9 +6,12 @@ namespace AutoBusiness\Astro\Calc;
 /**
  * Varshesha (Varsha Lord / year-lord) selection for the Tajik annual chart.
  *
- * Among the five office-bearers (Panchadhikari) the one with the greatest
- * Panchavargeeya Bala is the Varshesha — the convention used by mainstream
- * Vedic software (Parashara's Light, Jagannatha Hora).
+ * Among the five office-bearers (Panchadhikari), the Varshesha is the STRONGEST
+ * (by Panchavargeeya Bala) that also casts a Tajika aspect (drishti) on the
+ * Varsha Lagna; if none of the five aspects the Varsha Lagna, the Muntha lord is
+ * the Varshesha by default (Tajika Neelakanthi, Varshesha-adhikara — the same
+ * selection mainstream software such as Parashara's Light uses). A stronger
+ * office-bearer that does NOT aspect the annual ascendant is therefore skipped.
  *
  * The five offices:
  *   1. Muntha lord            (lord of the Muntha sign)
@@ -113,15 +116,60 @@ final class Varshesha
             ];
         }
 
-        // Varshesha = greatest Panchavargeeya bala (first office wins on a tie).
-        $winIdx = 0;
+        // ---- Varshesha selection (Tajika Neelakanthi, Varshesha-adhikara) ----
+        // The year lord is NOT simply the strongest office-bearer. It is the
+        // STRONGEST office-bearer that also casts a Tajika aspect (drishti) on the
+        // Varsha Lagna. If NONE of the five aspects the Varsha Lagna, the Muntha
+        // lord becomes the year lord by default. (This is why mainstream software
+        // such as Parashara's Light can pick a weaker Muntha lord over a stronger
+        // Lagna lord that does not aspect the annual ascendant.)
+        //
+        // Tajika drishti falls on the 3rd, 4th, 5th, 9th, 10th and 11th houses
+        // (3-11, 5-9 friendly and 4-10 inimical, all mutual) — NOT the 2/6/7/8/12,
+        // unlike the Parashari 7th aspect. A planet therefore aspects the Varsha
+        // Lagna when it sits in one of those houses counted from the lagna.
+        $houseFromLagna = static function (string $pl) use ($planets, $varshaLagnaSign): ?int {
+            if (!isset($planets[$pl]['sign_index'])) { return null; }
+            return (((int) $planets[$pl]['sign_index'] - $varshaLagnaSign) % 12 + 12) % 12 + 1;
+        };
+        $aspectsLagna = static function (?int $house): bool {
+            return $house !== null && in_array($house, [3, 4, 5, 9, 10, 11], true);
+        };
+        foreach ($candidates as &$c) {
+            $c['house'] = $houseFromLagna($c['planet']);
+            $c['aspects_lagna'] = $aspectsLagna($c['house']);
+        }
+        unset($c);
+
+        // Strongest office-bearer that aspects the Varsha Lagna (earlier office —
+        // Muntha, then Varsha/Janma Lagna… — wins an exact tie).
+        $winIdx = null;
         foreach ($candidates as $i => $c) {
-            if ($c['bala'] > $candidates[$winIdx]['bala']) { $winIdx = $i; }
+            if (!$c['aspects_lagna']) { continue; }
+            if ($winIdx === null || $c['bala'] > $candidates[$winIdx]['bala']) { $winIdx = $i; }
+        }
+        if ($winIdx === null) {
+            // None aspects the lagna → the Muntha lord is the year lord (offices[0]
+            // is always the Muntha lord, so it is candidates[0] here).
+            $munthaLord = Charts::signLord($munthaSign);
+            foreach ($candidates as $i => $c) {
+                if ($c['planet'] === $munthaLord) { $winIdx = $i; break; }
+            }
+            if ($winIdx === null) {          // safety net: strongest overall
+                $winIdx = 0;
+                foreach ($candidates as $i => $c) {
+                    if ($c['bala'] > $candidates[$winIdx]['bala']) { $winIdx = $i; }
+                }
+            }
         }
         $win = $candidates[$winIdx];
         foreach ($candidates as $i => &$c) { $c['is_varshesh'] = $i === $winIdx; }
         unset($c);
-        foreach ($officeRows as &$r) { $r['is_varshesh'] = $r['planet'] === $win['planet']; }
+        foreach ($officeRows as &$r) {
+            $r['is_varshesh'] = $r['planet'] === $win['planet'];
+            $r['house'] = $houseFromLagna($r['planet']);
+            $r['aspects_lagna'] = $aspectsLagna($r['house']);
+        }
         unset($r);
 
         return [

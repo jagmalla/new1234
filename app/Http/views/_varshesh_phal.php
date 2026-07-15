@@ -39,7 +39,7 @@ if ($vsh !== null && !empty($vsh['winner'])):
                         <td style="color:<?= $pcolor($c['planet']) ?>"><?= $h($c['planet_hi']) ?></td>
                         <td><?= $h((string) $c['bala20']) ?></td>
                         <td><?= $h($c['band_hi']) ?></td>
-                        <td><?= $c['aspects'] ? '<span style="color:#1c5138">हाँ</span>' : '<span style="color:#8A2F2F">नहीं</span>' ?> <span class="text-xs text-gray-400">(<?= $h((string) $c['drishti_kala']) ?> कला)</span></td>
+                        <td><?= $c['aspects'] ? '<span style="color:#1c5138">हाँ</span>' : '<span style="color:#8A2F2F">नहीं</span>' ?> <span class="text-xs text-gray-400">(<?= $h((string) ($c['drishti_note'] ?? $c['drishti_kala'] . ' कला')) ?>)</span></td>
                         <td style="text-align:left;font-size:.72rem"><?= $h($c['reason']) ?></td>
                     </tr>
                 <?php endforeach; ?>

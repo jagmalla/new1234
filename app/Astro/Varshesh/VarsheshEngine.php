@@ -88,6 +88,7 @@ final class VarsheshEngine
                 'band' => $bandOf($tot), 'band_hi' => self::BAND_HI[$bandOf($tot)],
                 'drishti_kala' => round((float) $cell['kala'], 1),
                 'drishti_type' => (string) $cell['type_hi'],
+                'drishti_note' => round((float) $cell['kala'], 1) . ' कला',
                 'aspects' => $aspects,
                 'reason' => '',
             ];
@@ -107,15 +108,34 @@ final class VarsheshEngine
         $winner = null;
 
         if ($methodMode !== 'tajik_lagna_drishti') {
-            // Parashara: the panchadhikari with the highest Panchavargeeya bala
-            // (= Varshesha::compute's winner, already on $vp['varshesh']['lord']).
+            // Default = Varshesha::compute's winner: the STRONGEST panchadhikari
+            // that casts a whole-sign Tajika aspect (3/4/5/9/10/11 from the Varsha
+            // Lagna) on the annual ascendant; if none aspects, the Muntha lord.
+            // (Verified against Parashara's Light, which likewise skips a stronger
+            // Lagna lord that does not aspect the year ascendant.) Reuse compute's
+            // house-based aspect flags so this panel explains the very same pick.
             $winner = (string) ($vp['varshesh']['lord'] ?? '');
+            $computeCands = [];
+            foreach (($vp['varshesh']['candidates'] ?? []) as $cc) { $computeCands[(string) $cc['planet']] = $cc; }
+            foreach ($trail as &$tc) {
+                $cc = $computeCands[$tc['planet']] ?? null;
+                if ($cc !== null) {
+                    $tc['aspects'] = (bool) ($cc['aspects_lagna'] ?? false);
+                    $hh = $cc['house'] ?? null;
+                    $tc['drishti_type'] = $tc['aspects'] ? ('भाव ' . $hh . ' से') : 'लग्न को नहीं';
+                    $tc['drishti_note'] = $hh !== null ? ('भाव ' . $hh) : '—';
+                }
+            }
+            unset($tc);
+            $aspecting = array_values(array_filter($trail, static fn($c) => $c['aspects']));
             if ($winner === '' && $trail !== []) {
                 $byBala = $trail;
                 usort($byBala, static fn($a, $b) => $b['bala'] <=> $a['bala']);
                 $winner = $byBala[0]['planet'];
             }
-            $method = 'पंचाधिकारियों में सर्वाधिक पंचवर्गीय बली वाला ग्रह वर्षेश (पराशरी रीति — Parashara\'s Light अनुरूप)';
+            $method = $aspecting === []
+                ? 'कोई पंचाधिकारी लग्न को ताजिक दृष्टि नहीं देता — मुंथेश वर्षाधिप (ताजिक-नीलकंठी · Parashara\'s Light अनुरूप)'
+                : 'लग्न को ताजिक दृष्टि देने वाले पंचाधिकारियों में सर्वाधिक पंचवर्गीय बली वर्षेश (ताजिक-नीलकंठी · Parashara\'s Light अनुरूप)';
         } elseif ($aspecting !== []) {
             $maxBala = max(array_map(static fn($c) => $c['bala'], $aspecting));
             $tied = array_values(array_filter($aspecting, static fn($c) => abs($c['bala'] - $maxBala) < 0.01));
@@ -148,12 +168,10 @@ final class VarsheshEngine
         }
         $winner = $winner ?? ($trail[0]['planet'] ?? 'Sun');
 
-        // mark the trail
+        // mark the trail (aspect-based reasons in both methods now).
         foreach ($trail as &$c) {
             if ($c['planet'] === $winner) {
                 $c['reason'] = '✓ वर्षेश — ' . $method; $c['selected'] = true;
-            } elseif ($methodMode !== 'tajik_lagna_drishti') {
-                $c['reason'] = 'पंचवर्गीय बल में पीछे'; $c['selected'] = false;
             } elseif (!$c['aspects']) {
                 $c['reason'] = 'लग्न को ताजिक दृष्टि नहीं — अपात्र'; $c['selected'] = false;
             } else {
