@@ -7,18 +7,20 @@ namespace AutoBusiness\Astro\Calc;
  * Varshesha (Varsha Lord / year-lord) selection for the Tajik annual chart.
  *
  * Among the five office-bearers (Panchadhikari), the Varshesha is the STRONGEST
- * (by Panchavargeeya Bala) that also casts a Tajika aspect (drishti) on the
- * Varsha Lagna; if none of the five aspects the Varsha Lagna, the Muntha lord is
- * the Varshesha by default (Tajika Neelakanthi, Varshesha-adhikara — the same
- * selection mainstream software such as Parashara's Light uses). A stronger
- * office-bearer that does NOT aspect the annual ascendant is therefore skipped.
+ * (by Panchavargeeya Bala) that also casts a FRIENDLY Tajika aspect (sneha
+ * drishti — 3rd/5th/9th/11th) on the Varsha Lagna; if none of the five aspects
+ * the Varsha Lagna, the Muntha lord is the Varshesha by default (Tajika
+ * Neelakanthi, Varshesha-adhikara — the same selection mainstream software such
+ * as Parashara's Light uses). A stronger office-bearer that does NOT aspect the
+ * annual ascendant is therefore skipped.
  *
  * The five offices:
  *   1. Muntha lord            (lord of the Muntha sign)
  *   2. Varsha Lagna lord      (lord of the annual ascendant)
  *   3. Janma Lagna lord       (lord of the birth ascendant)
  *   4. Trirashi lord          (triplicity lord of the Varsha Lagna, by day/night)
- *   5. Dina-ratri lord        (Sun by a day birth, Moon by a night birth)
+ *   5. Dina-ratri lord        (lord of the Sun's sign by a day Varsha Pravesh,
+ *                              of the Moon's sign by a night one)
  *
  * Panchavargeeya Bala = Kshetra (30) + Uchcha (20) + Hadda (15) + Drekkana (10)
  * + Navamsa (5) vishwas. Kshetra / Hadda / Navamsa grade the planet's compound
@@ -82,7 +84,7 @@ final class Varshesha
             ['key' => 'varsha_lagna', 'office' => 'वर्ष-लग्नेश (वर्ष लग्न स्वामी)', 'office_en' => 'Varsha Lagna Pati', 'planet' => Charts::signLord($varshaLagnaSign)],
             ['key' => 'janma_lagna',  'office' => 'जन्म-लग्नेश (जन्म लग्न स्वामी)',  'office_en' => 'Janma Lagna Pati',  'planet' => Charts::signLord($janmaLagnaSign)],
             ['key' => 'trirashi',     'office' => 'त्रिराशि-पति',                    'office_en' => 'Trirashi Pati',     'planet' => self::trirashiLord($varshaLagnaSign, $isDay)],
-            ['key' => 'dinaratri',    'office' => 'दिन-रात्रि पति',                  'office_en' => 'Dinaratri Pati',    'planet' => self::varaLord($varshaChart)],
+            ['key' => 'dinaratri',    'office' => 'दिन-रात्रि पति',                  'office_en' => 'Dinaratri Pati',    'planet' => self::dinaratriLord($planets, $isDay)],
         ];
 
         $officeRows = [];   // all five rows, PL-style (a planet may repeat)
@@ -124,16 +126,18 @@ final class Varshesha
         // such as Parashara's Light can pick a weaker Muntha lord over a stronger
         // Lagna lord that does not aspect the annual ascendant.)
         //
-        // Tajika drishti falls on the 3rd, 4th, 5th, 9th, 10th and 11th houses
-        // (3-11, 5-9 friendly and 4-10 inimical, all mutual) — NOT the 2/6/7/8/12,
-        // unlike the Parashari 7th aspect. A planet therefore aspects the Varsha
-        // Lagna when it sits in one of those houses counted from the lagna.
+        // A planet is eligible only with a FRIENDLY Tajika aspect (sneha drishti)
+        // on the Varsha Lagna — the 3rd, 5th, 9th and 11th houses (3-11 and 5-9,
+        // mutual). The inimical 4-10 drishti and the 2/6/7/8/12 (no drishti) do
+        // NOT qualify, so a Muntha/Lagna lord in the 6th/7th/10th is skipped —
+        // matching Parashara's Light (e.g. 2027-28: Venus 7th, Mercury 6th,
+        // Saturn 10th all fail → the Muntha lord Venus becomes the year lord).
         $houseFromLagna = static function (string $pl) use ($planets, $varshaLagnaSign): ?int {
             if (!isset($planets[$pl]['sign_index'])) { return null; }
             return (((int) $planets[$pl]['sign_index'] - $varshaLagnaSign) % 12 + 12) % 12 + 1;
         };
         $aspectsLagna = static function (?int $house): bool {
-            return $house !== null && in_array($house, [3, 4, 5, 9, 10, 11], true);
+            return $house !== null && in_array($house, [3, 5, 9, 11], true);
         };
         foreach ($candidates as &$c) {
             $c['house'] = $houseFromLagna($c['planet']);
@@ -184,20 +188,19 @@ final class Varshesha
     }
 
     /**
-     * Vara (weekday) lord at the Varsha Pravesh — the Dina-ratri pati shown by
-     * Parashara's Light (e.g. a Tuesday entry → Mars). Weekday from the chart's
-     * own instant converted to local mean time by the place longitude.
+     * Dina-ratri pati — the lord of the reigning luminary's sign: the dispositor
+     * of the SUN by a day Varsha Pravesh, of the MOON by a night one (Sun rules
+     * the day, Moon the night). Matches Parashara's Light (e.g. a night entry
+     * with the Moon in Taurus → Venus), unlike the weekday lord.
      *
-     * @param array<string,mixed> $varshaChart
+     * @param array<string,array<string,mixed>> $planets
      */
-    private static function varaLord(array $varshaChart): string
+    private static function dinaratriLord(array $planets, bool $isDay): string
     {
-        $jdUt = (float) ($varshaChart['meta']['jd_ut'] ?? 0.0);
-        $lonEast = (float) ($varshaChart['meta']['longitude_east'] ?? 0.0);
-        $jdLocal = $jdUt + $lonEast / 360.0;
-        $dow = ((int) floor($jdLocal + 1.5)) % 7;          // 0 = Sunday
-        if ($dow < 0) { $dow += 7; }
-        return ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'][$dow];
+        $luminary = $isDay ? 'Sun' : 'Moon';
+        $lon = (float) ($planets[$luminary]['sidereal_lon'] ?? 0.0);
+        $sign = (int) ($planets[$luminary]['sign_index'] ?? Charts::signIndex($lon));
+        return Charts::signLord($sign);
     }
 
     /** Triplicity (Trirashi) lord of a sign, by day/night. */

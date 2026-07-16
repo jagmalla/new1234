@@ -109,8 +109,8 @@ final class VarsheshEngine
 
         if ($methodMode !== 'tajik_lagna_drishti') {
             // Default = Varshesha::compute's winner: the STRONGEST panchadhikari
-            // that casts a whole-sign Tajika aspect (3/4/5/9/10/11 from the Varsha
-            // Lagna) on the annual ascendant; if none aspects, the Muntha lord.
+            // that casts a friendly whole-sign Tajika aspect (3/5/9/11 from the
+            // Varsha Lagna) on the annual ascendant; if none aspects, Muntha lord.
             // (Verified against Parashara's Light, which likewise skips a stronger
             // Lagna lord that does not aspect the year ascendant.) Reuse compute's
             // house-based aspect flags so this panel explains the very same pick.
