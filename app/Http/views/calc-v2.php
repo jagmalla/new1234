@@ -260,6 +260,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .pred-picker-label { font-size: .8rem; font-weight: 800; color: var(--sindoor); white-space: nowrap;
             text-transform: uppercase; letter-spacing: .02em; }
         .pred-inline-select { flex: 1; min-width: 160px; padding: 9px 30px 9px 12px; min-height: 40px; }
+        /* सहम + मुद्दा-दशा dropdowns share one line: saham wider, mudda narrower. */
+        .saham-sel-main { flex: 3 1 190px; }
+        .saham-sel-mudda { flex: 1 1 120px; min-width: 120px; max-width: 210px; }
         /* Dasha Maha/Antar picker — always ONE line (own full-width row, no wrap). */
         .dp-picker { display: flex; align-items: center; gap: 6px 12px; flex-wrap: nowrap;
             flex-basis: 100%; width: 100%; }
@@ -2594,28 +2597,39 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       apply();
     })();
 
-    // Saham selector: "active" shows every saham tied to the running
-    // Mudda-dasha, "all" shows all 50, otherwise a single saham by key.
+    // Saham selectors: सहम dropdown ("bydasha" = the mudda-dasha dropdown's
+    // sahams, "all" = every saham, else one saham by key) + a मुद्दा-दशा dropdown
+    // (in sequence) that picks WHICH dasha's active sahams the "bydasha" view
+    // shows. Changing the mudda-dasha switches back to the bydasha view.
     (function () {
       var sel = document.getElementById('saham-select');
       if (!sel) { return; }
+      var mud = document.getElementById('saham-mudda');
       var cards = document.querySelectorAll('#saham-detail-pane .saham-card');
       var pane = document.getElementById('saham-detail-pane');
+      var empty = document.getElementById('saham-empty');
       function apply() {
-        var v = sel.value;
+        var v = sel.value, byDasha = v === 'bydasha';
+        var lord = mud ? mud.value : '';
+        var shown = 0;
         cards.forEach(function (d) {
           var show = v === 'all'
-            || (v === 'active' ? d.getAttribute('data-active') === '1'
-                               : d.getAttribute('data-saham') === v);
+            || (byDasha ? d.getAttribute('data-sahamesh') === lord
+                        : d.getAttribute('data-saham') === v);
           d.classList.toggle('hidden', !show);
+          if (show) { shown++; }
         });
+        if (empty) { empty.classList.toggle('hidden', !(byDasha && shown === 0)); }
         if (pane) { pane.scrollTop = 0; }
       }
       sel.onchange = apply;
+      // Picking a mudda-dasha implies the "मुद्दा-दशा अनुसार" view.
+      if (mud) { mud.onchange = function () { sel.value = 'bydasha'; apply(); }; }
       // Related-saham chips jump straight to that single saham.
       document.querySelectorAll('.saham-chip[data-goto]').forEach(function (b) {
         b.onclick = function () { sel.value = b.getAttribute('data-goto'); apply(); };
       });
+      apply();
     })();
 
     // ताजिक योग view selector: "mudda" = the active Mudda-dasha lord's yogas

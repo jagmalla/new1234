@@ -477,6 +477,17 @@ final class CalcController
         $data['error'] = \AutoBusiness\Astro\Saham\SahamRepository::lastError();
         $data['active_lord'] = $activeLord;
         $data['tz'] = $tz;
+        // Mudda-dasha sequence (in order, one per lord) for the "मुद्दा-दशा चुनें"
+        // dropdown so any dasha period's active sahams can be viewed.
+        $muddaSeq = [];
+        $seenLord = [];
+        foreach (($vp['mudda_dasha'] ?? []) as $md) {
+            $l = (string) $md['lord'];
+            if (isset($seenLord[$l])) { continue; }
+            $seenLord[$l] = true;
+            $muddaSeq[] = ['lord' => $l, 'start_jd' => (float) $md['start_jd'], 'end_jd' => (float) $md['end_jd']];
+        }
+        $data['mudda_seq'] = $muddaSeq;
         return $data;
     }
 

@@ -36,25 +36,48 @@
                     <?php endif; ?>
                 </div>
 
-                <!-- Numbered, scrollable saham selector -->
-                <div class="pred-picker" style="margin-top:8px">
+                <?php
+                    // Mudda-dasha dropdown = the year's mudda sequence, limited to
+                    // lords that actually lord a saham (+ the active one), in order.
+                    $sahameshSet = [];
+                    foreach ($sahams as $s) { $sahameshSet[(string) $s['sahamesh']] = true; }
+                    $muddaOpts = [];
+                    foreach (($sah['mudda_seq'] ?? []) as $md) {
+                        $ml = (string) $md['lord'];
+                        if (isset($sahameshSet[$ml]) || $ml === $activeLord) { $muddaOpts[] = $ml; }
+                    }
+                    if ($muddaOpts === []) { $muddaOpts = array_keys($sahameshSet); }
+                ?>
+                <!-- सहम चुनें + मुद्दा-दशा चुनें on one line. The mudda-dasha dropdown
+                     (in sequence, default = active) drives the "मुद्दा-दशा अनुसार" view;
+                     pick any dasha to see the sahams active in that period. -->
+                <div class="pred-picker saham-pickrow" style="margin-top:8px;gap:8px;flex-wrap:wrap">
                     <label class="pred-picker-label" for="saham-select">सहम चुनें</label>
-                    <select id="saham-select" class="pred-inline-select" size="1">
-                        <option value="active"<?= $defaultOpt === 'active' ? ' selected' : '' ?>>● सक्रिय सहम (मुद्दा-दशा अनुसार)<?= $related !== [] ? ' — ' . count($related) : '' ?></option>
-                        <option value="all"<?= $defaultOpt === 'all' ? ' selected' : '' ?>>सभी सहम (All Saham)</option>
+                    <select id="saham-select" class="pred-inline-select saham-sel-main" size="1">
+                        <option value="bydasha" selected>● मुद्दा-दशा अनुसार सहम</option>
+                        <option value="all">सभी सहम (All Saham)</option>
                         <?php foreach ($sahams as $s): ?>
                             <option value="<?= $h($s['key']) ?>"><?= (int) $s['seq'] ?>. <?= $h($s['name_hi']) ?> — <?= $h($s['verdict_hi']) ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <label class="pred-picker-label" for="saham-mudda">मुद्दा-दशा</label>
+                    <select id="saham-mudda" class="pred-inline-select saham-sel-mudda" size="1">
+                        <?php foreach ($muddaOpts as $ml): ?>
+                            <option value="<?= $h($ml) ?>"<?= $ml === $activeLord ? ' selected' : '' ?>><?= $h($grahaHi[$ml] ?? $ml) ?><?= $ml === $activeLord ? ' (सक्रिय)' : '' ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
-                <!-- Saham detail cards (only the selected one shows) -->
-                <div id="saham-detail-pane" class="overflow-y-auto pr-1" style="max-height:420px">
+                <!-- Saham detail cards (only the selected set shows); no inner
+                     scroll — content flows into the single outer scrollbar. -->
+                <div id="saham-detail-pane" class="pr-1" style="margin-top:8px">
                     <?php foreach ($sahams as $s): $isDup = ($lonCount[(string) $s['lon']] ?? 0) > 1;
                         $isActive = !empty($s['related']);
-                        $showInit = $defaultOpt === 'all' || ($defaultOpt === 'active' && $isActive);
+                        // Default view = "मुद्दा-दशा अनुसार": show sahams whose सहमेश
+                        // is the (active) selected mudda-dasha lord.
+                        $showInit = (string) $s['sahamesh'] === $activeLord;
                     ?>
-                    <div class="saham-card<?= $showInit ? '' : ' hidden' ?>" data-saham="<?= $h($s['key']) ?>" data-active="<?= $isActive ? '1' : '0' ?>">
+                    <div class="saham-card<?= $showInit ? '' : ' hidden' ?>" data-saham="<?= $h($s['key']) ?>" data-active="<?= $isActive ? '1' : '0' ?>" data-sahamesh="<?= $h($s['sahamesh']) ?>">
                         <div class="saham-card-head">
                             <span class="saham-name"><?= (int) $s['seq'] ?>. <?= $h($s['name_hi']) ?></span>
                             <span class="gc-chip <?= $sTone($s['tone']) ?>"><?= $h($s['verdict_hi']) ?></span>
@@ -74,6 +97,7 @@
                         <?php endif; ?>
                     </div>
                     <?php endforeach; ?>
+                    <div id="saham-empty" class="hidden text-sm text-gray-500" style="padding:10px 2px">इस मुद्दा-दशा से संबंधित कोई सहम नहीं — दूसरी मुद्दा-दशा या "सभी सहम" चुनें।</div>
                 </div>
                 <?php else: ?>
                 <div class="gochar-pred-soon">
