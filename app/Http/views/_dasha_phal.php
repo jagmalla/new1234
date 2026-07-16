@@ -30,23 +30,13 @@ if ($dp !== null && !empty($dp['periods'])):
         <div class="text-xs text-gray-500" style="margin-top:3px">बल-स्तर पंचवर्गीय बल से (पूर्ण ≥<?= $h((string) $ctx['thresholds']['purna']) ?> · मध्य ≥<?= $h((string) $ctx['thresholds']['madhya']) ?> · हीन ≥<?= $h((string) $ctx['thresholds']['hina']) ?> · नष्ट <)। दशा चुनकर फल देखें।</div>
     </div>
 
-    <!-- Whole-year timeline (click a row to jump to that dasha). -->
-    <div class="dp-timeline" style="margin-top:8px">
-        <?php foreach ($periods as $i => $d): $tclr = $d['tone'] === 'pos' ? '#15803d' : ($d['tone'] === 'neg' ? '#b91c1c' : '#1d4ed8'); ?>
-        <button type="button" class="dp-trow<?= $i === $runD ? ' dp-now' : '' ?>" data-goto="<?= (int) $i ?>">
-            <span class="dp-dot" style="background:<?= $tclr ?>"></span>
-            <b style="color:<?= $pcolor($d['lord'] === 'Lagna' ? 'Sun' : $d['lord']) ?>"><?= $h($d['lord_hi']) ?></b>
-            <span class="dp-trow-dates"><?= $h($JD::toDmy((float) $d['start_jd'], $tz)) ?> – <?= $h($JD::toDmy((float) $d['end_jd'], $tz)) ?></span>
-            <span class="dp-trow-days"><?= (int) round($d['days']) ?> दिन</span>
-        </button>
-        <?php endforeach; ?>
-    </div>
-
+    <!-- दशा चुनें — options carry the mudda-dasha date range; in dasha series
+         order (same as the clickable list shown at the bottom). -->
     <div class="pred-picker" style="margin-top:10px;gap:8px">
         <label class="pred-picker-label" for="dp-dasha">दशा चुनें</label>
         <select id="dp-dasha" class="pred-inline-select" size="1">
             <?php foreach ($periods as $i => $d): ?>
-                <option value="<?= (int) $i ?>"<?= $i === $runD ? ' selected' : '' ?>><?= $h($d['lord_hi']) ?> दशा<?= $i === $runD ? ' (चालू)' : '' ?></option>
+                <option value="<?= (int) $i ?>"<?= $i === $runD ? ' selected' : '' ?>><?= $h($d['lord_hi']) ?> दशा<?= $i === $runD ? ' (चालू)' : '' ?> · <?= $h($JD::toDmy((float) $d['start_jd'], $tz)) ?> – <?= $h($JD::toDmy((float) $d['end_jd'], $tz)) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
@@ -115,6 +105,20 @@ if ($dp !== null && !empty($dp['periods'])):
         <?php endif; ?>
 
         <p class="text-xs text-gray-400" style="margin-top:8px">पात्यायिनी दशा = वर्ष-लग्न व ग्रहों के भुक्तांश से; बल-स्तर पंचवर्गीय बल से; उपचय/इतर-स्थान में फल एक स्तर ऊपर। अन्तर्दशा-श्रेणी वामनाचार्य-सारिणी से। स्रोत: ताजिक नीलकण्ठी, दशाफलाध्याय।</p>
+    </div>
+
+    <!-- सम्पूर्ण दशा-क्रम — clickable list (mudda-dasha series order) at the
+         bottom of the prediction; click a row to open that dasha above. -->
+    <div class="gph-section-title" style="margin-top:12px">सम्पूर्ण दशा-क्रम <span class="text-xs text-gray-400 font-normal">(मुद्दा दशा क्रम · क्लिक करें)</span></div>
+    <div class="dp-timeline" style="margin-top:6px">
+        <?php foreach ($periods as $i => $d): $tclr = $d['tone'] === 'pos' ? '#15803d' : ($d['tone'] === 'neg' ? '#b91c1c' : '#1d4ed8'); ?>
+        <button type="button" class="dp-trow<?= $i === $runD ? ' dp-now' : '' ?>" data-goto="<?= (int) $i ?>">
+            <span class="dp-dot" style="background:<?= $tclr ?>"></span>
+            <b style="color:<?= $pcolor($d['lord'] === 'Lagna' ? 'Sun' : $d['lord']) ?>"><?= $h($d['lord_hi']) ?></b>
+            <span class="dp-trow-dates"><?= $h($JD::toDmy((float) $d['start_jd'], $tz)) ?> – <?= $h($JD::toDmy((float) $d['end_jd'], $tz)) ?></span>
+            <span class="dp-trow-days"><?= (int) round($d['days']) ?> दिन</span>
+        </button>
+        <?php endforeach; ?>
     </div>
 <?php else: ?>
     <div class="gochar-pred-soon">

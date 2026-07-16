@@ -2513,7 +2513,13 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         };
       });
       document.querySelectorAll('.dp-trow').forEach(function (row) {
-        row.onclick = function () { ds.value = row.getAttribute('data-goto'); showDasha(ds.value); };
+        row.onclick = function () {
+          ds.value = row.getAttribute('data-goto'); showDasha(ds.value);
+          // The list now sits at the bottom — scroll back up to the दशा picker
+          // so the newly selected dasha's phal is in view.
+          var top = ds.closest('.pred-picker') || pane;
+          if (top && top.scrollIntoView) { top.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+        };
       });
       showDasha(ds.value);
     })();
