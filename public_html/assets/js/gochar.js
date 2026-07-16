@@ -111,37 +111,35 @@
         fTime.value = pad(dt.getHours()) + ':' + pad(dt.getMinutes());
         fetchGochar();
       };
-      var stepRow = function (specs) {
-        var row = h('div', 'gc-steppers');
-        specs.forEach(function (s) {
-          if (s.gap) { row.appendChild(h('span', 'gc-step-gap')); return; }
-          var b = h('button', 'gc-step', s.label); b.type = 'button'; b.title = s.title || s.label;
-          b.addEventListener('click', function () { bump(s.unit, s.amount); });
-          row.appendChild(b);
+      // One labelled column per unit (Year / Month / …), each with a −/+ pair
+      // stacked; minus tinted red, plus tinted green — aligned, compact, clear.
+      var stepGroup = function (cols) {
+        var wrap = h('div', 'gc-steps');
+        cols.forEach(function (c) {
+          var col = h('div', 'gc-step-col');
+          col.appendChild(h('div', 'gc-step-lbl', c.label));
+          var minus = h('button', 'gc-step gc-step-minus', c.minus);
+          minus.type = 'button'; minus.title = '−' + c.title + ' (' + c.label + ')';
+          minus.addEventListener('click', function () { bump(c.unit, -c.amount); });
+          var plus = h('button', 'gc-step gc-step-plus', c.plus);
+          plus.type = 'button'; plus.title = '+' + c.title + ' (' + c.label + ')';
+          plus.addEventListener('click', function () { bump(c.unit, c.amount); });
+          col.appendChild(minus); col.appendChild(plus);
+          wrap.appendChild(col);
         });
-        return row;
+        return wrap;
       };
-      dateCell.appendChild(stepRow([
-        { unit: 'year', amount: -1, label: '−1y', title: '−1 year' },
-        { unit: 'month', amount: -1, label: '−1m', title: '−1 month' },
-        { unit: 'week', amount: -1, label: '−1w', title: '−1 week' },
-        { unit: 'day', amount: -1, label: '−1d', title: '−1 day' },
-        { gap: true },
-        { unit: 'day', amount: 1, label: '+1d', title: '+1 day' },
-        { unit: 'week', amount: 1, label: '+1w', title: '+1 week' },
-        { unit: 'month', amount: 1, label: '+1m', title: '+1 month' },
-        { unit: 'year', amount: 1, label: '+1y', title: '+1 year' }
+      dateCell.appendChild(stepGroup([
+        { label: 'Year',  unit: 'year',  amount: 1, minus: '−1y', plus: '+1y', title: '1 year' },
+        { label: 'Month', unit: 'month', amount: 1, minus: '−1m', plus: '+1m', title: '1 month' },
+        { label: 'Week',  unit: 'week',  amount: 1, minus: '−1w', plus: '+1w', title: '1 week' },
+        { label: 'Day',   unit: 'day',   amount: 1, minus: '−1d', plus: '+1d', title: '1 day' }
       ]));
-      timeCell.appendChild(stepRow([
-        { unit: 'hour', amount: -12, label: '−12h', title: '−12 hours' },
-        { unit: 'hour', amount: -1, label: '−1h', title: '−1 hour' },
-        { unit: 'minute', amount: -10, label: '−10′', title: '−10 minutes' },
-        { unit: 'minute', amount: -1, label: '−1′', title: '−1 minute' },
-        { gap: true },
-        { unit: 'minute', amount: 1, label: '+1′', title: '+1 minute' },
-        { unit: 'minute', amount: 10, label: '+10′', title: '+10 minutes' },
-        { unit: 'hour', amount: 1, label: '+1h', title: '+1 hour' },
-        { unit: 'hour', amount: 12, label: '+12h', title: '+12 hours' }
+      timeCell.appendChild(stepGroup([
+        { label: '12 Hr', unit: 'hour',   amount: 12, minus: '−12h', plus: '+12h', title: '12 hours' },
+        { label: 'Hour',  unit: 'hour',   amount: 1,  minus: '−1h',  plus: '+1h',  title: '1 hour' },
+        { label: '10 Min',unit: 'minute', amount: 10, minus: '−10m', plus: '+10m', title: '10 minutes' },
+        { label: 'Min',   unit: 'minute', amount: 1,  minus: '−1m',  plus: '+1m',  title: '1 minute' }
       ]));
     }
 

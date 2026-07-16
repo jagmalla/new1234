@@ -403,14 +403,23 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .gp-body-pred .ug-panel { font-size: .9rem; }
         .gp-body-pred .ug-body { max-height: none; overflow: visible; padding-right: 0; }
         @media (max-width: 640px) { .gpane { --gp-h: 420px; } }
-        /* Date / time +/- steppers under the Gochar inputs. */
-        .gc-steppers { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 5px; }
-        .gc-step { font-size: .72rem; font-weight: 700; line-height: 1; color: #334155;
-            border: 1px solid var(--line); background: #f8fafc; border-radius: 6px;
-            padding: 5px 7px; cursor: pointer; min-width: 30px; }
-        .gc-step:hover { background: #e0e7ff; border-color: #c7d2fe; color: #1e3a8a; }
+        /* Date / time +/- steppers under the Gochar inputs — one labelled column
+           per unit, with a red minus + green plus stacked; aligned & compact. */
+        .gc-steps { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
+        .gc-step-col { display: flex; flex-direction: column; gap: 4px;
+            padding: 4px 5px 5px; border: 1px solid #e8eaed; border-radius: 9px;
+            background: #fbfbfa; min-width: 50px; }
+        .gc-step-lbl { font-size: .6rem; font-weight: 800; letter-spacing: .04em;
+            text-transform: uppercase; color: #94a3b8; text-align: center; margin-bottom: 1px; }
+        .gc-step { font-size: .74rem; font-weight: 700; line-height: 1; cursor: pointer;
+            border: 1px solid transparent; border-radius: 7px; padding: 5px 6px; text-align: center;
+            transition: background .12s, border-color .12s, transform .05s; }
+        .gc-step-minus { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        .gc-step-minus:hover { background: #fee2e2; border-color: #fca5a5; }
+        .gc-step-plus { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        .gc-step-plus:hover { background: #d1fae5; border-color: #6ee7b7; }
         .gc-step:active { transform: translateY(1px); }
-        .gc-step-gap { width: 8px; }
+        @media (max-width: 480px) { .gc-step-col { min-width: 44px; flex: 1 1 auto; } }
         .sade-dates { font-size: .86rem; color: #475569; font-weight: 600; margin: 3px 0; }
         .sade-progress { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 4px 0 2px; }
         .sade-bar { height: 100%; background: linear-gradient(90deg, #f59e0b, #ea580c); }
