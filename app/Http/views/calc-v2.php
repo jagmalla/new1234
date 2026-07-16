@@ -3192,6 +3192,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         birth: window.AB_BIRTH,
         fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ },
         injectPhal: false,
+        steppers: true,   // date/time +/- buttons; each step re-fetches → muhurat फल updates
         onResult: function (g) {
           var box = document.getElementById('mah-phal');
           if (!box || g.phal_html == null) { return; }
