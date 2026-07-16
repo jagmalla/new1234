@@ -47,7 +47,7 @@ if ($tb !== null && !empty($tb['groups'])):
             <?php foreach ($catHi as $ck => $cl): ?><option value="<?= $h($ck) ?>"><?= $h($cl) ?></option><?php endforeach; ?>
         </select>
         <label class="text-xs text-gray-600" style="display:flex;align-items:center;gap:5px;white-space:nowrap">
-            <input type="checkbox" id="tb-matched"> केवल इस वर्ष लागू
+            <input type="checkbox" id="tb-showall"> सभी दिखाएँ <span class="text-gray-400">(लागू नहीं भी)</span>
         </label>
     </div>
 
@@ -74,7 +74,7 @@ if ($tb !== null && !empty($tb['groups'])):
             <?php endforeach; ?>
         </div>
         <?php endforeach; ?>
-        <div id="tb-empty" class="hidden text-sm text-gray-500" style="padding:10px 2px">इस चयन के लिए कोई नियम नहीं।</div>
+        <div id="tb-empty" class="hidden text-sm text-gray-500" style="padding:10px 2px">इस वर्ष इस चयन में कोई <b>लागू</b> नियम नहीं — सभी नियम देखने हेतु ऊपर <b>"सभी दिखाएँ"</b> पर टिक करें।</div>
         <p class="text-xs text-gray-400" style="margin-top:8px">
             "इस वर्ष लागू" = वर्ष-कुण्डली पर संगणित शर्त सिद्ध। "शास्त्र-सन्दर्भ" = इत्थशाल/हद्दा/सहम-आधारित सूक्ष्म नियम — ज्योतिषी स्वयं विचार करें।
             स्रोत: ताजिक नीलकण्ठी, भावविचाराध्याय।</p>

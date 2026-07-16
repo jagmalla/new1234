@@ -2519,24 +2519,26 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     })();
 
     // भाव-फल (Tajik-Neelakanthi) filters: भाव dropdown · श्रेणी dropdown ·
-    // "केवल इस वर्ष लागू" checkbox. Composed so a rule shows only if it passes
-    // all three; house group titles hide when they have no visible card.
+    // "सभी दिखाएँ" checkbox. By DEFAULT only the rules applicable this year
+    // (data-matched="1") show — under every भाव and श्रेणी. Ticking "सभी दिखाएँ"
+    // reveals the non-applicable + reference rules too. House group titles hide
+    // when they have no visible card.
     (function () {
       var hs = document.getElementById('tb-house');
       var cs = document.getElementById('tb-cat');
-      var mo = document.getElementById('tb-matched');
+      var mo = document.getElementById('tb-showall');
       if (!hs && !cs && !mo) { return; }
       var pane = document.getElementById('tb-detail-pane');
       var empty = document.getElementById('tb-empty');
       function apply() {
         var hv = hs ? hs.value : 'all';
         var cv = cs ? cs.value : 'all';
-        var mv = mo ? mo.checked : false;
+        var showAll = mo ? mo.checked : false;   // default off → only applicable
         var shown = 0;
         document.querySelectorAll('#tb-detail-pane .tb-card').forEach(function (d) {
           var ok = (hv === 'all' || d.getAttribute('data-house') === hv)
                 && (cv === 'all' || d.getAttribute('data-cat') === cv)
-                && (!mv || d.getAttribute('data-matched') === '1');
+                && (showAll || d.getAttribute('data-matched') === '1');
           d.classList.toggle('hidden', !ok);
           if (ok) { shown++; }
         });
