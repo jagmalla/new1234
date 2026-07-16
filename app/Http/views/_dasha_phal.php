@@ -44,8 +44,7 @@ if ($dp !== null && !empty($dp['periods'])):
     <!-- No inner scroll: content (incl. the दशा-क्रम list) flows into the single
          outer prediction scrollbar so there is only one scrollbar, not two. -->
     <div id="dp-detail-pane" class="pr-1" style="margin-top:8px">
-        <?php foreach ($periods as $i => $d):
-            $runA = $i === $runD ? (int) ($dp['running']['antar'] ?? 0) : 0; ?>
+        <?php foreach ($periods as $i => $d): ?>
         <div class="dp-block<?= $i === $runD ? '' : ' hidden' ?>" data-dasha="<?= (int) $i ?>">
             <!-- Dasha phal card -->
             <div class="saham-card" style="border-left:4px solid <?= $d['tone'] === 'pos' ? '#15803d' : ($d['tone'] === 'neg' ? '#b91c1c' : '#1d4ed8') ?>">
@@ -62,32 +61,6 @@ if ($dp !== null && !empty($dp['periods'])):
                 <?php if (!empty($d['upgrade'])): ?><div class="gph-note gph-pos"><?= $h($d['upgrade']['text']) ?></div><?php endif; ?>
                 <?php if (!empty($d['dreshkana'])): ?><div class="gph-note gph-info"><?= $h($d['dreshkana']) ?></div><?php endif; ?>
             </div>
-
-            <!-- Antardasha selector + cards -->
-            <div class="pred-picker" style="margin-top:8px;gap:8px">
-                <label class="pred-picker-label">अन्तर्दशा</label>
-                <select class="pred-inline-select dp-antar-sel" size="1" data-dasha="<?= (int) $i ?>">
-                    <?php foreach ($d['antars'] as $ai => $a): ?>
-                        <option value="<?= (int) $ai ?>"<?= $ai === $runA ? ' selected' : '' ?>><?= $h($a['lord_hi']) ?><?= $ai === $runA && $i === $runD ? ' (चालू)' : '' ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <?php foreach ($d['antars'] as $ai => $a): ?>
-            <div class="saham-card dp-antar-card<?= $ai === $runA ? '' : ' hidden' ?>" data-dasha="<?= (int) $i ?>" data-antar="<?= (int) $ai ?>" style="background:#fbfcfe">
-                <div class="saham-card-head">
-                    <span class="saham-name" style="color:<?= $pcolor($a['lord'] === 'Lagna' ? 'Sun' : $a['lord']) ?>"><?= $h($d['lord_hi']) ?> / <?= $h($a['lord_hi']) ?></span>
-                    <?= $toneChip($a['shubh']) ?>
-                    <?php if (!empty($a['bala_tier'])): ?><span class="gph-house"><?= $h($a['bala_tier']) ?></span><?php endif; ?>
-                    <span class="text-xs text-gray-500"><?= $h($JD::toDmy((float) $a['start_jd'], $tz)) ?> – <?= $h($JD::toDmy((float) $a['end_jd'], $tz)) ?></span>
-                </div>
-                <div class="saham-phal">●
-                    <?php if ($a['self']): ?>पाकपति (दशापति की प्रथम अन्तर्दशा) — फल दशापति के बल के अनुसार।
-                    <?php elseif ($a['shubh'] === true): ?>वामनाचार्य-मत से यह शुभ अन्तर्दशा — <?= $h($d['lord_hi']) ?> दशा का शुभ फल प्रबल; अन्तर्दशेश के बल व शुभ-दृष्टि से मात्रा बढ़ती है।
-                    <?php elseif ($a['shubh'] === false): ?>वामनाचार्य-मत से यह अशुभ अन्तर्दशा — इस अवधि में सावधानी; अन्तर्दशेश शुभग्रहों से दृष्ट/मैत्री-युक्त हो तो कष्ट घटता है।
-                    <?php else: ?>लग्न-दशा की अन्तर्दशा — अन्तर्दशेश के बल व शुभ-दृष्टि से फल का विचार करें।<?php endif; ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
         </div>
         <?php endforeach; ?>
 

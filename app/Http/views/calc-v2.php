@@ -2540,14 +2540,6 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         if (pane) { pane.scrollTop = 0; }
       }
       ds.onchange = function () { showDasha(ds.value); };
-      document.querySelectorAll('.dp-antar-sel').forEach(function (sel) {
-        sel.onchange = function () {
-          var dd = sel.getAttribute('data-dasha');
-          document.querySelectorAll('.dp-antar-card[data-dasha="' + dd + '"]').forEach(function (c) {
-            c.classList.toggle('hidden', c.getAttribute('data-antar') !== sel.value);
-          });
-        };
-      });
       document.querySelectorAll('.dp-trow').forEach(function (row) {
         row.onclick = function () {
           ds.value = row.getAttribute('data-goto'); showDasha(ds.value);
