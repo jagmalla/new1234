@@ -24,8 +24,30 @@ if ($vsh !== null && !empty($vsh['winner'])):
         <?php endif; ?>
     </div>
 
-    <!-- चयन-कारण: the five candidates' comparison -->
-    <details class="tajik-matrix-wrap" style="margin-top:8px" open>
+    <!-- Phal card (21-table text) -->
+    <div class="saham-card" style="margin-top:8px">
+        <div class="saham-card-head">
+            <span class="saham-name" style="color:<?= $pcolor($vsh['winner']) ?>"><?= $h($vsh['winner_hi']) ?> वर्षेश — <?= $h($vsh['band_hi']) ?> फल</span>
+        </div>
+        <div class="saham-phal">● <?= $h($vsh['phal']) ?></div>
+    </div>
+
+    <!-- संशोधक (श्लोक 13, 37–44) -->
+    <?php if (!empty($vsh['modifiers'])): ?>
+    <div class="gph-section-title" style="margin-top:10px">संशोधक नियम <span class="text-xs text-gray-400 font-normal">(श्लोक 13 · 37–44)</span></div>
+    <?php foreach ($vsh['modifiers'] as $m): ?>
+        <div class="saham-card" style="margin-bottom:6px">
+            <div class="saham-card-head"><span class="saham-name" style="font-size:.9rem"><?= $h($m['title']) ?></span>
+                <span class="gc-chip <?= $m['tone'] === 'pos' ? 'gc-shubh' : ($m['tone'] === 'neg' ? 'gc-ashubh' : 'gc-mishrit') ?>"><?= $m['tone'] === 'pos' ? 'शुभ' : ($m['tone'] === 'neg' ? 'अशुभ' : 'सूचना') ?></span>
+            </div>
+            <?php if (!empty($m['text'])): ?><div class="gph-note <?= $noteCls($m['tone']) ?>" style="border-left:none;background:none;padding:2px 0"><?= $h($m['text']) ?></div><?php endif; ?>
+        </div>
+    <?php endforeach; ?>
+    <?php endif; ?>
+    <p class="text-xs text-gray-400" style="margin-top:6px">बल-बैंड जन्म व वर्ष दोनों में देखा गया (श्लोक 37): वर्ष <?= $h($vsh['band_hi']) ?> ← वर्ष-कुंडली <?= $h(['full'=>'पूर्ण','madhya'=>'मध्यम','heen'=>'हीन'][$vsh['v_band']] ?? '') ?> + जन्म-कुंडली <?= $h(['full'=>'पूर्ण','madhya'=>'मध्यम','heen'=>'हीन'][$vsh['n_band']] ?? '') ?>।</p>
+
+    <!-- चयन-कारण: the five candidates' comparison — moved to the bottom. -->
+    <details class="tajik-matrix-wrap" style="margin-top:12px">
         <summary style="cursor:pointer;font-weight:800;font-size:.9rem;color:var(--sindoor)">चयन-कारण (पंचाधिकारी तुलना)</summary>
         <div class="overflow-x-auto" style="margin-top:6px">
             <table class="tajik-matrix" style="white-space:normal">
@@ -48,28 +70,6 @@ if ($vsh !== null && !empty($vsh['winner'])):
         </div>
         <div class="text-xs text-gray-400" style="margin-top:4px">नियम: लग्न को ताजिक दृष्टि देने वालों में सर्वाधिक पंचवर्गीय बली = वर्षेश; बल-साम्य में वर्ष-लग्नेश; कोई न देखे/सब हीन → मुंथेश।</div>
     </details>
-
-    <!-- Phal card (21-table text) -->
-    <div class="saham-card" style="margin-top:8px">
-        <div class="saham-card-head">
-            <span class="saham-name" style="color:<?= $pcolor($vsh['winner']) ?>"><?= $h($vsh['winner_hi']) ?> वर्षेश — <?= $h($vsh['band_hi']) ?> फल</span>
-        </div>
-        <div class="saham-phal">● <?= $h($vsh['phal']) ?></div>
-    </div>
-
-    <!-- संशोधक (श्लोक 13, 37–44) -->
-    <?php if (!empty($vsh['modifiers'])): ?>
-    <div class="gph-section-title" style="margin-top:10px">संशोधक नियम <span class="text-xs text-gray-400 font-normal">(श्लोक 13 · 37–44)</span></div>
-    <?php foreach ($vsh['modifiers'] as $m): ?>
-        <div class="saham-card" style="margin-bottom:6px">
-            <div class="saham-card-head"><span class="saham-name" style="font-size:.9rem"><?= $h($m['title']) ?></span>
-                <span class="gc-chip <?= $m['tone'] === 'pos' ? 'gc-shubh' : ($m['tone'] === 'neg' ? 'gc-ashubh' : 'gc-mishrit') ?>"><?= $m['tone'] === 'pos' ? 'शुभ' : ($m['tone'] === 'neg' ? 'अशुभ' : 'सूचना') ?></span>
-            </div>
-            <?php if (!empty($m['text'])): ?><div class="gph-note <?= $noteCls($m['tone']) ?>" style="border-left:none;background:none;padding:2px 0"><?= $h($m['text']) ?></div><?php endif; ?>
-        </div>
-    <?php endforeach; ?>
-    <?php endif; ?>
-    <p class="text-xs text-gray-400" style="margin-top:6px">बल-बैंड जन्म व वर्ष दोनों में देखा गया (श्लोक 37): वर्ष <?= $h($vsh['band_hi']) ?> ← वर्ष-कुंडली <?= $h(['full'=>'पूर्ण','madhya'=>'मध्यम','heen'=>'हीन'][$vsh['v_band']] ?? '') ?> + जन्म-कुंडली <?= $h(['full'=>'पूर्ण','madhya'=>'मध्यम','heen'=>'हीन'][$vsh['n_band']] ?? '') ?>।</p>
 <?php else: ?>
     <div class="gochar-pred-soon">
         <div class="gps-icon">🔮</div>

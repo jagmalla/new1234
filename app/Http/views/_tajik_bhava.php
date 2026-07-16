@@ -33,16 +33,15 @@ if ($tb !== null && !empty($tb['groups'])):
             कुल <?= (int) $tb['total'] ?> नियम · <b style="color:#15803d">इस वर्ष लागू: <?= (int) $tb['matched_count'] ?></b></div>
     </div>
 
-    <div class="pred-picker" style="margin-top:8px;gap:8px">
+    <!-- भाव चुनें · श्रेणी · सभी दिखाएँ — all on one line (wrap on narrow). -->
+    <div class="pred-picker tb-pickrow" style="margin-top:8px;gap:8px;flex-wrap:wrap">
         <label class="pred-picker-label" for="tb-house">भाव चुनें</label>
-        <select id="tb-house" class="pred-inline-select" size="1">
+        <select id="tb-house" class="pred-inline-select tb-sel" size="1">
             <option value="all">सभी भाव (All)</option>
             <?php foreach ($bhavaHi as $hn => $label): ?><option value="<?= (int) $hn ?>"><?= $h($label) ?></option><?php endforeach; ?>
         </select>
-    </div>
-    <div class="pred-picker" style="margin-top:6px;gap:8px">
         <label class="pred-picker-label" for="tb-cat">श्रेणी</label>
-        <select id="tb-cat" class="pred-inline-select" size="1">
+        <select id="tb-cat" class="pred-inline-select tb-sel" size="1">
             <option value="all">सभी श्रेणियाँ</option>
             <?php foreach ($catHi as $ck => $cl): ?><option value="<?= $h($ck) ?>"><?= $h($cl) ?></option><?php endforeach; ?>
         </select>

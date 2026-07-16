@@ -263,6 +263,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         /* सहम + मुद्दा-दशा dropdowns share one line: saham wider, mudda narrower. */
         .saham-sel-main { flex: 3 1 190px; }
         .saham-sel-mudda { flex: 1 1 120px; min-width: 120px; max-width: 210px; }
+        /* भाव-फल: भाव + श्रेणी selects share one line with the checkbox. */
+        .tb-pickrow .tb-sel { flex: 1 1 140px; min-width: 130px; }
         /* Dasha Maha/Antar picker — always ONE line (own full-width row, no wrap). */
         .dp-picker { display: flex; align-items: center; gap: 6px 12px; flex-wrap: nowrap;
             flex-basis: 100%; width: 100%; }
@@ -2638,7 +2640,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       function wanted(v) {
         if (v === 'all') { return null; }
         if (v === 'mudda') { return [pane.getAttribute('data-mudda')]; }
-        if (v === 'main') { return [pane.getAttribute('data-munthesh'), pane.getAttribute('data-lagnesh')]; }
+        if (v === 'main') { return [pane.getAttribute('data-munthesh'), pane.getAttribute('data-lagnesh'), pane.getAttribute('data-varshesh')]; }
         return [v];
       }
       function apply() {

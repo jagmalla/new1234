@@ -52,7 +52,7 @@ if ($tj !== null && (!empty($tj['yogas']) || !empty($tj['chart_yogas']) || !empt
             <?php if ($muddaLord !== ''): ?>
             <option value="mudda"<?= $defaultView === 'mudda' ? ' selected' : '' ?>>● मुद्दा दशेश — <?= $h($grahaHi[$muddaLord] ?? $muddaLord) ?> (सक्रिय)</option>
             <?php endif; ?>
-            <option value="main">मुख्य योग — मुंथेश व लग्नेश</option>
+            <option value="main">Main Yog (Muntha, Varshesh, Lagnesh) — मुख्य योग</option>
             <option value="all"<?= $defaultView === 'all' ? ' selected' : '' ?>>सभी ग्रह (All)</option>
             <?php foreach ($tjPlanets as $pl): ?>
                 <option value="<?= $h($pl) ?>"><?= $h($grahaHi[$pl] ?? $pl) ?> — <?= $h(($chips[$pl]['word'] ?? '')) ?></option>
@@ -61,7 +61,7 @@ if ($tj !== null && (!empty($tj['yogas']) || !empty($tj['chart_yogas']) || !empt
     </div>
 
     <div id="tajik-detail-pane" class="overflow-y-auto pr-1" style="max-height:420px"
-         data-mudda="<?= $h($muddaLord) ?>" data-munthesh="<?= $h($munthesh) ?>" data-lagnesh="<?= $h($lagnesh) ?>">
+         data-mudda="<?= $h($muddaLord) ?>" data-munthesh="<?= $h($munthesh) ?>" data-lagnesh="<?= $h($lagnesh) ?>" data-varshesh="<?= $h($varshesh) ?>">
 
         <?php foreach (($tj['chart_yogas'] ?? []) as $y): ?>
         <div class="saham-card tajik-card" data-chart="1" data-planets="<?= $h(implode(',', $y['participants'])) ?>">
