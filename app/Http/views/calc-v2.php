@@ -2413,8 +2413,41 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .catch(function () { if (loadingBox) { loadingBox.classList.add('hidden'); } });
     };
 
+    // ---- Order both dropdowns like the dasha actually runs ----
+    // Mahadasha: chronological (the order they occur, from AB_DASHA — first
+    // comes first). Antardasha: for the selected Mahadasha, the 9 lords starting
+    // from the Mahadasha lord in Vimshottari order (so it changes with Maha).
+    var VIM = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
+    var labelOf = {};
+    [].forEach.call(mSel.options, function (o) { labelOf[o.value] = o.textContent; });
+    function reorderMaha() {
+      var order = [];
+      (window.AB_DASHA || []).forEach(function (p) {
+        if (p && p.lord && labelOf[p.lord] != null && order.indexOf(p.lord) === -1) { order.push(p.lord); }
+      });
+      VIM.forEach(function (l) { if (labelOf[l] != null && order.indexOf(l) === -1) { order.push(l); } });
+      if (!order.length) { return; }
+      var cur = mSel.value;
+      mSel.innerHTML = order.map(function (l) {
+        return '<option value="' + l + '"' + (l === cur ? ' selected' : '') + '>' + labelOf[l] + '</option>';
+      }).join('');
+      mSel.value = cur;
+    }
+    function rebuildAntar(keepSel) {
+      var start = VIM.indexOf(mSel.value); if (start < 0) { start = 0; }
+      var seq = []; for (var k = 0; k < 9; k++) { seq.push(VIM[(start + k) % 9]); }
+      var want = keepSel ? aSel.value : mSel.value;      // default = Maha lord (first antar)
+      if (seq.indexOf(want) === -1) { want = mSel.value; }
+      aSel.innerHTML = seq.map(function (l) {
+        return '<option value="' + l + '"' + (l === want ? ' selected' : '') + '>' + (labelOf[l] || l) + '</option>';
+      }).join('');
+      aSel.value = want;
+    }
+    reorderMaha();
+    rebuildAntar(true);   // keep the running antardasha selected on first load
+
     var onChange = function () { load(); loadEngine(); };
-    mSel.addEventListener('change', onChange);
+    mSel.addEventListener('change', function () { rebuildAntar(false); onChange(); });
     aSel.addEventListener('change', onChange);
   })();
 

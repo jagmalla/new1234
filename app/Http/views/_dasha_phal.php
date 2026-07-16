@@ -41,7 +41,9 @@ if ($dp !== null && !empty($dp['periods'])):
         </select>
     </div>
 
-    <div id="dp-detail-pane" class="overflow-y-auto pr-1" style="max-height:430px;margin-top:8px">
+    <!-- No inner scroll: content (incl. the दशा-क्रम list) flows into the single
+         outer prediction scrollbar so there is only one scrollbar, not two. -->
+    <div id="dp-detail-pane" class="pr-1" style="margin-top:8px">
         <?php foreach ($periods as $i => $d):
             $runA = $i === $runD ? (int) ($dp['running']['antar'] ?? 0) : 0; ?>
         <div class="dp-block<?= $i === $runD ? '' : ' hidden' ?>" data-dasha="<?= (int) $i ?>">
