@@ -300,6 +300,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             border-bottom: 1px solid var(--line); padding-bottom: 3px; margin: 4px 0 8px; }
         .gph-house { font-size: .78rem; font-weight: 700; background: #EEF2FF; color: #3730a3; border-radius: 999px; padding: 1px 9px; }
         .gochar-card .saham-card-head { gap: 6px; }
+        /* Tone-coloured Gochar prediction cards: green = शुभ, red = अशुभ,
+           blue = मिश्र/सूचना. Applied across every gochar category. */
+        .gochar-card.gcard-pos { border-left: 4px solid #15803d; background: #f6fef9; }
+        .gochar-card.gcard-neg { border-left: 4px solid #b91c1c; background: #fef6f6; }
+        .gochar-card.gcard-mix { border-left: 4px solid #1d4ed8; background: #f5f8ff; }
         .gph-note { font-size: .82rem; line-height: 1.5; border-left: 3px solid var(--line);
             padding: 2px 8px; margin: 3px 0; border-radius: 3px; }
         .gph-note.gph-pos { border-left-color: #15803d; background: #eef6f0; color: #15803d; }
@@ -3052,6 +3057,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         var sel = document.getElementById('pred-select');
         if (sel) { sel.value = target.slice(5); sel.dispatchEvent(new Event('change')); }
         var sc = document.getElementById('pred-scroll'); if (sc) { sc.scrollTop = 0; }
+      } else if (target.indexOf('vp:') === 0) {
+        // Varshaphal overview card → switch the Varshaphal prediction dropdown.
+        var vsel = document.getElementById('vp-pred-type');
+        if (vsel) { vsel.value = target.slice(3); vsel.dispatchEvent(new Event('change')); }
+        var vsc = document.getElementById('vp-pred-scroll'); if (vsc) { vsc.scrollTop = 0; }
       } else if (target === 'gochar-sadesati') {
         var g = document.querySelector('#side-menu [data-sec="gochar"]');
         if (g) { g.click(); }

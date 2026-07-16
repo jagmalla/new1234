@@ -16,6 +16,8 @@ $toneChip = static function (string $t) use ($h): string {
         : '<span class="gc-chip gc-mishrit">फल रुका</span>');
 };
 $noteCls = static fn(string $t): string => $t === 'pos' ? 'gph-pos' : ($t === 'neg' ? 'gph-neg' : 'gph-info');
+// Tone → coloured-card class (green शुभ / red अशुभ / blue मिश्र·सूचना).
+$cardCls = static fn(string $t): string => $t === 'pos' ? 'gcard-pos' : ($t === 'neg' ? 'gcard-neg' : 'gcard-mix');
 $av = $gp['av'] ?? ['bindu' => [], 'kaksha' => [], 'sav' => []];
 $ss = $gp['shani_special'] ?? null;
 $mu = $gp['muhurat'] ?? null;
@@ -82,7 +84,7 @@ if ($hasAny):
             $muTone = $muTithiTone === 'neg' ? 'neg' : ($muTithiTone === 'pos' ? 'pos' : 'mix');
         ?>
         <div class="gochar-cat" data-cat="general">
-            <div class="saham-card gochar-card" data-planet="all">
+            <div class="saham-card gochar-card gcard-mix" data-planet="all">
                 <div class="saham-phal">● <b>आधार:</b> जन्म-राशि <b style="color:<?= $pcolor('Moon') ?>"><?= $h($moonSignHi) ?></b> से गोचर देखा गया। गोचर चन्द्रमा अभी <?= ($gp['moon_ksheen'] ?? false) ? '<b style="color:#b91c1c">क्षीण (कमजोर)</b>' : '<b style="color:#15803d">बली (मजबूत)</b>' ?>।</div>
             </div>
 
@@ -120,7 +122,7 @@ if ($hasAny):
             </div>
             <?php endif; ?>
 
-            <div class="saham-card gochar-card" data-planet="all" style="margin-top:6px">
+            <div class="saham-card gochar-card <?= $cardCls($gTone) ?>" data-planet="all" style="margin-top:6px">
                 <div class="saham-phal"><b>निष्कर्ष:</b>
                     <?= $gTone === 'pos'
                         ? 'कुल मिलाकर गोचर अनुकूल — शुभ ग्रहों का प्रभाव अधिक। महत्त्वपूर्ण कार्यों हेतु समय ठीक है।'
@@ -138,8 +140,8 @@ if ($hasAny):
             <?php if ($ss !== null): ?>
             <div class="gph-section-title" style="margin-top:12px;font-size:.9rem">वर्तमान शनि-स्नैपशॉट <span class="text-xs text-gray-400 font-normal">(तीव्रता · प्रभावित ग्रह · पाया)</span></div>
             <?php endif; ?>
-            <?php if (!empty($ss['active'])): ?>
-            <div class="saham-card gochar-card" data-planet="Saturn" style="border-left:4px solid #1d4ed8">
+            <?php if (!empty($ss['active'])): $ssTone = (int) $ss['severity'] >= 3 ? 'neg' : ((int) $ss['severity'] === 2 ? 'neutral' : 'pos'); ?>
+            <div class="saham-card gochar-card <?= $cardCls($ssTone) ?>" data-planet="Saturn">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:#1d4ed8">🪐 <?= $h($ss['type_hi']) ?></span>
                     <span class="gc-chip <?= $sevTone((int) $ss['severity']) ?>">तीव्रता: <?= $h($ss['severity_hi']) ?> (<?= (int) $ss['severity'] ?>/3)</span>
@@ -155,7 +157,7 @@ if ($hasAny):
             </div>
             <?php endif; ?>
             <?php if (!empty($ss['paya'])): $py = $ss['paya']; ?>
-            <div class="saham-card gochar-card" data-planet="Saturn">
+            <div class="saham-card gochar-card <?= $cardCls(!empty($py['shubh']) ? 'pos' : 'neg') ?>" data-planet="Saturn">
                 <div class="saham-card-head"><span class="saham-name">शनि पाया — <?= $h($py['metal']) ?></span>
                     <span class="gc-chip <?= $py['shubh'] ? 'gc-shubh' : 'gc-ashubh' ?>"><?= $py['shubh'] ? 'शुभ' : 'अशुभ' ?></span></div>
                 <div class="saham-phal">● <?= $h($py['effect']) ?></div>
@@ -170,7 +172,7 @@ if ($hasAny):
         <div class="gochar-cat" data-cat="bhava">
             <div class="gph-section-title">चन्द्र-लग्न भाव-फल <span class="text-xs text-gray-400 font-normal">(भाव-गोचर + वेध / बिन्दु / तृतीयांश)</span></div>
             <?php foreach ($l1 as $e): ?>
-            <div class="saham-card gochar-card" data-planet="<?= $h($e['planet']) ?>">
+            <div class="saham-card gochar-card <?= $cardCls((string) ($e['tone'] ?? '')) ?>" data-planet="<?= $h($e['planet']) ?>">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:<?= $pcolor($e['planet']) ?>"><?= $h($e['planet_hi']) ?></span>
                     <span class="gph-house">भाव <?= (int) $e['house'] ?></span>
@@ -201,8 +203,13 @@ if ($hasAny):
         ?>
         <div class="gochar-cat" data-cat="ashtak">
             <div class="gph-section-title">अष्टकवर्ग (Ashtakvarga) <span class="text-xs text-gray-400 font-normal">(प्रति ग्रह: बिन्दु-फल · कक्षा-फल · सर्वाष्टकवर्ग — एक साथ)</span></div>
-            <?php foreach ($avSeq as $p): $row = $avMerge[$p]; $b = $row['bindu']; $k = $row['kaksha']; $s = $row['sav']; ?>
-            <div class="saham-card gochar-card" data-planet="<?= $h($p) ?>">
+            <?php foreach ($avSeq as $p): $row = $avMerge[$p]; $b = $row['bindu']; $k = $row['kaksha']; $s = $row['sav'];
+                $atones = array_filter([$b['tone'] ?? null, $k['tone'] ?? null, $s['tone'] ?? null]);
+                $anp = count(array_filter($atones, static fn($t) => $t === 'pos'));
+                $ann = count(array_filter($atones, static fn($t) => $t === 'neg'));
+                $atone = $ann === 0 ? 'pos' : ($anp >= $ann ? 'neutral' : 'neg');
+            ?>
+            <div class="saham-card gochar-card <?= $cardCls($atone) ?>" data-planet="<?= $h($p) ?>">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:<?= $pcolor($p) ?>"><?= $h($row['hi']) ?></span>
                 </div>
@@ -238,7 +245,7 @@ if ($hasAny):
         <div class="gochar-cat" data-cat="natal">
             <div class="gph-section-title">जन्म-ग्रहों पर गोचर <span class="text-xs text-gray-400 font-normal">(गोचर × जन्म-ग्रह)</span></div>
             <?php foreach ($l3 as $grp): ?>
-            <div class="saham-card gochar-card" data-planet="<?= $h($grp['transit']) ?>">
+            <div class="saham-card gochar-card <?= $cardCls(($grp['nature'] ?? '') === 'आसुरी' ? 'neg' : 'pos') ?>" data-planet="<?= $h($grp['transit']) ?>">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:<?= $pcolor($grp['transit']) ?>"><?= $h($grp['transit_hi']) ?></span>
                     <span class="gc-chip <?= $grp['nature'] === 'आसुरी' ? 'gc-ashubh' : 'gc-shubh' ?>"><?= $h($grp['nature']) ?></span>
@@ -267,7 +274,7 @@ if ($hasAny):
             <div class="text-xs text-gray-500" style="margin:2px 0 6px">वार: <b><?= $h($mu['weekday_hi']) ?></b> · गोचर चन्द्र नक्षत्र: <b><?= $h($mu['nakshatra']['transit']['name']) ?></b> पाद <?= (int) $mu['nakshatra']['transit']['pada'] ?> · जन्म-नक्षत्र: <b><?= $h($mu['nakshatra']['janma']['name']) ?></b></div>
 
             <?php if (!empty($mu['rahu_kaal'])): $rk = $mu['rahu_kaal']; ?>
-            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #6b21a8">
+            <div class="saham-card gochar-card gcard-neg" data-planet="all">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:#6b21a8">🕒 राहु काल</span>
                     <span class="gph-house"><?= $h($rk['start']) ?> – <?= $h($rk['end']) ?></span>
@@ -279,7 +286,7 @@ if ($hasAny):
             <?php endif; ?>
 
             <?php if (!empty($mu['disha_shul'])): $ds = $mu['disha_shul']; ?>
-            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #b45309">
+            <div class="saham-card gochar-card gcard-neg" data-planet="all">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:#b45309">🧭 दिशा शूल</span>
                     <span class="gph-house">वर्जित दिशा: <?= $h($ds['dir']) ?></span>
@@ -291,7 +298,7 @@ if ($hasAny):
             <?php endif; ?>
 
             <?php if (!empty($mu['tithi'])): $ti = $mu['tithi']; ?>
-            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #0e7490">
+            <div class="saham-card gochar-card <?= $cardCls((string) ($ti['tone'] ?? '')) ?>" data-planet="all">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:#0e7490">🌙 तिथि — <?= $h($ti['name']) ?></span>
                     <span class="gph-house">तिथि <?= (int) $ti['num'] ?> · <?= $h($ti['paksha_hi']) ?> · स्वामी <?= $h($ti['lord']) ?></span>
@@ -303,7 +310,7 @@ if ($hasAny):
             <?php endif; ?>
 
             <?php if (!empty($mu['janma_nak_phal'])): $jn = $mu['janma_nak_phal']; ?>
-            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #15803d">
+            <div class="saham-card gochar-card gcard-pos" data-planet="all">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:#15803d">⭐ जन्म-नक्षत्र वारफल</span>
                     <span class="gph-house"><?= $h($jn['janma_nak']) ?> · <?= $h($jn['weekday_hi']) ?></span>
@@ -317,7 +324,7 @@ if ($hasAny):
             <?php endif; ?>
 
             <?php if (!empty($mu['combust']['warns'])): foreach ($mu['combust']['warns'] as $cw): ?>
-            <div class="saham-card gochar-card" data-planet="<?= $h($cw['planet']) ?>" style="border-left:4px solid #b91c1c">
+            <div class="saham-card gochar-card gcard-neg" data-planet="<?= $h($cw['planet']) ?>">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:<?= $pcolor($cw['planet']) ?>">☀ अस्त — <?= $h($cw['planet_hi']) ?></span>
                     <span class="gph-house">सूर्य से <?= $h(number_format((float) $cw['sep'], 1)) ?>°</span>
@@ -327,7 +334,7 @@ if ($hasAny):
             </div>
             <?php endforeach; endif; ?>
             <?php if ($mu['combust']['warns'] === []): ?>
-            <div class="saham-card gochar-card" data-planet="all">
+            <div class="saham-card gochar-card gcard-pos" data-planet="all">
                 <div class="saham-card-head"><span class="saham-name" style="color:#15803d">☀ अस्त-ग्रह</span><span class="gc-chip gc-shubh">कोई अस्त नहीं</span></div>
                 <div class="saham-phal">● गोचर में गुरु व शुक्र अस्त नहीं — विवाह मुहूर्त हेतु इस दृष्टि से बाधा नहीं।</div>
                 <div class="gph-note gph-info"><?= $h($mu['combust']['note']) ?></div>
@@ -335,7 +342,7 @@ if ($hasAny):
             <?php endif; ?>
 
             <?php if (!empty($mu['kashta_rashi'])): $kr = $mu['kashta_rashi']; ?>
-            <div class="saham-card gochar-card" data-planet="all" style="border-left:4px solid #1d4ed8">
+            <div class="saham-card gochar-card <?= $cardCls(!empty($kr['sun_here']) ? 'neg' : 'neutral') ?>" data-planet="all">
                 <div class="saham-card-head">
                     <span class="saham-name" style="color:#1d4ed8">🪐 शनि-अष्टकवर्ग कष्ट-राशि</span>
                     <span class="gph-house"><?= $h(implode(', ', $kr['signs'])) ?> · <?= (int) $kr['bindu'] ?> बिन्दु</span>
