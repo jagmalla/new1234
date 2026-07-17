@@ -91,6 +91,10 @@
     form.appendChild(placeCell);
     inRoot.appendChild(form);
 
+    // Auto-fix loosely-typed date/time (incl. month names) + inline error, so a
+    // transit is never fetched from an unreadable value.
+    if (global.ABDate) { global.ABDate.attach(fDate, 'date'); global.ABDate.attach(fTime, 'time'); }
+
     // Optional +/- steppers under the date & time fields (day·week·month·year
     // and minute·10min·hour·12hour). Clicking recomputes the transit at once.
     if (cfg.steppers) {

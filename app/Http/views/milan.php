@@ -529,6 +529,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
 <?php endif; ?>
 
 <!-- City search (place -> lat/lon/tz) + date/time auto-format, same as the main form. -->
+<script src="<?= $h($asset('/assets/js/datefmt.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
 <script>
 (function () {
@@ -549,29 +550,13 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     });
   }
 
-  // Auto-correct date/time to canonical form on blur (e.g. "1 12 1980" -> "01-12-1980").
-  var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
-  var normDate = function (raw) {
-    var q = String(raw).trim().split(/[-\/.\s]+/).filter(Boolean);
-    if (q.length !== 3 || q.some(function (x) { return !/^\d+$/.test(x); })) { return raw; }
-    var a = +q[0], b = +q[1], c = +q[2], d, m, y;
-    if (a > 31) { y = a; m = b; d = c; } else { d = a; m = b; y = c; }
-    if (d < 1 || d > 31 || m < 1 || m > 12) { return raw; }
-    return pad2(d) + '-' + pad2(m) + '-' + y;
-  };
-  var normTime = function (raw) {
-    var q = String(raw).trim().split(/[:\s.]+/).filter(Boolean);
-    if (!q.length || q.some(function (x) { return !/^\d+$/.test(x); })) { return raw; }
-    var hh = +q[0], mi = +(q[1] || 0);
-    if (hh > 23 || mi > 59) { return raw; }
-    return pad2(hh) + ':' + pad2(mi);
-  };
-  document.querySelectorAll('.fmt-date').forEach(function (el) {
-    el.addEventListener('blur', function () { if (el.value.trim()) { el.value = normDate(el.value); } });
-  });
-  document.querySelectorAll('.fmt-time').forEach(function (el) {
-    el.addEventListener('blur', function () { if (el.value.trim()) { el.value = normTime(el.value); } });
-  });
+  // Auto-fix date/time (incl. month names like "jan") on blur, and block मिलान
+  // with a clear message if a value can't be understood — same as /calc.
+  var fields = [];
+  document.querySelectorAll('.fmt-date').forEach(function (el) { if (window.ABDate) { window.ABDate.attach(el, 'date'); fields.push({ el: el, kind: 'date' }); } });
+  document.querySelectorAll('.fmt-time').forEach(function (el) { if (window.ABDate) { window.ABDate.attach(el, 'time'); fields.push({ el: el, kind: 'time' }); } });
+  var mForm = document.querySelector('.fmt-date') && document.querySelector('.fmt-date').closest('form');
+  if (window.ABDate && mForm) { window.ABDate.guardForm(mForm, fields); }
 })();
 </script>
 

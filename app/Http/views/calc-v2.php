@@ -2318,6 +2318,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         : null;
 ?>
 <script>window.AB_USER = <?= json_encode($abUser, JSON_UNESCAPED_UNICODE) ?>;</script>
+<script src="<?= $h($asset('/assets/js/datefmt.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
@@ -2351,15 +2352,20 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     return pad2(h) + ':' + pad2(mi);
   };
 
-  var bindFmt = function (sel, fn) {
-    var el = document.querySelector(sel);
-    if (!el) { return; }
-    el.addEventListener('blur', function () {
-      if (el.value.trim()) { el.value = fn(el.value); }
-    });
-  };
-  bindFmt('[name="date"]', normDate);
-  bindFmt('[name="time"]', normTime);
+  // Date/time: auto-fix loosely-typed values (incl. month names like "jan") and
+  // show a clear error + block Calculate when a value can't be understood.
+  var bForm = document.getElementById('birth-form');
+  var bDate = bForm && bForm.querySelector('[name="date"]');
+  var bTime = bForm && bForm.querySelector('[name="time"]');
+  if (window.ABDate && bDate && bTime) {
+    window.ABDate.attach(bDate, 'date');
+    window.ABDate.attach(bTime, 'time');
+    window.ABDate.guardForm(bForm, [{ el: bDate, kind: 'date' }, { el: bTime, kind: 'time' }]);
+  } else {
+    // Fallback (ABDate not loaded): keep the old blur-only numeric formatter.
+    var bindFmt = function (el, fn) { if (el) { el.addEventListener('blur', function () { if (el.value.trim()) { el.value = fn(el.value); } }); } };
+    bindFmt(bDate, normDate); bindFmt(bTime, normTime);
+  }
 
   // Dasha Prediction: reload the Positive/Negative/Remedy summary when either
   // dropdown changes. Defaults are server-rendered to the running Maha/Antar.
