@@ -3,11 +3,9 @@
 
 RewriteEngine On
 
-# /canvas                  -> index.php?r=canvas
-# /api/workflow/save       -> index.php?r=api/workflow/save
-# /webhook/<workflow-id>   -> index.php?r=webhook&wf=<workflow-id>
-RewriteRule ^webhook/([A-Za-z0-9-]+)/?$ index.php?r=webhook&wf=$1 [QSA,L]
-
+# /            -> index.php (calculator home page)
+# /calc        -> index.php?r=calc
+# /milan       -> index.php?r=milan
 # Generic: anything not a real file/dir is handled by the front controller.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

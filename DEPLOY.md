@@ -9,7 +9,6 @@ framework). No credentials are included — you supply your own on the new host.
 project-root/          ← upload ABOVE the web root (NOT web-accessible)
 ├── app/               ← all PHP classes (PSR-4: AutoBusiness\… → app/…)
 ├── bootstrap.php      ← autoloader + env loader (MUST stay in the root)
-├── runner.php         ← background/cron runner (stays in the root)
 ├── migrations/        ← MySQL schema + seed data (import in order 001,002,…)
 ├── docs/              ← rule books / specs (reference only)
 ├── tests/             ← CLI test harnesses
@@ -34,11 +33,7 @@ are never served directly.
 ## 3. Configuration
 1. Copy `.env.example` to `.env` (keep it in the project root, above the webroot).
 2. Fill in your database (`DB_HOST/DB_NAME/DB_USER/DB_PASS`).
-3. Generate the credential master key and paste it into `CREDENTIAL_MASTER_KEY`:
-   ```
-   php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
-   ```
-4. (Optional) Set `LLM_API_KEY` only if you use the book-agent/AI features.
+3. (Optional) Set `LLM_API_KEY` only if you use the book-agent/AI features.
 
 ## 4. Database
 Create a database, then import the SQL files in `migrations/` **in numeric

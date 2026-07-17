@@ -4,9 +4,8 @@ declare(strict_types=1);
 namespace AutoBusiness\Core;
 
 /**
- * CSRF token helper. Global Rule: CSRF tokens on all dashboard/admin/canvas
- * forms. (Inbound webhooks use a per-workflow HMAC instead — see
- * WebhookController — not this token.)
+ * CSRF token helper. Global Rule: CSRF tokens on all dashboard/admin forms
+ * (e.g. the calculator's saved-chart actions).
  */
 final class Csrf
 {

@@ -4,13 +4,12 @@ declare(strict_types=1);
 namespace AutoBusiness\Core;
 
 /**
- * Staff-only access guard for the visual canvas and its save/load API.
+ * Staff-only access guard.
  *
- * The canvas is an ADMIN/STAFF-only builder (Global Rule / Module 2): clients
- * and astrologers never see it. Full staff authentication + role enforcement
- * arrives in Module 8 (the `staff` table). Until then this guard checks for a
- * staff session and, ONLY when APP_ENV=local, allows a dev shortcut so the
- * canvas is testable during development.
+ * Full staff authentication + role enforcement arrives in Module 8 (the `staff`
+ * table). Until then this guard checks for a staff session and, ONLY when
+ * APP_ENV=local, allows a dev shortcut so gated pages are reachable during
+ * development.
  */
 final class AdminGuard
 {
