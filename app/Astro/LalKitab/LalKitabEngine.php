@@ -33,9 +33,11 @@ final class LalKitabEngine
 
     /**
      * @param array<string,mixed> $chart D1 chart from CalculationEngine
+     * @param int|null $age native's current age in years (for the वर्ष कुंडली
+     *                      ज्ञान चक्र row); null hides the age-specific block
      * @return array<string,mixed>
      */
-    public static function compute(array $chart): array
+    public static function compute(array $chart, ?int $age = null): array
     {
         if (empty($chart['planets']) || empty($chart['ascendant'])) {
             return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
@@ -91,6 +93,12 @@ final class LalKitabEngine
             'sadesati'    => self::sadeSatiReadings($moonSign),
             'manglik'     => self::manglikReadings($chart, $lagnaSign, $house),
             'remedy'      => self::remedyReadings($house, $occupants),
+            'ayu'         => self::ayuReadings(),
+            'health'      => self::healthReadings(),
+            'bhavan'      => LalKitabData::section('bhavan'),
+            'varsh_gyan'  => self::varshGyanReadings($age),
+            'rules'       => self::ruleReadings(),
+            'age'         => $age,
         ];
     }
 
@@ -107,6 +115,9 @@ final class LalKitabEngine
         $al  = LalKitabData::section('ashubh_lakshan');
         $bg  = LalKitabData::section('bhavgat_upay');
         $su  = LalKitabData::section('samanya_upay');
+        $mt  = LalKitabData::section('maitri');
+        $sh  = LalKitabData::section('sheeghra');
+        $pd  = LalKitabData::section('puja_daan');
 
         $out = [];
         foreach (self::PLANETS as $p) {
@@ -163,6 +174,12 @@ final class LalKitabEngine
                 'neech_rashi'=> $un[$p]['neech'] ?? '',
                 'bhang'     => $un[$p]['bhang'] ?? '',
                 'ashubh_lakshan' => $isAshubh ? ($al[$p] ?? '') : '',
+                'mitra'     => $mt[$p]['mitra'] ?? '',
+                'shatru'    => $mt[$p]['shatru'] ?? '',
+                'sam'       => $mt[$p]['sam'] ?? '',
+                'sheeghra'  => $sh[$p] ?? '',
+                'upasana'   => $pd[$p]['upasana'] ?? '',
+                'daan'      => $pd[$p]['daan'] ?? '',
                 'remedies'  => array_values($remedies),
                 'samanya'   => array_values($su[$p] ?? []),
             ];
@@ -413,6 +430,83 @@ final class LalKitabEngine
         }
 
         return ['samanya' => $samanya, 'yuti' => $yuti];
+    }
+
+    /**
+     * आयु योग (longevity) — the yoga→years list plus each planet's Lal Kitab
+     * influence-years chart.
+     *
+     * @return array<string,mixed>
+     */
+    private static function ayuReadings(): array
+    {
+        $gc = LalKitabData::section('grah_chakra');
+        $chakra = [];
+        foreach (self::PLANETS as $p) {
+            if (isset($gc[$p])) {
+                $chakra[] = [
+                    'hi'      => LalKitabData::planetHi($p),
+                    'prabhav' => $gc[$p]['prabhav'] ?? '',
+                    'vishesh' => $gc[$p]['vishesh'] ?? '',
+                    'ashubh'  => $gc[$p]['ashubh'] ?? '',
+                    'kram'    => $gc[$p]['kram'] ?? '',
+                ];
+            }
+        }
+        return [
+            'yoga'   => LalKitabData::section('ayu_yog'),
+            'chakra' => $chakra,
+        ];
+    }
+
+    /**
+     * रोग / संतान — mixed disease & progeny remedies, grouped by category (वर्ग).
+     *
+     * @return array<string,list<string>>
+     */
+    private static function healthReadings(): array
+    {
+        $out = [];
+        foreach (LalKitabData::section('rog_santan') as $r) {
+            $varg = (string) ($r['varg'] ?? 'अन्य');
+            $out[$varg][] = (string) ($r['upay'] ?? '');
+        }
+        return $out;
+    }
+
+    /**
+     * वर्ष कुण्डली ज्ञान चक्र — for the native's current age, the bhava-number
+     * activated in each of the twelve houses (plus the reference note).
+     *
+     * @return array<string,mixed>
+     */
+    private static function varshGyanReadings(?int $age): array
+    {
+        $tbl = LalKitabData::section('varsh_gyan');
+        $row = null;
+        if ($age !== null && $age >= 1) {
+            $row = $tbl[(string) $age] ?? null;
+        }
+        return [
+            'age'    => $age,
+            'row'    => $row,   // list of 12 activation numbers (house1..12) or null
+            'has'    => $row !== null,
+        ];
+    }
+
+    /**
+     * उपाय के नियम, वर्जित उपाय व दान-निषेध — the do/don't reference for remedies.
+     *
+     * @return array<string,mixed>
+     */
+    private static function ruleReadings(): array
+    {
+        return [
+            'upay_niyam'    => LalKitabData::section('upay_niyam'),
+            'paitrik_niyam' => LalKitabData::section('paitrik_niyam'),
+            'varjit'        => LalKitabData::section('varjit'),
+            'daan_nishedh'  => LalKitabData::section('daan_nishedh'),
+        ];
     }
 
     /** Parse a "1, 5, 8" / "1 से 5, 8" house string into a flat int list. */

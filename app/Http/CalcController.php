@@ -209,9 +209,21 @@ final class CalcController
             // parental-debt/shraap, sade-sati, manglik). Wrapped so an edge-case
             // never blanks the page; text is baked/owner-editable in LalKitabData.
             'lalkitab' => $this->safe(
-                static fn () => $chart !== null
-                    ? \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart)
-                    : ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'],
+                static function () use ($chart, $date) {
+                    if ($chart === null) {
+                        return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
+                    }
+                    // Native's current age (for the वर्ष कुंडली ज्ञान चक्र row).
+                    $age = null;
+                    try {
+                        [$by, $bm, $bd] = self::parseDate($date);
+                        $age = (int) date('Y') - $by;
+                        if ((int) date('n') < $bm || ((int) date('n') === $bm && (int) date('j') < $bd)) {
+                            $age--;
+                        }
+                    } catch (\Throwable $e) { /* age optional */ }
+                    return \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart, $age);
+                },
                 ['ok' => false, 'error' => 'लाल किताब गणना विफल']
             ),
         ];

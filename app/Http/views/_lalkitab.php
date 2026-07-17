@@ -106,7 +106,12 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
         <option value="shrap">🧬 श्राप / पैतृक ऋण / Shrap</option>
         <option value="sadesati">🪐 साढ़े साती / ढैय्या / Sadde Satti</option>
         <option value="manglik">🔴 मंगलीक दोष / Manglik</option>
+        <option value="ayu">⏳ आयु योग / Longevity</option>
+        <option value="health">🩺 रोग / संतान / Health</option>
+        <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
+        <option value="varsh">📅 वर्ष कुंडली ज्ञान / Annual</option>
         <option value="remedy">🛠 उपाय / Remedy</option>
+        <option value="rules">📜 उपाय नियम / Rules</option>
       </select>
     </div>
 
@@ -147,6 +152,9 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
             </div>
             <div class="lk-sub"><b>प्रकृति:</b> <?= $h((string) $p['prakriti']) ?> · <b>रंग:</b> <?= $h((string) $p['rang']) ?> · <b>कारक भाव:</b> <?= $h((string) $p['karak_bhav']) ?></div>
             <div class="lk-sub"><b>उच्च राशि:</b> <?= $h((string) $p['uch_rashi']) ?> · <b>नीच राशि:</b> <?= $h((string) $p['neech_rashi']) ?></div>
+            <?php if (trim((string) $p['mitra']) !== '' || trim((string) $p['shatru']) !== ''): ?>
+              <div class="lk-sub"><b>मित्र:</b> <?= $h((string) $p['mitra']) ?> · <b>शत्रु:</b> <?= $h((string) $p['shatru']) ?><?= trim((string) $p['sam']) !== '' ? ' · <b>सम:</b> ' . $h((string) $p['sam']) : '' ?></div>
+            <?php endif; ?>
             <?php if (trim((string) $p['note']) !== ''): ?>
               <div class="lk-txt" style="margin-top:4px"><?= $h((string) $p['note']) ?></div>
             <?php endif; ?>
@@ -154,6 +162,9 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
               <div class="lk-txt" style="margin-top:5px;color:#991b1b"><b>⚠ अशुभ लक्षण:</b> <?= $h((string) $p['ashubh_lakshan']) ?></div>
             <?php endif; ?>
             <?= $remBlock($p['remedies'], $p['hi'] . ' — भावगत उपाय') ?>
+            <?php if (trim((string) $p['sheeghra']) !== ''): ?>
+              <div class="lk-sub" style="margin-top:5px"><b>⚡ शीघ्र उपाय:</b> <?= $h((string) $p['sheeghra']) ?></div>
+            <?php endif; ?>
           </div>
         <?php endforeach; ?>
       </div>
@@ -290,6 +301,70 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
         <?php endif; ?>
       </div>
 
+      <!-- ===== AYU / LONGEVITY ===== -->
+      <div class="lk-view" data-lk="ayu">
+        <?php $ay = $lk['ayu']; ?>
+        <h3 class="lk-h">आयु योग (Longevity)</h3>
+        <div class="lk-card">
+          <div class="lk-card-h">योग-अनुसार अनुमानित आयु</div>
+          <?php foreach ($ay['yoga'] as $y): ?>
+            <div class="lk-sub"><b><?= $h((string) $y['ayu']) ?> वर्ष</b> — <?= $h((string) $y['yog']) ?></div>
+          <?php endforeach; ?>
+        </div>
+        <div class="lk-card">
+          <div class="lk-card-h">ग्रह चक्र — जीवन में प्रभावशाली वर्ष</div>
+          <?php foreach ($ay['chakra'] as $c): ?>
+            <div class="lk-sub" style="margin-bottom:5px">
+              <b><?= $h((string) $c['hi']) ?>:</b> प्रभाव वर्ष <?= $h((string) $c['prabhav']) ?>
+              <?php if (trim((string) $c['ashubh']) !== ''): ?> · <span style="color:#991b1b">अशुभ वर्ष: <?= $h((string) $c['ashubh']) ?></span><?php endif; ?>
+              <?php if (trim((string) $c['vishesh']) !== ''): ?><br><span style="color:#64748b">विशेष: <?= $h((string) $c['vishesh']) ?></span><?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
+      <!-- ===== HEALTH / PROGENY ===== -->
+      <div class="lk-view" data-lk="health">
+        <h3 class="lk-h">रोग / संतान उपाय (Health &amp; Progeny)</h3>
+        <?php foreach ($lk['health'] as $varg => $items): ?>
+          <div class="lk-card">
+            <div class="lk-card-h" style="font-size:.9rem"><?= $h((string) $varg) ?></div>
+            <?= $remBlock($items, 'उपाय') ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <!-- ===== BHAVAN / VASTU ===== -->
+      <div class="lk-view" data-lk="bhavan">
+        <h3 class="lk-h">गृह / भवन निर्माण उपाय (Vastu)</h3>
+        <?php foreach ($lk['bhavan'] as $b): ?>
+          <div class="lk-card">
+            <div class="lk-card-h" style="font-size:.88rem"><?= $h((string) $b['sthiti']) ?></div>
+            <div class="lk-txt"><?= $h((string) $b['upay']) ?></div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <!-- ===== VARSH GYAN (annual) ===== -->
+      <div class="lk-view" data-lk="varsh">
+        <?php $vg = $lk['varsh_gyan']; ?>
+        <h3 class="lk-h">वर्ष कुंडली ज्ञान चक्र (Annual)</h3>
+        <div class="lk-txt" style="margin-bottom:9px">इस चक्र से किसी भी आयु-वर्ष में हर भाव में सक्रिय होने वाला भाव-अंक ज्ञात होता है — जिससे उस वर्ष का फल पढ़ा जाता है।</div>
+        <?php if (!empty($vg['has'])): ?>
+          <div class="lk-card good">
+            <div class="lk-card-h">आपकी वर्तमान आयु — <?= (int) $vg['age'] ?> वर्ष</div>
+            <div class="lk-txt" style="line-height:2">
+              <?php for ($i = 0; $i < 12; $i++): ?>
+                <span style="display:inline-block;min-width:82px"><b><?= $i + 1 ?>वाँ भाव</b>: <?= $h((string) ($vg['row'][$i] ?? '')) ?></span>
+              <?php endfor; ?>
+            </div>
+            <div class="lk-sub" style="margin-top:6px;color:#64748b">अर्थ: इस आयु-वर्ष में जिस भाव में जो अंक है, उस भाव का फल उस अंक-वाले भाव से जुड़ता है।</div>
+          </div>
+        <?php else: ?>
+          <div class="lk-card"><div class="lk-txt">आयु ज्ञात न होने से वर्ष-विशेष पंक्ति उपलब्ध नहीं।</div></div>
+        <?php endif; ?>
+      </div>
+
       <!-- ===== REMEDY ===== -->
       <div class="lk-view" data-lk="remedy">
         <?php $rm = $lk['remedy']; ?>
@@ -310,6 +385,50 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
             <?= $remBlock($s['upay'], $s['hi'] . ' — सामान्य उपाय') ?>
           </div>
         <?php endforeach; ?>
+        <div class="lk-card-h" style="margin:10px 0 6px">पूजा / उपासना एवं दान (अशुभ ग्रह हेतु)</div>
+        <?php foreach ($lk['planets'] as $p): if (trim((string) $p['upasana']) === '' && trim((string) $p['daan']) === '') { continue; } ?>
+          <div class="lk-card">
+            <div class="lk-card-h" style="font-size:.9rem"><?= $h((string) $p['hi']) ?></div>
+            <?php if (trim((string) $p['upasana']) !== ''): ?><div class="lk-sub"><b>उपासना / पाठ:</b> <?= $h((string) $p['upasana']) ?></div><?php endif; ?>
+            <?php if (trim((string) $p['daan']) !== ''): ?><div class="lk-sub"><b>दान:</b> <?= $h((string) $p['daan']) ?></div><?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <!-- ===== RULES (do / don't) ===== -->
+      <div class="lk-view" data-lk="rules">
+        <?php $ru = $lk['rules']; ?>
+        <h3 class="lk-h">उपाय के नियम व सावधानियाँ (Rules)</h3>
+        <div class="lk-card">
+          <div class="lk-card-h">उपाय के सामान्य नियम</div>
+          <ul class="lk-rem-list" style="color:#334155">
+            <?php foreach ($ru['upay_niyam'] as $n): ?><li><?= $h((string) $n) ?></li><?php endforeach; ?>
+          </ul>
+        </div>
+        <?php if ($ru['varjit']): ?>
+          <div class="lk-card bad">
+            <div class="lk-card-h">वर्जित उपाय (न करें)</div>
+            <?php foreach ($ru['varjit'] as $v): ?>
+              <div class="lk-sub"><b><?= $h((string) $v['sthiti']) ?>:</b> <?= $h((string) $v['varjit']) ?><?php if (trim((string) $v['parinam']) !== ''): ?> <span style="color:#991b1b">— <?= $h((string) $v['parinam']) ?></span><?php endif; ?></div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+        <?php if ($ru['daan_nishedh']): ?>
+          <div class="lk-card">
+            <div class="lk-card-h">दान-निषेध</div>
+            <?php foreach ($ru['daan_nishedh'] as $d): ?>
+              <div class="lk-sub"><b><?= $h((string) $d['sthiti']) ?>:</b> <?= $h((string) $d['varjit']) ?></div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+        <?php if ($ru['paitrik_niyam']): ?>
+          <div class="lk-card">
+            <div class="lk-card-h">पैतृक ऋण — नियम</div>
+            <ul class="lk-rem-list" style="color:#334155">
+              <?php foreach ($ru['paitrik_niyam'] as $n): ?><li><?= $h((string) $n) ?></li><?php endforeach; ?>
+            </ul>
+          </div>
+        <?php endif; ?>
       </div>
 
     </div><!-- /lk-scroll -->
