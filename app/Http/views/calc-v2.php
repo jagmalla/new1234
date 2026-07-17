@@ -1396,6 +1396,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                                 <span class="pp-sub text-gray-700">फल-बल</span>
                                 <span class="gc-chip <?= $smCls ?>"><?= $h((string) $sm['word']) ?> (<?= (int) $sm['score'] ?>)</span>
                                 <?php if (!empty($sm['d9'])): ?><span class="gc-chip gc-mishrit" style="background:#ede9fe;color:#5b21b6"><?= $h((string) $sm['d9']) ?></span><?php endif; ?>
+                                <?php $fn = $sm['functional'] ?? null; if ($fn !== null):
+                                    $fnCls = $fn['tier'] === 'pos' ? 'gc-shubh' : ($fn['tier'] === 'neg' ? 'gc-ashubh' : 'gc-mishrit'); ?>
+                                    <span class="gc-chip <?= $fnCls ?>" title="<?= $h((string) $fn['why']) ?>">इस लग्न में <?= $h((string) $fn['word']) ?></span>
+                                    <?php if (!empty($fn['maraka'])): ?><span class="gc-chip gc-ashubh" title="2/7 भाव का स्वामी">मारक</span><?php endif; ?>
+                                <?php endif; ?>
                             </div>
                             <?php if (!empty($sm['reasons'])): ?>
                                 <div class="text-xs text-gray-500" style="margin-top:2px"><?= $h(implode(' · ', $sm['reasons'])) ?></div>

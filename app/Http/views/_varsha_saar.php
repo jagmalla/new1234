@@ -112,5 +112,47 @@ if ($vp !== null):
             <?php else: ?><div class="text-gray-400 italic">चालू दशा से सम्बन्धित सहम नहीं</div><?php endif; ?>
         </div>
     </div>
+
+    <?php
+        // ---- महीना-दर-महीना पट्टी: the Mudda dasha laid out proportionally over
+        // the year, coloured by each lord's standing in the varsha chart
+        // (6/8/12 भाव = red; natural benefic = green; other malefic = amber).
+        $muddaAll = $vp['mudda_dasha'] ?? [];
+        $vpl = $vp['varsha_chart']['planets'] ?? [];
+        $spanS = $muddaAll !== [] ? (float) $muddaAll[0]['start_jd'] : 0.0;
+        $spanE = $muddaAll !== [] ? (float) end($muddaAll)['end_jd'] : 1.0;
+        $spanT = max(1.0, $spanE - $spanS);
+    ?>
+    <?php if ($muddaAll !== []): ?>
+    <div style="margin-top:11px">
+        <div class="text-xs text-gray-400 font-semibold" style="margin-bottom:4px">मुद्दा-दशा वर्ष-पट्टी
+            <span class="font-normal">(हरा = शुभ काल · पीला = मिश्रित · लाल = सावधानी)</span></div>
+        <div style="display:flex;width:100%;border-radius:7px;overflow:hidden;border:1px solid #e2e8f0">
+            <?php foreach ($muddaAll as $mSeg):
+                $mlS = (string) $mSeg['lord'];
+                $wPct = max(2.0, ((float) $mSeg['end_jd'] - (float) $mSeg['start_jd']) / $spanT * 100.0);
+                $mHouse = (int) ($vpl[$mlS]['house'] ?? 0);
+                $mBen = in_array($mlS, ['Jupiter', 'Venus', 'Mercury', 'Moon'], true);
+                if (in_array($mHouse, [6, 8, 12], true)) { $bgc = '#fecaca'; $fgc = '#7f1d1d'; }
+                elseif ($mBen) { $bgc = '#bbf7d0'; $fgc = '#14532d'; }
+                else { $bgc = '#fde68a'; $fgc = '#713f12'; }
+                $isNow = $muddaNow !== null && $mSeg['lord'] === $muddaNow['lord']
+                    && (float) $mSeg['start_jd'] === (float) $muddaNow['start_jd'];
+                $fromS = \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $mSeg['start_jd'], $tzS);
+                $toS = \AutoBusiness\Astro\Time\JulianDay::toDmy((float) $mSeg['end_jd'], $tzS);
+            ?>
+            <div title="<?= $h(($grahaHi[$mlS] ?? $mlS) . ': ' . $fromS . ' – ' . $toS . ($mHouse ? ' · वर्ष-कुंडली ' . $mHouse . 'वें भाव में' : '')) ?>"
+                 style="width:<?= number_format($wPct, 2) ?>%;background:<?= $bgc ?>;color:<?= $fgc ?>;text-align:center;font-size:.68rem;font-weight:700;padding:4px 0;<?= $isNow ? 'outline:2px solid #1d4ed8;outline-offset:-2px;' : '' ?>">
+                <?= $h(mb_substr($grahaHi[$mlS] ?? $mlS, 0, 2)) ?><?= $isNow ? ' ●' : '' ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="text-xs text-gray-400" style="display:flex;justify-content:space-between;margin-top:2px">
+            <span><?= $h(\AutoBusiness\Astro\Time\JulianDay::toDmy($spanS, $tzS)) ?></span>
+            <span>● = चालू दशा (कर्सर रखने पर तिथियाँ)</span>
+            <span><?= $h(\AutoBusiness\Astro\Time\JulianDay::toDmy($spanE, $tzS)) ?></span>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
 <?php endif; ?>

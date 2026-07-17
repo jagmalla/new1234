@@ -118,10 +118,60 @@ final class StrengthMeter
                 'bindu' => $bindu,
                 'sav' => $savv,
                 'd9' => $d9,
+                'functional' => self::functional($pl, (int) ($chart['ascendant']['sign_index'] ?? 0)),
                 'timing' => self::timing($pl, $mds, $nowJd, $tz),
             ];
         }
         return ['planets' => $out];
+    }
+
+    /**
+     * Functional (lagna-specific) nature by the BPHS ownership rules — computed,
+     * not a baked table, so it is consistent for every lagna:
+     *
+     *   त्रिकोण (1,5,9) स्वामी → कारक शुभ · 3/6/11 स्वामी → अकारक अशुभ ·
+     *   8वें का स्वामी → अशुभ (लग्नेश हो तो नहीं) ·
+     *   केन्द्र (4,7,10) — नैसर्गिक शुभ स्वामी हो तो शुभता घटती है, पाप हो तो पापता ·
+     *   केन्द्र + त्रिकोण दोनों का स्वामी → योगकारक ·
+     *   2/7 के स्वामी → मारक (अलग tag)
+     *
+     * @return array{word:string,tier:string,maraka:bool,owns:list<int>,why:string}|null
+     *         null for Rahu/Ketu (no ownership in the Parashari scheme)
+     */
+    private static function functional(string $pl, int $ascSign): ?array
+    {
+        if ($pl === 'Rahu' || $pl === 'Ketu') {
+            return null;
+        }
+        $owns = [];
+        for ($hh = 1; $hh <= 12; $hh++) {
+            if (Charts::signLord((($ascSign + $hh - 1) % 12)) === $pl) {
+                $owns[] = $hh;
+            }
+        }
+        $trikona = array_intersect($owns, [1, 5, 9]);
+        $kendra  = array_intersect($owns, [4, 7, 10]);
+        $dusth   = array_intersect($owns, [3, 6, 11]);
+        $ownsEighth = in_array(8, $owns, true) && !in_array(1, $owns, true);
+        $maraka  = array_intersect($owns, [2, 7]) !== [];
+        $naturalBenefic = in_array($pl, ['Jupiter', 'Venus', 'Mercury', 'Moon'], true);
+
+        $why = 'स्वामी: ' . implode(', ', $owns) . ' भाव';
+        if ($trikona !== [] && $kendra !== []) {
+            return ['word' => 'योगकारक', 'tier' => 'pos', 'maraka' => $maraka, 'owns' => $owns, 'why' => $why . ' — केन्द्र+त्रिकोण'];
+        }
+        $s = count($trikona) - count($dusth) - ($ownsEighth ? 1 : 0);
+        // Kendradhipati: benefic owning only kendras dips; malefic improves.
+        if ($kendra !== [] && $trikona === []) {
+            $s += $naturalBenefic ? -1 : 1;
+        }
+        if ($s > 0) {
+            return ['word' => 'कारक (शुभ)', 'tier' => 'pos', 'maraka' => $maraka, 'owns' => $owns, 'why' => $why];
+        }
+        if ($s < 0) {
+            return ['word' => 'अकारक (अशुभ)', 'tier' => 'neg', 'maraka' => $maraka, 'owns' => $owns, 'why' => $why];
+        }
+        return ['word' => 'सम', 'tier' => 'mix', 'maraka' => $maraka, 'owns' => $owns, 'why' => $why];
     }
 
     /**
