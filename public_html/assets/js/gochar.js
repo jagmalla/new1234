@@ -32,6 +32,22 @@
   }
   function opt(v, t) { var o = document.createElement('option'); o.value = v; o.textContent = t || v; return o; }
   function sel(x) { return (typeof x === 'string') ? document.querySelector(x) : x; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  // Date is entered/shown as DD-MM-YYYY; the endpoint + Date() need YYYY-MM-DD.
+  function ddmmToISO(s) {
+    var m = String(s || '').trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);
+    return m ? (m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2)) : String(s || '');
+  }
+  // Time is entered/shown as 24-hour HH:MM; tolerate a stray am/pm on input.
+  function norm24(s) {
+    s = String(s || '').trim();
+    var m = s.match(/^(\d{1,2}):(\d{2})\s*([ap]m)?$/i);
+    if (!m) { return s; }
+    var h = parseInt(m[1], 10), mm = m[2];
+    if (m[3]) { var pm = /p/i.test(m[3]); if (pm && h < 12) { h += 12; } if (!pm && h === 12) { h = 0; } }
+    return ('0' + h).slice(-2) + ':' + mm;
+  }
 
   function init(cfg) {
     cfg = cfg || {};
@@ -43,12 +59,15 @@
     inRoot.innerHTML = '';
     var now = new Date();
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-    var today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+    // DD-MM-YYYY date and 24-hour HH:MM time (matches the birth form's format).
+    var today = pad(now.getDate()) + '-' + pad(now.getMonth() + 1) + '-' + now.getFullYear();
     var hhmm = pad(now.getHours()) + ':' + pad(now.getMinutes());
 
     var form = h('div', 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm');
-    var fDate = h('input'); fDate.type = 'date'; fDate.value = today;
-    var fTime = h('input'); fTime.type = 'time'; fTime.value = hhmm;
+    var fDate = h('input'); fDate.type = 'text'; fDate.value = today;
+    fDate.placeholder = 'DD-MM-YYYY'; fDate.setAttribute('inputmode', 'numeric');
+    var fTime = h('input'); fTime.type = 'text'; fTime.value = hhmm;
+    fTime.placeholder = 'HH:MM'; fTime.setAttribute('inputmode', 'numeric');
     [fDate, fTime].forEach(function (i) { i.className = 'border rounded px-2 py-1'; });
     var fPlace = h('input', 'border rounded px-2 py-1'); fPlace.type = 'text';
     fPlace.placeholder = 'Type a city…'; fPlace.autocomplete = 'off';
@@ -63,43 +82,111 @@
       l.appendChild(h('span', 'text-gray-500', text)); l.appendChild(node); return l;
     }
 
-    form.appendChild(lab('Date', fDate));
-    form.appendChild(lab('Time', fTime));
+    var dateCell = lab('Date (DD-MM-YYYY)', fDate);
+    var timeCell = lab('Time (24h HH:MM)', fTime);
+    form.appendChild(dateCell);
+    form.appendChild(timeCell);
     var placeCell = lab('Place (search city)', fPlace, 'relative col-span-2');
     placeCell.appendChild(fResults);
     form.appendChild(placeCell);
-    form.appendChild(lab('Latitude (N+)', fLat));
-    form.appendChild(lab('Longitude (E+)', fLon));
-    form.appendChild(lab('Timezone (hrs E+)', fTz));
     inRoot.appendChild(form);
+
+    // Optional +/- steppers under the date & time fields (day·week·month·year
+    // and minute·10min·hour·12hour). Clicking recomputes the transit at once.
+    if (cfg.steppers) {
+      // Shift the current date+time by a unit and refetch. Building one Date
+      // from both fields lets a ±12h or ±1d step roll cleanly across midnight.
+      var bump = function (unit, amount) {
+        var iso = ddmmToISO(fDate.value).split('-');
+        var tp = (norm24(fTime.value) || '00:00').split(':');
+        var dt = new Date(+iso[0], (+iso[1] - 1), +iso[2], +tp[0], +tp[1], 0);
+        if (isNaN(dt)) { return; }
+        if (unit === 'day') { dt.setDate(dt.getDate() + amount); }
+        else if (unit === 'week') { dt.setDate(dt.getDate() + 7 * amount); }
+        else if (unit === 'month') { dt.setMonth(dt.getMonth() + amount); }
+        else if (unit === 'year') { dt.setFullYear(dt.getFullYear() + amount); }
+        else if (unit === 'minute') { dt.setMinutes(dt.getMinutes() + amount); }
+        else if (unit === 'hour') { dt.setHours(dt.getHours() + amount); }
+        fDate.value = pad(dt.getDate()) + '-' + pad(dt.getMonth() + 1) + '-' + dt.getFullYear();
+        fTime.value = pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+        fetchGochar();
+      };
+      // One labelled column per unit (Year / Month / …), each with a −/+ pair
+      // stacked; minus tinted red, plus tinted green — aligned, compact, clear.
+      var stepGroup = function (cols) {
+        var wrap = h('div', 'gc-steps');
+        cols.forEach(function (c) {
+          var col = h('div', 'gc-step-col');
+          col.appendChild(h('div', 'gc-step-lbl', c.label));
+          var minus = h('button', 'gc-step gc-step-minus', c.minus);
+          minus.type = 'button'; minus.title = '−' + c.title + ' (' + c.label + ')';
+          minus.addEventListener('click', function () { bump(c.unit, -c.amount); });
+          var plus = h('button', 'gc-step gc-step-plus', c.plus);
+          plus.type = 'button'; plus.title = '+' + c.title + ' (' + c.label + ')';
+          plus.addEventListener('click', function () { bump(c.unit, c.amount); });
+          col.appendChild(minus); col.appendChild(plus);
+          wrap.appendChild(col);
+        });
+        return wrap;
+      };
+      dateCell.appendChild(stepGroup([
+        { label: 'Year',  unit: 'year',  amount: 1, minus: '−1y', plus: '+1y', title: '1 year' },
+        { label: 'Month', unit: 'month', amount: 1, minus: '−1m', plus: '+1m', title: '1 month' },
+        { label: 'Week',  unit: 'week',  amount: 1, minus: '−1w', plus: '+1w', title: '1 week' },
+        { label: 'Day',   unit: 'day',   amount: 1, minus: '−1d', plus: '+1d', title: '1 day' }
+      ]));
+      timeCell.appendChild(stepGroup([
+        { label: '12 Hr', unit: 'hour',   amount: 12, minus: '−12h', plus: '+12h', title: '12 hours' },
+        { label: 'Hour',  unit: 'hour',   amount: 1,  minus: '−1h',  plus: '+1h',  title: '1 hour' },
+        { label: '10 Min',unit: 'minute', amount: 10, minus: '−10m', plus: '+10m', title: '10 minutes' },
+        { label: 'Min',   unit: 'minute', amount: 1,  minus: '−1m',  plus: '+1m',  title: '1 minute' }
+      ]));
+    }
+
+    // Advanced (lat/lon/tz): auto-filled by the city search, so hidden by default.
+    var adv = h('div', 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mt-3 hidden');
+    adv.appendChild(lab('Latitude (N+)', fLat));
+    adv.appendChild(lab('Longitude (E+)', fLon));
+    adv.appendChild(lab('Timezone (hrs E+)', fTz));
+    inRoot.appendChild(adv);
 
     // Worldwide city search fills lat/lon/tz (tz offset at the gochar date).
     if (global.ABCitySearch) {
       global.ABCitySearch.init({
         input: fPlace, results: fResults, lat: fLat, lon: fLon, tz: fTz,
         getDate: function () {
-          var dt = new Date(fDate.value + 'T' + (fTime.value || '12:00') + ':00');
+          var dt = new Date(ddmmToISO(fDate.value) + 'T' + (norm24(fTime.value) || '12:00') + ':00');
           return isNaN(dt) ? new Date() : dt;
         }
       });
     }
 
-    var bar = h('div', 'mt-3 flex items-center gap-3');
+    var bar = h('div', 'mt-3 flex flex-wrap items-center gap-3');
     var btn = h('button', 'bg-blue-600 text-white rounded px-4 py-2 text-sm font-semibold', 'Show transit');
+    btn.type = 'button';
+    var advBtn = h('button', 'text-sm text-blue-700 font-semibold border border-blue-200 rounded px-3 py-2 hover:bg-blue-50', '⚙ Advanced (Lat/Lon · Timezone)');
+    advBtn.type = 'button';
+    advBtn.setAttribute('aria-expanded', 'false');
+    advBtn.addEventListener('click', function () {
+      var hidden = adv.classList.toggle('hidden');
+      advBtn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+    });
     var status = h('span', 'text-xs text-gray-500');
-    bar.appendChild(btn); bar.appendChild(status);
+    bar.appendChild(btn); bar.appendChild(advBtn); bar.appendChild(status);
     inRoot.appendChild(bar);
 
-    // Output: the transit chart only (positions table removed for a cleaner look).
+    // Output: a header row (Gochar (Transit) + date / time / place) then the
+    // transit chart. The header matches the natal D1 header so the two cards
+    // in the row line up.
     outRoot.innerHTML = '';
-    var title = h('div', 'text-sm font-semibold text-center mb-2 text-gray-700', 'Gochar (Transit)');
-    var chartBox = h('div', 'w-full max-w-sm mx-auto');
-    outRoot.appendChild(title); outRoot.appendChild(chartBox);
+    var header = h('div', 'flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700');
+    var chartBox = h('div', 'w-full');
+    outRoot.appendChild(header); outRoot.appendChild(chartBox);
 
     function fetchGochar() {
       status.textContent = 'calculating…';
       var q = new URLSearchParams({
-        date: fDate.value, time: fTime.value,
+        date: ddmmToISO(fDate.value), time: norm24(fTime.value),
         lat: fLat.value, lon: fLon.value, tz: fTz.value,
         bdate: birth.date || '', btime: birth.time || '',
         blat: birth.lat != null ? birth.lat : '', blon: birth.lon != null ? birth.lon : '',
@@ -111,6 +198,24 @@
           if (g.error) { status.textContent = 'Error: ' + g.error; return; }
           status.textContent = '';
           renderResult(g);
+          // Gochar Phal panel (server-rendered) — inject beside the chart and
+          // (re)bind its planet filter, so predictions follow the date/place.
+          if (g.phal_html != null && cfg.injectPhal !== false) {
+            var box = document.getElementById('gochar-phal');
+            if (box) {
+              box.innerHTML = g.phal_html;
+              if (global.ABBindGocharPhal) { global.ABBindGocharPhal(); }
+              if (global.ABBindSadeTimeline) { global.ABBindSadeTimeline(); }
+            }
+          }
+          // Optional consumer hook (e.g. the Mahurat page renders its own view
+          // from the same transit result without a second server round-trip).
+          // Second arg carries the transit moment's date/time/place for subtitles.
+          if (typeof cfg.onResult === 'function') {
+            try {
+              cfg.onResult(g, { date: fDate.value, time: fTime.value, place: (fPlace.value || '').trim() });
+            } catch (e) {}
+          }
         })
         .catch(function (e) { status.textContent = 'Request failed: ' + e; });
     }
@@ -121,11 +226,26 @@
         var t = g.transits[name];
         planets.push({ abbr: ABBR[name] || name.slice(0, 2), sign: t.sign_index, deg: t.deg, retro: !!t.retro });
       });
+      var place = (fPlace.value || '').trim();
+      header.innerHTML =
+          '<span class="font-semibold text-gray-800">Gochar (Transit)</span>'
+        + '<span class="ml-auto flex flex-wrap items-center gap-x-4">'
+        +   '<span>' + esc(fDate.value) + '</span>'
+        +   '<span>' + esc(fTime.value) + '</span>'
+        +   (place ? '<span class="font-semibold text-gray-800">' + esc(place) + '</span>' : '')
+        + '</span>';
       ABChart.renderNorth(chartBox, { asc_sign: g.ascendant.sign_index, planets: planets },
-        { title: g.label, showDeg: true });
+        { showDeg: true });
     }
 
     btn.addEventListener('click', fetchGochar);
+    // Changing the date or time (or the advanced lat/lon/tz) recomputes at once,
+    // so the transit chart AND the Gochar Phal predictions follow the new
+    // moment without needing the button. 'change' fires on commit/blur, not on
+    // every keystroke, so this is one fetch per change.
+    [fDate, fTime, fLat, fLon, fTz].forEach(function (i) {
+      i.addEventListener('change', fetchGochar);
+    });
 
     // Default to the viewer's IP location — city, state, country + lat/lon/tz —
     // and the current date/time, then compute (no permission prompt).

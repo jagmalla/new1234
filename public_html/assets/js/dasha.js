@@ -62,7 +62,24 @@
     return out;
   }
 
-  function row(period, level, tz, inline) {
+  // The running chain (period containing "now") drilled `depth` levels deep,
+  // e.g. [Maha, Antar, Pratyantar]. Returns [] when now is outside topPeriods.
+  function runningChain(topPeriods, now, depth) {
+    depth = depth || 3;
+    var chain = [], periods = topPeriods || [];
+    for (var d = 0; d < depth; d++) {
+      var found = null;
+      for (var i = 0; i < periods.length; i++) {
+        if (periods[i].start_jd <= now && now < periods[i].end_jd) { found = periods[i]; break; }
+      }
+      if (!found) { break; }
+      chain.push({ lord: found.lord, start_jd: found.start_jd, end_jd: found.end_jd, level: d });
+      periods = children(found);
+    }
+    return chain;
+  }
+
+  function row(period, level, tz, inline, now) {
     var wrap = document.createElement('div');
     var head = document.createElement('div');
     head.className = 'py-1 cursor-pointer select-none hover:bg-gray-50';
@@ -70,6 +87,11 @@
     head.style.alignItems = 'stretch';
     // Thin separator line between every dasha period.
     head.style.borderBottom = '1px solid #e8ecf3';
+
+    // Highlight the period that contains "now" (today) — at every level — so the
+    // currently-running dasha is obvious at a glance.
+    var isCurrent = (now != null && period.start_jd <= now && now < period.end_jd);
+    if (isCurrent) { head.style.background = '#dceffc'; }
 
     // Name column: in the wide Detail view (inline) it is a fixed width so the
     // date column always starts at the same x for all five levels. The width is
@@ -132,15 +154,25 @@
       var kids = document.createElement('div');
       kids.className = 'hidden';
       var built = false;
-      head.addEventListener('click', function () {
+      var build = function () {
         if (!built) {
-          children(period).forEach(function (c) { kids.appendChild(row(c, level + 1, tz, inline)); });
+          children(period).forEach(function (c) { kids.appendChild(row(c, level + 1, tz, inline, now)); });
           built = true;
         }
-        var open = kids.classList.toggle('hidden') === false;
+      };
+      var setOpen = function (open) {
+        kids.classList.toggle('hidden', !open);
         tw.textContent = open ? '−' : '+';
+      };
+      head.addEventListener('click', function () {
+        build();
+        setOpen(kids.classList.contains('hidden'));   // toggle
       });
       wrap.appendChild(kids);
+      // Auto-open only the current Mahadasha so Mahadasha → Antardasha are
+      // visible by default; deeper levels stay collapsed for the client to
+      // expand with the + button. (Current rows are still highlighted.)
+      if (isCurrent && level === 0) { build(); setOpen(true); }
     }
     return wrap;
   }
@@ -148,9 +180,25 @@
   function render(container, topPeriods, opts) {
     opts = opts || {};
     container.innerHTML = '';
+    // "now" as Julian Day (UT). Period start/end are also JD (UT), so the
+    // containment test is timezone-independent.
+    var now = (opts.now != null) ? opts.now : (Date.now() / 86400000 + 2440587.5);
+    var currentEl = null;
     (topPeriods || []).forEach(function (p) {
-      container.appendChild(row({ lord: p.lord, start_jd: p.start_jd, end_jd: p.end_jd }, 0, opts.tz || 0, !!opts.datesInline));
+      var r = row({ lord: p.lord, start_jd: p.start_jd, end_jd: p.end_jd }, 0, opts.tz || 0, !!opts.datesInline, now);
+      container.appendChild(r);
+      if (p.start_jd <= now && now < p.end_jd) { currentEl = r; }
     });
+
+    // Scroll the current Mahadasha to the top of the scroll window so the
+    // highlighted current chain is what the user sees first.
+    if (currentEl) {
+      setTimeout(function () {
+        var cRect = container.getBoundingClientRect();
+        var eRect = currentEl.firstChild.getBoundingClientRect();
+        container.scrollTop += (eRect.top - cRect.top);
+      }, 240);
+    }
 
     // Fixed-height scroll window: show ~maxRows rows; the rest scrolls inside the
     // box instead of expanding the section. Row height is measured live (after a
@@ -169,5 +217,5 @@
     }
   }
 
-  global.ABDasha = { render: render, jdToDMY: jdToDMY };
+  global.ABDasha = { render: render, jdToDMY: jdToDMY, runningChain: runningChain, PCOL: PCOL };
 })(window);

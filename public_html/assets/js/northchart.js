@@ -4,7 +4,7 @@
  * (diamond) chart for any divisional or transit chart, given the lagna sign and
  * each planet's sign. Ascendant sits in house 1 (top-centre); houses are fixed,
  * signs rotate. Planet abbreviations are colour-coded (Parashara's Light style),
- * degrees shown on request, retrograde marked with R.
+ * degrees shown on request, retrograde marked with a circled-R (®).
  *
  * Designed for reuse by the client/astrologer screens (Module 5d) and the gochar
  * panel as well as the /calc test page.
@@ -22,6 +22,13 @@
   var COLOR = {
     Su:'#dc2626', Mo:'#0891b2', Ma:'#ea580c', Me:'#16a34a', Ju:'#b45309',
     Ve:'#db2777', Sa:'#1d4ed8', Ra:'#3d4554', Ke:'#3d4554', As:'#111827', MUN:'#7c3aed'
+  };
+
+  // Own-rashi (rulership) sign indices per planet (0=Aries…11=Pisces). When a
+  // planet sits in a sign it rules, it (and that house's rashi number) is
+  // underlined. Rahu/Ketu own no sign.
+  var OWN = {
+    Su:[4], Mo:[3], Ma:[0,7], Me:[2,5], Ju:[8,11], Ve:[1,6], Sa:[9,10]
   };
 
   // Exaltation (ex) and debilitation (de) sign index per planet (0=Aries…11=Pi).
@@ -61,54 +68,85 @@
   var BB_COLOR = '#15803d';  // Bhava Bala (virupas)
   var ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
-  // One-line "<Roman>=AV:<n>, BB:<n>" anchor + rotation per house: top & bottom
-  // read horizontally, the two sides are rotated so the ring stays thin.
-  var POS = {
-    2:[16.5,-3.0,0], 1:[50,-3.0,0], 12:[83.5,-3.0,0],            // top
-    6:[16.5,104.2,0], 7:[50,104.2,0], 8:[83.5,104.2,0],          // bottom
-    3:[-3.7,16.5,-90], 4:[-3.7,50,-90], 5:[-3.7,83.5,-90],       // left (rotated)
-    11:[103.7,16.5,90], 10:[103.7,50,90], 9:[103.7,83.5,90]      // right (rotated)
+  // Edge + segment-centre per house (3 segments/edge at 16.5/50/83.5).
+  // side: t=top, b=bottom, l=left (rotate -90), r=right (rotate 90).
+  var EDGE = {
+    1:['t',50], 2:['t',16.5], 12:['t',83.5],
+    7:['b',50], 6:['b',16.5], 8:['b',83.5],
+    4:['l',50], 3:['l',16.5], 5:['l',83.5],
+    10:['r',50], 11:['r',16.5], 9:['r',83.5]
   };
+  // Label anchor [x, y, rotation] centred `mid` units outside the chart edge.
+  function bandPos(hh, mid) {
+    var e = EDGE[hh], s = e[1];
+    switch (e[0]) {
+      case 't': return [s, -mid, 0];
+      case 'b': return [s, 100 + mid, 0];
+      case 'l': return [-mid, s, -90];
+      default:  return [100 + mid, s, 90];
+    }
+  }
 
-  // Draw the (thin) outer ring: rectangle + per-house separator lines + a single
-  // colour-coded "<Roman>=AV:.., BB:.." line in each house segment.
+  // Draw the outer ring(s): a Drishti band (graha aspects) just outside the
+  // chart, then the AV/BB band outside that. Nesting inside-out: (1) chart,
+  // (2) Drishti, (3) AV/BB.
   function drawOuterRing(svg, ring) {
-    var M = 7.5;
+    var DR = 5, O = 10;  // band outer offsets: Drishti 0..5, AV/BB 5..10 (slim, equal)
     var sep = function (x1,y1,x2,y2) {
       svg.appendChild(el('line', {x1:x1,y1:y1,x2:x2,y2:y2, stroke:'#cbd5e1', 'stroke-width':0.4}));
     };
-    svg.appendChild(el('rect', {x:-M, y:-M, width:100 + 2 * M, height:100 + 2 * M, fill:'none', stroke:'#9ca3af', 'stroke-width':0.6, rx:1}));
-    // corner diagonals
-    sep(0,0,-M,-M); sep(100,0,100+M,-M); sep(100,100,100+M,100+M); sep(0,100,-M,100+M);
-    // edge separators at the 1/3 and 2/3 points (3 segments per edge)
+    // rectangles: outer (AV/BB) and the Drishti / AV boundary
+    svg.appendChild(el('rect', {x:-O, y:-O, width:100 + 2 * O, height:100 + 2 * O, fill:'none', stroke:'#9ca3af', 'stroke-width':0.6, rx:1}));
+    svg.appendChild(el('rect', {x:-DR, y:-DR, width:100 + 2 * DR, height:100 + 2 * DR, fill:'none', stroke:'#cbd5e1', 'stroke-width':0.5, rx:1}));
+    // radial separators from the chart edge out to the outer rectangle
+    sep(0,0,-O,-O); sep(100,0,100+O,-O); sep(100,100,100+O,100+O); sep(0,100,-O,100+O);
     [33,67].forEach(function (t) {
-      sep(t,0,t,-M); sep(t,100,t,100+M);   // top, bottom
-      sep(0,t,-M,t); sep(100,t,100+M,t);   // left, right
+      sep(t,0,t,-O); sep(t,100,t,100+O);   // top, bottom
+      sep(0,t,-O,t); sep(100,t,100+O,t);   // left, right
     });
 
-    function label(x, y, rot, roman, av, bb) {
-      var t = el('text', {x:x, y:y, 'text-anchor':'middle', 'font-size':2.5, 'font-weight':'700'});
-      if (rot) { t.setAttribute('transform', 'rotate(' + rot + ',' + x + ',' + y + ')'); }
-      var span = function (txt, fill) { var s = el('tspan', {fill:fill}); s.textContent = txt; t.appendChild(s); };
-      span(roman + '=', '#111827');
-      span('AV:' + av, AV_COLOR);
-      span(', ', '#111827');
-      span('BB:' + bb, BB_COLOR);
-      svg.appendChild(t);
+    function placed(p, fontSize) {
+      var t = el('text', {x:p[0], y:p[1], 'text-anchor':'middle', 'font-size':fontSize, 'font-weight':'700'});
+      if (p[2]) { t.setAttribute('transform', 'rotate(' + p[2] + ',' + p[0] + ',' + p[1] + ')'); }
+      t.span = function (txt, fill) { var s = el('tspan', {fill:fill}); s.textContent = txt; t.appendChild(s); };
+      return t;
     }
 
     for (var hh = 1; hh <= 12; hh++) {
       var v = ring[hh] || ring[String(hh)];
       if (!v) { continue; }
-      var p = POS[hh];
+
+      // AV/BB (outer band).
+      var a = placed(bandPos(hh, 7.5), 2.5);
       var bb = (v.bb_virupa != null) ? Math.round(v.bb_virupa) : v.bb;
-      label(p[0], p[1], p[2], ROMAN[hh], v.av, bb);
+      a.span(ROMAN[hh] + '=', '#111827');
+      a.span('AV:' + v.av, AV_COLOR);
+      a.span(', ', '#111827');
+      a.span('BB:' + bb, BB_COLOR);
+      svg.appendChild(a);
+
+      // Drishti (inner band): "Dr: " + colour-coded aspecting planets, styled to
+      // match the AV/BB band (same font size 2.5 and weight 700).
+      var d = placed(bandPos(hh, 2.5), 2.5);
+      d.span('Dr: ', '#111827');
+      var list = v.drishti || [];
+      if (!list.length) { d.span('—', '#9ca3af'); }
+      list.forEach(function (ab, i) {
+        if (i) { d.span(', ', '#111827'); }
+        d.span(ab, COLOR[ab] || '#111827');
+      });
+      svg.appendChild(d);
     }
   }
 
   function renderNorth(container, data, opts) {
     opts = opts || {};
     container.innerHTML = '';
+
+    // Rotation: which house is drawn at position 1 (top-centre). 1 = lagna
+    // (default, no rotation). Value 0..11 is the house-1 offset in signs. The
+    // planets and signs stay in the zodiac; only the house frame turns.
+    var rotate = (((((opts.rotate || 1) - 1) % 12) + 12) % 12);
 
     if (opts.title) {
       var h = document.createElement('div');
@@ -120,10 +158,22 @@
     // An optional outer ring shows Ashtakavarga (AV) and Bhava Bala (BB) per
     // house just outside the chart; it widens the viewBox to make room.
     var ring = opts.outer || null;
-    var svg = el('svg', {
-      viewBox: ring ? '-9 -9 118 118' : '0 0 100 100',
-      width: '100%', height: 'auto', 'class': 'rounded'
-    });
+    // Rotate the AV/BB/Drishti ring with the signs so each value stays attached
+    // to its own sign/bhava at the new on-screen house position.
+    if (ring && rotate) {
+      var rr = {};
+      for (var rh = 1; rh <= 12; rh++) { rr[rh] = ring[((rh - 1 + rotate) % 12) + 1] || ring[String(((rh - 1 + rotate) % 12) + 1)]; }
+      ring = rr;
+    }
+    // Default: scale to the container WIDTH (height follows, keeping the square).
+    // fit:true → scale to fit BOTH width and height (contain), so the chart
+    // always fits inside a freely-resized panel without overflowing or clipping.
+    var svg = el('svg', opts.fit
+      ? { viewBox: ring ? '-10.6 -10.6 121.2 121.2' : '0 0 100 100',
+          width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet',
+          'class': 'rounded', style: 'display:block' }
+      : { viewBox: ring ? '-10.6 -10.6 121.2 121.2' : '0 0 100 100',
+          width: '100%', height: 'auto', 'class': 'rounded' });
 
     if (ring) { drawOuterRing(svg, ring); }
 
@@ -140,48 +190,72 @@
     line(50,99,1,50); line(1,50,50,1);
 
     var ascSign = ((data.asc_sign % 12) + 12) % 12;
+    // dispAsc = sign shown in house 1 after rotation; the real ascendant then
+    // falls into whatever house now holds it (house 1 when not rotated).
+    var dispAsc = (ascSign + rotate) % 12;
+    var houseOf = function (sign) { return (((sign - dispAsc) % 12) + 12) % 12 + 1; };
 
     // Group planet labels by fixed house.
     var byHouse = {};
     for (var i = 1; i <= 12; i++) { byHouse[i] = []; }
 
-    // Ascendant marker always sits in house 1.
-    byHouse[1].push({
+    // Ascendant marker sits in the house that holds the lagna sign.
+    byHouse[houseOf(ascSign)].push({
       abbr: 'As',
       txt: 'As' + (opts.showDeg && data.asc_deg != null ? ' ' + data.asc_deg + '°' : '')
     });
 
     (data.planets || []).forEach(function (p) {
-      var house = (((p.sign - ascSign) % 12) + 12) % 12 + 1;
+      var house = houseOf(p.sign);
       var d = DIGN[p.abbr];
       var mark = d ? (p.sign === d.ex ? '↑' : (p.sign === d.de ? '↓' : '')) : '';
       var txt = p.abbr + mark
-        + (opts.showDeg && p.deg != null ? ' ' + p.deg + '°' : '')
-        + (p.retro ? ' R' : '');
-      byHouse[house].push({ abbr: p.abbr, txt: txt });
+        + (opts.showDeg && p.deg != null ? ' ' + p.deg + '°' : '');
+      // Own rashi = the planet's sign in THIS chart is one it rules.
+      var own = !!(OWN[p.abbr] && OWN[p.abbr].indexOf(p.sign) >= 0);
+      byHouse[house].push({ abbr: p.abbr, txt: txt, retro: !!p.retro, own: own });
     });
 
     for (var hh = 1; hh <= 12; hh++) {
       var cx = C[hh][0], cy = C[hh][1];
-      var signNum = ((ascSign + (hh - 1)) % 12);
+      var signNum = ((dispAsc + (hh - 1)) % 12);
 
-      // Rashi (sign) number only — black, tucked at the house's inner corner.
-      svg.appendChild(el('text', {
-        x: INNER[hh][0], y: INNER[hh][1] + 1.2, 'text-anchor':'middle',
-        'font-size':3.5, fill:'#000000', 'font-weight':'700'
-      }, String(signNum + 1)));
-
-      // Planets centred in the house body, colour-coded (Dasha palette).
       var items = byHouse[hh];
       var n = items.length;
+      // Underline the rashi number when an occupant rules this sign (own rashi).
+      var houseOwn = items.some(function (it) { return it.own; });
+
+      // Rashi (sign) number only — black, tucked at the house's inner corner.
+      var rnAttrs = {
+        x: INNER[hh][0], y: INNER[hh][1] + 1.2, 'text-anchor':'middle',
+        'font-size':3.5, fill:'#000000', 'font-weight':'700'
+      };
+      if (houseOwn) { rnAttrs['text-decoration'] = 'underline'; }
+      svg.appendChild(el('text', rnAttrs, String(signNum + 1)));
+
+      // Planets centred in the house body, colour-coded (Dasha palette).
       var lineH = 4.2;
       var startY = cy - ((n - 1) * lineH) / 2 + 1.3;
       for (var j = 0; j < n; j++) {
-        svg.appendChild(el('text', {
+        var fs = opts.big ? 4.2 : 3.8;
+        var ptAttrs = {
           x: cx, y: startY + j * lineH, 'text-anchor':'middle',
-          'font-size': opts.big ? 4.2 : 3.8,
-          fill: COLOR[items[j].abbr] || '#111827', 'font-weight':'600'
-        }, items[j].txt));
+          'font-size': fs, fill: COLOR[items[j].abbr] || '#111827', 'font-weight':'600'
+        };
+        if (items[j].own) { ptAttrs['text-decoration'] = 'underline'; }
+        var pt = el('text', ptAttrs, items[j].txt);
+        // Retrograde: a raised circled-R (®) after the planet — one size smaller
+        // than the planet text, tucked close (small dx) and raised by a fixed
+        // fraction of the planet font so it aligns as a neat superscript.
+        if (items[j].retro) {
+          var sup = el('tspan', {
+            'font-size': (fs * 0.85).toFixed(2), fill: '#b91c1c',
+            dx: 0.2, dy: (-fs * 0.32).toFixed(2)
+          });
+          sup.textContent = '®';
+          pt.appendChild(sup);
+        }
+        svg.appendChild(pt);
       }
     }
 
@@ -193,7 +267,8 @@
       var key = elm.getAttribute('data-varga');
       if (vargas[key]) {
         renderNorth(elm, vargas[key], {
-          title: vargas[key].label,
+          // Skip the built-in title when the container supplies its own header.
+          title: elm.hasAttribute('data-notitle') ? null : vargas[key].label,
           showDeg: true,
           big: key === 'D1',
           // Outer AV/BB ring only on a D1 container marked with data-ring.

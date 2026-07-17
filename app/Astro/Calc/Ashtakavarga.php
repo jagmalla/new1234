@@ -107,4 +107,27 @@ final class Ashtakavarga
             'bav_totals' => $bavTotals,
         ];
     }
+
+    /** Contributor order (7 planets + Lagna) used by the Kaksha subdivisions. */
+    public const KAKSHA_ORDER = ['Saturn', 'Jupiter', 'Mars', 'Sun', 'Venus', 'Mercury', 'Moon', 'Lagna'];
+
+    /**
+     * Does one contributor drop a bindu into $sign of $planet's Bhinnashtakavarga?
+     * Used by the Gochar Kaksha reading: a transit planet in a given kaksha
+     * gets a शुभ result if that kaksha's lord contributed a bindu to the transit
+     * sign, else a रेखा (ashubh) result.
+     *
+     * @param int $sign            the sign in question (0..11)
+     * @param int $contributorSign the contributor's own sign (Lagna = ascendant)
+     */
+    public static function contributes(string $planet, string $contributor, int $sign, int $contributorSign): bool
+    {
+        $houses = self::BENEFIC[$planet][$contributor] ?? [];
+        foreach ($houses as $h) {
+            if ((($contributorSign + $h - 1) % 12 + 12) % 12 === (($sign % 12) + 12) % 12) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

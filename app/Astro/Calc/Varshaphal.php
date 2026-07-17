@@ -72,14 +72,9 @@ final class Varshaphal
                 'sign' => Charts::SIGNS[$varshaLagnaSign],
                 'lord' => Charts::signLord($varshaLagnaSign),
             ],
-            // Varshesh (year lord) selection has five classical office-bearers;
-            // here we surface the strongest candidates (Lagna lord + Muntha lord)
-            // for the Tajik agent to interpret. Full Panchadhikari selection is a
-            // documented refinement.
-            'varshesh_candidates' => [
-                'varsha_lagna_lord' => Charts::signLord($varshaLagnaSign),
-                'muntha_lord' => Charts::signLord($munthaSign),
-            ],
+            // Varshesh (year lord): the strongest of the five Panchadhikari
+            // office-bearers by Panchavargeeya Bala (Parashara's Light convention).
+            'varshesh' => Varshesha::compute($varshaChart, $munthaSign, $varshaLagnaSign, $natalAscSign),
             'mudda_dasha' => $mudda,
         ];
     }

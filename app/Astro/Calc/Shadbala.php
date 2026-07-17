@@ -13,9 +13,14 @@ use AutoBusiness\Astro\Time\JulianDay;
  *   1. Sthana  — Uchcha + Saptavargaja + Ojha-Yugma + Kendradi + Drekkana  (validated ±0.01 vs PL)
  *   2. Dig     — directional, via Lagna/MC cusps                            (validated ±0.01 vs PL)
  *   3. Kaala   — Nathonnata + Paksha + Tribhaga + Vara + Hora + Masa + Abda + Ayana + Yuddha
- *   4. Chesta  — Sun=Ayana, Moon=Paksha, star planets = seeghra (motional)
+ *                (Moon ALWAYS takes the benefic Paksha share; Ayana/Paksha are
+ *                 NOT doubled — the BPHS "doubling" is realised by the same value
+ *                 appearing once here and once in Chesta, matching PL)
+ *   4. Chesta  — Sun = Ayana, Moon = Paksha; the five star planets by the
+ *                Seeghra (Chesta) Kendra = Seeghrochcha − Madhyama, ÷3
  *   5. Naisargika — fixed natural strength                                  (PL values)
- *   6. Drig    — net benefic-minus-malefic aspect (Sphuta Drishti)
+ *   6. Drig    — net benefic-minus-malefic aspect (Sphuta Drishti); Moon and
+ *                Mercury are always benefic (PL); ÷4
  *
  * Then Total (virupas) -> Rupas (/60) -> ratio vs minimum requirement, and
  * Ishta/Kashta phala. The engine passes sidereal longitudes, speeds, asc/MC,
@@ -111,6 +116,15 @@ final class Shadbala
         // Shared Paksha + Ayana (also reused by Chesta).
         $elong = Charts::norm($siderealLon['Moon'] - $siderealLon['Sun']);
         $pakshaBen = (180.0 - abs(180.0 - $elong)) / 3.0;
+        // Paksha Bala: the Moon ALWAYS takes the benefic share, regardless of
+        // phase (Parashara's Light convention). Jupiter/Venus/Mercury are the
+        // other benefics; the three malefics get the complementary share.
+        $moonWaxing = $elong < 180.0;
+        $pakshaBenefics = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+        // Ayana Bala (once, un-doubled). The BPHS "doubling" of the Sun's Ayana
+        // and the Moon's Paksha is realised NOT by doubling a column, but by the
+        // same value appearing once in Kaala AND once in Chesta (see below);
+        // that reproduces PL, which counts each exactly twice, not four times.
         $ayana = [];
         foreach (self::PLANETS as $p) {
             $ayana[$p] = self::ayanaBala($p, $decl[$p]);
@@ -124,20 +138,21 @@ final class Shadbala
             $dig = self::digBala($planet, $lon, $cusps);
             $naisargika = self::NAISARGIKA[$planet];
 
-            $paksha = in_array($planet, self::BENEFIC, true) ? $pakshaBen : (60.0 - $pakshaBen);
+            $paksha = in_array($planet, $pakshaBenefics, true) ? $pakshaBen : (60.0 - $pakshaBen);
             $kaala = self::kaalaBala($planet, $paksha, $ayana[$planet], $ctx);
             $chesta = self::chestaBala($planet, $ayana[$planet], $paksha, $jdUt, $tropical);
-            $drig = self::drigBala($planet, $siderealLon);
+            $drig = self::drigBala($planet, $siderealLon, $moonWaxing);
 
             $total = $sthana['total'] + $dig + $kaala + $chesta + $naisargika + $drig;
             $rupas = $total / 60.0;
             $required = self::MIN_REQUIRED[$planet];
             $ratio = $total / $required;
 
-            // Ishta/Kashta phala = sqrt(Uchcha x Chesta), sqrt((60-Uchcha)(60-Chesta)).
+            // Ishta/Kashta phala = arithmetic mean of Uchcha and Chesta Bala
+            // (Parashara's Light): Ishta = (Uchcha + Chesta)/2, Kashta = 60 − Ishta.
             $u = $sthana['uccha'];
-            $ishta = sqrt(max(0.0, $u) * max(0.0, $chesta));
-            $kashta = sqrt(max(0.0, 60.0 - $u) * max(0.0, 60.0 - $chesta));
+            $ishta = ($u + $chesta) / 2.0;
+            $kashta = 60.0 - $ishta;
 
             $out[$planet] = [
                 'sthana' => $sthana,
@@ -200,7 +215,9 @@ final class Shadbala
         } else {
             $kranti = $decl;  // north positive
         }
-        $v = 60.0 * (23.4578 + $kranti) / 47.9156;
+        // Scale: 60 × (max-decl ± kranti) / (2 × max-decl), max-decl = 23°27′.
+        // Denominator is 2×23.4578 = 46.9156 (a full swing of the declination).
+        $v = 60.0 * (23.4578 + $kranti) / 46.9156;
         return max(0.0, $v);
     }
 
@@ -338,6 +355,15 @@ final class Shadbala
     // =====================================================================
 
     /**
+     * Chesta Bala (BPHS/Raman — the method Parashara's Light uses):
+     *   Sun  = Ayana Bala (already doubled), Moon = Paksha Bala (already doubled).
+     *   Star planets: Chesta Kendra = Seeghrochcha − (Madhya + Spashta)/2,
+     *   reduced to <=180; Chesta Bala = Kendra / 3.
+     *   For Mars/Jupiter/Saturn the Seeghrochcha is the MEAN SUN and the Madhya
+     *   is the planet's own mean longitude; for Mercury/Venus the Seeghrochcha is
+     *   the planet's own mean (seeghra) longitude and the Madhya is the mean Sun.
+     *   Spashta is the planet's TRUE (tropical) longitude.
+     *
      * @param array<string,float> $tropical
      */
     private static function chestaBala(string $planet, float $ayana, float $paksha, float $jdUt, array $tropical): float
@@ -348,15 +374,25 @@ final class Shadbala
         if ($planet === 'Moon') {
             return $paksha;
         }
-        // Star planets: Chesta = seeghra (synodic) kendra / 3.
         $d = $jdUt - 2451545.0;
         $meanSun = Charts::norm(self::MEAN_LON['Sun'][0] + self::MEAN_LON['Sun'][1] * $d);
         $meanPl = Charts::norm(self::MEAN_LON[$planet][0] + self::MEAN_LON[$planet][1] * $d);
+        $spashta = $tropical[$planet];
 
-        // Superior planets reckon from the Sun; inferior from the planet.
-        $kendra = in_array($planet, ['Mars', 'Jupiter', 'Saturn'], true)
-            ? Charts::norm($meanSun - $meanPl)
-            : Charts::norm($meanPl - $meanSun);
+        if (in_array($planet, ['Mars', 'Jupiter', 'Saturn'], true)) {
+            $seeghra = $meanSun;   // superior: seeghrochcha = mean Sun
+            $madhya = $meanPl;
+        } else {
+            $seeghra = $meanPl;    // inferior: seeghrochcha = own mean (seeghra) lon
+            $madhya = $meanSun;
+        }
+        unset($spashta); // (true longitude not used by the seeghra-kendra method)
+
+        // Seeghra (Chesta) Kendra = Seeghrochcha − Madhyama graha, folded to
+        // 0–180°; Chesta Bala = Kendra / 3. NOTE: Parashara's Light applies its
+        // full internal manda/seeghra anomaly model here, so for the five star
+        // planets our Chesta runs a few virupa below PL — a tolerated residual.
+        $kendra = Charts::norm($seeghra - $madhya);
         if ($kendra > 180.0) {
             $kendra = 360.0 - $kendra;
         }
@@ -370,9 +406,12 @@ final class Shadbala
     /**
      * @param array<string,float> $siderealLon
      */
-    private static function drigBala(string $aspected, array $siderealLon): float
+    private static function drigBala(string $aspected, array $siderealLon, bool $moonWaxing = true): float
     {
-        $benefics = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+        // Fixed classification (Parashara's Light): the Moon and Mercury are
+        // ALWAYS benefic for Drig Bala (Moon regardless of phase; Mercury never
+        // demoted for keeping malefic company). Malefics: Sun, Mars, Saturn.
+        $benefics = ['Moon', 'Mercury', 'Jupiter', 'Venus'];
         $sum = 0.0;
         foreach (self::PLANETS as $aspecting) {
             if ($aspecting === $aspected) {
@@ -401,6 +440,35 @@ final class Shadbala
         return $sum;
     }
 
+    /** Whether the birth instant is by day (Sun above the horizon). Used by the
+     *  Bhava Kaala (day/night) Bala. */
+    public static function isDayBirth(float $jdUt, float $lat, float $lonEast, float $sunTropical, float $sunDecl): bool
+    {
+        $S = static fn($d) => sin(deg2rad($d));
+        $C = static fn($d) => cos(deg2rad($d));
+        $T = static fn($d) => tan(deg2rad($d));
+        $eps = 23.4423;
+        $H0 = rad2deg(acos(max(-1.0, min(1.0, -$T($lat) * $T($sunDecl)))));
+        $raSun = Charts::norm(rad2deg(atan2($S($sunTropical) * $C($eps), $C($sunTropical))));
+        $t = ($jdUt - 2451545.0) / 36525.0;
+        $gmst = Charts::norm(280.46061837 + 360.98564736629 * ($jdUt - 2451545.0) + 0.000387933 * $t * $t);
+        $haBirth = Charts::norm($gmst + $lonEast - $raSun);
+        if ($haBirth > 180.0) {
+            $haBirth -= 360.0;
+        }
+        $birthClock = self::localClockHour($jdUt, $lonEast);
+        $transit = $birthClock - $haBirth / 15.0;
+        $half = $H0 / 15.0;
+        return $birthClock >= ($transit - $half) && $birthClock < ($transit + $half);
+    }
+
+    /** Public accessor: Sphuta Drishti (virupa) of one planet on an arbitrary
+     *  point — used by the Bhava Drishti Bala (per-planet, occupant-aware). */
+    public static function drishtiOnPoint(string $aspecting, float $from, float $to): float
+    {
+        return self::sphutaDrishti($aspecting, $from, $to);
+    }
+
     /** Sphuta Drishti (virupa) of one planet on a point, incl. special aspects. */
     private static function sphutaDrishti(string $aspecting, float $from, float $to): float
     {
@@ -409,14 +477,19 @@ final class Shadbala
         // Base Parashari drishti curve.
         $v = self::baseDrishti($c);
 
-        // Special full aspects raise specific houses to 60.
+        // Special full aspects: Mars (4th/8th), Jupiter (5th/9th), Saturn
+        // (3rd/10th) see their special HOUSE fully (60 virupa). The house spans
+        // 30° starting at its cusp, so a separation within [cusp, cusp+30) is a
+        // full aspect (not a ±15° spike around the exact cusp, which spuriously
+        // fired one house early and missed the rest of the house).
         $special = [
             'Mars' => [90.0, 210.0], 'Jupiter' => [120.0, 240.0], 'Saturn' => [60.0, 270.0],
         ];
         if (isset($special[$aspecting])) {
-            foreach ($special[$aspecting] as $ang) {
-                if (abs($c - $ang) <= 15.0) {
-                    $v = max($v, 45.0 + (15.0 - abs($c - $ang)));
+            foreach ($special[$aspecting] as $cusp) {
+                if ($c >= $cusp && $c < $cusp + 30.0) {
+                    $v = 60.0;
+                    break;
                 }
             }
         }

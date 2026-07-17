@@ -89,7 +89,17 @@ final class CalculationEngine
             $avSigns[$pl] = Charts::signIndex($sidereal[$pl]);
         }
         $ashtakavarga = Ashtakavarga::compute($avSigns);
-        $bhavaBala = BhavaBala::compute($ascSid, $ascSign, $shadbala, $sidereal);
+        // House occupants (incl. nodes) feed the Bhava Bala "Planets-in" component.
+        $occupants = array_fill(1, 12, []);
+        foreach ($planets as $pname => $pp) {
+            if (isset($occupants[$pp['house']])) {
+                $occupants[$pp['house']][] = $pname;
+            }
+        }
+        $sunTrop = Charts::norm($sidereal['Sun'] + $ayan);
+        $sunDecl = rad2deg(asin(sin(deg2rad(23.4423)) * sin(deg2rad($sunTrop))));
+        $isDay = Shadbala::isDayBirth($jdUt, $lat, $lonEast, $sunTrop, $sunDecl);
+        $bhavaBala = BhavaBala::compute($ascSid, $ascSign, $shadbala, $sidereal, $occupants, $isDay);
 
         // Per-house summary (house no, sign, planets, lord, AV bindus, Bhava Bala).
         $houses = [];
@@ -104,6 +114,11 @@ final class CalculationEngine
                 'av' => $ashtakavarga['sav'][$hsign],
                 'bb' => $bhavaBala[$hh]['rupa'],
                 'bb_virupa' => $bhavaBala[$hh]['total_virupa'],
+                'bb_adhipati' => $bhavaBala[$hh]['adhipati'],
+                'bb_digbala' => $bhavaBala[$hh]['digbala'],
+                'bb_drishti' => $bhavaBala[$hh]['drishti'],
+                'bb_planets_in' => $bhavaBala[$hh]['planets_in'],
+                'bb_day_night' => $bhavaBala[$hh]['day_night'],
                 'planets' => [],
             ];
         }
@@ -112,6 +127,20 @@ final class CalculationEngine
                 $houses[$pp['house']]['planets'][] = $pname;
             }
         }
+
+        // Graha Drishti (BPHS whole-house aspects) — one shared computation used
+        // by the D1 chart ring, the House Details table and the Copy text.
+        $drishti = Drishti::byHouse(array_map(static fn($p) => (int) $p['house'], $planets));
+        foreach ($houses as $hh => &$H) {
+            $H['drishti'] = $drishti[$hh] ?? [];
+        }
+        unset($H);
+
+        // Vimshopaka Bala — divisional-strength score (out of 20) per planet in
+        // the four varga groups.
+        $vimshopaka = VimshopakaBala::compute(
+            array_map(static fn($p) => (float) $p['sidereal_lon'], $planets)
+        );
 
         return [
             'meta' => [
@@ -122,6 +151,7 @@ final class CalculationEngine
                 'latitude' => $lat,
                 'longitude_east' => $lonEast,
             ],
+            'is_day' => $isDay,   // Sun above horizon at the chart moment (Saham day/night)
             'ascendant' => [
                 'sidereal_lon' => round($ascSid, 4),
                 'sign' => Charts::signName($ascSid),
@@ -142,6 +172,7 @@ final class CalculationEngine
                 'running' => $running,
             ],
             'shadbala' => $shadbala,
+            'vimshopaka' => $vimshopaka,
             'ashtakavarga' => $ashtakavarga,
             'bhava_bala' => $bhavaBala,
             'houses' => $houses,
@@ -157,6 +188,19 @@ final class CalculationEngine
      * @param array<string,mixed> $natalChart
      * @return array<string,mixed>
      */
+    /**
+     * Sidereal longitude (deg, 0..360) of one graha at an arbitrary instant.
+     * Lightweight probe for slow-planet transit TIMELINES (e.g. Sade-Sati window
+     * dates) where computing a whole chart per date would be wasteful.
+     */
+    public function planetSiderealLon(string $planet, float $jdUt): float
+    {
+        $ayan = Ayanamsa::degrees($this->ayanamsa, $jdUt);
+        $positions = $this->eph->positions($jdUt);
+        $lon = (float) ($positions[$planet]['lon'] ?? 0.0);
+        return Charts::norm($lon - $ayan);
+    }
+
     public function gochar(array $natalChart, float $atJdUt, float $lat, float $lonEast): array
     {
         $ayan = Ayanamsa::degrees($this->ayanamsa, $atJdUt);
@@ -173,11 +217,25 @@ final class CalculationEngine
                 'sign' => Charts::signName($sid),
                 'sign_index' => Charts::signIndex($sid),
                 'deg' => (int) floor(Charts::degInSign($sid)),
+                // Raw fields (additive) for the Gochar prediction engine — the
+                // browser panel ignores them; GocharPhalEngine needs them for
+                // the ksheen-Moon and degree-timing rules.
+                'deg_in_sign' => round(Charts::degInSign($sid), 4),
+                'sidereal_lon' => round($sid, 4),
                 'retro' => $p['retro'],
+                // Nakshatra + pada of the transit longitude (for the Gochar
+                // Details table); combustion is filled in below (needs the Sun).
+                'nakshatra' => Charts::nakshatra($sid),
                 'house_from_lagna' => Charts::houseFromAsc($sid, $natalAscSign),
                 'house_from_moon' => Charts::houseFromAsc($sid, $natalMoonSign),
             ];
         }
+        // Combustion (अस्त) for each transit planet — read from the Sun's
+        // separation, using the same orbs as the natal Planet Condition block.
+        foreach ($transits as $name => &$t) {
+            $t['combust'] = PlanetCondition::combustion($name, $transits);
+        }
+        unset($t);
 
         // Transit Ascendant for the requested moment + place (so the gochar
         // chart has its own rising sign, like mainstream software).
@@ -222,14 +280,14 @@ final class CalculationEngine
                     'name' => $name,
                     'abbr' => $abbr[$name] ?? substr((string) $name, 0, 2),
                     'sign' => Varga::sign($v, $lon),
-                    'deg' => (int) floor(Charts::degInSign($lon)), // D1 whole degree, for labels
+                    'deg' => (int) floor(Varga::degree($v, $lon)), // degree within the divisional sign
                     'retro' => (bool) ($p['retro'] ?? false),
                 ];
             }
             $out[$v] = [
                 'label' => $label,
                 'asc_sign' => Varga::sign($v, $ascLon),
-                'asc_deg' => (int) floor(Charts::degInSign($ascLon)),
+                'asc_deg' => (int) floor(Varga::degree($v, $ascLon)),
                 'planets' => $planets,
             ];
         }

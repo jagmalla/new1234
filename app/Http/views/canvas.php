@@ -10,9 +10,11 @@ declare(strict_types=1);
  */
 
 use AutoBusiness\Core\AdminGuard;
+use AutoBusiness\Core\Asset;
 use AutoBusiness\Core\Csrf;
 
 AdminGuard::require();
+Asset::noCacheHtml(); // HTML always revalidated (cache-busting)
 $csrf = Csrf::token();
 ?>
 <!doctype html>
@@ -53,6 +55,6 @@ $csrf = Csrf::token();
     <div id="canvas" class="w-full bg-gray-200"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/drawflow@0.0.59/dist/drawflow.min.js"></script>
-    <script src="/assets/js/canvas.js"></script>
+    <script src="<?= htmlspecialchars(Asset::url('/assets/js/canvas.js'), ENT_QUOTES) ?>"></script>
 </body>
 </html>
