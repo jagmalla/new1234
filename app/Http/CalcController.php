@@ -204,6 +204,16 @@ final class CalcController
             // of the Varshaphal prediction dropdown; Patyayini dasha with a
             // dasha/antardasha selector.
             'dasha_phal' => $this->dashaPhal($vp ?? null, $chart, (float) ($meta['tz'] ?? 0.0), (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Lal Kitab (लाल किताब) reading — the fixed-Aries teva chart plus its
+            // categorised predictions & remedies (planet, house, karak, yoga,
+            // parental-debt/shraap, sade-sati, manglik). Wrapped so an edge-case
+            // never blanks the page; text is baked/owner-editable in LalKitabData.
+            'lalkitab' => $this->safe(
+                static fn () => $chart !== null
+                    ? \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart)
+                    : ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'],
+                ['ok' => false, 'error' => 'लाल किताब गणना विफल']
+            ),
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.

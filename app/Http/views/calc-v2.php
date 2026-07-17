@@ -1157,6 +1157,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 </div>
             </div>
             <div class="l2-mi">
+                <button type="button" data-sec="lalkitab">Laal Kitab (लाल किताब)</button>
+            </div>
+            <div class="l2-mi">
                 <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan</a>
             </div>
         </nav>
@@ -2105,6 +2108,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <?php require __DIR__ . '/_varsha_bala_cards.php'; ?>
         </div>
         </div>
+
+        <!-- ============ लाल किताब (full-width section) ============ -->
+        <div id="sec-lalkitab" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+        <?php $lk = $view['lalkitab'] ?? ['ok' => false]; require __DIR__ . '/_lalkitab.php'; ?>
+        </div><!-- /sec-lalkitab -->
 
         <!-- ============ दशा (full-width section) ============ -->
         <div id="sec-dasha" class="l2-section l2-full hidden space-y-4 md:space-y-6">
@@ -3362,6 +3370,53 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
   }
 
   var gocharDetailsBuilt = false;
+  // ---- Laal Kitab (लाल किताब): render the fixed-Aries chart + wire the
+  // category dropdown and the "only ashubh / only applicable" filters. Built
+  // lazily the first time the section is opened.
+  var lalKitabBuilt = false;
+  function applyLkFilters() {
+    // Planet view: hide non-ashubh cards when "only ashubh" is checked.
+    var pb = document.querySelector('#sec-lalkitab .lk-onlybad[data-scope="planet"]');
+    if (pb) {
+      var onlyBad = pb.checked;
+      document.querySelectorAll('#sec-lalkitab .lk-view[data-lk="planet"] .lk-card[data-bad]').forEach(function (c) {
+        c.style.display = (onlyBad && c.getAttribute('data-bad') !== '1') ? 'none' : '';
+      });
+    }
+    // Yoga + Shrap views: hide non-applicable cards when "only applicable" checked.
+    document.querySelectorAll('#sec-lalkitab .lk-onlyapp').forEach(function (chk) {
+      var scope = chk.getAttribute('data-scope');
+      var onlyApp = chk.checked;
+      document.querySelectorAll('#sec-lalkitab .lk-view[data-lk="' + scope + '"] .lk-card[data-app]').forEach(function (c) {
+        c.style.display = (onlyApp && c.getAttribute('data-app') !== '1') ? 'none' : '';
+      });
+    });
+  }
+  function buildLalKitab() {
+    if (lalKitabBuilt) { applyLkFilters(); return; }
+    lalKitabBuilt = true;
+    // Chart (fixed Aries lagna; planets placed by bhava).
+    var host = document.getElementById('lk-chart');
+    if (host && window.ABChart && window.AB_LALKITAB && window.AB_LALKITAB.planets) {
+      window.ABChart.renderNorth(host, window.AB_LALKITAB, { showDeg: false, big: true });
+    }
+    // Category dropdown → toggle the matching .lk-view.
+    var sel = document.getElementById('lk-select');
+    if (sel && !sel._bound) {
+      sel._bound = true;
+      sel.addEventListener('change', function () {
+        document.querySelectorAll('#sec-lalkitab .lk-view').forEach(function (v) {
+          v.classList.toggle('active', v.getAttribute('data-lk') === sel.value);
+        });
+        applyLkFilters();
+      });
+    }
+    document.querySelectorAll('#sec-lalkitab .lk-onlybad, #sec-lalkitab .lk-onlyapp').forEach(function (chk) {
+      chk.addEventListener('change', applyLkFilters);
+    });
+    applyLkFilters();
+  }
+
   function buildGocharDetails() {
     if (gocharDetailsBuilt || !window.ABGochar) { return; }
     if (!document.getElementById('gd-inputs')) { return; }
@@ -3392,7 +3447,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
   }
 
   // Side-menu section switching: home = three-panel; others span the two panels.
-  var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-muhurat', 'sec-varsha'];
+  var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-muhurat', 'sec-varsha', 'sec-lalkitab'];
   function showSection(key, focusPred) {
     var homeMode = key === 'home';
     var customMode = key === 'custom';
@@ -3429,6 +3484,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     });
     if (key === 'muhurat') { buildMahuratPage(); }
     if (key === 'grah') { buildGocharDetails(); }
+    if (key === 'lalkitab') { buildLalKitab(); }
     if (homeMode) { setTimeout(setPanelHeights, 60); }
     // Cards rendered while their section was hidden (Mudda dasha, gochar pair)
     // measured zero heights — re-run their resize syncs now they are visible.
