@@ -261,6 +261,28 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             text-transform: uppercase; letter-spacing: .02em; }
         .pred-inline-select { flex: 1; min-width: 160px; padding: 9px 30px 9px 12px; min-height: 40px; }
         /* सहम + मुद्दा-दशा dropdowns share one line: saham wider, mudda narrower. */
+        /* "Dasha Details" button + popup (responsive; close ✕ always visible). */
+        .dasha-detail-btn { font-size: .78rem; font-weight: 700; border: 1px solid var(--sindoor);
+            color: var(--sindoor); background: #fff; border-radius: 8px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+        .dasha-detail-btn:hover { background: var(--sindoor); color: #fff; }
+        .dm-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(15,12,8,.55);
+            display: flex; align-items: center; justify-content: center; padding: 14px; }
+        .dm-overlay.hidden { display: none; }
+        .dm-box { background: #fff; border-radius: 12px; width: 100%; max-width: 680px; max-height: 88vh;
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 14px 48px rgba(0,0,0,.35); }
+        .dm-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+            border-bottom: 1px solid var(--line); background: #fff; flex: 0 0 auto; }
+        .dm-title { font-weight: 800; font-size: 1rem; color: var(--sindoor); }
+        .dm-close { margin-left: auto; width: 36px; height: 36px; min-width: 36px; border-radius: 50%;
+            border: 1px solid var(--line); background: #f8fafc; color: #334155; cursor: pointer;
+            font-size: 1.05rem; line-height: 1; display: flex; align-items: center; justify-content: center; }
+        .dm-close:hover { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+        .dm-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 14px; flex: 1 1 auto; }
+        .dm-body::-webkit-scrollbar { width: 9px; }
+        .dm-body::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 8px; }
+        .dm-tree .dasha-tree, .dm-tree { font-size: .9rem; }
+        .dasha-strip { cursor: pointer; }
+        @media (max-width: 640px) { .dm-box { max-height: 92vh; border-radius: 10px; } .dm-body { padding: 10px 10px; } }
         .saham-sel-main { flex: 3 1 190px; }
         .saham-sel-mudda { flex: 1 1 120px; min-width: 120px; max-width: 210px; }
         /* भाव-फल: भाव + श्रेणी selects share one line with the checkbox. */
@@ -1247,6 +1269,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
          data-lang="<?= $h((string) $phala['lang']) ?>">
         <div class="flex flex-wrap items-end gap-x-6 gap-y-3 mb-3">
             <h2 class="font-semibold">Dasha Prediction <span class="text-xs text-gray-400 font-normal">(दशा फल)</span></h2>
+            <button type="button" id="dasha-detail-btn" class="dasha-detail-btn">📅 Dasha Details</button>
             <div class="dp-picker">
                 <span class="pred-picker-label">यहाँ से चुनें ▾</span>
                 <label class="dp-field"><span>Mahadasha</span>
@@ -2318,6 +2341,20 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         : null;
 ?>
 <script>window.AB_USER = <?= json_encode($abUser, JSON_UNESCAPED_UNICODE) ?>;</script>
+<!-- Dasha Details popup: the full Vimshottari dasha tree (expand + scroll),
+     with a close ✕ that stays visible; works on phone / tablet / laptop. -->
+<div id="dasha-modal" class="dm-overlay hidden" role="dialog" aria-modal="true" aria-label="Dasha details">
+    <div class="dm-box">
+        <div class="dm-head">
+            <span class="dm-title">दशा विवरण <span style="font-weight:400;color:#9ca3af;font-size:.8rem">/ Dasha Details</span></span>
+            <button type="button" class="dm-close" id="dasha-modal-close" aria-label="Close / बंद करें" title="Close">✕</button>
+        </div>
+        <div class="dm-body" id="dasha-modal-body">
+            <div id="dasha-modal-tree" class="dm-tree"></div>
+        </div>
+    </div>
+</div>
+
 <script src="<?= $h($asset('/assets/js/datefmt.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
@@ -2485,6 +2522,41 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         btn.textContent = open ? 'Collapse ▴' : 'Expand ▾';
       });
     });
+  })();
+
+  // Dasha Details popup: renders the full Vimshottari dasha tree (expand a
+  // period to see its children; scroll forward/backward). Opened by the "Dasha
+  // Details" button OR by clicking the running-dasha strip. Close ✕ / backdrop /
+  // Esc. Works on phone/tablet/laptop; body scroll is locked while open.
+  (function () {
+    var overlay = document.getElementById('dasha-modal');
+    if (!overlay) { return; }
+    var tree = document.getElementById('dasha-modal-tree');
+    var body = document.getElementById('dasha-modal-body');
+    var built = false;
+    function open() {
+      if (!built && window.ABDasha && window.AB_DASHA && window.AB_DASHA.length) {
+        try { window.ABDasha.render(tree, window.AB_DASHA, { tz: window.AB_TZ, datesInline: true }); built = true; }
+        catch (e) { tree.innerHTML = '<div class="text-sm text-gray-500">दशा उपलब्ध नहीं / Dasha not available.</div>'; }
+      } else if (!built) {
+        tree.innerHTML = '<div class="text-sm text-gray-500">दशा उपलब्ध नहीं / Dasha not available.</div>';
+      }
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';           // lock background scroll
+      if (body) { body.scrollTop = 0; }
+    }
+    function close() { overlay.classList.add('hidden'); document.body.style.overflow = ''; }
+    var btn = document.getElementById('dasha-detail-btn');
+    if (btn) { btn.addEventListener('click', open); }
+    document.querySelectorAll('.dasha-strip').forEach(function (s) {
+      s.setAttribute('role', 'button'); s.setAttribute('tabindex', '0');
+      s.addEventListener('click', open);
+      s.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
+    var x = document.getElementById('dasha-modal-close');
+    if (x) { x.addEventListener('click', close); }
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) { close(); } });  // backdrop
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) { close(); } });
   })();
 
   // Planet Prediction: pick a planet (left) -> show only its detail (right).
