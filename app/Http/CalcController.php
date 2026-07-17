@@ -175,6 +175,25 @@ final class CalcController
                     : null,
                 null
             ),
+            // D1 दोष-पैनल: कालसर्प / ग्रहण / चांडाल / अंगारक / विष / केमद्रुम /
+            // शकट / पितृ — detection + परिहार, the "दोष" prediction option.
+            'doshas' => $this->safe(
+                static fn () => $chart !== null ? \AutoBusiness\Astro\Phala\DoshaFinder::compute($chart) : [],
+                []
+            ),
+            // आगामी 12 महीने की समय-रेखा: ingress + वक्री/मार्गी + दशा-परिवर्तन +
+            // गोचर-जन्म ±3° संयोग — one merged calendar (Gochar section + Today).
+            'year_timeline' => $this->safe(
+                static function () use ($chart, &$engine, &$nowJd, $meta) {
+                    if ($chart === null || !isset($engine, $nowJd)) {
+                        return null;
+                    }
+                    return \AutoBusiness\Astro\Gochar\YearTimeline::compute(
+                        $engine, $chart, (float) $nowJd, (float) ($meta['tz'] ?? 0.0)
+                    );
+                },
+                null
+            ),
             // House Prediction: combines the editable rule tables with the chart
             // facts to write a per-house Hindi reading.
             'housePred' => $housePred = $this->housePred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),

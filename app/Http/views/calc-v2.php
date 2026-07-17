@@ -1099,6 +1099,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <button type="button" data-sec="profile">New / Profile</button>
             </div>
             <div class="l2-mi">
+                <button type="button" data-sec="today">Today (आज का Consult)</button>
+            </div>
+            <div class="l2-mi">
                 <button type="button" data-sec="custom">Custom Screen</button>
             </div>
             <div class="l2-mi">
@@ -1142,6 +1145,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                     <button type="button" data-sec="gochar" data-target="card-gocharcalc">Gochar Calculation</button>
                     <button type="button" data-sec="gochar" data-target="card-gocharpair">Chart + Prediction (Row 1)</button>
                     <button type="button" data-sec="gochar" data-target="card-gochardet">Chart + Prediction (Row 2)</button>
+                    <button type="button" data-sec="gochar" data-target="yt-card">12-Month Timeline</button>
                 </div>
             </div>
             <div class="l2-mi">
@@ -1239,10 +1243,21 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                     <option value="bhavesh">Bhavesh (भावेश)</option>
                     <option value="karak">Karak (कारक)</option>
                     <option value="yoga">Kundali Yog (योग)</option>
+                    <option value="dosha">Dosha (दोष व परिहार)</option>
                     <option value="shaap">Shrap (पूर्वशाप व सन्तान)</option>
+                    <option value="search" hidden>🔍 खोज परिणाम</option>
                 </select>
                 </div>
+                <button type="button" id="d1-print" class="pred-expand" aria-label="Print report" title="D1 रिपोर्ट Print करें" style="width:auto;padding:0 8px;font-size:.8rem">🖨</button>
                 <button type="button" id="pred-expand" class="pred-expand" aria-label="Expand" title="Expand">⤢</button>
+            </div>
+            <!-- विषय-खोज: chips + free text, scans every prediction block. -->
+            <div id="pred-topic-row" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:6px 0 4px">
+                <input type="text" id="pred-q" placeholder="🔍 विषय खोजें…" aria-label="फलादेश में खोजें"
+                       style="flex:1;min-width:110px;border:1px solid #cbd5e1;border-radius:8px;padding:3px 9px;font-size:.76rem">
+                <?php foreach (['धन' => '💰', 'विवाह' => '💑', 'संतान' => '👶', 'रोग' => '🩺', 'नौकरी' => '💼', 'शिक्षा' => '🎓', 'विदेश' => '✈'] as $tpc => $tpi): ?>
+                <button type="button" class="lk-chip" data-topic="<?= $h($tpc) ?>" style="border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:1px 9px;font-size:.72rem;color:#475569;cursor:pointer"><?= $tpi ?> <?= $h($tpc) ?></button>
+                <?php endforeach; ?>
             </div>
             <div id="pred-scroll">
 
@@ -1734,6 +1749,18 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             </div><!-- /pred-view yoga -->
 
             <!-- शाप-दोष / सन्तान योग — Poorva Shaap (BPHS ch.86) catalogue + remedies. -->
+            <div class="pred-view hidden" data-pred="dosha">
+                <?php require __DIR__ . '/_dosha_panel.php'; ?>
+            </div><!-- /pred-view dosha -->
+
+            <div class="pred-view hidden" data-pred="search">
+                <div class="bg-white rounded-lg shadow p-4 text-sm">
+                    <h2 class="font-semibold mb-1">🔍 खोज परिणाम</h2>
+                    <div id="pred-search-note" class="text-xs text-gray-500 mb-3"></div>
+                    <div id="pred-search-results"></div>
+                </div>
+            </div><!-- /pred-view search -->
+
             <div class="pred-view hidden" data-pred="shaap">
                 <?php require __DIR__ . '/_shaap.php'; ?>
             </div><!-- /pred-view shaap -->
@@ -2039,6 +2066,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <!-- gochar.js still fetches transits + injects #gochar-phal here; kept
              hidden since the visible transit chart is drawn into a chart slot. -->
         <div id="gochar-output" class="hidden"></div>
+            <!-- आगामी 12 महीने की समय-रेखा (गोचर + दशा + संयोग merged) -->
+            <?php require __DIR__ . '/_year_timeline.php'; ?>
         </div><!-- /sec-gochar -->
 
         <!-- ============ मुहूर्त (Mahurat) — dedicated transit+muhurat page ======= -->
@@ -2091,7 +2120,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <div id="sec-varsha" class="l2-section l2-full hidden space-y-4 md:space-y-6">
         <!-- Varshaphal year selection + summary details -->
         <div id="card-vpbox" class="bg-white rounded-lg shadow p-4">
-            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal</h2>
+            <h2 class="font-semibold mb-3 text-gray-700">Varshaphal
+                <button type="button" id="vp-print" class="pred-expand" title="वर्ष रिपोर्ट Print करें" style="width:auto;padding:0 8px;font-size:.8rem;float:right">🖨 वर्ष रिपोर्ट</button></h2>
             <!-- Year selector on the LEFT, the colourful year summary fills the
                  empty space on the RIGHT (moved up here from below the box). -->
             <div class="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-10">
@@ -2168,6 +2198,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <?php require __DIR__ . '/_varsha_bala_cards.php'; ?>
         </div>
         </div>
+
+        <!-- ============ आज का Consult (full-width section) ============ -->
+        <div id="sec-today" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+        <?php require __DIR__ . '/_today_dashboard.php'; ?>
+        </div><!-- /sec-today -->
 
         <!-- ============ लाल किताब (full-width section) ============ -->
         <div id="sec-lalkitab" class="l2-section l2-full hidden space-y-4 md:space-y-6">
@@ -2388,6 +2423,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 </main>
 
 <?php if ($chart !== null): ?>
+<?php // Hidden D1 print report (opened by #d1-print via ABPrintDoc). ?>
+<?php require __DIR__ . '/_d1_report.php'; ?>
+
 <script>
   window.AB_VARGAS = <?= json_encode($vargas ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
   window.AB_DASHA  = <?= json_encode($chart['dasha']['mahadashas'] ?? [], JSON_UNESCAPED_UNICODE) ?>;
@@ -3430,6 +3468,129 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
   }
 
   var gocharDetailsBuilt = false;
+  // ---- Shared print-document window (D1 report, Varshaphal report, Lal Kitab
+  // report/checklist all use this) + the D1/Varshaphal print buttons + the
+  // topic-search that scans every prediction block for a keyword.
+  (function () {
+    var LKR_CSS = 'body{font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;color:#111;margin:24px;line-height:1.55;font-size:13px}' +
+      '.lkr-title{font-size:20px;font-weight:800;border-bottom:3px solid #b91c1c;padding-bottom:6px;margin-bottom:4px}' +
+      '.lkr-sub{color:#555;font-size:12px;margin-bottom:14px}' +
+      '.lkr-h{font-size:15px;font-weight:800;margin:16px 0 6px;color:#7c2d12;border-bottom:1px solid #ddd;padding-bottom:3px}' +
+      '.lkr-box{border:1px solid #ddd;border-radius:6px;padding:8px 11px;margin:6px 0;page-break-inside:avoid}' +
+      '.lkr-box.lkr-bad{border-color:#fca5a5;background:#fef2f2}' +
+      '.lkr-box.lkr-hot{border-color:#fdba74;background:#fff7ed}' +
+      '.lkr-why{color:#92400e;font-size:11.5px;margin-top:3px}' +
+      '.lkr-ul{margin:5px 0 2px;padding-left:20px}.lkr-ul li{margin:2px 0}' +
+      '.lkr-days{margin-top:6px;font-size:10px;color:#333}' +
+      '.lkr-day{display:inline-block;width:20px;height:16px;border:1px solid #999;border-radius:3px;text-align:center;margin:1px;font-size:8.5px;color:#777;vertical-align:middle}' +
+      '.lkr-foot{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;color:#666;font-size:11px;font-style:italic}' +
+      'select,button{display:none!important}' +
+      'table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:3px 6px;font-size:11.5px;text-align:left}' +
+      '@media print{body{margin:10mm}}';
+    window.ABPrintDoc = function (src, title) {
+      var html = '';
+      if (typeof src === 'string') {
+        var el = document.getElementById(src);
+        if (el) { html = el.innerHTML; }
+      } else if (src && src.html) { html = src.html; }
+      if (!html) { return; }
+      var w = window.open('', '_blank');
+      if (!w) { alert('Popup blocked — कृपया popup की अनुमति दें।'); return; }
+      w.document.write('<!DOCTYPE html><html lang="hi"><head><meta charset="utf-8"><title>' + title +
+        '</title><style>' + LKR_CSS + '</style></head><body>' + html + '</body></html>');
+      w.document.close();
+      w.focus();
+      setTimeout(function () { w.print(); }, 500);
+    };
+    var dp = document.getElementById('d1-print');
+    if (dp) { dp.addEventListener('click', function () { window.ABPrintDoc('d1-report', 'Birth Chart Report'); }); }
+    var vpb = document.getElementById('vp-print');
+    if (vpb) {
+      vpb.addEventListener('click', function () {
+        // Compose the Varshaphal report from the already-rendered panes.
+        var html = '<div class="lkr-title">वर्षफल रिपोर्ट (Varshaphal Report)</div>';
+        ['vp-saar', 'vp-pred-varshesh', 'vp-pred-muntha'].forEach(function (id) {
+          var e = document.getElementById(id);
+          if (e) { html += '<div style="margin:12px 0">' + e.innerHTML + '</div>'; }
+        });
+        window.ABPrintDoc({ html: html }, 'Varshaphal Report');
+      });
+    }
+
+    // ---- topic search across the D1 prediction blocks -------------------
+    var TOPICS = {
+      'धन':    ['धन', 'रुपया', 'पैसा', 'सम्पत्ति', 'संपत्ति', 'दौलत', 'आर्थिक', 'लक्ष्मी', 'धनी', 'व्यय', 'खर्च', 'लाभ'],
+      'विवाह': ['विवाह', 'शादी', 'पति', 'पत्नी', 'दाम्पत्य', 'ससुराल', 'वैवाहिक', 'जीवनसाथी'],
+      'संतान': ['संतान', 'सन्तान', 'पुत्र', 'औलाद', 'बच्च', 'गर्भ'],
+      'रोग':   ['रोग', 'बीमार', 'स्वास्थ्य', 'दर्द', 'चोट', 'कष्ट', 'इलाज'],
+      'नौकरी': ['नौकरी', 'व्यापार', 'कारोबार', 'धंधा', 'राज्य', 'सरकारी', 'पदोन्नति', 'तरक्की', 'उन्नति', 'रोज़गार', 'रोजगार', 'करियर'],
+      'शिक्षा': ['शिक्षा', 'विद्या', 'पढ़ाई', 'बुद्धि', 'स्मरण'],
+      'विदेश': ['विदेश', 'यात्रा', 'परदेस', 'प्रवास']
+    };
+    function scanBlocks(scopeSel, terms, cap) {
+      var out = [];
+      document.querySelectorAll(scopeSel).forEach(function (c) {
+        if (out.length >= cap) { return; }
+        var t = (c.textContent || '').trim();
+        if (t.length < 18) { return; }
+        if (!terms.some(function (k) { return k && t.indexOf(k) !== -1; })) { return; }
+        // skip nested duplicates (an li inside an already-matched card)
+        if (out.some(function (o) { return o.contains(c) || c.contains(o); })) { return; }
+        out.push(c);
+      });
+      return out;
+    }
+    window.ABTopicSearch = function (label, terms) {
+      var res = document.getElementById('pred-search-results');
+      var note = document.getElementById('pred-search-note');
+      if (!res) { return; }
+      res.innerHTML = '';
+      var PRED_HI = { general: 'सारांश', dasha: 'दशा फल', grah: 'ग्रह फल', bhav: 'भाव फल', bhavesh: 'भावेश', karak: 'कारक', yoga: 'योग', dosha: 'दोष', shaap: 'शाप' };
+      var blocks = scanBlocks('#pred-scroll .pred-view:not([data-pred="search"]) li, ' +
+        '#pred-scroll .pred-view:not([data-pred="search"]) .whitespace-pre-line, ' +
+        '#pred-scroll .pred-view:not([data-pred="search"]) .yoga-card, ' +
+        '#pred-scroll .pred-view:not([data-pred="search"]) .shaap-card, ' +
+        '#pred-scroll .pred-view:not([data-pred="search"]) .gc-line', terms, 60);
+      blocks.forEach(function (c) {
+        var from = c.closest('.pred-view');
+        var key = from ? from.getAttribute('data-pred') : '';
+        var card = document.createElement('div');
+        card.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;padding:7px 11px;margin-bottom:7px;font-size:.85rem;color:#334155;line-height:1.6';
+        card.innerHTML = '<div style="font-size:.68rem;color:#0369a1;font-weight:700;margin-bottom:2px">📁 ' + (PRED_HI[key] || key) + '</div>';
+        var body = document.createElement('div');
+        body.textContent = (c.textContent || '').trim();
+        card.appendChild(body);
+        res.appendChild(card);
+      });
+      if (note) {
+        note.textContent = blocks.length
+          ? ('"' + label + '" — ' + blocks.length + ' परिणाम' + (blocks.length >= 60 ? ' (पहले 60)' : '') + '।')
+          : ('"' + label + '" के लिए कोई परिणाम नहीं।');
+      }
+      var sel = document.getElementById('pred-select');
+      if (sel) {
+        var so = sel.querySelector('option[value="search"]');
+        if (so) { so.hidden = false; }
+        sel.value = 'search';
+        sel.dispatchEvent(new Event('change'));
+      }
+    };
+    document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var topic = chip.getAttribute('data-topic');
+        window.ABTopicSearch(chip.textContent.trim(), TOPICS[topic] || [topic]);
+      });
+    });
+    var pq = document.getElementById('pred-q');
+    if (pq) {
+      pq.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') { return; }
+        var v = pq.value.trim();
+        if (v) { window.ABTopicSearch(v, TOPICS[v] || [v]); }
+      });
+    }
+  })();
+
   // ---- Laal Kitab (लाल किताब): render the fixed-Aries chart + wire the
   // category dropdown and the "only ashubh / only applicable" filters. Built
   // lazily the first time the section is opened.
@@ -3483,36 +3644,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       chk.addEventListener('change', applyLkFilters);
     });
 
-    // ---- Print (पूर्ण रिपोर्ट + उपाय checklist): open the hidden server-built
-    // document in a print window with a compact professional stylesheet.
-    var LKR_CSS = 'body{font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;color:#111;margin:24px;line-height:1.55;font-size:13px}' +
-      '.lkr-title{font-size:20px;font-weight:800;border-bottom:3px solid #b91c1c;padding-bottom:6px;margin-bottom:4px}' +
-      '.lkr-sub{color:#555;font-size:12px;margin-bottom:14px}' +
-      '.lkr-h{font-size:15px;font-weight:800;margin:16px 0 6px;color:#7c2d12;border-bottom:1px solid #ddd;padding-bottom:3px}' +
-      '.lkr-box{border:1px solid #ddd;border-radius:6px;padding:8px 11px;margin:6px 0;page-break-inside:avoid}' +
-      '.lkr-box.lkr-bad{border-color:#fca5a5;background:#fef2f2}' +
-      '.lkr-box.lkr-hot{border-color:#fdba74;background:#fff7ed}' +
-      '.lkr-why{color:#92400e;font-size:11.5px;margin-top:3px}' +
-      '.lkr-ul{margin:5px 0 2px;padding-left:20px}.lkr-ul li{margin:2px 0}' +
-      '.lkr-days{margin-top:6px;font-size:10px;color:#333}' +
-      '.lkr-day{display:inline-block;width:20px;height:16px;border:1px solid #999;border-radius:3px;text-align:center;margin:1px;font-size:8.5px;color:#777;vertical-align:middle}' +
-      '.lkr-foot{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;color:#666;font-size:11px;font-style:italic}' +
-      '@media print{body{margin:10mm}}';
-    function lkPrint(srcId, title) {
-      var src = document.getElementById(srcId);
-      if (!src) { return; }
-      var w = window.open('', '_blank');
-      if (!w) { alert('Popup blocked — कृपया popup की अनुमति दें।'); return; }
-      w.document.write('<!DOCTYPE html><html lang="hi"><head><meta charset="utf-8"><title>' + title +
-        '</title><style>' + LKR_CSS + '</style></head><body>' + src.innerHTML + '</body></html>');
-      w.document.close();
-      w.focus();
-      setTimeout(function () { w.print(); }, 500);
-    }
+    // ---- Print (पूर्ण रिपोर्ट + उपाय checklist): shared print window helper.
     var pr = document.getElementById('lk-print-report');
-    if (pr) { pr.addEventListener('click', function () { lkPrint('lk-report', 'Lal Kitab Report'); }); }
+    if (pr) { pr.addEventListener('click', function () { window.ABPrintDoc('lk-report', 'Lal Kitab Report'); }); }
     var pc = document.getElementById('lk-print-checklist');
-    if (pc) { pc.addEventListener('click', function () { lkPrint('lk-checklist', 'Lal Kitab Upay Checklist'); }); }
+    if (pc) { pc.addEventListener('click', function () { window.ABPrintDoc('lk-checklist', 'Lal Kitab Upay Checklist'); }); }
 
     // ---- Topic search across every category. A chip (or typed text) collects
     // its synonym set, matching cards are cloned into the results view with an
@@ -3616,7 +3752,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
   }
 
   // Side-menu section switching: home = three-panel; others span the two panels.
-  var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-muhurat', 'sec-varsha', 'sec-lalkitab'];
+  var FULL_SECTIONS = ['sec-profile', 'sec-custom', 'sec-grah', 'sec-varga', 'sec-dasha', 'sec-bal', 'sec-gochar', 'sec-muhurat', 'sec-varsha', 'sec-lalkitab', 'sec-today'];
   function showSection(key, focusPred) {
     var homeMode = key === 'home';
     var customMode = key === 'custom';
