@@ -110,8 +110,11 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
         <option value="health">🩺 रोग / संतान / Health</option>
         <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
         <option value="varsh">📅 वर्ष कुंडली ज्ञान / Annual</option>
+        <option value="supt">😴 सुप्त ग्रह / Sleeping Planets</option>
+        <option value="drishti">👁 भाव दृष्टि / House Aspects</option>
         <option value="remedy">🛠 उपाय / Remedy</option>
         <option value="rules">📜 उपाय नियम / Rules</option>
+        <option value="reference">📚 संदर्भ चक्र / Reference</option>
       </select>
     </div>
 
@@ -365,6 +368,38 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
         <?php endif; ?>
       </div>
 
+      <!-- ===== SUPT (sleeping planets) ===== -->
+      <div class="lk-view" data-lk="supt">
+        <h3 class="lk-h">सुप्त ग्रह (Sleeping Planets)</h3>
+        <div class="lk-txt" style="margin-bottom:9px">लाल किताब में हर भाव में बैठा ग्रह तब तक "सुप्त" (सोया) रहता है जब तक उस भाव का <b>जगाने वाला ग्रह</b> कुंडली में उपस्थित न हो। नीचे प्रत्येक ग्रह की जागृत/सुप्त स्थिति है।</div>
+        <?php foreach ($lk['supt'] as $s): ?>
+          <div class="lk-card <?= $s['awake'] ? 'good' : 'bad' ?>">
+            <div class="lk-card-h">
+              <?= $h((string) $s['hi']) ?> — <?= $h((string) $s['house_ord']) ?> भाव में
+              <?= $pill($s['awake'] ? 'जागृत' : 'सुप्त', 's') ?>
+            </div>
+            <div class="lk-sub"><b>जगाने वाला ग्रह:</b> <?= $h((string) $s['waker']) ?><?= $s['awake'] ? ' — कुंडली में उपस्थित (सक्रिय)' : ' — कुंडली में अनुपस्थित (सुप्त रहेगा)' ?></div>
+            <?php if (trim((string) $s['jagega']) !== ''): ?><div class="lk-sub"><b>कब जागेगा:</b> <?= $h((string) $s['jagega']) ?><?= trim((string) $s['aayu']) !== '' ? ' (' . $h((string) $s['aayu']) . ')' : '' ?></div><?php endif; ?>
+            <?php if (trim((string) $s['ashubh']) !== ''): ?><div class="lk-sub" style="color:#991b1b"><b>अशुभ वर्ष:</b> <?= $h((string) $s['ashubh']) ?></div><?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <!-- ===== DRISHTI (house aspects) ===== -->
+      <div class="lk-view" data-lk="drishti">
+        <h3 class="lk-h">भाव दृष्टि (House Aspects)</h3>
+        <div class="lk-txt" style="margin-bottom:9px">लाल किताब की भाव-दृष्टि के अनुसार जिन भावों में ग्रह बैठे हैं वे किन भावों को देखते हैं (दृष्टि), किनसे सहायता पाते हैं, और किनसे टकराव है — तथा उन भावों में कौन-से ग्रह हैं।</div>
+        <?php foreach ($lk['drishti'] as $d):
+            $fmtH = static function (array $hs) use ($h) { return $hs ? $h(implode(', ', $hs)) . ' भाव' : '—'; }; ?>
+          <div class="lk-card">
+            <div class="lk-card-h"><?= $h((string) $d['house_ord']) ?> भाव — <?= $h(implode(', ', $d['planets_hi'])) ?></div>
+            <div class="lk-sub"><b>👁 दृष्टि (देखता है):</b> <?= $fmtH($d['drishti']) ?><?= $d['drishti_p'] ? ' → ' . $h(implode(', ', $d['drishti_p'])) : '' ?></div>
+            <div class="lk-sub" style="color:#166534"><b>🤝 सहायक भाव:</b> <?= $fmtH($d['sahayak']) ?><?= $d['sahayak_p'] ? ' → ' . $h(implode(', ', $d['sahayak_p'])) : '' ?></div>
+            <div class="lk-sub" style="color:#991b1b"><b>⚔ टकराव:</b> <?= $fmtH($d['takrav']) ?><?= $d['takrav_p'] ? ' → ' . $h(implode(', ', $d['takrav_p'])) : '' ?></div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
       <!-- ===== REMEDY ===== -->
       <div class="lk-view" data-lk="remedy">
         <?php $rm = $lk['remedy']; ?>
@@ -429,6 +464,82 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
             </ul>
           </div>
         <?php endif; ?>
+      </div>
+
+      <!-- ===== REFERENCE (chakras) ===== -->
+      <div class="lk-view" data-lk="reference">
+        <?php $rf = $lk['reference']; ?>
+        <h3 class="lk-h">संदर्भ चक्र (Reference Charts)</h3>
+
+        <div class="lk-card">
+          <div class="lk-card-h">जीवन की अवस्थाएँ (Life Stages)</div>
+          <?php foreach ($rf['avastha'] as $a): $cur = ($a['avastha'] === $rf['cur_stage']); ?>
+            <div class="lk-sub" style="<?= $cur ? 'font-weight:700;color:#166534' : '' ?>">
+              <?= $cur ? '➤ ' : '' ?><b><?= $h((string) $a['avastha']) ?>:</b> <?= $h((string) $a['bhav']) ?> · <?= $h((string) $a['aayu']) ?><?= $cur ? ' (आपकी वर्तमान अवस्था)' : '' ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+
+        <div class="lk-card">
+          <div class="lk-card-h">ग्रह वस्तुएँ एवं संबंधी (Significators)</div>
+          <div class="lk-txt" style="margin-bottom:6px;color:#64748b">उपाय व दान में इन वस्तुओं का उपयोग होता है।</div>
+          <?php foreach ($rf['planets'] as $p): ?>
+            <div class="lk-sub" style="margin-bottom:5px"><b><?= $h((string) $p['hi']) ?>:</b> <?= $h((string) $p['vastu']) ?><?php if (trim((string) $p['sthapana']) !== ''): ?><br><span style="color:#9a3412"><b>स्थापना वस्तु:</b> <?= $h((string) $p['sthapana']) ?></span><?php endif; ?></div>
+          <?php endforeach; ?>
+        </div>
+
+        <div class="lk-card">
+          <div class="lk-card-h">ग्रह-राशि संबंध चक्र</div>
+          <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+            <thead><tr style="background:#f8fafc;text-align:left">
+              <th style="padding:4px 6px;border-bottom:1px solid #e5e7eb">राशि</th>
+              <th style="padding:4px 6px;border-bottom:1px solid #e5e7eb">स्वामी</th>
+              <th style="padding:4px 6px;border-bottom:1px solid #e5e7eb">उच्च</th>
+              <th style="padding:4px 6px;border-bottom:1px solid #e5e7eb">नीच</th>
+              <th style="padding:4px 6px;border-bottom:1px solid #e5e7eb">कारक</th>
+              <th style="padding:4px 6px;border-bottom:1px solid #e5e7eb">भाग्यकारी</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($rf['grah_rashi'] as $g): ?>
+              <tr>
+                <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9"><?= $h((string) $g['rashi']) ?></td>
+                <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9"><?= $h((string) $g['swami']) ?></td>
+                <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9"><?= $h((string) $g['uch']) ?></td>
+                <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9"><?= $h((string) $g['neech']) ?></td>
+                <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9"><?= $h((string) $g['karak']) ?></td>
+                <td style="padding:4px 6px;border-bottom:1px solid #f1f5f9"><?= $h((string) $g['bhagya']) ?></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <div class="lk-card">
+          <div class="lk-card-h">भाव-मास चक्र (House → Month)</div>
+          <div class="lk-txt" style="line-height:2">
+            <?php for ($i = 1; $i <= 12; $i++): ?>
+              <span style="display:inline-block;min-width:120px"><b><?= $i ?>वाँ भाव:</b> <?= $h((string) ($rf['bhav_maas'][(string) $i] ?? '')) ?></span>
+            <?php endfor; ?>
+          </div>
+        </div>
+
+        <div class="lk-card">
+          <div class="lk-card-h">भाव स्थापना उपाय (किसी भाव को बल देने हेतु)</div>
+          <div class="lk-txt" style="margin-bottom:6px;color:#64748b">अभीष्ट भाव के स्वामी-ग्रह से सम्बन्धित वस्तुओं के साथ:</div>
+          <?php for ($i = 1; $i <= 12; $i++): if (empty($rf['bhav_sthapana'][(string) $i])) { continue; } ?>
+            <div class="lk-sub"><b><?= $i ?>वाँ भाव:</b> <?= $h((string) $rf['bhav_sthapana'][(string) $i]) ?></div>
+          <?php endfor; ?>
+        </div>
+
+        <div class="lk-card">
+          <div class="lk-card-h">अवयस्क कुंडली चक्र (बाल्यावस्था 1–12 वर्ष)</div>
+          <div class="lk-txt" style="margin-bottom:6px;color:#64748b">छोटी आयु में भाग्य हेतु सहायक भाव व उसका स्वामी।</div>
+          <?php foreach ($rf['avyask'] as $age => $a): $cur = ($rf['cur_avyask'] !== null && (string) $rf['age'] === (string) $age); ?>
+            <div class="lk-sub" style="<?= $cur ? 'font-weight:700;color:#166534' : '' ?>"><?= $cur ? '➤ ' : '' ?><b><?= $h((string) $age) ?> वर्ष:</b> <?= $h((string) $a['bhav']) ?>वाँ भाव (<?= $h((string) $a['swami']) ?>)</div>
+          <?php endforeach; ?>
+        </div>
       </div>
 
     </div><!-- /lk-scroll -->

@@ -98,6 +98,9 @@ final class LalKitabEngine
             'bhavan'      => LalKitabData::section('bhavan'),
             'varsh_gyan'  => self::varshGyanReadings($age),
             'rules'       => self::ruleReadings(),
+            'supt'        => self::suptReadings($house),
+            'drishti'     => self::drishtiReadings($house, $occupants),
+            'reference'   => self::referenceReadings($age),
             'age'         => $age,
         ];
     }
@@ -506,6 +509,131 @@ final class LalKitabEngine
             'paitrik_niyam' => LalKitabData::section('paitrik_niyam'),
             'varjit'        => LalKitabData::section('varjit'),
             'daan_nishedh'  => LalKitabData::section('daan_nishedh'),
+        ];
+    }
+
+    /**
+     * सुप्त ग्रह (sleeping planets). In Lal Kitab a planet stays dormant in its
+     * house until the house's "waking" planet (सुप्त भाव चक्र) is itself present
+     * in the chart. Logic here: planet P in house H wakes when supt_bhav[H] is
+     * placed anywhere in this chart; otherwise it sleeps.
+     *
+     * @param array<string,int> $house
+     * @return list<array<string,mixed>>
+     */
+    private static function suptReadings(array $house): array
+    {
+        $sb = LalKitabData::section('supt_bhav');   // house => waker (Hindi)
+        $sg = LalKitabData::section('supt_grah');   // planet => when/age/malefic
+        // Hindi waker name -> is that planet placed in the chart?
+        $placedHi = [];
+        foreach (array_keys($house) as $p) { $placedHi[LalKitabData::planetHi($p)] = true; }
+
+        $out = [];
+        foreach (self::PLANETS as $p) {
+            if (!isset($house[$p])) { continue; }
+            $h = $house[$p];
+            $waker = (string) ($sb[(string) $h] ?? '');
+            $awake = $waker !== '' && isset($placedHi[$waker]);
+            $out[] = [
+                'hi'        => LalKitabData::planetHi($p),
+                'house'     => $h,
+                'house_ord' => LalKitabData::houseOrdinalHi($h),
+                'waker'     => $waker,
+                'awake'     => $awake,
+                'jagega'    => $sg[$p]['jagega'] ?? '',
+                'aayu'      => $sg[$p]['aayu'] ?? '',
+                'ashubh'    => $sg[$p]['ashubh'] ?? '',
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * भाव दृष्टि (Lal Kitab house aspects). For every occupied house, resolve its
+     * दृष्टि (aspect), परस्पर सहायता (mutual help) and टकराव (conflict) target
+     * houses and name the planets sitting there — turning the raw chakra into a
+     * concrete planet-to-planet relationship reading.
+     *
+     * @param array<string,int> $house
+     * @param array<int,list<string>> $occupants
+     * @return list<array<string,mixed>>
+     */
+    private static function drishtiReadings(array $house, array $occupants): array
+    {
+        $bd = LalKitabData::section('bhav_drishti');
+        $planetsInHi = static function (array $hs) use ($occupants): array {
+            $r = [];
+            foreach ($hs as $hh) {
+                foreach ($occupants[$hh] ?? [] as $pl) {
+                    $r[] = LalKitabData::planetHi($pl) . ' (' . LalKitabData::houseOrdinalHi((int) $hh) . ')';
+                }
+            }
+            return $r;
+        };
+        $out = [];
+        for ($h = 1; $h <= 12; $h++) {
+            if (empty($occupants[$h])) { continue; }
+            $e = $bd[(string) $h] ?? [];
+            $out[] = [
+                'house'      => $h,
+                'house_ord'  => LalKitabData::houseOrdinalHi($h),
+                'planets_hi' => array_map([LalKitabData::class, 'planetHi'], $occupants[$h]),
+                'drishti'    => $e['drishti'] ?? [],
+                'drishti_p'  => $planetsInHi($e['drishti'] ?? []),
+                'sahayak'    => $e['sahayak'] ?? [],
+                'sahayak_p'  => $planetsInHi($e['sahayak'] ?? []),
+                'takrav'     => $e['takrav'] ?? [],
+                'takrav_p'   => $planetsInHi($e['takrav'] ?? []),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Reference chakras — life-stage (अवस्था), minor-chart helper (अवयस्क), house
+     * month, planet significators, rashi relations and establishment remedies.
+     * The native's current अवस्था + अवयस्क row are flagged from their age.
+     *
+     * @return array<string,mixed>
+     */
+    private static function referenceReadings(?int $age): array
+    {
+        // Which अवस्था covers this age? (stages are 25-year bands.)
+        $avastha = LalKitabData::section('avastha');
+        $curStage = null;
+        if ($age !== null && $age >= 1) {
+            $idx = intdiv(max(0, $age - 1), 25);   // 1-25→0, 26-50→1 …
+            if ($idx > 3) { $idx = 3; }
+            $curStage = $avastha[$idx]['avastha'] ?? null;
+        }
+        $avyask = LalKitabData::section('avyask');
+        $curAvyask = ($age !== null) ? ($avyask[(string) $age] ?? null) : null;
+
+        // planet significators / establishment objects, in canonical order
+        $vastu = LalKitabData::section('grah_vastu');
+        $sthapana = LalKitabData::section('sthapana_vastu');
+        $planets = [];
+        foreach (self::PLANETS as $p) {
+            if (isset($vastu[$p]) || isset($sthapana[$p])) {
+                $planets[] = [
+                    'hi'       => LalKitabData::planetHi($p),
+                    'vastu'    => $vastu[$p] ?? '',
+                    'sthapana' => $sthapana[$p] ?? '',
+                ];
+            }
+        }
+
+        return [
+            'avastha'       => $avastha,
+            'cur_stage'     => $curStage,
+            'avyask'        => $avyask,
+            'cur_avyask'    => $curAvyask,
+            'age'           => $age,
+            'bhav_maas'     => LalKitabData::section('bhav_maas'),
+            'grah_rashi'    => LalKitabData::section('grah_rashi'),
+            'bhav_sthapana' => LalKitabData::section('bhav_sthapana'),
+            'planets'       => $planets,
         ];
     }
 
