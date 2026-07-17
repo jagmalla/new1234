@@ -206,7 +206,8 @@
           [['vp-pred-general', v.general_html], ['vp-pred-saham', v.saham_html], ['vp-pred-tajik', v.tajik_html],
            ['vp-pred-varshesh', v.varshesh_html], ['vp-pred-muntha', v.muntha_html],
            ['vp-pred-bhava', v.bhava_html], ['vp-pred-dasha', v.dasha_phal_html],
-           ['vp-row3', v.row3_html], ['card-varshadet', v.positions_html]]
+           ['vp-row3', v.row3_html], ['card-varshadet', v.positions_html],
+           ['vp-saar', v.saar_html]]
             .forEach(function (f) {
               var el = document.getElementById(f[0]);
               if (el && f[1] != null) { el.innerHTML = f[1]; }

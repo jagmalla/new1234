@@ -1386,6 +1386,35 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                             </span>
                         </div>
 
+                        <!-- Prediction-confidence + फल-काल (StrengthMeter): how
+                             strongly this planet's results will manifest and in
+                             which dasha windows. -->
+                        <?php $sm = $view['strength']['planets'][$pl] ?? null; if ($sm !== null):
+                            $smCls = $sm['tier'] === 'pos' ? 'gc-shubh' : ($sm['tier'] === 'neg' ? 'gc-ashubh' : 'gc-mishrit'); ?>
+                        <div style="border:1px dashed #cbd5e1;border-radius:8px;padding:6px 10px;margin:4px 0 8px;background:#fafcff">
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                                <span class="pp-sub text-gray-700">फल-बल</span>
+                                <span class="gc-chip <?= $smCls ?>"><?= $h((string) $sm['word']) ?> (<?= (int) $sm['score'] ?>)</span>
+                                <?php if (!empty($sm['d9'])): ?><span class="gc-chip gc-mishrit" style="background:#ede9fe;color:#5b21b6"><?= $h((string) $sm['d9']) ?></span><?php endif; ?>
+                            </div>
+                            <?php if (!empty($sm['reasons'])): ?>
+                                <div class="text-xs text-gray-500" style="margin-top:2px"><?= $h(implode(' · ', $sm['reasons'])) ?></div>
+                            <?php endif; ?>
+                            <?php $tmg = $sm['timing'] ?? null; if ($tmg !== null && ($tmg['maha'] !== null || $tmg['antar'] !== [])): ?>
+                            <div class="text-xs" style="margin-top:3px;color:#475569">
+                                <b>⏳ फल-काल:</b>
+                                <?php if ($tmg['maha'] !== null): ?>
+                                    महादशा <?= $h($tmg['maha']['from']) ?> – <?= $h($tmg['maha']['to']) ?>
+                                    <?= $tmg['maha']['status'] === 'running' ? '<b style="color:#166534">(चालू)</b>' : ($tmg['maha']['status'] === 'past' ? '(बीत चुकी)' : '(आगामी)') ?>
+                                <?php endif; ?>
+                                <?php foreach ($tmg['antar'] as $ad): ?>
+                                    · <?= $h($ppHi[$ad['maha']] ?? $ad['maha']) ?>-महादशा में अंतर्दशा <?= $h($ad['from']) ?> – <?= $h($ad['to']) ?><?= !empty($ad['running']) ? ' <b style="color:#166534">(चालू)</b>' : '' ?>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
+
                         <!-- ग्रह स्थिति block (migration 008) — computed dignity /
                              combustion / companions, above the unchanged (A)/(B). -->
                         <?php $gc = $row['condition'] ?? null; if ($gc !== null): ?>
@@ -1487,6 +1516,26 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                             <span><?= $ord2((int) $hh) ?> House — <?= $h((string) $hd['rashi_hi']) ?> (<?= $h((string) $hd['rashi']) ?>)</span>
                             <?php if (!empty($hd['chip'])): ?><span class="gc-chip gc-<?= $h((string) $hd['chip']['tier']) ?>"><?= $h((string) $hd['chip']['word']) ?></span><?php endif; ?>
                         </div>
+                        <?php // भावेश (house-lord) confidence + फल-काल from the StrengthMeter.
+                            $hLord = $chart['houses'][$hh]['lord'] ?? null;
+                            $smL = $hLord !== null ? ($view['strength']['planets'][$hLord] ?? null) : null;
+                            if ($smL !== null):
+                                $smLCls = $smL['tier'] === 'pos' ? 'gc-shubh' : ($smL['tier'] === 'neg' ? 'gc-ashubh' : 'gc-mishrit');
+                                $tmgL = $smL['timing'] ?? ['maha' => null, 'antar' => []]; ?>
+                        <div class="text-xs" style="border:1px dashed #cbd5e1;border-radius:8px;padding:5px 9px;margin:2px 0 8px;background:#fafcff;color:#475569">
+                            <b>भावेश <?= $h($ppHi[$hLord] ?? $hLord) ?></b>
+                            <span class="gc-chip <?= $smLCls ?>"><?= $h((string) $smL['word']) ?></span>
+                            <?php if ($tmgL['maha'] !== null || $tmgL['antar'] !== []): ?>
+                                · <b>⏳ फल-काल:</b>
+                                <?php if ($tmgL['maha'] !== null): ?>
+                                    महादशा <?= $h($tmgL['maha']['from']) ?> – <?= $h($tmgL['maha']['to']) ?><?= $tmgL['maha']['status'] === 'running' ? ' <b style="color:#166534">(चालू)</b>' : ($tmgL['maha']['status'] === 'past' ? ' (बीत चुकी)' : '') ?>
+                                <?php endif; ?>
+                                <?php foreach ($tmgL['antar'] as $adL): ?>
+                                    · <?= $h($ppHi[$adL['maha']] ?? $adL['maha']) ?>-महादशा में अंतर्दशा <?= $h($adL['from']) ?> – <?= $h($adL['to']) ?><?= !empty($adL['running']) ? ' <b style="color:#166534">(चालू)</b>' : '' ?>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
                         <div class="text-gray-600 mb-2 whitespace-pre-line" style="font-size:1.02rem"><?= $h((string) $hd['intro']) ?></div>
                         <?php if (!empty($hd['lines'])): ?>
                         <ul class="list-disc pl-5 space-y-1 text-gray-800" style="font-size:1.02rem; line-height:1.6">
@@ -2044,6 +2093,12 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <div id="vp-box"></div>
                 <div id="vp-summary" class="flex-1"></div>
             </div>
+        </div>
+
+        <!-- वर्ष का सार — one-look year summary (varshesh · muntha · mudda ·
+             tajik · saham + verdict); swapped by the year-change JSON too. -->
+        <div id="vp-saar">
+            <?php require __DIR__ . '/_varsha_saar.php'; ?>
         </div>
 
         <!-- ROW 1: Varsha (Annual) chart on the LEFT + Varshaphal prediction

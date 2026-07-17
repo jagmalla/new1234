@@ -166,6 +166,15 @@ final class CalcController
             // (B) Graha-in-Bhava (as placement). Built from the chart's own
             // ruled-house + placed-house knowledge.
             'planetPhala' => $this->planetPhala($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
+            // Prediction-confidence meter: per-planet प्रबल/मध्यम/क्षीण verdict
+            // (Shadbala + Ashtakavarga + D9) with reasons, plus each planet's
+            // dasha फल-काल windows — shown on the Planet/House prediction cards.
+            'strength' => $this->safe(
+                static fn () => $chart !== null
+                    ? \AutoBusiness\Astro\Phala\StrengthMeter::compute($chart, (float) ($meta['tz'] ?? 0.0), $nowJd ?? null)
+                    : null,
+                null
+            ),
             // House Prediction: combines the editable rule tables with the chart
             // facts to write a per-house Hindi reading.
             'housePred' => $housePred = $this->housePred($chart, (string) ($_GET['phala_lang'] ?? 'hi')),
@@ -964,6 +973,7 @@ final class CalcController
                 'general_html' => $frag('_vp_general.php'),
                 'row3_html' => $frag('_varsha_bala_cards.php'),
                 'positions_html' => $frag('_varsha_positions.php'),
+                'saar_html' => $frag('_varsha_saar.php'),
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(400);
