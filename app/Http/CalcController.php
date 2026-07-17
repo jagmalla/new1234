@@ -209,7 +209,7 @@ final class CalcController
             // parental-debt/shraap, sade-sati, manglik). Wrapped so an edge-case
             // never blanks the page; text is baked/owner-editable in LalKitabData.
             'lalkitab' => $this->safe(
-                static function () use ($chart, $date) {
+                static function () use ($chart, $date, &$dashaNow, &$sadeSati) {
                     if ($chart === null) {
                         return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
                     }
@@ -222,7 +222,17 @@ final class CalcController
                             $age--;
                         }
                     } catch (\Throwable $e) { /* age optional */ }
-                    return \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart, $age);
+                    // Activation context: running Maha/Antar lords + the current
+                    // Sade-Sati/Dhaiya state — drives the 🔥 strip + priority score.
+                    $lkActive = [
+                        'maha'  => $dashaNow['maha']['lord'] ?? null,
+                        'antar' => $dashaNow['antar']['lord'] ?? null,
+                        'sadesati' => (is_array($sadeSati) && !empty($sadeSati['active'])) ? [
+                            'kind'  => (string) ($sadeSati['kind'] ?? ''),
+                            'phase' => $sadeSati['phase'] ?? null,
+                        ] : null,
+                    ];
+                    return \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart, $age, $lkActive);
                 },
                 ['ok' => false, 'error' => 'लाल किताब गणना विफल']
             ),

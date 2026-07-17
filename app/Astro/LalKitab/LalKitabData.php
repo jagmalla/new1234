@@ -57,6 +57,17 @@ final class LalKitabData
         'Jupiter' => 9, 'Venus' => 5, 'Saturn' => 0, 'Rahu' => 7, 'Ketu' => 1,
     ];
 
+    /**
+     * पक्का घर — each planet's own "pukka" house(s) in the Lal Kitab teva. A
+     * planet sitting in its pukka ghar gives its results with full force and
+     * added stability (सूर्य-1, चन्द्र-4, मंगल-3/8, बुध-7, गुरु-9, शुक्र-7,
+     * शनि-10, राहु-12, केतु-6).
+     */
+    public const PUKKA_GHAR = [
+        'Sun' => [1], 'Moon' => [4], 'Mars' => [3, 8], 'Mercury' => [7],
+        'Jupiter' => [9], 'Venus' => [7], 'Saturn' => [10], 'Rahu' => [12], 'Ketu' => [6],
+    ];
+
     /** @var array<string,mixed>|null cached decoded JSON */
     private static ?array $bank = null;
 

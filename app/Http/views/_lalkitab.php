@@ -48,6 +48,17 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
     foreach ($items as $it) { $out .= '<li>' . $h((string) $it) . '</li>'; }
     return $out . '</ul></div>';
 };
+/** small right-floated source tag naming the rule bank a card came from (#10). */
+$srcTag = static function (string $s) use ($h): string {
+    return '<span class="lk-src" title="स्रोत">' . $h($s) . '</span>';
+};
+/** priority-score pill — red ≥4, amber 2-3, gray 1 (hidden at 0). */
+$scorePill = static function (int $score): string {
+    if ($score <= 0) { return ''; }
+    $st = $score >= 4 ? 'background:#dc2626;color:#fff'
+        : ($score >= 2 ? 'background:#f59e0b;color:#fff' : 'background:#e2e8f0;color:#475569');
+    return '<span class="lk-pill" style="' . $st . '">प्राथमिकता ' . $score . '</span>';
+};
 ?>
 <style>
   #sec-lalkitab .lk-pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.72rem;font-weight:700;margin-left:4px;vertical-align:middle}
@@ -69,6 +80,20 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
   #sec-lalkitab .lk-flt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:#475569;margin-bottom:9px}
   #sec-lalkitab .lk-legend{font-size:.74rem;color:#64748b;margin-top:9px;line-height:1.7}
   #sec-lalkitab h3.lk-h{font-size:.95rem;font-weight:700;color:#0f172a;margin:2px 0 8px;border-bottom:1px solid #e5e7eb;padding-bottom:5px}
+  #sec-lalkitab .lk-src{float:right;font-size:.64rem;color:#94a3b8;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:0 5px;margin-left:6px;font-weight:400}
+  #sec-lalkitab .lk-active{background:linear-gradient(90deg,#fff7ed,#fffbeb);border:1px solid #fdba74;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:.8rem;color:#7c2d12;line-height:1.7}
+  #sec-lalkitab .lk-active b{color:#9a3412}
+  #sec-lalkitab .lk-active .lk-pill{margin-left:2px}
+  #sec-lalkitab .lk-btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:5px 11px;font-size:.78rem;font-weight:600;color:#334155;cursor:pointer;white-space:nowrap}
+  #sec-lalkitab .lk-btn:hover{background:#f1f5f9}
+  #sec-lalkitab .lk-chip{border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:2px 10px;font-size:.73rem;color:#475569;cursor:pointer}
+  #sec-lalkitab .lk-chip:hover{background:#e0f2fe;border-color:#7dd3fc}
+  #sec-lalkitab .lk-search-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  #sec-lalkitab #lk-q{flex:1;min-width:130px;border:1px solid #cbd5e1;border-radius:8px;padding:5px 10px;font-size:.8rem}
+  #sec-lalkitab .lk-reason{font-size:.74rem;color:#92400e;background:#fffbeb;border:1px dashed #fcd34d;border-radius:6px;padding:3px 8px;margin-top:5px}
+  #sec-lalkitab .lk-cmp{width:100%;border-collapse:collapse;font-size:.8rem}
+  #sec-lalkitab .lk-cmp th{background:#f8fafc;text-align:left;padding:5px 7px;border-bottom:1px solid #e5e7eb}
+  #sec-lalkitab .lk-cmp td{padding:5px 7px;border-bottom:1px solid #f1f5f9;vertical-align:top}
 </style>
 
 <?php if (!$ok): ?>
@@ -96,8 +121,31 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
 
   <!-- RIGHT: category predictions -->
   <div class="bg-white rounded-lg shadow p-4 flex flex-col">
-    <div class="flex items-center gap-2 mb-3">
-      <select id="lk-select" class="l2-select" aria-label="लाल किताब श्रेणी चुनें" style="flex:1;min-width:0">
+
+    <?php $act = $lk['active'] ?? []; ?>
+    <?php if (!empty($act['maha']) || !empty($act['antar']) || !empty($act['sadesati']) || !empty($act['year_eff']) || !empty($act['year_bad'])): ?>
+    <!-- 🔥 what is live right now: dasha lords, sade-sati, this-year planets (#1) -->
+    <div class="lk-active">
+      <b>🔥 अभी सक्रिय:</b>
+      <?php if (!empty($act['maha'])): ?>
+        महादशा — <b><?= $h((string) $act['maha']['hi']) ?></b> (<?= $h((string) $act['maha']['house_ord']) ?> भाव)<?= $pill((string) $act['maha']['verdict'], 'v') ?>
+      <?php endif; ?>
+      <?php if (!empty($act['antar'])): ?>
+        · अंतर्दशा — <b><?= $h((string) $act['antar']['hi']) ?></b> (<?= $h((string) $act['antar']['house_ord']) ?> भाव)<?= $pill((string) $act['antar']['verdict'], 'v') ?>
+      <?php endif; ?>
+      <?php if (!empty($act['sadesati'])): ?>
+        · <b><?= $h((string) $act['sadesati']['label']) ?> चल रही है</b><?= $act['sadesati']['phase'] ? ' (चरण ' . (int) $act['sadesati']['phase'] . ')' : '' ?>
+      <?php endif; ?>
+      <?php if (!empty($act['year_eff']) || !empty($act['year_bad'])): ?>
+        <br><b>इस आयु-वर्ष (<?= (int) ($act['age'] ?? 0) ?>) में:</b>
+        <?php if (!empty($act['year_eff'])): ?>प्रभावी ग्रह — <?= $h(implode(', ', $act['year_eff'])) ?><?php endif; ?>
+        <?php if (!empty($act['year_bad'])): ?> · <span style="color:#b91c1c">अशुभ वर्ष — <?= $h(implode(', ', $act['year_bad'])) ?></span><?php endif; ?>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <div class="flex items-center gap-2 mb-2" style="flex-wrap:wrap">
+      <select id="lk-select" class="l2-select" aria-label="लाल किताब श्रेणी चुनें" style="flex:1;min-width:190px">
         <option value="overview">🔎 सामान्य परिचय / General Overview</option>
         <option value="planet">🪐 ग्रह फल / Planet Prediction</option>
         <option value="house">🏠 भाव (Bhav) फल / House Prediction</option>
@@ -112,10 +160,27 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
         <option value="varsh">📅 वर्ष कुंडली ज्ञान / Annual</option>
         <option value="supt">😴 सुप्त ग्रह / Sleeping Planets</option>
         <option value="drishti">👁 भाव दृष्टि / House Aspects</option>
+        <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
         <option value="remedy">🛠 उपाय / Remedy</option>
         <option value="rules">📜 उपाय नियम / Rules</option>
         <option value="reference">📚 संदर्भ चक्र / Reference</option>
+        <option value="search" hidden>🔍 खोज परिणाम / Search Results</option>
       </select>
+      <button type="button" id="lk-print-report" class="lk-btn">🖨 पूर्ण रिपोर्ट</button>
+      <button type="button" id="lk-print-checklist" class="lk-btn">📋 उपाय Checklist</button>
+    </div>
+
+    <!-- topic search across every category (#6) -->
+    <div class="lk-search-row">
+      <input type="text" id="lk-q" placeholder="🔍 विषय खोजें… (जैसे धन, विवाह, संतान)" aria-label="लाल किताब में खोजें">
+      <button type="button" class="lk-chip" data-topic="धन">💰 धन</button>
+      <button type="button" class="lk-chip" data-topic="विवाह">💑 विवाह</button>
+      <button type="button" class="lk-chip" data-topic="संतान">👶 संतान</button>
+      <button type="button" class="lk-chip" data-topic="रोग">🩺 रोग</button>
+      <button type="button" class="lk-chip" data-topic="नौकरी">💼 नौकरी/व्यापार</button>
+      <button type="button" class="lk-chip" data-topic="शिक्षा">🎓 शिक्षा</button>
+      <button type="button" class="lk-chip" data-topic="मुकदमा">⚖ मुकदमा</button>
+      <button type="button" class="lk-chip" data-topic="विदेश">✈ विदेश</button>
     </div>
 
     <div class="lk-scroll">
@@ -123,6 +188,26 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
       <!-- ===== OVERVIEW ===== -->
       <div class="lk-view active" data-lk="overview">
         <h3 class="lk-h">सामान्य परिचय (Lal Kitab Overview)</h3>
+
+        <?php if (!empty($lk['priority'])): ?>
+        <!-- priority summary — which remedies to start with (#2) -->
+        <div class="lk-card" style="border-color:#f59e0b;background:#fffbeb">
+          <div class="lk-card-h">🎯 सबसे पहले इन उपायों से शुरू करें <?= $srcTag('प्राथमिकता स्कोर') ?></div>
+          <?php foreach ($lk['priority'] as $i => $pp): ?>
+            <div style="margin:7px 0 9px">
+              <div class="lk-sub" style="font-size:.86rem"><b><?= $i + 1 ?>. <?= $h((string) $pp['hi']) ?></b> (<?= $h((string) $pp['house_ord']) ?> भाव) <?= $scorePill((int) $pp['score']) ?></div>
+              <?php if ($pp['reasons']): ?><div class="lk-reason">कारण: <?= $h(implode(' · ', $pp['reasons'])) ?></div><?php endif; ?>
+              <?= $remBlock(array_merge($pp['remedies'], $pp['sheeghra'] !== '' ? ['⚡ शीघ्र: ' . $pp['sheeghra']] : []), $pp['hi'] . ' — पहले ये उपाय' . ($pp['var'] !== '' ? ' (प्रारंभ: ' . $pp['var'] . ')' : '')) ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="lk-card good">
+          <div class="lk-card-h">🎯 प्राथमिकता</div>
+          <div class="lk-txt">कोई गंभीर अशुभता नहीं मिली — सामान्य उपाय पर्याप्त हैं।</div>
+        </div>
+        <?php endif; ?>
+
         <div class="lk-txt" style="margin-bottom:10px">
           लाल किताब में लग्न सदैव <b>मेष</b> माना जाता है और बारह भावों के स्वामी स्थिर रहते हैं।
           ग्रह अपने जन्म-कुंडली के भाव के अनुसार यहाँ बैठते हैं। नीचे प्रत्येक ग्रह की स्थिति व शुभ/अशुभ प्रवृत्ति का सार है।
@@ -133,7 +218,7 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
             <div class="lk-card-h">
               <?= $h((string) $p['hi']) ?>
               <span class="lk-meta" style="margin:0 0 0 6px"><?= $h((string) $p['house_ord']) ?> भाव · <?= $h((string) $p['sign_hi']) ?><?= $p['retro'] ? ' · वक्री' : '' ?></span>
-              <?= $pill((string) $p['status'], 'status') ?><?= $pill((string) $p['verdict'], 'verdict') ?>
+              <?= $pill((string) $p['status'], 'status') ?><?= $pill((string) $p['verdict'], 'verdict') ?><?php if (!empty($p['pukka'])): ?><span class="lk-pill" style="background:#ede9fe;color:#5b21b6">पक्का घर</span><?php endif; ?><?= $scorePill((int) ($p['score'] ?? 0)) ?>
             </div>
             <div class="lk-txt"><b>कारक भाव:</b> <?= $h((string) $p['karak_bhav']) ?> · <b>शुभ भाव:</b> <?= $h((string) $p['shubh']) ?> · <b>अशुभ भाव:</b> <?= $h((string) $p['ashubh']) ?></div>
           </div>
@@ -151,8 +236,16 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
           <div class="lk-card <?= $cls ?>" data-bad="<?= $p['is_ashubh'] ? '1' : '0' ?>">
             <div class="lk-card-h">
               <?= $h((string) $p['hi']) ?> — <?= $h((string) $p['house_ord']) ?> भाव में (<?= $h((string) $p['sign_hi']) ?>)
-              <?= $pill((string) $p['status'], 'status') ?><?= $pill((string) $p['verdict'], 'verdict') ?>
+              <?= $pill((string) $p['status'], 'status') ?><?= $pill((string) $p['verdict'], 'verdict') ?><?php
+                if (!empty($p['pukka'])): ?><span class="lk-pill" style="background:#ede9fe;color:#5b21b6">पक्का घर</span><?php endif;
+                if (!empty($act['maha']) && $act['maha']['hi'] === $p['hi']): ?><span class="lk-pill" style="background:#dc2626;color:#fff">🔥 महादशा</span><?php endif;
+                if (!empty($act['antar']) && $act['antar']['hi'] === $p['hi']): ?><span class="lk-pill" style="background:#f97316;color:#fff">🔥 अंतर्दशा</span><?php endif;
+              ?><?= $scorePill((int) ($p['score'] ?? 0)) ?>
+              <?= $srcTag('शुभ-अशुभ भाव चक्र') ?>
             </div>
+            <?php if (!empty($p['reasons']) && ($p['score'] ?? 0) > 0): ?>
+              <div class="lk-reason">प्राथमिकता-कारण: <?= $h(implode(' · ', $p['reasons'])) ?></div>
+            <?php endif; ?>
             <div class="lk-sub"><b>प्रकृति:</b> <?= $h((string) $p['prakriti']) ?> · <b>रंग:</b> <?= $h((string) $p['rang']) ?> · <b>कारक भाव:</b> <?= $h((string) $p['karak_bhav']) ?></div>
             <div class="lk-sub"><b>उच्च राशि:</b> <?= $h((string) $p['uch_rashi']) ?> · <b>नीच राशि:</b> <?= $h((string) $p['neech_rashi']) ?></div>
             <?php if (trim((string) $p['mitra']) !== '' || trim((string) $p['shatru']) !== ''): ?>
@@ -214,6 +307,20 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
 
       <!-- ===== YOGA ===== -->
       <div class="lk-view" data-lk="yoga">
+        <?php if (!empty($lk['yuti_dosha'])): ?>
+          <h3 class="lk-h">विशेष युति / ग्रहण दोष</h3>
+          <?php foreach ($lk['yuti_dosha'] as $D): ?>
+            <div class="lk-card bad" data-app="1">
+              <div class="lk-card-h">⚠ <?= $h((string) $D['name']) ?>
+                <span class="lk-meta" style="margin:0 0 0 6px"><?= $h((string) $D['pair_hi']) ?> — <?= $h((string) $D['house_ord']) ?> भाव में</span>
+                <?= $srcTag('युति दोष गणना') ?>
+              </div>
+              <div class="lk-txt"><?= $h((string) $D['desc']) ?></div>
+              <?= $remBlock($D['remedies'], $D['name'] . ' — उपाय') ?>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+
         <h3 class="lk-h">योग — भविष्यवाणी सूत्र</h3>
         <div class="lk-flt">
           <label><input type="checkbox" class="lk-onlyapp" data-scope="yoga" checked> केवल लागू योग दिखाएँ</label>
@@ -223,6 +330,7 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
           <div class="lk-card <?= $Y['applicable'] ? 'good' : '' ?>" data-app="<?= $Y['applicable'] ? '1' : '0' ?>">
             <div class="lk-card-h" style="font-size:.88rem">
               <?= $h((string) $Y['sthiti']) ?><?= $Y['applicable'] ? $pill('लागू', 'a') : '' ?>
+              <?= $srcTag(($Y['mode'] ?? '') === 'exact' ? 'सटीक गणना' : 'पाठ-मिलान') ?>
             </div>
             <?php if (trim((string) $Y['prabhavit']) !== ''): ?><div class="lk-sub"><b>प्रभावित ग्रह:</b> <?= $h((string) $Y['prabhavit']) ?></div><?php endif; ?>
             <div class="lk-txt"><?= $h((string) $Y['phal']) ?></div>
@@ -366,6 +474,52 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
         <?php else: ?>
           <div class="lk-card"><div class="lk-txt">आयु ज्ञात न होने से वर्ष-विशेष पंक्ति उपलब्ध नहीं।</div></div>
         <?php endif; ?>
+      </div>
+
+      <!-- ===== COMPARE: D1 vs Lal Kitab (#8) ===== -->
+      <div class="lk-view" data-lk="compare">
+        <h3 class="lk-h">D1 ↔ लाल किताब तुलना (Double Confirmation)</h3>
+        <div class="lk-txt" style="margin-bottom:9px">
+          बायीं ओर लाल किताब टेवा है; नीचे जन्म-कुंडली (D1)। जिस ग्रह की <b>राशि-स्थिति</b> (उच्च/नीच/स्वगृही)
+          और <b>लाल किताब भाव-फल</b> दोनों एक ही दिशा में हों, वहाँ भविष्यवाणी की पुष्टि दोहरी मानी जाती है।
+        </div>
+        <div class="lk-card" style="padding:8px">
+          <div class="lk-card-h" style="font-size:.85rem">जन्म कुंडली (D1)</div>
+          <div id="lk-d1-mini" style="max-width:340px;margin:0 auto"></div>
+        </div>
+        <div class="lk-card">
+          <div style="overflow-x:auto">
+          <table class="lk-cmp">
+            <thead><tr><th>ग्रह</th><th>D1 राशि-स्थिति</th><th>लाल किताब भाव-फल</th><th>निष्कर्ष</th></tr></thead>
+            <tbody>
+            <?php foreach ($lk['planets'] as $p):
+                $dBad = $p['status'] === 'नीच';
+                $dGood = in_array($p['status'], ['उच्च', 'स्वगृही'], true);
+                $lBad = !empty($p['is_ashubh']);
+                $lGood = $p['verdict'] === 'शुभ';
+                if ($dBad && $lBad) { $concl = '<span style="color:#b91c1c;font-weight:700">❌ दोहरी अशुभ पुष्टि — उपाय प्राथमिकता से करें</span>'; }
+                elseif (($dGood && $lGood) || (!empty($p['pukka']) && $lGood)) { $concl = '<span style="color:#166534;font-weight:700">✅ दोहरी शुभ पुष्टि</span>'; }
+                elseif ($lBad || $dBad) { $concl = '<span style="color:#92400e">⚠ मिश्रित — एक प्रणाली में अशुभ</span>'; }
+                else { $concl = '<span style="color:#475569">— सामान्य</span>'; }
+            ?>
+              <tr>
+                <td><b><?= $h((string) $p['hi']) ?></b></td>
+                <td><?= $h((string) $p['sign_hi']) ?> <?= $pill((string) $p['status'], 's') ?></td>
+                <td><?= $h((string) $p['house_ord']) ?> भाव <?= $pill((string) $p['verdict'], 'v') ?><?= !empty($p['pukka']) ? ' <span class="lk-pill" style="background:#ede9fe;color:#5b21b6">पक्का घर</span>' : '' ?></td>
+                <td><?= $concl ?></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SEARCH RESULTS (#6, filled by JS) ===== -->
+      <div class="lk-view" data-lk="search">
+        <h3 class="lk-h">🔍 खोज परिणाम</h3>
+        <div id="lk-search-note" class="lk-txt" style="margin-bottom:9px;color:#64748b"></div>
+        <div id="lk-search-results"></div>
       </div>
 
       <!-- ===== SUPT (sleeping planets) ===== -->
@@ -544,6 +698,147 @@ $remBlock = static function (array $items, string $title = 'उपाय / ट�
 
     </div><!-- /lk-scroll -->
   </div>
+</div>
+
+<?php
+// ===================================================================
+// Hidden print documents (#5 पूर्ण रिपोर्ट, #7 उपाय checklist). Built
+// server-side from ONLY the applicable findings; a button opens each in a
+// print window (JS in calc-v2 buildLalKitab). All styling via lkr-* classes
+// whose CSS lives in the print window.
+// ===================================================================
+$in = $in ?? [];
+$native = trim((string) ($in['name'] ?? ''));
+$birthLine = trim(
+    ($native !== '' ? $native . ' · ' : '')
+    . (string) ($in['date'] ?? '') . ' ' . (string) ($in['time'] ?? '')
+    . (trim((string) ($in['place'] ?? '')) !== '' ? ' · ' . (string) $in['place'] : '')
+);
+$ashubhPlanets = array_values(array_filter($lk['planets'], static fn ($p) => !empty($p['is_ashubh'])));
+$applYoga  = array_values(array_filter($lk['yoga'], static fn ($y) => !empty($y['applicable'])));
+$possShrap = array_values(array_filter($lk['shrap'], static fn ($s) => !empty($s['possible'])));
+$ssAct = $act['sadesati'] ?? null;
+?>
+<div id="lk-report" hidden>
+  <div class="lkr-title">लाल किताब रिपोर्ट (Lal Kitab Report)</div>
+  <div class="lkr-sub"><?= $h($birthLine) ?> · लग्न: <?= $h((string) $lk['lagna_hi']) ?> · चन्द्र राशि: <?= $h((string) $lk['moon_hi']) ?><?= $lk['age'] !== null ? ' · वर्तमान आयु: ' . (int) $lk['age'] . ' वर्ष' : '' ?></div>
+
+  <?php if (!empty($act['maha']) || !empty($act['antar']) || $ssAct): ?>
+  <div class="lkr-box lkr-hot">
+    <b>🔥 अभी सक्रिय:</b>
+    <?= !empty($act['maha']) ? 'महादशा — ' . $h((string) $act['maha']['hi']) . ' (' . $h((string) $act['maha']['house_ord']) . ' भाव, ' . $h((string) $act['maha']['verdict']) . ')' : '' ?>
+    <?= !empty($act['antar']) ? ' · अंतर्दशा — ' . $h((string) $act['antar']['hi']) . ' (' . $h((string) $act['antar']['house_ord']) . ' भाव)' : '' ?>
+    <?= $ssAct ? ' · ' . $h((string) $ssAct['label']) . ' चल रही है' : '' ?>
+    <?= !empty($act['year_bad']) ? ' · इस आयु-वर्ष में अशुभ: ' . $h(implode(', ', $act['year_bad'])) : '' ?>
+  </div>
+  <?php endif; ?>
+
+  <?php if (!empty($lk['priority'])): ?>
+  <div class="lkr-h">🎯 प्राथमिकता — सबसे पहले ये उपाय</div>
+  <?php foreach ($lk['priority'] as $i => $pp): ?>
+    <div class="lkr-box">
+      <b><?= $i + 1 ?>. <?= $h((string) $pp['hi']) ?></b> (<?= $h((string) $pp['house_ord']) ?> भाव · स्कोर <?= (int) $pp['score'] ?>)
+      <?php if ($pp['reasons']): ?><div class="lkr-why">कारण: <?= $h(implode(' · ', $pp['reasons'])) ?></div><?php endif; ?>
+      <ul class="lkr-ul">
+        <?php foreach ($pp['remedies'] as $r): ?><li><?= $h((string) $r) ?></li><?php endforeach; ?>
+        <?php if ($pp['sheeghra'] !== ''): ?><li>⚡ शीघ्र उपाय: <?= $h((string) $pp['sheeghra']) ?></li><?php endif; ?>
+      </ul>
+      <?php if ($pp['var'] !== ''): ?><div class="lkr-why">प्रारंभ वार: <?= $h((string) $pp['var']) ?> · अवधि: 40–43 दिन निरंतर</div><?php endif; ?>
+    </div>
+  <?php endforeach; ?>
+  <?php endif; ?>
+
+  <?php if (!empty($lk['yuti_dosha'])): ?>
+  <div class="lkr-h">⚠ विशेष युति / ग्रहण दोष</div>
+  <?php foreach ($lk['yuti_dosha'] as $D): ?>
+    <div class="lkr-box lkr-bad">
+      <b><?= $h((string) $D['name']) ?></b> — <?= $h((string) $D['pair_hi']) ?>, <?= $h((string) $D['house_ord']) ?> भाव<br>
+      <?= $h((string) $D['desc']) ?>
+      <ul class="lkr-ul"><?php foreach ($D['remedies'] as $r): ?><li><?= $h((string) $r) ?></li><?php endforeach; ?></ul>
+    </div>
+  <?php endforeach; ?>
+  <?php endif; ?>
+
+  <?php if ($ashubhPlanets): ?>
+  <div class="lkr-h">🪐 अशुभ ग्रह एवं उनके उपाय</div>
+  <?php foreach ($ashubhPlanets as $p): ?>
+    <div class="lkr-box lkr-bad">
+      <b><?= $h((string) $p['hi']) ?></b> — <?= $h((string) $p['house_ord']) ?> भाव (<?= $h((string) $p['sign_hi']) ?>) · <?= $h((string) $p['status']) ?>
+      <?php if (trim((string) $p['ashubh_lakshan']) !== ''): ?><div class="lkr-why">लक्षण: <?= $h((string) $p['ashubh_lakshan']) ?></div><?php endif; ?>
+      <ul class="lkr-ul"><?php foreach (array_slice($p['remedies'], 0, 5) as $r): ?><li><?= $h((string) $r) ?></li><?php endforeach; ?></ul>
+    </div>
+  <?php endforeach; ?>
+  <?php endif; ?>
+
+  <?php if ($applYoga): ?>
+  <div class="lkr-h">✨ लागू योग</div>
+  <?php foreach ($applYoga as $Y): ?>
+    <div class="lkr-box"><b><?= $h((string) $Y['sthiti']) ?></b><br><?= $h((string) $Y['phal']) ?></div>
+  <?php endforeach; ?>
+  <?php endif; ?>
+
+  <?php if ($possShrap): ?>
+  <div class="lkr-h">🧬 संभावित पैतृक ऋण</div>
+  <?php foreach ($possShrap as $S): ?>
+    <div class="lkr-box lkr-bad"><b><?= $h((string) $S['rin']) ?></b> — <?= $h((string) $S['pehchan']) ?><br>
+      उपाय: <?= $h((string) $S['upay']) ?></div>
+  <?php endforeach; ?>
+  <?php endif; ?>
+
+  <?php $mg = $lk['manglik']; if (!empty($mg['is'])): ?>
+  <div class="lkr-h">🔴 मंगलीक दोष</div>
+  <div class="lkr-box lkr-bad">मंगल <?= $h((string) $mg['mars_ord']) ?> भाव में — मंगलीक दोष है।
+    <?php if (trim((string) $mg['upay']) !== ''): ?><br>उपाय: <?= $h((string) $mg['upay']) ?><?php endif; ?></div>
+  <?php endif; ?>
+
+  <?php if ($ssAct): ?>
+  <div class="lkr-h">🪐 <?= $h((string) $ssAct['label']) ?> — उपाय</div>
+  <?php $ssu = $lk['sadesati']['upay'] ?? []; $ph = (int) ($ssAct['phase'] ?? 0);
+        $rows = ($ssAct['label'] === 'ढैय्या') ? ($lk['sadesati']['dhaiya_upay'] ?? []) : $ssu;
+        $pick = ($ph >= 1 && isset($rows[$ph - 1])) ? [$rows[$ph - 1]] : $rows;
+        foreach ($pick as $u): ?>
+    <div class="lkr-box"><b><?= $h((string) ($u['charan'] ?? $u['dhaiya'] ?? '')) ?></b><br><?= $h((string) $u['upay']) ?></div>
+  <?php endforeach; ?>
+  <?php endif; ?>
+
+  <div class="lkr-h">📜 उपाय के नियम (सार)</div>
+  <ul class="lkr-ul">
+    <?php foreach (array_slice($lk['rules']['upay_niyam'] ?? [], 0, 6) as $n): ?><li><?= $h((string) $n) ?></li><?php endforeach; ?>
+  </ul>
+  <div class="lkr-foot">यह रिपोर्ट लाल किताब के शास्त्रीय नियमों पर आधारित है। उपाय श्रद्धा एवं नियम-पूर्वक 40–43 दिन निरंतर करें।</div>
+</div>
+
+<div id="lk-checklist" hidden>
+  <div class="lkr-title">उपाय Checklist (40–43 दिन)</div>
+  <div class="lkr-sub"><?= $h($birthLine) ?></div>
+  <?php
+    // planets to track: priority list first, else all ashubh planets
+    $track = $lk['priority'];
+    if ($track === []) {
+        foreach ($ashubhPlanets as $p) {
+            $track[] = ['hi' => $p['hi'], 'house_ord' => $p['house_ord'], 'score' => 0,
+                'reasons' => [], 'remedies' => array_slice($p['remedies'], 0, 3),
+                'sheeghra' => '', 'var' => $p['var']];
+        }
+    }
+  ?>
+  <?php foreach ($track as $pp): ?>
+    <div class="lkr-box">
+      <b><?= $h((string) $pp['hi']) ?></b> (<?= $h((string) $pp['house_ord']) ?> भाव)<?= $pp['var'] !== '' ? ' · प्रारंभ वार: <b>' . $h((string) $pp['var']) . '</b>' : '' ?>
+      <ul class="lkr-ul">
+        <?php foreach ($pp['remedies'] as $r): ?><li>☐ <?= $h((string) $r) ?></li><?php endforeach; ?>
+      </ul>
+      <div class="lkr-days">
+        दिन:
+        <?php for ($d = 1; $d <= 43; $d++): ?><span class="lkr-day"><?= $d ?></span><?php endfor; ?>
+      </div>
+    </div>
+  <?php endforeach; ?>
+  <div class="lkr-h">सावधानियाँ</div>
+  <ul class="lkr-ul">
+    <?php foreach (array_slice($lk['rules']['upay_niyam'] ?? [], 0, 4) as $n): ?><li><?= $h((string) $n) ?></li><?php endforeach; ?>
+  </ul>
+  <div class="lkr-foot">हर दिन उपाय पूर्ण होने पर उस दिन के अंक पर ✓ लगाएँ। बीच में नागा हो जाए तो पुनः प्रारंभ करें।</div>
 </div>
 
 <script>

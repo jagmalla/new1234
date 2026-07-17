@@ -35,9 +35,14 @@ final class LalKitabEngine
      * @param array<string,mixed> $chart D1 chart from CalculationEngine
      * @param int|null $age native's current age in years (for the वर्ष कुंडली
      *                      ज्ञान चक्र row); null hides the age-specific block
+     * @param array<string,mixed> $active current activation context:
+     *        ['maha' => lord|null, 'antar' => lord|null,
+     *         'sadesati' => ['kind' => 'sadesati'|'dhaiya', 'phase' => 1..3|null]|null]
+     *        — used to highlight the planets that are "live" right now and to
+     *        weight the priority score.
      * @return array<string,mixed>
      */
-    public static function compute(array $chart, ?int $age = null): array
+    public static function compute(array $chart, ?int $age = null, array $active = []): array
     {
         if (empty($chart['planets']) || empty($chart['ascendant'])) {
             return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
@@ -77,6 +82,16 @@ final class LalKitabEngine
             ];
         }
 
+        // Build the interdependent readings in order: planets → sleeping-state →
+        // special conjunction doshas → priority score (uses all three + the
+        // running dasha / age context) → the "active now" summary strip.
+        $planets   = self::planetReadings($chart, $house);
+        $supt      = self::suptReadings($house);
+        $yutiDosha = self::yutiDoshaReadings($occupants);
+        self::scorePlanets($planets, $supt, $yutiDosha, $active, $age);
+        $priority  = self::priorityReadings($planets);
+        $activeNow = self::activeReadings($house, $planets, $active, $age);
+
         return [
             'ok'          => true,
             'error'       => null,
@@ -85,7 +100,10 @@ final class LalKitabEngine
             'moon_sign'   => $moonSign,
             'moon_hi'     => LalKitabData::signHi(Charts::SIGNS[$moonSign]),
             'grid'        => $grid,
-            'planets'     => self::planetReadings($chart, $house),
+            'planets'     => $planets,
+            'active'      => $activeNow,
+            'priority'    => $priority,
+            'yuti_dosha'  => $yutiDosha,
             'houses'      => self::houseReadings($house, $occupants),
             'karak'       => self::karakReadings($house),
             'yoga'        => self::yogaReadings($house),
@@ -98,7 +116,7 @@ final class LalKitabEngine
             'bhavan'      => LalKitabData::section('bhavan'),
             'varsh_gyan'  => self::varshGyanReadings($age),
             'rules'       => self::ruleReadings(),
-            'supt'        => self::suptReadings($house),
+            'supt'        => $supt,
             'drishti'     => self::drishtiReadings($house, $occupants),
             'reference'   => self::referenceReadings($age),
             'age'         => $age,
@@ -154,6 +172,9 @@ final class LalKitabEngine
 
             $verdict = $isAshubh ? 'अशुभ' : ($isShubh ? 'शुभ' : 'मध्यम');
 
+            // पक्का घर — the planet's own fixed house; sitting there = stable/strong.
+            $pukka = in_array($h, LalKitabData::PUKKA_GHAR[$p] ?? [], true);
+
             $remedies = $bg[$p][(string) $h] ?? [];
 
             $out[] = [
@@ -167,6 +188,8 @@ final class LalKitabEngine
                 'status'    => $status,
                 'verdict'   => $verdict,
                 'is_ashubh' => $isAshubh,
+                'pukka'     => $pukka,
+                'var'       => $gp[$p]['var'] ?? '',
                 'karak_bhav'=> $gp[$p]['karak_bhav'] ?? '',
                 'prakriti'  => $gp[$p]['prakriti'] ?? '',
                 'rang'      => $gp[$p]['rang'] ?? '',
@@ -271,28 +294,282 @@ final class LalKitabEngine
     private static function yogaReadings(array $house): array
     {
         $rules = LalKitabData::section('bhavishyavani');
-        // reverse: house => "<ordinal> भाव" phrases for the occupant planets
+        $bd    = LalKitabData::section('bhav_drishti');
         $out = [];
         foreach ($rules as $r) {
             $sthiti = (string) ($r['sthiti'] ?? '');
-            $applicable = false;
-            foreach ($house as $p => $h) {
-                $ord = LalKitabData::houseOrdinalHi($h);
-                $ph  = LalKitabData::planetHi($p);
-                if ($ph !== '' && mb_strpos($sthiti, $ph) !== false
-                    && mb_strpos($sthiti, $ord . ' भाव') !== false) {
-                    $applicable = true;
-                    break;
+            $cond   = $r['cond'] ?? null;
+
+            if (is_array($cond) && $cond !== []) {
+                // Exact evaluation from the parsed clauses (baked at data-build
+                // time): every clause must hold. Clause forms:
+                //   {p:[..], h:[..]}  every planet's house ∈ h
+                //   {p:[A,B], h:[]}   yuti — all planets share one house
+                //   {asp:[A,B]}       A's house aspects B's house (भाव दृष्टि चक्र)
+                $applicable = true;
+                foreach ($cond as $c) {
+                    if (isset($c['asp'])) {
+                        [$a, $b] = $c['asp'];
+                        $ha = $house[$a] ?? null;
+                        $hb = $house[$b] ?? null;
+                        $sees = ($ha !== null) ? ($bd[(string) $ha]['drishti'] ?? []) : [];
+                        if ($ha === null || $hb === null || !in_array($hb, $sees, true)) {
+                            $applicable = false;
+                            break;
+                        }
+                        continue;
+                    }
+                    $ps = $c['p'] ?? [];
+                    $hs = $c['h'] ?? [];
+                    if ($hs !== []) {
+                        foreach ($ps as $p) {
+                            if (!isset($house[$p]) || !in_array($house[$p], $hs, true)) {
+                                $applicable = false;
+                                break 2;
+                            }
+                        }
+                    } else {
+                        // yuti: all named planets in one and the same house
+                        $seen = [];
+                        foreach ($ps as $p) { $seen[] = $house[$p] ?? -1; }
+                        if (count(array_unique($seen)) !== 1 || $seen[0] === -1) {
+                            $applicable = false;
+                            break;
+                        }
+                    }
                 }
+                $mode = 'exact';
+            } else {
+                // Fallback: the original text heuristic (planet name + its
+                // ordinal-house phrase both appear in the स्थिति text).
+                $applicable = false;
+                foreach ($house as $p => $h) {
+                    $ord = LalKitabData::houseOrdinalHi($h);
+                    $ph  = LalKitabData::planetHi($p);
+                    if ($ph !== '' && mb_strpos($sthiti, $ph) !== false
+                        && mb_strpos($sthiti, $ord . ' भाव') !== false) {
+                        $applicable = true;
+                        break;
+                    }
+                }
+                $mode = 'text';
             }
+
             $out[] = [
                 'sthiti'     => $sthiti,
                 'prabhavit'  => (string) ($r['prabhavit'] ?? ''),
                 'phal'       => (string) ($r['phal'] ?? ''),
                 'applicable' => $applicable,
+                'mode'       => $mode,   // 'exact' = parsed rule, 'text' = heuristic
             ];
         }
         return $out;
+    }
+
+    /**
+     * विशेष युति / ग्रहण दोष — well-known malefic conjunctions detected from the
+     * teva (two planets sharing a house). Each carries its उपाय, looked up from
+     * the ग्रह-युति उपाय bank (plus each planet's शीघ्र उपाय as fallback).
+     *
+     * @param array<int,list<string>> $occupants
+     * @return list<array<string,mixed>>
+     */
+    private static function yutiDoshaReadings(array $occupants): array
+    {
+        /** alphabetically-sorted pair key => [name, description] */
+        $catalog = [
+            'Rahu|Sun'      => ['सूर्य ग्रहण दोष', 'सूर्य-राहु की युति — पिता, मान-सम्मान व सरकारी पक्ष के फल ग्रहण-ग्रस्त होते हैं; आत्मविश्वास व पद में बाधा।'],
+            'Ketu|Sun'      => ['सूर्य-केतु दोष', 'सूर्य-केतु की युति — पुत्र-पक्ष व पिता के सुख में कमी, कार्यों में अचानक रुकावट।'],
+            'Moon|Rahu'     => ['चन्द्र ग्रहण दोष', 'चन्द्र-राहु की युति — मन अशांत, वहम/चिंता, माता के सुख व जल-स्रोतों से हानि।'],
+            'Ketu|Moon'     => ['चन्द्र-केतु दोष', 'चन्द्र-केतु की युति — मन में उतार-चढ़ाव, माता या मामा-पक्ष को कष्ट।'],
+            'Jupiter|Rahu'  => ['गुरु चांडाल योग', 'गुरु-राहु की युति — गुरु/धर्म/शिक्षा के फल दूषित; बड़ों से मतभेद, निर्णय-दोष।'],
+            'Mars|Saturn'   => ['शनि-मंगल कष्ट योग', 'शनि-मंगल की युति — संघर्ष, दुर्घटना/चोट व तकनीकी-भूमि विवादों की प्रवृत्ति।'],
+            'Mars|Rahu'     => ['अंगारक योग', 'मंगल-राहु की युति — क्रोध व जोखिम की अधिकता, रक्त/अग्नि सम्बन्धी कष्ट।'],
+            'Rahu|Saturn'   => ['श्रापित योग', 'शनि-राहु की युति — रुके हुए काम, दीर्घ बाधाएँ व पैतृक अशुभता का संकेत।'],
+        ];
+        $gy = LalKitabData::section('grah_yuti_upay');
+        $sh = LalKitabData::section('sheeghra');
+
+        $out = [];
+        for ($h = 1; $h <= 12; $h++) {
+            $ps = $occupants[$h] ?? [];
+            $n = count($ps);
+            if ($n < 2) { continue; }
+            for ($i = 0; $i < $n; $i++) {
+                for ($j = $i + 1; $j < $n; $j++) {
+                    $pair = [$ps[$i], $ps[$j]];
+                    sort($pair);
+                    $key = implode('|', $pair);
+                    if (!isset($catalog[$key])) { continue; }
+                    [$name, $desc] = $catalog[$key];
+                    // उपाय: matching entries from the ग्रह-युति bank …
+                    $rem = [];
+                    // display order follows the traditional planet sequence
+                    $disp = array_values(array_intersect(self::PLANETS, $pair));
+                    $a = LalKitabData::planetHi($disp[0]);
+                    $b = LalKitabData::planetHi($disp[1]);
+                    foreach ($gy as $row) {
+                        $y = (string) ($row['yuti'] ?? '');
+                        if (mb_strpos($y, $a) !== false && mb_strpos($y, $b) !== false) {
+                            $rem[] = (string) ($row['upay'] ?? '');
+                        }
+                    }
+                    // … plus each planet's quick remedy as a safe fallback.
+                    foreach ($pair as $p) {
+                        if (!empty($sh[$p])) { $rem[] = LalKitabData::planetHi($p) . ' शीघ्र उपाय: ' . $sh[$p]; }
+                    }
+                    $out[] = [
+                        'name'      => $name,
+                        'desc'      => $desc,
+                        'planets'   => $pair,
+                        'pair_hi'   => $a . '-' . $b,
+                        'house'     => $h,
+                        'house_ord' => LalKitabData::houseOrdinalHi($h),
+                        'remedies'  => array_values(array_filter($rem)),
+                    ];
+                }
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Priority score — a transparent, additive severity score per planet so the
+     * astrologer knows which उपाय to start with. The weights (shown to the user
+     * as reasons) are:
+     *   +3 महादशा स्वामी      +2 अंतर्दशा स्वामी
+     *   +2 नीच राशि           +2 अशुभ भाव (लाल किताब)
+     *   +2 ग्रहण/विशेष युति    +2 इस आयु-वर्ष ग्रह का अशुभ वर्ष
+     *   +2 शनि पर साढ़े साती/ढैय्या    +1 सुप्त ग्रह
+     *   −1 उच्च राशि          −1 पक्का घर
+     *
+     * @param list<array<string,mixed>> $planets   modified in place
+     * @param list<array<string,mixed>> $supt
+     * @param list<array<string,mixed>> $yutiDosha
+     * @param array<string,mixed> $active
+     */
+    private static function scorePlanets(array &$planets, array $supt, array $yutiDosha, array $active, ?int $age): void
+    {
+        // lookups
+        $asleep = [];
+        foreach ($supt as $s) {
+            if (empty($s['awake'])) { $asleep[$s['hi']] = true; }
+        }
+        $inDosha = [];
+        foreach ($yutiDosha as $d) {
+            foreach ($d['planets'] as $p) { $inDosha[$p] = $d['name']; }
+        }
+        $gc = LalKitabData::section('grah_chakra');
+
+        foreach ($planets as &$pl) {
+            $p = $pl['planet'];
+            $score = 0;
+            $reasons = [];
+
+            if ($active['maha'] ?? null) {
+                if ($active['maha'] === $p) { $score += 3; $reasons[] = 'महादशा स्वामी (+3)'; }
+            }
+            if (($active['antar'] ?? null) === $p) { $score += 2; $reasons[] = 'अंतर्दशा स्वामी (+2)'; }
+            if ($pl['status'] === 'नीच') { $score += 2; $reasons[] = 'नीच राशि (+2)'; }
+            if (!empty($pl['is_ashubh'])) { $score += 2; $reasons[] = 'अशुभ भाव (+2)'; }
+            if (isset($inDosha[$p])) { $score += 2; $reasons[] = $inDosha[$p] . ' (+2)'; }
+            if ($p === 'Saturn' && !empty($active['sadesati'])) {
+                $score += 2;
+                $reasons[] = (($active['sadesati']['kind'] ?? '') === 'dhaiya' ? 'ढैय्या' : 'साढ़े साती') . ' चल रही है (+2)';
+            }
+            if ($age !== null && !empty($gc[$p]['ashubh'])
+                && preg_match_all('/\d+/', (string) $gc[$p]['ashubh'], $m)
+                && in_array((string) $age, $m[0], true)) {
+                $score += 2;
+                $reasons[] = 'इस आयु-वर्ष में अशुभ वर्ष (+2)';
+            }
+            if (isset($asleep[$pl['hi']])) { $score += 1; $reasons[] = 'सुप्त ग्रह (+1)'; }
+            if ($pl['status'] === 'उच्च') { $score -= 1; $reasons[] = 'उच्च राशि (−1)'; }
+            if (!empty($pl['pukka'])) { $score -= 1; $reasons[] = 'पक्का घर (−1)'; }
+
+            $pl['score']   = max(0, $score);
+            $pl['reasons'] = $reasons;
+        }
+        unset($pl);
+    }
+
+    /**
+     * "सबसे पहले इन उपायों से शुरू करें" — the top-3 planets by priority score
+     * (score ≥ 2), each with its first few भावगत remedies and quick remedy.
+     *
+     * @param list<array<string,mixed>> $planets
+     * @return list<array<string,mixed>>
+     */
+    private static function priorityReadings(array $planets): array
+    {
+        $sh = LalKitabData::section('sheeghra');
+        $cand = array_values(array_filter($planets, static fn ($p) => ($p['score'] ?? 0) >= 2));
+        usort($cand, static fn ($a, $b) => ($b['score'] <=> $a['score']));
+        $out = [];
+        foreach (array_slice($cand, 0, 3) as $p) {
+            $out[] = [
+                'hi'        => $p['hi'],
+                'house_ord' => $p['house_ord'],
+                'score'     => $p['score'],
+                'reasons'   => $p['reasons'],
+                'remedies'  => array_slice($p['remedies'], 0, 3),
+                'sheeghra'  => $sh[$p['planet']] ?? '',
+                'var'       => $p['var'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * 🔥 "अभी सक्रिय" strip — what is live right now: the running Maha/Antar
+     * dasha lords with their Lal Kitab standing, the Sade-Sati/Dhaiya state and
+     * the planets whose ग्रह-चक्र influence / malefic years include the current age.
+     *
+     * @param array<string,int> $house
+     * @param list<array<string,mixed>> $planets
+     * @return array<string,mixed>
+     */
+    private static function activeReadings(array $house, array $planets, array $active, ?int $age): array
+    {
+        $byKey = [];
+        foreach ($planets as $p) { $byKey[$p['planet']] = $p; }
+        $mk = static function (?string $lord) use ($byKey): ?array {
+            if ($lord === null || !isset($byKey[$lord])) { return null; }
+            $p = $byKey[$lord];
+            return [
+                'hi' => $p['hi'], 'house_ord' => $p['house_ord'],
+                'verdict' => $p['verdict'], 'score' => $p['score'] ?? 0,
+            ];
+        };
+
+        // planets whose influence / malefic years include the current age
+        $gc = LalKitabData::section('grah_chakra');
+        $yearEff = $yearBad = [];
+        if ($age !== null) {
+            foreach ($gc as $p => $row) {
+                if (!empty($row['prabhav']) && preg_match_all('/\d+/', (string) $row['prabhav'], $m)
+                    && in_array((string) $age, $m[0], true)) {
+                    $yearEff[] = LalKitabData::planetHi($p);
+                }
+                if (!empty($row['ashubh']) && preg_match_all('/\d+/', (string) $row['ashubh'], $m)
+                    && in_array((string) $age, $m[0], true)) {
+                    $yearBad[] = LalKitabData::planetHi($p);
+                }
+            }
+        }
+
+        $ss = $active['sadesati'] ?? null;
+        return [
+            'maha'      => $mk($active['maha'] ?? null),
+            'antar'     => $mk($active['antar'] ?? null),
+            'sadesati'  => is_array($ss) ? [
+                'label' => (($ss['kind'] ?? '') === 'dhaiya') ? 'ढैय्या' : 'साढ़े साती',
+                'phase' => $ss['phase'] ?? null,
+            ] : null,
+            'year_eff'  => $yearEff,
+            'year_bad'  => $yearBad,
+            'age'       => $age,
+        ];
     }
 
     /**

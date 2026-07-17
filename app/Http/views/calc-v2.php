@@ -3400,20 +3400,129 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     if (host && window.ABChart && window.AB_LALKITAB && window.AB_LALKITAB.planets) {
       window.ABChart.renderNorth(host, window.AB_LALKITAB, { showDeg: false, big: true });
     }
+    var d1MiniDone = false;
+    function showLkView(key) {
+      document.querySelectorAll('#sec-lalkitab .lk-view').forEach(function (v) {
+        v.classList.toggle('active', v.getAttribute('data-lk') === key);
+      });
+      // D1 mini chart for the comparison view — rendered lazily on first open
+      // (a hidden container measures zero, so it can't be drawn at build time).
+      if (key === 'compare' && !d1MiniDone && window.ABChart && window.AB_VARGAS && window.AB_VARGAS.D1) {
+        var m = document.getElementById('lk-d1-mini');
+        if (m) { window.ABChart.renderNorth(m, window.AB_VARGAS.D1, { showDeg: true, fit: true }); d1MiniDone = true; }
+      }
+      applyLkFilters();
+    }
     // Category dropdown → toggle the matching .lk-view.
     var sel = document.getElementById('lk-select');
     if (sel && !sel._bound) {
       sel._bound = true;
-      sel.addEventListener('change', function () {
-        document.querySelectorAll('#sec-lalkitab .lk-view').forEach(function (v) {
-          v.classList.toggle('active', v.getAttribute('data-lk') === sel.value);
-        });
-        applyLkFilters();
-      });
+      sel.addEventListener('change', function () { showLkView(sel.value); });
     }
     document.querySelectorAll('#sec-lalkitab .lk-onlybad, #sec-lalkitab .lk-onlyapp').forEach(function (chk) {
       chk.addEventListener('change', applyLkFilters);
     });
+
+    // ---- Print (पूर्ण रिपोर्ट + उपाय checklist): open the hidden server-built
+    // document in a print window with a compact professional stylesheet.
+    var LKR_CSS = 'body{font-family:"Noto Sans Devanagari","Mangal",Arial,sans-serif;color:#111;margin:24px;line-height:1.55;font-size:13px}' +
+      '.lkr-title{font-size:20px;font-weight:800;border-bottom:3px solid #b91c1c;padding-bottom:6px;margin-bottom:4px}' +
+      '.lkr-sub{color:#555;font-size:12px;margin-bottom:14px}' +
+      '.lkr-h{font-size:15px;font-weight:800;margin:16px 0 6px;color:#7c2d12;border-bottom:1px solid #ddd;padding-bottom:3px}' +
+      '.lkr-box{border:1px solid #ddd;border-radius:6px;padding:8px 11px;margin:6px 0;page-break-inside:avoid}' +
+      '.lkr-box.lkr-bad{border-color:#fca5a5;background:#fef2f2}' +
+      '.lkr-box.lkr-hot{border-color:#fdba74;background:#fff7ed}' +
+      '.lkr-why{color:#92400e;font-size:11.5px;margin-top:3px}' +
+      '.lkr-ul{margin:5px 0 2px;padding-left:20px}.lkr-ul li{margin:2px 0}' +
+      '.lkr-days{margin-top:6px;font-size:10px;color:#333}' +
+      '.lkr-day{display:inline-block;width:20px;height:16px;border:1px solid #999;border-radius:3px;text-align:center;margin:1px;font-size:8.5px;color:#777;vertical-align:middle}' +
+      '.lkr-foot{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;color:#666;font-size:11px;font-style:italic}' +
+      '@media print{body{margin:10mm}}';
+    function lkPrint(srcId, title) {
+      var src = document.getElementById(srcId);
+      if (!src) { return; }
+      var w = window.open('', '_blank');
+      if (!w) { alert('Popup blocked — कृपया popup की अनुमति दें।'); return; }
+      w.document.write('<!DOCTYPE html><html lang="hi"><head><meta charset="utf-8"><title>' + title +
+        '</title><style>' + LKR_CSS + '</style></head><body>' + src.innerHTML + '</body></html>');
+      w.document.close();
+      w.focus();
+      setTimeout(function () { w.print(); }, 500);
+    }
+    var pr = document.getElementById('lk-print-report');
+    if (pr) { pr.addEventListener('click', function () { lkPrint('lk-report', 'Lal Kitab Report'); }); }
+    var pc = document.getElementById('lk-print-checklist');
+    if (pc) { pc.addEventListener('click', function () { lkPrint('lk-checklist', 'Lal Kitab Upay Checklist'); }); }
+
+    // ---- Topic search across every category. A chip (or typed text) collects
+    // its synonym set, matching cards are cloned into the results view with an
+    // origin label, and the dropdown jumps to "खोज परिणाम".
+    var LK_TOPICS = {
+      'धन':     ['धन', 'रुपया', 'पैसा', 'सम्पत्ति', 'संपत्ति', 'दौलत', 'आर्थिक', 'लक्ष्मी', 'धनी', 'गरीब', 'कंगाल', 'व्यय', 'खर्च'],
+      'विवाह':  ['विवाह', 'शादी', 'पति', 'पत्नी', 'कन्या', 'दाम्पत्य', 'ससुराल', 'वैवाहिक', 'विवाहोपरान्त'],
+      'संतान':  ['संतान', 'सन्तान', 'पुत्र', 'औलाद', 'बच्च', 'लड़का', 'लड़के', 'गर्भ'],
+      'रोग':    ['रोग', 'बीमार', 'स्वास्थ्य', 'दर्द', 'चोट', 'इलाज', 'दवा', 'कष्ट', 'मृत्यु'],
+      'नौकरी':  ['नौकरी', 'व्यापार', 'कारोबार', 'धंधा', 'राज्य', 'सरकारी', 'पदोन्नति', 'तरक्की', 'उन्नति', 'रोज़गार', 'रोजगार', 'काम'],
+      'शिक्षा': ['शिक्षा', 'विद्या', 'पढ़ाई', 'बुद्धि', 'स्मरण'],
+      'मुकदमा': ['मुकदमा', 'कोर्ट', 'कचहरी', 'राज्यभय', 'दण्ड', 'जेल', 'कानून'],
+      'विदेश':  ['विदेश', 'यात्रा', 'परदेस', 'प्रवास']
+    };
+    var LK_VIEW_NAMES = {
+      overview: 'परिचय', planet: 'ग्रह फल', house: 'भाव फल', karak: 'कारक', yoga: 'योग',
+      shrap: 'पैतृक ऋण', sadesati: 'साढ़े साती', manglik: 'मंगलीक', ayu: 'आयु योग',
+      health: 'रोग/संतान', bhavan: 'गृह निर्माण', varsh: 'वर्ष चक्र', supt: 'सुप्त ग्रह',
+      drishti: 'भाव दृष्टि', remedy: 'उपाय', rules: 'नियम', reference: 'संदर्भ', compare: 'तुलना'
+    };
+    function lkSearch(label, terms) {
+      var res = document.getElementById('lk-search-results');
+      var note = document.getElementById('lk-search-note');
+      if (!res) { return; }
+      res.innerHTML = '';
+      var count = 0, MAX = 60;
+      document.querySelectorAll('#sec-lalkitab .lk-view:not([data-lk="search"]) .lk-card').forEach(function (c) {
+        if (count >= MAX) { return; }
+        var t = c.textContent || '';
+        var hit = terms.some(function (k) { return k && t.indexOf(k) !== -1; });
+        if (!hit) { return; }
+        var from = c.closest('.lk-view');
+        var fromKey = from ? from.getAttribute('data-lk') : '';
+        var cl = c.cloneNode(true);
+        cl.style.display = '';
+        var tag = document.createElement('div');
+        tag.style.cssText = 'font-size:.68rem;color:#0369a1;margin-bottom:3px;font-weight:700';
+        tag.textContent = '📁 ' + (LK_VIEW_NAMES[fromKey] || fromKey);
+        cl.insertBefore(tag, cl.firstChild);
+        res.appendChild(cl);
+        count++;
+      });
+      if (note) {
+        note.textContent = count
+          ? ('"' + label + '" — ' + count + ' परिणाम मिले' + (count >= MAX ? ' (पहले ' + MAX + ' दिखाए गए)' : '') + '।')
+          : ('"' + label + '" के लिए कोई परिणाम नहीं मिला।');
+      }
+      if (sel) {
+        var so = sel.querySelector('option[value="search"]');
+        if (so) { so.hidden = false; }
+        sel.value = 'search';
+      }
+      showLkView('search');
+    }
+    document.querySelectorAll('#sec-lalkitab .lk-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var topic = chip.getAttribute('data-topic');
+        lkSearch(chip.textContent.trim(), LK_TOPICS[topic] || [topic]);
+      });
+    });
+    var q = document.getElementById('lk-q');
+    if (q) {
+      q.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') { return; }
+        var v = q.value.trim();
+        if (!v) { return; }
+        lkSearch(v, LK_TOPICS[v] || [v]);
+      });
+    }
+
     applyLkFilters();
   }
 
