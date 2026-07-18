@@ -952,6 +952,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             font-weight: 700; font-size: .84rem; cursor: pointer; }
         .ab-btn:hover { filter: brightness(.94); }
         .ab-btn-ghost { background: #f1f5f9; color: #b91c1c; }
+        .ab-btn-edit { background: #f1f5f9; color: #0f766e; border: 1px solid #99f6e4; }
+        .ab-btn-edit:hover { background: #ccfbf1; }
         .ab-btn-sm { padding: 5px 11px; font-size: .78rem; }
         .ab-open-count { font-size: .78rem; font-weight: 600; color: #94a3b8; }
         .ab-open-search { padding: 12px 16px; border-bottom: 1px solid var(--line); }

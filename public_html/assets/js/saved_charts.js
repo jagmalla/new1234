@@ -74,6 +74,11 @@
   // entry of the same person). नाम + जन्म-तिथि/समय/स्थान अनिवार्य; बाकी optional.
   var CONTACT = ['phone', 'email', 'address', 'city', 'country'];
 
+  // editingId = the saved chart being edited via the Open browser's ✎ button;
+  // null means a fresh Save from the current chart form. In edit mode the birth
+  // data (date/time/place/…) comes from the stored entry, not the form.
+  var editingId = null;
+
   function findExisting(list, d) {
     for (var i = 0; i < list.length; i++) {
       if (list[i].name === d.name && list[i].date === d.date && list[i].time === d.time && list[i].place === d.place) { return i; }
@@ -81,24 +86,17 @@
     return -1;
   }
 
-  function save() {
-    var d = collect();
-    if (!d.date || !d.time || !d.place) {
-      toast('कृपया पहले जन्म-विवरण भरें — तारीख़, समय व जन्म-स्थान आवश्यक हैं।', 'err');
-      return;
-    }
-    // summary of the mandatory chart data (read-only in the popup)
+  // Fill + open the profile popup from a base record (chart form data on a fresh
+  // save, or a stored entry when editing) plus optional prior contact details.
+  function openSaveModal(d, prev) {
     var sum = el('ab-save-sum');
     if (sum) {
       sum.innerHTML = '<b>जन्म-विवरण:</b> ' + esc(d.date) + ' &nbsp;' + esc(d.time) +
-        ' &nbsp;·&nbsp; ' + esc(d.place) + '<br><span style="font-size:.74rem;color:#94a3b8">(बदलने हेतु पहले New/Profile फ़ॉर्म में सुधार करें)</span>';
+        ' &nbsp;·&nbsp; ' + esc(d.place) +
+        '<br><span style="font-size:.74rem;color:#94a3b8">' +
+        (editingId ? 'जन्म-विवरण बदलने हेतु चार्ट खोलकर New/Profile में सुधारें।' : '(बदलने हेतु पहले New/Profile फ़ॉर्म में सुधार करें)') +
+        '</span>';
     }
-    // prefill: name from the form; contact details from an earlier save of the
-    // same person (so re-saving edits, not blanks); city guessed from place.
-    var prev = null;
-    var list = load();
-    var pi = findExisting(list, d);
-    if (pi >= 0) { prev = list[pi]; }
     var set = function (id, v) { var e = el(id); if (e) { e.value = v || ''; } };
     set('ab-sv-name', d.name || (prev && prev.name) || '');
     set('ab-sv-phone', prev ? prev.phone : '');
@@ -111,12 +109,45 @@
     var nm = el('ab-sv-name'); if (nm) { setTimeout(function () { nm.focus(); }, 60); }
   }
 
-  function confirmSave() {
+  // Save Chart button → fresh save from the current chart form.
+  function save() {
+    editingId = null;
     var d = collect();
+    if (!d.date || !d.time || !d.place) {
+      toast('कृपया पहले जन्म-विवरण भरें — तारीख़, समय व जन्म-स्थान आवश्यक हैं।', 'err');
+      return;
+    }
+    // contact details from an earlier save of the same person (edit, not blank)
+    var list = load();
+    var pi = findExisting(list, d);
+    openSaveModal(d, pi >= 0 ? list[pi] : null);
+  }
+
+  // ✎ Edit button (Open browser) → edit a stored chart's profile in place.
+  function editProfile(id) {
+    var c = byId(id);
+    if (!c) { return; }
+    editingId = id;
+    closeOverlays();
+    openSaveModal(c, c);
+  }
+
+  function confirmSave() {
     var gv = function (id) { var e = el(id); return e ? String(e.value || '').trim() : ''; };
-    d.name = gv('ab-sv-name');
     var err = el('ab-save-err');
     var fail = function (msg) { if (err) { err.textContent = msg; err.classList.remove('hidden'); } };
+
+    // base birth data: stored entry when editing, else the chart form.
+    var d;
+    if (editingId) {
+      var cur = byId(editingId);
+      if (!cur) { editingId = null; fail('यह चार्ट अब उपलब्ध नहीं है।'); return; }
+      d = {}; Object.keys(cur).forEach(function (k) { d[k] = cur[k]; });   // clone
+    } else {
+      d = collect();
+    }
+
+    d.name = gv('ab-sv-name');
     if (!d.name) { fail('नाम आवश्यक है — कृपया नाम भरें।'); var e = el('ab-sv-name'); if (e) { e.focus(); } return; }
     if (!d.date || !d.time || !d.place) { fail('जन्म-तिथि, समय व स्थान आवश्यक हैं — पहले New/Profile फ़ॉर्म भरें।'); return; }
     var email = gv('ab-sv-email');
@@ -127,11 +158,26 @@
     d.city = gv('ab-sv-city');
     d.country = gv('ab-sv-country');
 
-    // keep the name typed in the popup on the form too, so Calculate/URL match
+    var list = load();
+
+    // ---- edit mode: update the exact stored entry by id ----
+    if (editingId) {
+      var ix = -1;
+      for (var i = 0; i < list.length; i++) { if (list[i].id === editingId) { ix = i; break; } }
+      if (ix < 0) { editingId = null; fail('यह चार्ट अब उपलब्ध नहीं है।'); return; }
+      d.id = editingId; d.savedAt = Date.now(); list[ix] = d; store(list);
+      editingId = null;
+      // close only the profile popup and return to the Open browser (refreshed)
+      var sm = el('ab-save-modal'); if (sm) { sm.classList.add('hidden'); }
+      openOverlay('ab-open-modal');
+      renderList((el('ab-open-q') || {}).value || '');
+      toast('प्रोफ़ाइल अपडेट हो गई ✓', 'ok');
+      return;
+    }
+
+    // ---- fresh save from the form ----
     var f = el('birth-form');
     if (f) { var fn = f.querySelector('[name="name"]'); if (fn && !fn.value) { fn.value = d.name; } }
-
-    var list = load();
     var idx = findExisting(list, d);
     if (idx >= 0) {
       d.id = list[idx].id; d.savedAt = Date.now(); list[idx] = d; store(list);
@@ -184,6 +230,7 @@
         '</div>' +
         '<div class="ab-open-acts">' +
           '<button type="button" class="ab-btn ab-btn-sm" data-open="' + esc(c.id) + '">खोलें / Open</button>' +
+          '<button type="button" class="ab-btn ab-btn-edit ab-btn-sm" data-edit="' + esc(c.id) + '" title="प्रोफ़ाइल संपादित करें">✎ Edit</button>' +
           '<button type="button" class="ab-btn ab-btn-ghost ab-btn-sm" data-del="' + esc(c.id) + '" title="हटाएँ">✕</button>' +
         '</div>' +
         (when ? '<div class="ab-open-when">' + esc(when) + '</div>' : '') +
@@ -217,6 +264,7 @@
       if (e.target.closest('[data-ab-save]')) { e.preventDefault(); save(); return; }
       if (e.target.closest('[data-ab-open]')) { e.preventDefault(); openBrowser(); return; }
       var op = e.target.closest('[data-open]'); if (op) { openChart(byId(op.getAttribute('data-open'))); return; }
+      var ed = e.target.closest('[data-edit]'); if (ed) { e.preventDefault(); editProfile(ed.getAttribute('data-edit')); return; }
       var dl = e.target.closest('[data-del]'); if (dl) { del(dl.getAttribute('data-del')); return; }
       if (e.target.closest('[data-close]') || e.target.classList.contains('ab-modal-overlay')) { closeOverlays(); return; }
     });
