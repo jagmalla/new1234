@@ -538,7 +538,18 @@ live. They render as labelled colour-coded columns (Year/Month/Week/Day &
 
 MySQL, ~90 tables, seeded by `migrations/001…026` (import **in numeric order**).
 The app runs without them (baked fallbacks), but the DB is where an owner edits
-prediction text. Grouped:
+prediction text.
+
+**Importing / syncing the migrations (new hosting):** open
+`https://your-site/index.php?r=admin/migrate` — the **DB Sync** page lists all
+26 files with applied/pending status and a *Run pending* button. Applied files
+are tracked in `schema_migrations`, so the page is safe to reopen any time;
+after uploading a new migration file, press *Run pending* again and only the
+new one executes. (With SSH: `php bin/migrate.php`, or `--force` to re-run
+everything — all seeds are idempotent.) Manual phpMyAdmin import of each file
+in numeric order also works.
+
+Grouped:
 
 - **Platform/auth/automation:** `app_settings`, `users`, `staff`, `credentials`,
   `workflows`, `workflow_conclusions`, `job_queue`, `execution_logs`,

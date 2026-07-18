@@ -59,6 +59,15 @@ try {
             (new MilanController())->show();
             break;
 
+        // DB Sync: import/track the migrations/*.sql seed files (admin only).
+        case 'GET admin/migrate':
+            (new \AutoBusiness\Http\MigrateController())->show();
+            break;
+
+        case 'POST admin/migrate/run':
+            (new \AutoBusiness\Http\MigrateController())->run();
+            break;
+
         case 'POST api/workflow/save':
             (new CanvasController())->save();
             break;
