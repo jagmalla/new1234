@@ -583,9 +583,47 @@ final class LalKitabEngine
                 'phal'       => (string) ($r['phal'] ?? ''),
                 'applicable' => $applicable,
                 'mode'       => $mode,   // 'exact' = parsed rule, 'text' = heuristic
+                'tone'       => self::phalTone((string) ($r['phal'] ?? '')),
             ];
         }
         return $out;
+    }
+
+    /**
+     * फल का शुभ/अशुभ स्वभाव — the yoga card's colour must follow the RESULT, not
+     * merely "is it applicable". Scans the phal text for benefic vs malefic
+     * cues; the last-mentioned polarity wins for "अशुभ … परन्तु … शुभ" style
+     * sentences (Lal Kitab phrases the exception at the end). Returns
+     * 'pos' | 'neg' | 'mix'.
+     */
+    private static function phalTone(string $phal): string
+    {
+        if (trim($phal) === '') { return 'mix'; }
+        // Negated malefic clauses ("अशुभ … नहीं होता", "हानि नहीं करेगा") actually
+        // read benefic — drop them so they neither count as neg nor let their
+        // शुभ/उच्च leak in. Mask before scanning.
+        $work = preg_replace('/(हानि|अशुभ|नीच|कष्ट|रोग|दोष|कुप्रभाव|बुरा)[^।;]{0,20}?नहीं\s*(होता|होती|करता|करती|करेगा|करेगी|देता|देती|देगा|देगी|पाता|पाती|पड़ता|पड़ती)/u', ' शुभ ', $phal) ?? $phal;
+        // Mask "अशुभ" so the pos cue "शुभ" cannot match inside it.
+        $posText = str_replace('अशुभ', 'अ✕', $work);
+
+        // strong malefic cues
+        $neg = ['हानि', 'अशुभ', 'नीच', 'कष्ट', 'रोग', 'दुःख', 'दुख', 'मरते', 'मरवा', 'मृत्यु', 'मौत',
+            'विष', 'नाश', 'भारी होता', 'कुप्रभाव', 'दरिद्र', 'निर्धन', 'शत्रु', 'बाधा', 'दोष', 'भय',
+            'दुर्घटना', 'ग्रहण की स्थिति', 'अन्धे', 'मौन', 'रतान्ध', 'हानिकारक', 'बुरा', 'पीड़ा', 'विकार'];
+        // strong benefic cues
+        $pos = ['शुभ', 'उच्च', 'लाभ', 'धनी', 'राजा', 'सुख', 'उन्नति', 'वृद्धि', 'सफल', 'यश', 'कीर्ति',
+            'सम्मान', 'रक्षा', 'कल्याण', 'समृद्ध', 'भाग्य', 'उत्तम', 'श्रेष्ठ', 'सुखी'];
+
+        // find the last occurrence of any cue on each side → later wins.
+        $lastNeg = -1; $lastPos = -1; $nHits = 0; $pHits = 0;
+        foreach ($neg as $w) { $i = mb_strrpos($work, $w); if ($i !== false) { $nHits++; if ($i > $lastNeg) { $lastNeg = $i; } } }
+        foreach ($pos as $w) { $i = mb_strrpos($posText, $w); if ($i !== false) { $pHits++; if ($i > $lastPos) { $lastPos = $i; } } }
+
+        if ($nHits === 0 && $pHits === 0) { return 'mix'; }
+        if ($nHits > 0 && $pHits === 0) { return 'neg'; }
+        if ($pHits > 0 && $nHits === 0) { return 'pos'; }
+        // both present ("अशुभ … परन्तु … शुभ" / "शुभ … किन्तु … हानि"): later wins.
+        return $lastPos > $lastNeg ? 'pos' : 'neg';
     }
 
     /**

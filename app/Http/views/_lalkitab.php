@@ -34,7 +34,9 @@ $pill = static function (string $txt, string $kind) use ($h): string {
     $map = [
         'शुभ' => 'background:#dcfce7;color:#166534', 'उच्च' => 'background:#dcfce7;color:#166534',
         'स्वगृही' => 'background:#dbeafe;color:#1e40af', 'सम' => 'background:#f1f5f9;color:#475569',
-        'मध्यम' => 'background:#fef9c3;color:#854d0e',
+        'मध्यम' => 'background:#fef9c3;color:#854d0e', 'मिश्रित' => 'background:#fef9c3;color:#854d0e',
+        'शुभ फल' => 'background:#dcfce7;color:#166534',
+        'अशुभ फल' => 'background:#fee2e2;color:#991b1b',
         'अशुभ' => 'background:#fee2e2;color:#991b1b', 'नीच' => 'background:#fee2e2;color:#991b1b',
     ];
     $st = $map[$txt] ?? 'background:#f1f5f9;color:#475569';
@@ -450,10 +452,18 @@ $scorePill = static function (int $score): string {
           <label><input type="checkbox" class="lk-onlyapp" data-scope="yoga" checked> केवल लागू योग दिखाएँ</label>
           <span style="color:#94a3b8">(सभी सूत्र देखने हेतु चेक हटाएँ)</span>
         </div>
-        <?php foreach ($lk['yoga'] as $Y): ?>
-          <div class="lk-card <?= $Y['applicable'] ? 'good' : '' ?>" data-app="<?= $Y['applicable'] ? '1' : '0' ?>">
+        <?php foreach ($lk['yoga'] as $Y):
+            // Card colour follows the RESULT (शुभ/अशुभ), not mere applicability;
+            // a non-applicable card stays neutral (grey).
+            $yt = $Y['tone'] ?? 'mix';
+            $yCls = !$Y['applicable'] ? '' : ($yt === 'pos' ? 'good' : ($yt === 'neg' ? 'bad' : ''));
+            $tonePill = $Y['applicable']
+                ? ($yt === 'pos' ? $pill('शुभ फल', 'v') : ($yt === 'neg' ? $pill('अशुभ फल', 'v') : $pill('मिश्रित', 'v')))
+                : ''; ?>
+          <div class="lk-card <?= $yCls ?>" data-app="<?= $Y['applicable'] ? '1' : '0' ?>">
             <div class="lk-card-h" style="font-size:.88rem">
-              <?= $h((string) $Y['sthiti']) ?><?= $Y['applicable'] ? $pill('लागू', 'a') : '' ?>
+              <?= $h((string) $Y['sthiti']) ?>
+              <?php if ($Y['applicable']): ?><span class="lk-pill" style="background:#e0e7ff;color:#3730a3">लागू</span><?= $tonePill ?><?php endif; ?>
               <?= $srcTag(($Y['mode'] ?? '') === 'exact' ? 'सटीक गणना' : 'पाठ-मिलान') ?>
             </div>
             <?php if (trim((string) $Y['prabhavit']) !== ''): ?><div class="lk-sub"><b>प्रभावित ग्रह:</b> <?= $h((string) $Y['prabhavit']) ?></div><?php endif; ?>
