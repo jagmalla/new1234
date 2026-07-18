@@ -114,12 +114,21 @@ $satEffect = [
     </div>
     <?php endif; ?>
 
-    <?php // ===== 3) पूर्वशाप व सन्तान योग ===== ?>
-    <div class="gen-card gen-c-<?= $shCount > 0 ? 'neg' : 'pos' ?> gen-clickable" data-genjump="pred:shaap" role="button" tabindex="0">
+    <?php // ===== 3) पूर्वशाप व सन्तान योग =====
+        // शुभ सन्तान-योग (जैसे बहुपुत्र) और शाप-दोष अलग-अलग गिने जाते हैं — शुभ
+        // योग को कभी "शाप + उपाय" की तरह प्रस्तुत नहीं किया जाता।
+        $shDosha = (int) ($sh['detected_dosha'] ?? $shCount);
+        $shShubh = (int) ($sh['detected_shubh'] ?? 0);
+    ?>
+    <div class="gen-card gen-c-<?= $shDosha > 0 ? 'neg' : 'pos' ?> gen-clickable" data-genjump="pred:shaap" role="button" tabindex="0">
         <div class="gen-h">🛕 पूर्वशाप व सन्तान</div>
-        <?php if ($shCount > 0): ?>
-        <div class="gen-line gen-neg"><b><?= $shCount ?> शाप/सन्तान-योग</b> संगणित (<?= $h(implode(', ', array_slice($sh['detected_categories'] ?? [], 0, 4))) ?>)। परम्परागत उपाय ऊपर "Shrap (पूर्वशाप व सन्तान)" में देखें।</div>
-        <?php else: ?>
+        <?php if ($shDosha > 0): ?>
+        <div class="gen-line gen-neg"><b><?= $shDosha ?> शाप-दोष</b> संगणित (<?= $h(implode(', ', array_slice($sh['dosha_categories'] ?? ($sh['detected_categories'] ?? []), 0, 4))) ?>)। परम्परागत उपाय "Shrap (पूर्वशाप व सन्तान)" पैनल में देखें।</div>
+        <?php endif; ?>
+        <?php if ($shShubh > 0): ?>
+        <div class="gen-line gen-pos"><b><?= $shShubh ?> शुभ सन्तान-योग</b> संगणित (<?= $h(implode(', ', array_slice($sh['shubh_categories'] ?? [], 0, 4))) ?>) — शुभ संकेत।</div>
+        <?php endif; ?>
+        <?php if ($shDosha === 0 && $shShubh === 0): ?>
         <div class="gen-line gen-pos">इस दृष्टि से कोई प्रमुख पूर्वशाप-दोष संगणित नहीं — शुभ संकेत।</div>
         <?php endif; ?>
         <div class="gen-jumphint">विस्तृत शाप-दोष / सन्तान फल देखें →</div>

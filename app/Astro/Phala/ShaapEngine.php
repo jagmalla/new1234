@@ -51,10 +51,20 @@ final class ShaapEngine
         $groups = [];
         $detectedCount = 0;
         $detectedCats = [];
+        // शुभ सन्तान-योग (e.g. बहुपुत्र) and शाप-दोष are counted separately so
+        // the General Overview never presents a benefic yoga as a "शाप".
+        $shubhCats = $doshaCats = [];
+        $shubhCount = $doshaCount = 0;
         foreach (($rules['rules'] ?? []) as $r) {
             $d = $auto ? self::detect((string) $r['id'], $ctx) : null;
             $row = $r + ['detected' => $d];
-            if ($d === true) { $detectedCount++; $detectedCats[$r['cat']] = true; $row['phal_dasha'] = $phalDasha; }
+            if ($d === true) {
+                $detectedCount++;
+                $detectedCats[$r['cat']] = true;
+                $row['phal_dasha'] = $phalDasha;
+                if (($r['type'] ?? '') === 'shubh') { $shubhCount++; $shubhCats[$r['cat']] = true; }
+                else { $doshaCount++; $doshaCats[$r['cat']] = true; }
+            }
             $groups[$r['cat']][] = $row;
         }
 
@@ -72,6 +82,11 @@ final class ShaapEngine
             'groups' => $groups,
             'detected_count' => $detectedCount,
             'detected_categories' => array_keys($detectedCats),
+            // split counts: benefic santaan-yogas vs actual shaap-doshas
+            'detected_shubh' => $shubhCount,
+            'detected_dosha' => $doshaCount,
+            'shubh_categories' => array_keys($shubhCats),
+            'dosha_categories' => array_keys($doshaCats),
             'remedies' => array_values($activeRemedies),
             'total' => count($rules['rules'] ?? []),
         ];
@@ -90,11 +105,14 @@ final class ShaapEngine
             $out[] = [
                 'planet' => $p, 'planet_hi' => Yogakaraka::planetHi($p),
                 'role' => $roles[$p]['role'] ?? 'neutral', 'role_hi' => $roles[$p]['role_hi'] ?? 'सम',
+                'start_jd' => $period[0] ?? null,
                 'dasha' => $period !== null
                     ? \AutoBusiness\Astro\Time\JulianDay::toDmy($period[0], $tz) . ' – ' . \AutoBusiness\Astro\Time\JulianDay::toDmy($period[1], $tz)
                     : null,
             ];
         }
+        // chronological — the chips read as a timeline (dasha-less planets last)
+        usort($out, static fn ($a, $b) => ($a['start_jd'] ?? PHP_FLOAT_MAX) <=> ($b['start_jd'] ?? PHP_FLOAT_MAX));
         return ['planets' => $out, 'note' => 'दोष/योग का प्रभाव पुत्रकारक गुरु व पंचमेश-लग्नेश की महादशा/अन्तर्दशा में सम्भावित।'];
     }
 

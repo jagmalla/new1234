@@ -25,7 +25,7 @@ $card = static function (array $c) use ($h, $dv): void {
         echo '<div class="de-line ' . $cls . '"><b>' . $lbl . '</b> — ' . $h((string) $t['body']) . '</div>';
     }
     if (!empty($c['remedy'])) {
-        echo '<div class="de-line de-rem"><b>● उपाय</b> — ' . $h((string) $c['remedy']) . '</div>';
+        echo '<div class="de-rembox"><b>🛠 उपाय</b> — ' . $h((string) $c['remedy']) . '</div>';
     }
     echo '</div>';
 };
@@ -51,9 +51,11 @@ $ovTier = $dv[$eng['overall']['tier'] ?? 'mishrit'] ?? 'gc-mishrit';
 <!-- 6. उपाय (संकलित) -->
 <?php if (!empty($eng['remedies'])): ?>
 <div class="de-card">
-    <div class="de-head"><span class="de-title">उपाय (संकलित)</span></div>
-    <ul class="de-remlist">
-        <?php foreach ($eng['remedies'] as $rm): ?><li class="de-rem">● <?= $h((string) $rm) ?></li><?php endforeach; ?>
-    </ul>
+    <div class="de-head"><span class="de-title">🛠 उपाय (संकलित)</span></div>
+    <div class="de-rembox" style="margin-top:4px">
+        <ul class="de-remlist">
+            <?php foreach ($eng['remedies'] as $rm): ?><li>● <?= $h((string) $rm) ?></li><?php endforeach; ?>
+        </ul>
+    </div>
 </div>
 <?php endif; ?>

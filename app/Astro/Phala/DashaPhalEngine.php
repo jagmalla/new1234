@@ -281,12 +281,14 @@ final class DashaPhalEngine
     private static function factsLine(array $f): string
     {
         $parts = [self::HOUSE_CAT[$f['house']] ?? '', $f['dignity_word']];
-        if ($f['neecha_bhanga']) { $parts[] = 'नीच भंग'; }
+        // dignity_word for the debil_bhanga tier is already "नीच (नीच भंग)" —
+        // only add the separate भंग flag when the word doesn't carry it.
+        if ($f['neecha_bhanga'] && mb_strpos((string) $f['dignity_word'], 'भंग') === false) { $parts[] = 'नीच भंग'; }
         if ($f['retro']) { $parts[] = 'वक्री'; }
         if ($f['combust'] !== null) { $parts[] = 'अस्त ' . $f['combust']['pct'] . '%'; }
         if ($f['ben_con'] !== []) { $parts[] = 'शुभ युति: ' . implode(', ', array_map([self::class, 'hi'], $f['ben_con'])); }
         if ($f['mal_con'] !== []) { $parts[] = 'पाप युति: ' . implode(', ', array_map([self::class, 'hi'], $f['mal_con'])); }
-        if ($f['ben_asp'] > 0 || $f['mal_asp'] > 0) { $parts[] = sprintf('दृष्टि शुभ%d/पाप%d', $f['ben_asp'], $f['mal_asp']); }
+        if ($f['ben_asp'] > 0 || $f['mal_asp'] > 0) { $parts[] = sprintf('दृष्टि — शुभ %d / पाप %d', $f['ben_asp'], $f['mal_asp']); }
         return implode(' · ', array_filter($parts, static fn($x) => $x !== ''));
     }
 

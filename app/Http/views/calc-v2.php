@@ -820,8 +820,12 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .de-pos b { color: var(--shubh); }
         .de-neg b { color: var(--ashubh); }
         .de-rem b, .de-rem { color: var(--haldi); }
+        /* उपाय — highlighted remedy box (matches the Lal Kitab remedy styling) */
+        .de-rembox { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
+                     padding: 7px 11px; margin: 7px 0 3px; color: #7c2d12; line-height: 1.6; }
+        .de-rembox b { color: #9a3412; }
         .de-remlist { list-style: none; padding-left: 0; margin: 0; }
-        .de-remlist li { color: var(--haldi); margin: 3px 0; }
+        .de-remlist li { color: #7c2d12; margin: 3px 0; }
         .de-classical { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
         .de-classical-btn { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
         .de-classical-btn:hover { color: var(--sindoor); }

@@ -17,8 +17,10 @@ if ($sh !== null && !empty($sh['groups'])):
     <div class="shaap-note">⚠ यह <b>बृहत्पाराशरहोराशास्त्र (अध्याय 86)</b> का शास्त्रीय/परम्परागत पाठ है — केवल <b>सूचनात्मक व सांस्कृतिक सन्दर्भ</b> हेतु। इसे चिकित्सा, प्रजनन या किसी व्यक्तिगत निर्णय का आधार <b>न बनाएँ</b>। उपाय धार्मिक-परम्परागत आस्था पर आधारित हैं।</div>
 
     <div class="yoga-sec-title" style="margin-top:10px">पूर्वशाप व सन्तान योग <span class="text-xs text-gray-400 font-normal">(अध्याय 86 · कुल <?= (int) $sh['total'] ?>)</span>
-        <?php if ((int) $sh['detected_count'] > 0): ?><span class="gc-chip gc-ashubh" style="margin-left:6px">इस कुंडली में संगणित: <?= (int) $sh['detected_count'] ?></span>
-        <?php else: ?><span class="gc-chip gc-shubh" style="margin-left:6px">इस कुंडली में कोई शाप-योग संगणित नहीं</span><?php endif; ?></div>
+        <?php $shD = (int) ($sh['detected_dosha'] ?? $sh['detected_count']); $shS = (int) ($sh['detected_shubh'] ?? 0); ?>
+        <?php if ($shD > 0): ?><span class="gc-chip gc-ashubh" style="margin-left:6px">शाप-दोष संगणित: <?= $shD ?></span><?php endif; ?>
+        <?php if ($shS > 0): ?><span class="gc-chip gc-shubh" style="margin-left:6px">शुभ सन्तान-योग: <?= $shS ?></span><?php endif; ?>
+        <?php if ($shD === 0 && $shS === 0): ?><span class="gc-chip gc-shubh" style="margin-left:6px">इस कुंडली में कोई शाप-योग संगणित नहीं</span><?php endif; ?></div>
 
     <div class="pred-picker" style="margin-top:8px;gap:8px;flex-wrap:wrap">
         <label class="pred-picker-label" for="sh-cat">श्रेणी</label>
