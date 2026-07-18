@@ -1,15 +1,15 @@
 /* Auto Business — Save / Open birth charts (layout v2).
  *
- * Lets a registered user save the chart they have entered and re-open it later
- * from a searchable "Saved Charts" window. Saving/opening is gated to logged-in
- * users: window.AB_USER is null until the (future) login system sets it to
- * { id, name }. While it is null every Save/Open action shows a "please
- * register" message instead of storing anything.
+ * Lets the user save the chart they have entered and re-open it later from a
+ * searchable "Saved Charts" window. Works immediately without login: until the
+ * (future) account system sets window.AB_USER = { id, name }, charts are kept
+ * under a shared "guest" bucket in this browser's localStorage. Once per-user
+ * accounts arrive, each user's charts live under their own key automatically —
+ * nothing else changes.
  *
- * Storage: per-user in localStorage (key ab_saved_charts_v1__<userId>) as an
- * array of chart entries. Capped at 200 charts per user. When the server-side
- * account backend arrives, only load()/store() need to point at it — the UI and
- * gating stay the same.
+ * Storage: localStorage key ab_saved_charts_v1__<userId|guest> as an array of
+ * chart entries, capped at 200. When the server-side account backend arrives,
+ * only load()/store() need to point at it — the UI stays the same.
  *
  * Buttons opt in with data-ab-save / data-ab-open attributes (delegated), so the
  * form, the top bar and any future page can trigger it without extra wiring.
@@ -21,7 +21,9 @@
   var doc = global.document;
 
   function user() { return global.AB_USER || null; }
-  function keyFor() { var u = user(); return u ? 'ab_saved_charts_v1__' + u.id : null; }
+  // No login yet → charts live under the shared "guest" bucket; per-user keys
+  // take over automatically once AB_USER is set by the future account system.
+  function keyFor() { var u = user(); return 'ab_saved_charts_v1__' + (u ? u.id : 'guest'); }
   function load() {
     var k = keyFor(); if (!k) { return []; }
     try { var a = JSON.parse(global.localStorage.getItem(k) || '[]'); return Array.isArray(a) ? a : []; }
@@ -68,7 +70,6 @@
 
   // ---- save ---------------------------------------------------------------
   function save() {
-    if (!user()) { needRegister(); return; }
     var d = collect();
     if (!d.date || !d.time) { toast('कृपया पहले जन्म-विवरण भरें — तारीख़ व समय आवश्यक हैं।', 'err'); return; }
     var list = load();
@@ -90,7 +91,6 @@
 
   // ---- open (browse + search) --------------------------------------------
   function openBrowser() {
-    if (!user()) { needRegister(); return; }
     var q = el('ab-open-q'); if (q) { q.value = ''; }
     renderList('');
     openOverlay('ab-open-modal');
@@ -134,7 +134,11 @@
       if (c[k]) { p.set(k, c[k]); }
     });
     p.set('layout', 'new');
-    global.location.href = '/calc?' + p.toString();   // reopens on the D1 birth-chart page
+    // Reopen through the same URL the Calculate form submits to, so it works
+    // on every hosting (pretty /calc rewrite or plain index.php routing alike).
+    var f = el('birth-form');
+    var base = (f && f.getAttribute('action')) || '/calc';
+    global.location.href = base + '?' + p.toString();
   }
 
   function del(id) {
