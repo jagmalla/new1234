@@ -935,6 +935,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .ab-modal-note { color: #0f766e; font-size: .78rem; margin: 0; background: #f0fdfa;
             border: 1px solid #ccfbf1; border-radius: 8px; padding: 7px 10px; }
         .ab-modal-foot { padding: 12px 16px; border-top: 1px solid var(--line); text-align: right; }
+        /* Save-chart profile popup */
+        .ab-save-sum { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;
+                       padding: 7px 11px; font-size: .82rem; color: #475569; margin-bottom: 10px; line-height: 1.6; }
+        .ab-save-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+        @media (max-width: 560px) { .ab-save-grid { grid-template-columns: 1fr; } }
+        .ab-save-grid label { display: flex; flex-direction: column; gap: 3px;
+                              font-size: .76rem; font-weight: 700; color: #475569; }
+        .ab-save-grid input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 10px;
+                              font-size: .86rem; font-weight: 400; color: #0f172a; }
+        .ab-save-grid input:focus { outline: 2px solid #99f6e4; border-color: #0f766e; }
+        .ab-req { color: #b91c1c; }
+        .ab-save-err { margin-top: 8px; background: #fef2f2; border: 1px solid #fecaca;
+                       border-radius: 8px; padding: 6px 10px; color: #b91c1c; font-size: .8rem; }
         .ab-btn { background: var(--sindoor); color: #fff; border: none; border-radius: 8px; padding: 8px 16px;
             font-weight: 700; font-size: .84rem; cursor: pointer; }
         .ab-btn:hover { filter: brightness(.94); }
@@ -4283,10 +4296,42 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <div class="ab-modal-head">📂 सहेजे गए चार्ट <span id="ab-open-count" class="ab-open-count"></span>
             <button type="button" class="ab-modal-x" data-close aria-label="बंद करें">✕</button></div>
         <div class="ab-open-search">
-            <input id="ab-open-q" type="text" autocomplete="off" placeholder="🔎 नाम, स्थान या तारीख़ से खोजें… (search by name, place or date)">
+            <input id="ab-open-q" type="text" autocomplete="off" placeholder="🔎 नाम, फ़ोन, email, शहर, स्थान या तारीख़ से खोजें… (search)">
         </div>
         <div id="ab-open-list" class="ab-open-list"></div>
         <div class="ab-open-tip">कोई चार्ट खोलने पर वह D1 (जन्म-कुंडली) पेज पर खुलेगा। नया चार्ट बनाने हेतु ऊपर “New Kundli / New / Profile” पर जाएँ।</div>
+    </div>
+</div>
+
+<!-- Save-chart profile popup: contact details asked at save time, prefilled
+     from the chart form; नाम + जन्म-तिथि/समय/स्थान अनिवार्य, बाकी optional. -->
+<div id="ab-save-modal" class="ab-modal-overlay hidden" aria-hidden="true">
+    <div class="ab-modal ab-modal-lg" role="dialog" aria-modal="true" style="max-height:88vh;overflow-y:auto">
+        <div class="ab-modal-head">💾 चार्ट सहेजें — Profile
+            <button type="button" class="ab-modal-x" data-close aria-label="बंद करें">✕</button></div>
+        <div class="ab-modal-body">
+            <div id="ab-save-sum" class="ab-save-sum"></div>
+            <div class="ab-save-grid">
+                <label>नाम (Name) <span class="ab-req">*</span>
+                    <input id="ab-sv-name" type="text" autocomplete="off"></label>
+                <label>फ़ोन नंबर (Phone)
+                    <input id="ab-sv-phone" type="text" inputmode="tel" autocomplete="off"></label>
+                <label>Email ID
+                    <input id="ab-sv-email" type="email" autocomplete="off"></label>
+                <label>पता (Address)
+                    <input id="ab-sv-address" type="text" autocomplete="off"></label>
+                <label>शहर (City)
+                    <input id="ab-sv-city" type="text" autocomplete="off"></label>
+                <label>देश (Country)
+                    <input id="ab-sv-country" type="text" autocomplete="off"></label>
+            </div>
+            <div id="ab-save-err" class="ab-save-err hidden"></div>
+            <p class="ab-modal-note" style="margin-top:8px">* नाम तथा जन्म-तिथि/समय/स्थान अनिवार्य हैं; शेष विवरण optional।</p>
+        </div>
+        <div class="ab-modal-foot">
+            <button type="button" class="ab-btn" id="ab-save-confirm">💾 सहेजें / Save</button>
+            <button type="button" class="ab-btn ab-btn-ghost" data-close>रद्द करें / Cancel</button>
+        </div>
     </div>
 </div>
 

@@ -42,7 +42,7 @@
   function el(id) { return doc.getElementById(id); }
   function openOverlay(id) { var m = el(id); if (m) { m.classList.remove('hidden'); doc.body.style.overflow = 'hidden'; } }
   function closeOverlays() {
-    ['ab-register-modal', 'ab-open-modal'].forEach(function (id) { var m = el(id); if (m) { m.classList.add('hidden'); } });
+    ['ab-register-modal', 'ab-open-modal', 'ab-save-modal'].forEach(function (id) { var m = el(id); if (m) { m.classList.add('hidden'); } });
     doc.body.style.overflow = '';
   }
 
@@ -68,24 +68,83 @@
     };
   }
 
-  // ---- save ---------------------------------------------------------------
+  // ---- save (profile popup) ----------------------------------------------
+  // Save opens a profile popup asking Name / Phone / Email / Address / City /
+  // Country, prefilled from the chart form (and from the previously saved
+  // entry of the same person). नाम + जन्म-तिथि/समय/स्थान अनिवार्य; बाकी optional.
+  var CONTACT = ['phone', 'email', 'address', 'city', 'country'];
+
+  function findExisting(list, d) {
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].name === d.name && list[i].date === d.date && list[i].time === d.time && list[i].place === d.place) { return i; }
+    }
+    return -1;
+  }
+
   function save() {
     var d = collect();
-    if (!d.date || !d.time) { toast('कृपया पहले जन्म-विवरण भरें — तारीख़ व समय आवश्यक हैं।', 'err'); return; }
-    var list = load();
-    // Same person (name + date + time + place) → update in place, don't duplicate.
-    var idx = -1;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].name === d.name && list[i].date === d.date && list[i].time === d.time && list[i].place === d.place) { idx = i; break; }
+    if (!d.date || !d.time || !d.place) {
+      toast('कृपया पहले जन्म-विवरण भरें — तारीख़, समय व जन्म-स्थान आवश्यक हैं।', 'err');
+      return;
     }
-    if (idx >= 0) { d.id = list[idx].id; d.savedAt = Date.now(); list[idx] = d; store(list); toast('चार्ट अपडेट हो गया ✓', 'ok'); return; }
+    // summary of the mandatory chart data (read-only in the popup)
+    var sum = el('ab-save-sum');
+    if (sum) {
+      sum.innerHTML = '<b>जन्म-विवरण:</b> ' + esc(d.date) + ' &nbsp;' + esc(d.time) +
+        ' &nbsp;·&nbsp; ' + esc(d.place) + '<br><span style="font-size:.74rem;color:#94a3b8">(बदलने हेतु पहले New/Profile फ़ॉर्म में सुधार करें)</span>';
+    }
+    // prefill: name from the form; contact details from an earlier save of the
+    // same person (so re-saving edits, not blanks); city guessed from place.
+    var prev = null;
+    var list = load();
+    var pi = findExisting(list, d);
+    if (pi >= 0) { prev = list[pi]; }
+    var set = function (id, v) { var e = el(id); if (e) { e.value = v || ''; } };
+    set('ab-sv-name', d.name || (prev && prev.name) || '');
+    set('ab-sv-phone', prev ? prev.phone : '');
+    set('ab-sv-email', prev ? prev.email : '');
+    set('ab-sv-address', prev ? prev.address : '');
+    set('ab-sv-city', (prev && prev.city) || String(d.place || '').split(',')[0].trim());
+    set('ab-sv-country', prev ? prev.country : '');
+    var err = el('ab-save-err'); if (err) { err.classList.add('hidden'); }
+    openOverlay('ab-save-modal');
+    var nm = el('ab-sv-name'); if (nm) { setTimeout(function () { nm.focus(); }, 60); }
+  }
+
+  function confirmSave() {
+    var d = collect();
+    var gv = function (id) { var e = el(id); return e ? String(e.value || '').trim() : ''; };
+    d.name = gv('ab-sv-name');
+    var err = el('ab-save-err');
+    var fail = function (msg) { if (err) { err.textContent = msg; err.classList.remove('hidden'); } };
+    if (!d.name) { fail('नाम आवश्यक है — कृपया नाम भरें।'); var e = el('ab-sv-name'); if (e) { e.focus(); } return; }
+    if (!d.date || !d.time || !d.place) { fail('जन्म-तिथि, समय व स्थान आवश्यक हैं — पहले New/Profile फ़ॉर्म भरें।'); return; }
+    var email = gv('ab-sv-email');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fail('Email ID सही प्रारूप में नहीं है।'); return; }
+    d.phone = gv('ab-sv-phone');
+    d.email = email;
+    d.address = gv('ab-sv-address');
+    d.city = gv('ab-sv-city');
+    d.country = gv('ab-sv-country');
+
+    // keep the name typed in the popup on the form too, so Calculate/URL match
+    var f = el('birth-form');
+    if (f) { var fn = f.querySelector('[name="name"]'); if (fn && !fn.value) { fn.value = d.name; } }
+
+    var list = load();
+    var idx = findExisting(list, d);
+    if (idx >= 0) {
+      d.id = list[idx].id; d.savedAt = Date.now(); list[idx] = d; store(list);
+      closeOverlays(); toast('चार्ट अपडेट हो गया ✓', 'ok'); return;
+    }
     if (list.length >= LIMIT) {
-      toast('अधिकतम ' + LIMIT + ' चार्ट ही सहेजे जा सकते हैं। नया सहेजने हेतु "सहेजे गए चार्ट" में से कुछ हटाएँ।', 'err');
+      fail('अधिकतम ' + LIMIT + ' चार्ट ही सहेजे जा सकते हैं। "सहेजे गए चार्ट" में से कुछ हटाएँ।');
       return;
     }
     d.id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     d.savedAt = Date.now();
     list.push(d); store(list);
+    closeOverlays();
     toast('चार्ट सहेजा गया ✓  (' + list.length + '/' + LIMIT + ')', 'ok');
   }
 
@@ -103,7 +162,9 @@
     var cnt = el('ab-open-count'); if (cnt) { cnt.textContent = '(' + list.length + '/' + LIMIT + ')'; }
     var ql = String(query || '').toLowerCase().trim();
     var f = ql ? list.filter(function (c) {
-      return ((c.name || '') + ' ' + (c.place || '') + ' ' + (c.date || '')).toLowerCase().indexOf(ql) >= 0;
+      return ((c.name || '') + ' ' + (c.place || '') + ' ' + (c.date || '') + ' ' +
+              (c.phone || '') + ' ' + (c.email || '') + ' ' + (c.city || '') + ' ' +
+              (c.country || '')).toLowerCase().indexOf(ql) >= 0;
     }) : list;
     if (!f.length) {
       host.innerHTML = '<div class="ab-open-empty">' +
@@ -117,6 +178,9 @@
         '<div class="ab-open-main">' +
           '<div class="ab-open-name">' + esc(c.name || '—') + (c.gender ? ' <span class="ab-open-g">' + esc(c.gender) + '</span>' : '') + '</div>' +
           '<div class="ab-open-meta">' + esc(c.date || '') + '  ' + esc(c.time || '') + (c.place ? '  ·  ' + esc(c.place) : '') + '</div>' +
+          ((c.phone || c.email || c.city) ? '<div class="ab-open-meta">' +
+            [c.phone ? '📞 ' + esc(c.phone) : '', c.email ? '✉ ' + esc(c.email) : '', c.city ? '🏙 ' + esc(c.city) + (c.country ? ', ' + esc(c.country) : '') : '']
+              .filter(Boolean).join('  ·  ') + '</div>' : '') +
         '</div>' +
         '<div class="ab-open-acts">' +
           '<button type="button" class="ab-btn ab-btn-sm" data-open="' + esc(c.id) + '">खोलें / Open</button>' +
@@ -158,6 +222,10 @@
     });
     doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeOverlays(); } });
     var q = el('ab-open-q'); if (q) { q.addEventListener('input', function () { renderList(this.value); }); }
+    var cf = el('ab-save-confirm'); if (cf) { cf.addEventListener('click', confirmSave); }
+    // Enter inside the save popup = Save
+    var sm = el('ab-save-modal');
+    if (sm) { sm.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); confirmSave(); } }); }
   }
 
   if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', bind); } else { bind(); }
