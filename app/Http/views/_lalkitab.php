@@ -94,6 +94,10 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab .lk-cmp{width:100%;border-collapse:collapse;font-size:.8rem}
   #sec-lalkitab .lk-cmp th{background:#f8fafc;text-align:left;padding:5px 7px;border-bottom:1px solid #e5e7eb}
   #sec-lalkitab .lk-cmp td{padding:5px 7px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  #sec-lalkitab .lk-anlz{border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;padding:7px 10px;margin:6px 0;font-size:.8rem;color:#334155}
+  #sec-lalkitab .lk-anlz-row{display:flex;gap:8px;align-items:flex-start;padding:2px 0;flex-wrap:wrap}
+  #sec-lalkitab .lk-anlz-k{flex:none;min-width:76px;font-weight:700;color:#64748b;font-size:.74rem;padding-top:1px}
+  #sec-lalkitab .lk-anlz-final{border-top:1px dashed #cbd5e1;margin-top:3px;padding-top:5px}
 </style>
 
 <?php if (!$ok): ?>
@@ -246,21 +250,92 @@ $scorePill = static function (int $score): string {
             <?php if (!empty($p['reasons']) && ($p['score'] ?? 0) > 0): ?>
               <div class="lk-reason">प्राथमिकता-कारण: <?= $h(implode(' · ', $p['reasons'])) ?></div>
             <?php endif; ?>
-            <div class="lk-sub"><b>प्रकृति:</b> <?= $h((string) $p['prakriti']) ?> · <b>रंग:</b> <?= $h((string) $p['rang']) ?> · <b>कारक भाव:</b> <?= $h((string) $p['karak_bhav']) ?></div>
-            <div class="lk-sub"><b>उच्च राशि:</b> <?= $h((string) $p['uch_rashi']) ?> · <b>नीच राशि:</b> <?= $h((string) $p['neech_rashi']) ?></div>
-            <?php if (trim((string) $p['mitra']) !== '' || trim((string) $p['shatru']) !== ''): ?>
-              <div class="lk-sub"><b>मित्र:</b> <?= $h((string) $p['mitra']) ?> · <b>शत्रु:</b> <?= $h((string) $p['shatru']) ?><?= trim((string) $p['sam']) !== '' ? ' · <b>सम:</b> ' . $h((string) $p['sam']) : '' ?></div>
+
+            <!-- स्थिति-विश्लेषण: भाव → युति → दृष्टि → सुप्त — इस कुंडली पर computed -->
+            <div class="lk-anlz">
+              <div class="lk-anlz-row"><span class="lk-anlz-k">🏠 भाव</span>
+                <?= $h((string) $p['house_ord']) ?> भाव —
+                <?php $inS = in_array($p['house'], array_map('intval', preg_split('/[^0-9]+/', (string) $p['shubh'], -1, PREG_SPLIT_NO_EMPTY) ?: []), true); ?>
+                <?= $inS ? '<b style="color:#166534">इस ग्रह का शुभ भाव</b>' : '<b style="color:#991b1b">इस ग्रह का अशुभ/सामान्य भाव</b>' ?>
+                <span style="color:#94a3b8">(शुभ: <?= $h((string) $p['shubh']) ?> · अशुभ: <?= $h((string) $p['ashubh']) ?>)</span>
+              </div>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">🤝 युति</span>
+                <?php if (!empty($p['alone'])): ?>
+                  अकेला बैठा है — "अदृष्ट अकेला" नियम लागू
+                <?php else: ?>
+                  साथ में:
+                  <?php foreach ($p['mates'] as $mE): ?>
+                    <b><?= $h((string) $mE['hi']) ?></b> <span class="lk-pill" style="<?= $mE['rel'] === 'मित्र' ? 'background:#dcfce7;color:#166534' : ($mE['rel'] === 'शत्रु' ? 'background:#fee2e2;color:#991b1b' : 'background:#f1f5f9;color:#475569') ?>"><?= $h((string) $mE['rel']) ?></span>
+                  <?php endforeach; ?>
+                  <?php foreach (($p['dosha'] ?? []) as $dn): ?>
+                    <span class="lk-pill" style="background:#dc2626;color:#fff">⚠ <?= $h((string) $dn) ?></span>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </div>
+              <?php if (!empty($p['in_hits']) || !empty($p['out_hits'])): ?>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">👁 दृष्टि</span>
+                <?php foreach (($p['in_hits'] ?? []) as $ih): ?>
+                  <span style="color:<?= $ih['kind'] === 'टकराव' ? '#991b1b' : ($ih['kind'] === 'सहायता' ? '#166534' : '#475569') ?>">
+                    ← <?= $h(implode(', ', $ih['planets_hi'])) ?> (<?= (int) $ih['house'] ?>वें) से <?= $h((string) $ih['kind']) ?></span> &nbsp;
+                <?php endforeach; ?>
+                <?php foreach (($p['out_hits'] ?? []) as $oh): ?>
+                  <span style="color:<?= $oh['kind'] === 'टकराव' ? '#991b1b' : ($oh['kind'] === 'सहायता' ? '#166534' : '#475569') ?>">
+                    → <?= (int) $oh['house'] ?>वें (<?= $h(implode(', ', $oh['planets_hi'])) ?>) पर <?= $h((string) $oh['kind']) ?></span> &nbsp;
+                <?php endforeach; ?>
+              </div>
+              <?php endif; ?>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">😴 सुप्त</span>
+                <?= !empty($p['asleep']) ? '<b style="color:#991b1b">सुप्त — जगाने वाला ग्रह कुंडली में नहीं; फल दबा रहेगा</b>' : 'जागृत — फल सक्रिय' ?>
+              </div>
+              <?php if (!empty($p['verdict_why'])): ?>
+              <div class="lk-anlz-row lk-anlz-final"><span class="lk-anlz-k">⚖ निष्कर्ष</span>
+                <b><?= $h((string) $p['verdict']) ?></b> — <?= $h(implode(' · ', $p['verdict_why'])) ?>
+              </div>
+              <?php endif; ?>
+            </div>
+
+            <!-- इस कुंडली में लागू फल (टिप्पणी के जाँचे हुए नियम) -->
+            <?php if (!empty($p['notes_applied'])): ?>
+              <div class="lk-sub" style="margin-top:7px"><b>📌 इस कुंडली में लागू फल:</b></div>
+              <?php foreach ($p['notes_applied'] as $na): ?>
+                <div class="lk-txt" style="margin:3px 0;padding-left:10px;border-left:3px solid #0f766e">
+                  <?= $h((string) $na['text']) ?>
+                  <span style="font-size:.72rem;color:#0f766e">(<?= $h((string) $na['why']) ?>)</span>
+                </div>
+              <?php endforeach; ?>
             <?php endif; ?>
-            <?php if (trim((string) $p['note']) !== ''): ?>
-              <div class="lk-txt" style="margin-top:4px"><?= $h((string) $p['note']) ?></div>
+            <?php if (!empty($p['notes_ref'])): ?>
+              <details style="margin-top:5px">
+                <summary style="cursor:pointer;font-size:.76rem;color:#94a3b8">अन्य नियम — इस कुंडली में लागू नहीं (<?= count($p['notes_ref']) ?>)</summary>
+                <?php foreach ($p['notes_ref'] as $nr): ?>
+                  <div style="font-size:.78rem;color:#94a3b8;margin:2px 0;padding-left:10px">✗ <?= $h((string) $nr) ?></div>
+                <?php endforeach; ?>
+              </details>
             <?php endif; ?>
+
             <?php if (trim((string) $p['ashubh_lakshan']) !== ''): ?>
-              <div class="lk-txt" style="margin-top:5px;color:#991b1b"><b>⚠ अशुभ लक्षण:</b> <?= $h((string) $p['ashubh_lakshan']) ?></div>
+              <div class="lk-txt" style="margin-top:5px;color:#991b1b"><b>⚠ अशुभ लक्षण (मिलान करें):</b> <?= $h((string) $p['ashubh_lakshan']) ?></div>
             <?php endif; ?>
-            <?= $remBlock($p['remedies'], $p['hi'] . ' — भावगत उपाय') ?>
-            <?php if (trim((string) $p['sheeghra']) !== ''): ?>
-              <div class="lk-sub" style="margin-top:5px"><b>⚡ शीघ्र उपाय:</b> <?= $h((string) $p['sheeghra']) ?></div>
+
+            <!-- उपाय — केवल तभी जब वास्तव में आवश्यकता हो -->
+            <?php if (!empty($p['need_remedy'])): ?>
+              <?= $remBlock($p['remedies'], $p['hi'] . ' — भावगत उपाय (आवश्यक)') ?>
+              <?php if (trim((string) $p['sheeghra']) !== ''): ?>
+                <div class="lk-sub" style="margin-top:5px"><b>⚡ शीघ्र उपाय:</b> <?= $h((string) $p['sheeghra']) ?></div>
+              <?php endif; ?>
+            <?php else: ?>
+              <div style="margin-top:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:6px 10px;font-size:.8rem;color:#166534">
+                ✅ यह ग्रह <?= $p['verdict'] === 'शुभ' ? 'शुभ' : 'सामान्य' ?> स्थिति में है — <b>कोई उपाय आवश्यक नहीं</b>।
+              </div>
+              <?php if (!empty($p['remedies'])): ?>
+              <details style="margin-top:4px">
+                <summary style="cursor:pointer;font-size:.76rem;color:#94a3b8">एहतियाती उपाय देखें (optional)</summary>
+                <?= $remBlock($p['remedies'], $p['hi'] . ' — एहतियाती उपाय') ?>
+              </details>
+              <?php endif; ?>
             <?php endif; ?>
+
+            <div class="lk-sub" style="margin-top:7px;color:#94a3b8"><b>परिचय:</b> प्रकृति <?= $h((string) $p['prakriti']) ?> · रंग <?= $h((string) $p['rang']) ?> · कारक भाव <?= $h((string) $p['karak_bhav']) ?> · उच्च <?= $h((string) $p['uch_rashi']) ?> · नीच <?= $h((string) $p['neech_rashi']) ?><?php if (trim((string) $p['mitra']) !== ''): ?> · मित्र: <?= $h((string) $p['mitra']) ?> · शत्रु: <?= $h((string) $p['shatru']) ?><?php endif; ?></div>
           </div>
         <?php endforeach; ?>
       </div>

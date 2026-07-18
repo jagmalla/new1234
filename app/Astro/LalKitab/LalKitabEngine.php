@@ -31,6 +31,10 @@ final class LalKitabEngine
     /** Planets carried into the Lal Kitab chart (incl. shadow planets). */
     private const PLANETS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
 
+    /** @var array<string,int> planet => LK house, for the note-clause parser's
+     *  relative-house ("X के Nवें में") checks. Set by planetReadings(). */
+    private static array $noteHouses = [];
+
     /**
      * @param array<string,mixed> $chart D1 chart from CalculationEngine
      * @param int|null $age native's current age in years (for the वर्ष कुंडली
@@ -82,12 +86,13 @@ final class LalKitabEngine
             ];
         }
 
-        // Build the interdependent readings in order: planets → sleeping-state →
-        // special conjunction doshas → priority score (uses all three + the
-        // running dasha / age context) → the "active now" summary strip.
-        $planets   = self::planetReadings($chart, $house);
+        // Build the interdependent readings in order: sleeping-state + special
+        // conjunction doshas first (the per-planet analysis consumes both) →
+        // planets → priority score (uses the running dasha / age context) →
+        // the "active now" summary strip.
         $supt      = self::suptReadings($house);
         $yutiDosha = self::yutiDoshaReadings($occupants);
+        $planets   = self::planetReadings($chart, $house, $occupants, $supt, $yutiDosha);
         self::scorePlanets($planets, $supt, $yutiDosha, $active, $age);
         $priority  = self::priorityReadings($planets);
         $activeNow = self::activeReadings($house, $planets, $active, $age);
@@ -128,7 +133,7 @@ final class LalKitabEngine
      * @param array<string,int> $house
      * @return array<int,array<string,mixed>>
      */
-    private static function planetReadings(array $chart, array $house): array
+    private static function planetReadings(array $chart, array $house, array $occupants = [], array $supt = [], array $yutiDosha = []): array
     {
         $gp  = LalKitabData::section('graha_parichay');
         $sab = LalKitabData::section('shubh_ashubh_bhav');
@@ -139,6 +144,35 @@ final class LalKitabEngine
         $mt  = LalKitabData::section('maitri');
         $sh  = LalKitabData::section('sheeghra');
         $pd  = LalKitabData::section('puja_daan');
+        $bd  = LalKitabData::section('bhav_drishti');
+
+        // lookups shared by the per-planet analysis
+        $awake = [];   // planet-en => bool
+        foreach ($supt as $s) {
+            foreach (LalKitabData::PLANET_HI as $en => $hiName) {
+                if ($hiName === $s['hi']) { $awake[$en] = !empty($s['awake']); }
+            }
+        }
+        $doshaOf = [];   // planet-en => list of dosha names it participates in
+        foreach ($yutiDosha as $dEntry) {
+            foreach ($dEntry['planets'] as $dp) { $doshaOf[$dp][] = $dEntry['name']; }
+        }
+        // "संबंध" (Lal Kitab) = same house OR a भाव-दृष्टि link either way.
+        $sambandh = static function (string $a, string $b) use ($house, $bd): ?string {
+            $ha = $house[$a] ?? null;
+            $hb = $house[$b] ?? null;
+            if ($ha === null || $hb === null) { return null; }
+            if ($ha === $hb) { return 'एक ही भाव में युति'; }
+            if (in_array($hb, $bd[(string) $ha]['drishti'] ?? [], true)) {
+                return LalKitabData::houseOrdinalHi($ha) . ' भाव की दृष्टि ' . LalKitabData::houseOrdinalHi($hb) . ' पर';
+            }
+            if (in_array($ha, $bd[(string) $hb]['drishti'] ?? [], true)) {
+                return LalKitabData::planetHi($b) . ' (' . LalKitabData::houseOrdinalHi($hb) . ') की दृष्टि इस भाव पर';
+            }
+            return null;
+        };
+
+        self::$noteHouses = $house;   // for the note parser's relative-house checks
 
         $out = [];
         foreach (self::PLANETS as $p) {
@@ -149,7 +183,7 @@ final class LalKitabEngine
             $sIdx = (int) ($chart['planets'][$p]['sign_index'] ?? 0);
             $retro = !empty($chart['planets'][$p]['retro']);
 
-            // classification against the real rashi
+            // 1) classification against the real rashi
             $status = 'सम';
             $exalt = LalKitabData::EXALT[$p] ?? null;
             $debil = LalKitabData::DEBIL[$p] ?? null;
@@ -160,21 +194,86 @@ final class LalKitabEngine
             } elseif (Charts::SIGN_LORDS[$sIdx] === $p) {
                 $status = 'स्वगृही';
             }
-
-            // shubh / ashubh house verdict
-            $shubhList  = self::parseHouses($sab[$p]['shubh'] ?? '');
-            $ashubhList = self::parseHouses($sab[$p]['ashubh'] ?? '');
-            $isAshubh = in_array($h, $ashubhList, true);
-            $isShubh  = in_array($h, $shubhList, true);
-            if ($status === 'नीच') {
-                $isAshubh = true;
-            }
-
-            $verdict = $isAshubh ? 'अशुभ' : ($isShubh ? 'शुभ' : 'मध्यम');
-
-            // पक्का घर — the planet's own fixed house; sitting there = stable/strong.
             $pukka = in_array($h, LalKitabData::PUKKA_GHAR[$p] ?? [], true);
 
+            // 2) युति — house-mates with their मैत्री relation to this planet.
+            $mates = [];
+            $mitraTxt = (string) ($mt[$p]['mitra'] ?? '');
+            $shatruTxt = (string) ($mt[$p]['shatru'] ?? '');
+            foreach (($occupants[$h] ?? []) as $om) {
+                if ($om === $p) { continue; }
+                $omHi = LalKitabData::planetHi($om);
+                $rel = 'सम';
+                if ($omHi !== '' && mb_strpos($mitraTxt, $omHi) !== false) { $rel = 'मित्र'; }
+                elseif ($omHi !== '' && mb_strpos($shatruTxt, $omHi) !== false) { $rel = 'शत्रु'; }
+                $mates[] = ['planet' => $om, 'hi' => $omHi, 'rel' => $rel];
+            }
+            $alone = $mates === [];
+
+            // 3) दृष्टि (भाव-दृष्टि चक्र) — who affects this planet, whom it affects.
+            $e = $bd[(string) $h] ?? [];
+            $inHits = [];   // planets whose house sees / clashes with this house
+            foreach ($occupants as $h2 => $ps2) {
+                if ($h2 === $h || $ps2 === []) { continue; }
+                $e2 = $bd[(string) $h2] ?? [];
+                $kind = null;
+                if (in_array($h, $e2['takrav'] ?? [], true)) { $kind = 'टकराव'; }
+                elseif (in_array($h, $e2['drishti'] ?? [], true)) { $kind = 'दृष्टि'; }
+                elseif (in_array($h, $e2['sahayak'] ?? [], true)) { $kind = 'सहायता'; }
+                if ($kind !== null) {
+                    $inHits[] = ['kind' => $kind, 'house' => $h2,
+                        'planets_hi' => array_map([LalKitabData::class, 'planetHi'], $ps2)];
+                }
+            }
+            $outHits = [];   // occupied houses this planet's house sees / clashes with
+            foreach (['drishti' => 'दृष्टि', 'takrav' => 'टकराव', 'sahayak' => 'सहायता'] as $keyK => $kindHi) {
+                foreach (($e[$keyK] ?? []) as $ht) {
+                    if (!empty($occupants[$ht])) {
+                        $outHits[] = ['kind' => $kindHi, 'house' => $ht,
+                            'planets_hi' => array_map([LalKitabData::class, 'planetHi'], $occupants[$ht])];
+                    }
+                }
+            }
+
+            // 4) निष्कर्ष — additive verdict with every reason recorded. The
+            //    house lists switch to the "अदृष्ट अकेला" columns when alone.
+            $shubhSrc = ($alone && trim((string) ($sab[$p]['shubh_alone'] ?? '')) !== '')
+                ? (string) $sab[$p]['shubh_alone'] : (string) ($sab[$p]['shubh'] ?? '');
+            $ashubhSrc = ($alone && trim((string) ($sab[$p]['ashubh_alone'] ?? '')) !== '')
+                ? (string) $sab[$p]['ashubh_alone'] : (string) ($sab[$p]['ashubh'] ?? '');
+            $shubhList  = self::parseHouses($shubhSrc);
+            $ashubhList = self::parseHouses($ashubhSrc);
+            $v = 0;
+            $vWhy = [];
+            if (in_array($h, $shubhList, true)) { $v++; $vWhy[] = ($alone ? 'अकेला — ' : '') . $h . 'वाँ भाव इस ग्रह हेतु शुभ (+)'; }
+            elseif (in_array($h, $ashubhList, true)) { $v--; $vWhy[] = ($alone ? 'अकेला — ' : '') . $h . 'वाँ भाव इस ग्रह हेतु अशुभ (−)'; }
+            if ($status === 'उच्च') { $v++; $vWhy[] = 'उच्च राशि (+)'; }
+            elseif ($status === 'नीच') { $v--; $vWhy[] = 'नीच राशि (−)'; }
+            elseif ($status === 'स्वगृही') { $v++; $vWhy[] = 'स्वगृही (+)'; }
+            if ($pukka) { $v++; $vWhy[] = 'पक्का घर (+)'; }
+            foreach ($mates as $mEntry) {
+                if ($mEntry['rel'] === 'मित्र') { $v++; $vWhy[] = $mEntry['hi'] . ' (मित्र) साथ (+)'; }
+                elseif ($mEntry['rel'] === 'शत्रु') { $v--; $vWhy[] = $mEntry['hi'] . ' (शत्रु) साथ (−)'; }
+            }
+            foreach (($doshaOf[$p] ?? []) as $dn) { $v--; $vWhy[] = $dn . ' (−)'; }
+            foreach ($inHits as $ih) {
+                if ($ih['kind'] === 'टकराव') { $v--; $vWhy[] = $ih['house'] . 'वें भाव (' . implode(', ', $ih['planets_hi']) . ') से टकराव (−)'; }
+            }
+            $isAsleep = isset($awake[$p]) && $awake[$p] === false;
+            if ($isAsleep) { $vWhy[] = 'ग्रह सुप्त — फल दबा रहेगा'; }
+
+            $verdict = $v > 0 ? 'शुभ' : ($v < 0 ? 'अशुभ' : 'मध्यम');
+            if ($isAsleep && $verdict === 'शुभ') { $verdict = 'मध्यम'; }
+            $isAshubh = $verdict === 'अशुभ';
+            $isShubh = $verdict === 'शुभ';
+
+            // 5) टिप्पणी के "अगर-तो" नियम — इस कुंडली पर जाँचे हुए: केवल लागू
+            //    वाले मुख्य फल बनते हैं, शेष संदर्भ में जाते हैं।
+            [$notesApplied, $notesRef] = self::noteClauses(
+                (string) ($sab[$p]['note'] ?? ''), $p, $h, $alone, $isAshubh, $isShubh, $sambandh
+            );
+
+            $needRemedy = $isAshubh || $status === 'नीच' || ($doshaOf[$p] ?? []) !== [];
             $remedies = $bg[$p][(string) $h] ?? [];
 
             $out[] = [
@@ -187,8 +286,18 @@ final class LalKitabEngine
                 'retro'     => $retro,
                 'status'    => $status,
                 'verdict'   => $verdict,
+                'verdict_why' => $vWhy,
                 'is_ashubh' => $isAshubh,
                 'pukka'     => $pukka,
+                'alone'     => $alone,
+                'mates'     => $mates,
+                'dosha'     => array_values($doshaOf[$p] ?? []),
+                'asleep'    => $isAsleep,
+                'in_hits'   => $inHits,
+                'out_hits'  => $outHits,
+                'notes_applied' => $notesApplied,
+                'notes_ref' => $notesRef,
+                'need_remedy' => $needRemedy,
                 'var'       => $gp[$p]['var'] ?? '',
                 'karak_bhav'=> $gp[$p]['karak_bhav'] ?? '',
                 'prakriti'  => $gp[$p]['prakriti'] ?? '',
@@ -471,7 +580,7 @@ final class LalKitabEngine
             }
             if (($active['antar'] ?? null) === $p) { $score += 2; $reasons[] = 'अंतर्दशा स्वामी (+2)'; }
             if ($pl['status'] === 'नीच') { $score += 2; $reasons[] = 'नीच राशि (+2)'; }
-            if (!empty($pl['is_ashubh'])) { $score += 2; $reasons[] = 'अशुभ भाव (+2)'; }
+            if (!empty($pl['is_ashubh'])) { $score += 2; $reasons[] = 'लाल-किताब निष्कर्ष अशुभ (+2)'; }
             if (isset($inDosha[$p])) { $score += 2; $reasons[] = $inDosha[$p] . ' (+2)'; }
             if ($p === 'Saturn' && !empty($active['sadesati'])) {
                 $score += 2;
@@ -912,6 +1021,101 @@ final class LalKitabEngine
             'bhav_sthapana' => LalKitabData::section('bhav_sthapana'),
             'planets'       => $planets,
         ];
+    }
+
+    /**
+     * टिप्पणी (शुभ-अशुभ भाव चक्र) के "अगर-तो" वाक्यों को अलग कर इस कुंडली पर
+     * जाँचता है। Conditions understood per clause (ANDed):
+     *   "अकेला"                → planet has no house-mate;
+     *   "<ग्रह> से संबंध/साथ"   → yuti or a भाव-दृष्टि link with that planet;
+     *   "किसी ग्रह के साथ संबंध" → not alone;
+     *   "<भाव> में (हो/स्थित)"  → the planet sits in that house;
+     *   "अशुभ हो(गा)"          → computed verdict is अशुभ.
+     * A clause whose conditions hold goes to applied (with the reason); a
+     * failing one to reference; a condition-free clause is general → applied.
+     *
+     * @return array{0:list<array{text:string,why:string}>,1:list<string>}
+     */
+    private static function noteClauses(string $note, string $p, int $h, bool $alone, bool $isAshubh, bool $isShubh, callable $sambandh): array
+    {
+        if (trim($note) === '') {
+            return [[], []];
+        }
+        static $ordMap = [
+            'पहले' => 1, 'दूसरे' => 2, 'तीसरे' => 3, 'चौथे' => 4, 'पांचवें' => 5, 'पाँचवें' => 5,
+            'छठे' => 6, 'छठें' => 6, 'सातवें' => 7, 'आठवें' => 8, 'नौवें' => 9, 'दसवें' => 10,
+            'ग्यारहवें' => 11, 'बारहवें' => 12,
+        ];
+        $applied = [];
+        $ref = [];
+        foreach (preg_split('/\s*[;।]\s*/u', $note) ?: [] as $cl) {
+            $cl = trim($cl);
+            if ($cl === '') { continue; }
+            $conds = 0;
+            $ok = true;
+            $why = [];
+
+            if (mb_strpos($cl, 'अकेला') !== false) {
+                $conds++;
+                if ($alone) { $why[] = 'ग्रह अकेला बैठा है'; } else { $ok = false; }
+            }
+            if (preg_match('/अशुभ हो(गा)?/u', $cl)) {
+                $conds++;
+                if ($isAshubh) { $why[] = 'ग्रह अशुभ स्थिति में है'; } else { $ok = false; }
+            }
+            // relative-house condition — "<ग्रह> के Nवें (…) में" = the Nth house
+            // counted FROM that planet's own house.
+            $clH = $cl;   // copy with the possessive part removed for the plain scan
+            if (preg_match('/(सूर्य|चन्द्र|मंगल|बुध|गुरु|शुक्र|शनि|राहु|केतु)\s*के\s*(\d{1,2}|पहले|दूसरे|तीसरे|चौथे|पाँचवें|पांचवें|छठें|छठे|सातवें|आठवें|नौवें|दसवें|ग्यारहवें|बारहवें)\s*(?:वें|वे|ठे|थे)?\s*(?:\([^)]*\)\s*)?(?:भाव\s*)?में/u', $cl, $mR)) {
+                $conds++;
+                $refP = null;
+                foreach (LalKitabData::PLANET_HI as $en => $hiName) {
+                    if ($hiName === $mR[1]) { $refP = $en; break; }
+                }
+                $n = ctype_digit($mR[2]) ? (int) $mR[2] : ($ordMap[$mR[2]] ?? 0);
+                if ($refP !== null && $n >= 1 && $n <= 12 && isset(self::$noteHouses[$refP])) {
+                    $target = ((self::$noteHouses[$refP] - 1 + ($n - 1)) % 12) + 1;
+                    if ($h === $target) {
+                        $why[] = $mR[1] . ' के ' . $n . 'वें = ' . LalKitabData::houseOrdinalHi($target) . ' भाव — यही स्थिति';
+                    } else { $ok = false; }
+                } else { $ok = false; }
+                $clH = str_replace($mR[0], ' ', $cl);
+            }
+            // plain house condition — "… भाव में / …वें में / 1st में" (not "…भाव का फल")
+            $hSet = [];
+            if (preg_match_all('/(पहले|दूसरे|तीसरे|चौथे|पाँचवें|पांचवें|छठें|छठे|सातवें|आठवें|नौवें|दसवें|ग्यारहवें|बारहवें)\s*(?:भाव\s*)?में/u', $clH, $mW)) {
+                foreach ($mW[1] as $w) { if (isset($ordMap[$w])) { $hSet[$ordMap[$w]] = true; } }
+            }
+            if (preg_match_all('/(\d{1,2})\s*(?:st|nd|rd|th|वें|वे|ठे|थे)?\s*(?:भाव\s*)?में/u', $clH, $mD)) {
+                foreach ($mD[1] as $n) { $n = (int) $n; if ($n >= 1 && $n <= 12) { $hSet[$n] = true; } }
+            }
+            if ($hSet !== []) {
+                $conds++;
+                if (isset($hSet[$h])) { $why[] = 'यह ग्रह ' . LalKitabData::houseOrdinalHi($h) . ' भाव में है'; } else { $ok = false; }
+            }
+            // other-planet संबंध
+            if (preg_match('/किसी ग्रह के साथ/u', $cl)) {
+                $conds++;
+                if (!$alone) { $why[] = 'साथ में अन्य ग्रह उपस्थित'; } else { $ok = false; }
+            } elseif (preg_match('/संबंध|के साथ/u', $cl)) {
+                foreach (LalKitabData::PLANET_HI as $en => $hiName) {
+                    if ($en === $p || mb_strpos($cl, $hiName) === false) { continue; }
+                    $conds++;
+                    $s = $sambandh($p, $en);
+                    if ($s !== null) { $why[] = $hiName . ' से संबंध (' . $s . ')'; } else { $ok = false; }
+                    break;
+                }
+            }
+
+            if ($conds === 0) {
+                $applied[] = ['text' => $cl, 'why' => 'सामान्य नियम'];
+            } elseif ($ok) {
+                $applied[] = ['text' => $cl, 'why' => implode(' · ', $why)];
+            } else {
+                $ref[] = $cl;
+            }
+        }
+        return [$applied, $ref];
     }
 
     /** Parse a "1, 5, 8" / "1 से 5, 8" house string into a flat int list. */
