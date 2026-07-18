@@ -342,19 +342,68 @@ $scorePill = static function (int $score): string {
 
       <!-- ===== HOUSE PREDICTION ===== -->
       <div class="lk-view" data-lk="house">
-        <h3 class="lk-h">भाव (Bhav) फल</h3>
-        <?php foreach ($lk['houses'] as $H): ?>
-          <div class="lk-card">
-            <div class="lk-card-h"><?= (int) $H['house'] ?>. <?= $h((string) $H['house_ord']) ?> भाव — <?= $h((string) $H['rashi']) ?> (स्वामी <?= $h((string) $H['swami']) ?>)</div>
-            <?php if ($H['planets_hi']): ?>
-              <div class="lk-sub"><b>स्थित ग्रह:</b> <?= $h(implode(', ', $H['planets_hi'])) ?></div>
-            <?php else: ?>
-              <div class="lk-sub" style="color:#94a3b8">इस भाव में कोई ग्रह नहीं</div>
+        <h3 class="lk-h">भाव (Bhav) फल — computed</h3>
+        <div class="lk-flt">
+          <label><input type="checkbox" class="lk-onlybad" data-scope="house"> केवल अशुभ/सुप्त भाव दिखाएँ</label>
+        </div>
+        <?php foreach ($lk['houses'] as $H):
+            $hBad = $H['verdict'] === 'अशुभ' || empty($H['awake']);
+            $hCls = $H['verdict'] === 'अशुभ' ? 'bad' : ($H['verdict'] === 'शुभ' ? 'good' : ''); ?>
+          <div class="lk-card <?= $hCls ?>" data-bad="<?= $hBad ? '1' : '0' ?>">
+            <div class="lk-card-h"><?= (int) $H['house'] ?>. <?= $h((string) $H['house_ord']) ?> भाव — <?= $h((string) $H['rashi']) ?>
+              <?= $pill((string) $H['verdict'], 'v') ?>
+              <?php if (empty($H['awake'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php else: ?><span class="lk-pill" style="background:#dcfce7;color:#166534">जागृत</span><?php endif; ?>
+              <?= $srcTag('भाव विचार + दृष्टि चक्र') ?>
+            </div>
+
+            <div class="lk-anlz">
+              <div class="lk-anlz-row"><span class="lk-anlz-k">🪐 स्थित ग्रह</span>
+                <?php if (!empty($H['occ'])): foreach ($H['occ'] as $oe): ?>
+                  <b><?= $h((string) $oe['hi']) ?></b> <span class="lk-pill" style="<?= $oe['verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($oe['verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $oe['verdict']) ?></span>
+                <?php endforeach; else: ?>
+                  <span style="color:#94a3b8">कोई ग्रह नहीं — भाव खाली</span>
+                <?php endif; ?>
+              </div>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">👑 स्वामी</span>
+                <b><?= $h((string) $H['lord_hi']) ?></b>
+                <?php if ($H['lord_house']): ?>— <?= $h(\AutoBusiness\Astro\LalKitab\LalKitabData::houseOrdinalHi((int) $H['lord_house'])) ?> भाव में<?php endif; ?>
+                <?php if (!empty($H['lord_verdict'])): ?><span class="lk-pill" style="<?= $H['lord_verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($H['lord_verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $H['lord_verdict']) ?></span><?php endif; ?>
+              </div>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">😴 जागृति</span>
+                <?php if (!empty($H['awake'])): ?>
+                  जागृत — <?= $h((string) $H['awake_by']) ?>
+                <?php else: ?>
+                  <b style="color:#991b1b">सुप्त</b> — जगाने वाला ग्रह <b><?= $h((string) $H['waker_hi']) ?></b>; इस भाव के विषय दबे रहेंगे
+                <?php endif; ?>
+              </div>
+              <?php if (!empty($H['in_hits'])): ?>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">👁 दृष्टि</span>
+                <?php foreach ($H['in_hits'] as $ih): ?>
+                  <span style="color:<?= $ih['kind'] === 'टकराव' ? '#991b1b' : ($ih['kind'] === 'सहायता' ? '#166534' : '#475569') ?>">← <?= $h(implode(', ', $ih['planets_hi'])) ?> (<?= (int) $ih['house'] ?>वें) से <?= $h((string) $ih['kind']) ?></span> &nbsp;
+                <?php endforeach; ?>
+              </div>
+              <?php endif; ?>
+              <?php foreach (($H['warn'] ?? []) as $wl): ?>
+                <div class="lk-anlz-row"><span class="lk-anlz-k">⚠ चेतावनी</span><span style="color:#991b1b"><?= $h((string) $wl) ?></span></div>
+              <?php endforeach; ?>
+              <?php if (!empty($H['verdict_why'])): ?>
+              <div class="lk-anlz-row lk-anlz-final"><span class="lk-anlz-k">⚖ निष्कर्ष</span>
+                <b><?= $h((string) $H['verdict']) ?></b> — <?= $h(implode(' · ', $H['verdict_why'])) ?>
+              </div>
+              <?php endif; ?>
+            </div>
+
+            <div class="lk-txt" style="margin-top:5px">
+              <b>इस भाव के विषय<?= $H['verdict'] === 'अशुभ' ? ' (इनमें बाधा/सावधानी)' : ($H['verdict'] === 'शुभ' ? ' (इनमें उन्नति)' : '') ?>:</b>
+              <?= $h((string) $H['vishay']) ?>
+              <?php if (trim((string) $H['maas']) !== ''): ?><span style="color:#94a3b8"> · विशेष मास: <?= $h((string) $H['maas']) ?></span><?php endif; ?>
+            </div>
+
+            <?php if (!empty($H['need_remedy']) && !empty($H['remedies'])): ?>
+              <?= $remBlock($H['remedies'], $H['house_ord'] . ' भाव — बल हेतु उपाय') ?>
+            <?php elseif ($H['verdict'] === 'शुभ'): ?>
+              <div style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:5px 9px;font-size:.78rem;color:#166534">✅ भाव सबल — कोई उपाय आवश्यक नहीं।</div>
             <?php endif; ?>
-            <?php if ($H['lord_house']): ?>
-              <div class="lk-sub"><b>भाव स्वामी <?= $h((string) $H['lord_hi']) ?></b> — <?= $h(\AutoBusiness\Astro\LalKitab\LalKitabData::houseOrdinalHi((int) $H['lord_house'])) ?> भाव में बैठे हैं</div>
-            <?php endif; ?>
-            <div class="lk-txt" style="margin-top:4px"><b>विचार:</b> <?= $h((string) $H['vishay']) ?></div>
           </div>
         <?php endforeach; ?>
       </div>

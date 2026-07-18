@@ -109,7 +109,7 @@ final class LalKitabEngine
             'active'      => $activeNow,
             'priority'    => $priority,
             'yuti_dosha'  => $yutiDosha,
-            'houses'      => self::houseReadings($house, $occupants),
+            'houses'      => self::houseReadings($house, $occupants, $planets),
             'karak'       => self::karakReadings($house),
             'yoga'        => self::yogaReadings($house),
             'shrap'       => self::shrapReadings($house),
@@ -327,12 +327,113 @@ final class LalKitabEngine
      * @param array<int,list<string>> $occupants
      * @return array<int,array<string,mixed>>
      */
-    private static function houseReadings(array $house, array $occupants): array
+    private static function houseReadings(array $house, array $occupants, array $planets = []): array
     {
         $bv = LalKitabData::section('bhav_vichar');
+        $bd = LalKitabData::section('bhav_drishti');
+        $bm = LalKitabData::section('bhav_maas');
+        $bs = LalKitabData::section('bhav_sthapana');
+        $sv = LalKitabData::section('sthapana_vastu');
+        $sh = LalKitabData::section('sheeghra');
+
+        // planet-key => computed planet analysis (verdict etc.) from planetReadings
+        $pMap = [];
+        foreach ($planets as $pe) { $pMap[$pe['planet']] = $pe; }
+        // Hindi waker name (सुप्त भाव चक्र / भाव विचार) => planet key
+        $hiToEn = array_flip(LalKitabData::PLANET_HI);
+
         $out = [];
         for ($h = 1; $h <= 12; $h++) {
             $lord = LalKitabData::HOUSE_LORD[$h];
+            $lordE = $pMap[$lord] ?? null;
+
+            // 1) स्थित ग्रह — each with its computed verdict.
+            $occ = [];
+            foreach ($occupants[$h] as $op) {
+                $occ[] = [
+                    'planet' => $op,
+                    'hi' => LalKitabData::planetHi($op),
+                    'verdict' => $pMap[$op]['verdict'] ?? 'मध्यम',
+                    'asleep' => !empty($pMap[$op]['asleep']),
+                ];
+            }
+
+            // 2) जागृत / सुप्त भाव — occupied house is awake; an empty house wakes
+            //    only if its जगाने-वाला ग्रह sits in / aspects it (भाव-दृष्टि).
+            $wakerHi = trim((string) ($bv[(string) $h]['jagane'] ?? ''));
+            $wakerEn = $hiToEn[$wakerHi] ?? null;
+            $awakeBy = null;
+            if ($occ !== []) {
+                $awakeBy = 'भाव में ग्रह स्थित';
+            } elseif ($wakerEn !== null && isset($house[$wakerEn])) {
+                $wh = $house[$wakerEn];
+                if (in_array($h, $bd[(string) $wh]['drishti'] ?? [], true)) {
+                    $awakeBy = $wakerHi . ' (' . LalKitabData::houseOrdinalHi($wh) . ') की दृष्टि इस भाव पर';
+                }
+            }
+            $isAwake = $awakeBy !== null;
+
+            // 3) दृष्टि-प्रभाव — incoming from occupied houses (टकराव / सहायता /
+            //    दृष्टि + the chakra's विश्वासघात / अचानक-चोट warning columns).
+            $inHits = [];
+            foreach ($occupants as $h2 => $ps2) {
+                if ($h2 === $h || $ps2 === []) { continue; }
+                $e2 = $bd[(string) $h2] ?? [];
+                $kind = null;
+                if (in_array($h, $e2['takrav'] ?? [], true)) { $kind = 'टकराव'; }
+                elseif (in_array($h, $e2['sahayak'] ?? [], true)) { $kind = 'सहायता'; }
+                elseif (in_array($h, $e2['drishti'] ?? [], true)) { $kind = 'दृष्टि'; }
+                if ($kind !== null) {
+                    $inHits[] = ['kind' => $kind, 'house' => $h2,
+                        'planets_hi' => array_map([LalKitabData::class, 'planetHi'], $ps2)];
+                }
+            }
+            $warn = [];
+            $eH = $bd[(string) $h] ?? [];
+            foreach (['vishwasghat' => 'विश्वासघात की आशंका', 'achanak_chot' => 'अचानक चोट/हानि की आशंका'] as $wk => $wl) {
+                $whs = array_values(array_filter($eH[$wk] ?? [], static fn ($x) => !empty($occupants[$x])));
+                if ($whs !== []) {
+                    $warn[] = $wl . ' — ' . implode(', ', array_map(
+                        static fn ($x) => $x . 'वें (' . implode(', ', array_map([LalKitabData::class, 'planetHi'], $occupants[$x])) . ')', $whs
+                    )) . ' से';
+                }
+            }
+
+            // 4) निष्कर्ष — additive verdict with reasons.
+            $v = 0;
+            $why = [];
+            foreach ($occ as $oe) {
+                if ($oe['verdict'] === 'शुभ') { $v++; $why[] = $oe['hi'] . ' शुभ स्थिति में (+)'; }
+                elseif ($oe['verdict'] === 'अशुभ') { $v--; $why[] = $oe['hi'] . ' अशुभ स्थिति में (−)'; }
+            }
+            if ($lordE !== null) {
+                if ($lordE['verdict'] === 'शुभ') { $v++; $why[] = 'भाव-स्वामी ' . LalKitabData::planetHi($lord) . ' शुभ (+)'; }
+                elseif ($lordE['verdict'] === 'अशुभ') { $v--; $why[] = 'भाव-स्वामी ' . LalKitabData::planetHi($lord) . ' अशुभ (−)'; }
+                if (!empty($lordE['asleep'])) { $why[] = 'भाव-स्वामी सुप्त'; }
+            }
+            foreach ($inHits as $ih) {
+                if ($ih['kind'] === 'टकराव') { $v--; $why[] = $ih['house'] . 'वें (' . implode(', ', $ih['planets_hi']) . ') से टकराव (−)'; }
+                elseif ($ih['kind'] === 'सहायता') { $v++; $why[] = $ih['house'] . 'वें (' . implode(', ', $ih['planets_hi']) . ') से सहायता (+)'; }
+            }
+            if (!$isAwake) { $why[] = 'भाव सुप्त — विषय दबे रहेंगे'; }
+            $verdict = $v > 0 ? 'शुभ' : ($v < 0 ? 'अशुभ' : 'मध्यम');
+            if (!$isAwake && $verdict === 'शुभ') { $verdict = 'मध्यम'; }
+
+            // 5) उपाय — only when the house needs strengthening.
+            $needRemedy = $verdict === 'अशुभ' || !$isAwake;
+            $remedies = [];
+            if ($needRemedy) {
+                $est = trim((string) ($bs[(string) $h] ?? ''));
+                if ($est !== '') {
+                    $vastu = trim((string) ($sv[$lord] ?? ''));
+                    $remedies[] = 'भाव-स्थापना: ' . $est
+                        . ($vastu !== '' ? ' (स्वामी ' . LalKitabData::planetHi($lord) . ' की वस्तु: ' . $vastu . ')' : '');
+                }
+                if (!$isAwake && $wakerEn !== null && !empty($sh[$wakerEn])) {
+                    $remedies[] = 'भाव जगाने हेतु ' . $wakerHi . ' का शीघ्र उपाय: ' . $sh[$wakerEn];
+                }
+            }
+
             $out[$h] = [
                 'house'      => $h,
                 'house_ord'  => LalKitabData::houseOrdinalHi($h),
@@ -342,8 +443,20 @@ final class LalKitabEngine
                 'lord'       => $lord,
                 'lord_hi'    => LalKitabData::planetHi($lord),
                 'lord_house' => $house[$lord] ?? null,   // where this house-lord sits (LK)
+                'lord_verdict' => $lordE['verdict'] ?? null,
                 'planets'    => $occupants[$h],
                 'planets_hi' => array_map([LalKitabData::class, 'planetHi'], $occupants[$h]),
+                'occ'        => $occ,
+                'awake'      => $isAwake,
+                'awake_by'   => $awakeBy,
+                'waker_hi'   => $wakerHi,
+                'in_hits'    => $inHits,
+                'warn'       => $warn,
+                'verdict'    => $verdict,
+                'verdict_why' => $why,
+                'maas'       => $bm[(string) $h] ?? '',
+                'need_remedy' => $needRemedy,
+                'remedies'   => $remedies,
             ];
         }
         return $out;

@@ -3615,14 +3615,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
   // lazily the first time the section is opened.
   var lalKitabBuilt = false;
   function applyLkFilters() {
-    // Planet view: hide non-ashubh cards when "only ashubh" is checked.
-    var pb = document.querySelector('#sec-lalkitab .lk-onlybad[data-scope="planet"]');
-    if (pb) {
+    // "only ashubh" checkboxes (planet + house views): hide non-flagged cards.
+    document.querySelectorAll('#sec-lalkitab .lk-onlybad').forEach(function (pb) {
+      var scope = pb.getAttribute('data-scope');
       var onlyBad = pb.checked;
-      document.querySelectorAll('#sec-lalkitab .lk-view[data-lk="planet"] .lk-card[data-bad]').forEach(function (c) {
+      document.querySelectorAll('#sec-lalkitab .lk-view[data-lk="' + scope + '"] .lk-card[data-bad]').forEach(function (c) {
         c.style.display = (onlyBad && c.getAttribute('data-bad') !== '1') ? 'none' : '';
       });
-    }
+    });
     // Yoga + Shrap views: hide non-applicable cards when "only applicable" checked.
     document.querySelectorAll('#sec-lalkitab .lk-onlyapp').forEach(function (chk) {
       var scope = chk.getAttribute('data-scope');
