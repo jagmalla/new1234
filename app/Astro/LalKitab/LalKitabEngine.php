@@ -110,14 +110,14 @@ final class LalKitabEngine
             'priority'    => $priority,
             'yuti_dosha'  => $yutiDosha,
             'houses'      => self::houseReadings($house, $occupants, $planets),
-            'karak'       => self::karakReadings($house),
+            'karak'       => self::karakReadings($house, $planets),
             'yoga'        => self::yogaReadings($house),
             'shrap'       => self::shrapReadings($house),
-            'sadesati'    => self::sadeSatiReadings($moonSign),
+            'sadesati'    => self::sadeSatiReadings($moonSign, $active),
             'manglik'     => self::manglikReadings($chart, $lagnaSign, $house),
             'remedy'      => self::remedyReadings($house, $occupants),
-            'ayu'         => self::ayuReadings(),
-            'health'      => self::healthReadings(),
+            'ayu'         => self::ayuReadings($house, $occupants, $chart),
+            'health'      => self::healthReadings($planets),
             'bhavan'      => LalKitabData::section('bhavan'),
             'varsh_gyan'  => self::varshGyanReadings($age),
             'rules'       => self::ruleReadings(),
@@ -469,9 +469,14 @@ final class LalKitabEngine
      * @param array<string,int> $house
      * @return array<int,array<string,mixed>>
      */
-    private static function karakReadings(array $house): array
+    private static function karakReadings(array $house, array $planets = []): array
     {
         $gp = LalKitabData::section('graha_parichay');
+        $bg = LalKitabData::section('bhavgat_upay');
+        $sh = LalKitabData::section('sheeghra');
+        $pMap = [];
+        foreach ($planets as $pe) { $pMap[$pe['planet']] = $pe; }
+
         // build house => list of karak planets from the karak_bhav column
         $byHouse = array_fill(1, 12, []);
         foreach ($gp as $p => $row) {
@@ -481,25 +486,40 @@ final class LalKitabEngine
                 }
             }
         }
-        $sab = LalKitabData::section('shubh_ashubh_bhav');
         $out = [];
         for ($h = 1; $h <= 12; $h++) {
             $karaks = [];
             foreach ($byHouse[$h] as $p) {
                 $ph = $house[$p] ?? null;
-                $ashubhList = self::parseHouses($sab[$p]['ashubh'] ?? '');
+                $pe = $pMap[$p] ?? null;
+                $verdict = $pe['verdict'] ?? 'मध्यम';
+                // कारक ग्रह अशुभ/नीच/सुप्त हो तो वह जिस भाव का कारक है उसका फल दुर्बल।
+                $weak = $verdict === 'अशुभ' || ($pe['status'] ?? '') === 'नीच' || !empty($pe['asleep']);
+                $remedies = [];
+                if ($weak && $ph !== null) {
+                    $remedies = array_slice($bg[$p][(string) $ph] ?? [], 0, 3);
+                    if (!empty($sh[$p])) { $remedies[] = '⚡ शीघ्र: ' . $sh[$p]; }
+                }
                 $karaks[] = [
                     'planet'   => $p,
                     'hi'       => LalKitabData::planetHi($p),
                     'placed'   => $ph,
                     'placed_ord' => $ph ? LalKitabData::houseOrdinalHi($ph) : '',
-                    'ok'       => $ph !== null && !in_array($ph, $ashubhList, true),
+                    'verdict'  => $verdict,
+                    'asleep'   => !empty($pe['asleep']),
+                    'weak'     => $weak,
+                    'remedies' => array_values($remedies),
                 ];
             }
+            // house-level verdict = worst of its karaks
+            $anyWeak = false; $allStrong = $karaks !== [];
+            foreach ($karaks as $k) { if ($k['weak']) { $anyWeak = true; } if ($k['verdict'] !== 'शुभ') { $allStrong = false; } }
             $out[$h] = [
                 'house'     => $h,
                 'house_ord' => LalKitabData::houseOrdinalHi($h),
+                'vishay'    => LalKitabData::section('bhav_vichar')[(string) $h]['vishay'] ?? '',
                 'karaks'    => $karaks,
+                'verdict'   => $anyWeak ? 'अशुभ' : ($allStrong ? 'शुभ' : 'मध्यम'),
             ];
         }
         return $out;
@@ -833,9 +853,10 @@ final class LalKitabEngine
     }
 
     /**
-     * श्राप / पैतृक ऋण — the nine ancestral debts. Compound OR-conditions make
-     * exact detection unreliable, so each debt's planet-in-house cues are matched
-     * best-effort and flagged "संभावित" (possible) when any cue matches.
+     * श्राप / पैतृक ऋण — the nine ancestral debts, detected EXACTLY from the
+     * baked {houses,planets} condition of each debt: the debt is present when
+     * any listed planet actually sits in any listed house of THIS chart. The
+     * matched planet+house are reported so the astrologer sees why.
      *
      * @param array<string,int> $house
      * @return list<array<string,mixed>>
@@ -845,25 +866,24 @@ final class LalKitabEngine
         $rin = LalKitabData::section('paitrik_rin');
         $out = [];
         foreach ($rin as $r) {
-            $pehchan = (string) ($r['pehchan'] ?? '');
-            $possible = false;
-            foreach ($house as $p => $h) {
-                $ord = LalKitabData::houseOrdinalHi($h);
-                $ph  = LalKitabData::planetHi($p);
-                if ($ph !== '' && mb_strpos($pehchan, $ph) !== false
-                    && mb_strpos($pehchan, $ord . ' भाव') !== false) {
-                    $possible = true;
-                    break;
+            $cond = $r['cond'] ?? ['houses' => [], 'planets' => []];
+            $matched = [];
+            foreach (($cond['planets'] ?? []) as $cp) {
+                $ph = $house[$cp] ?? null;
+                if ($ph !== null && in_array($ph, $cond['houses'] ?? [], true)) {
+                    $matched[] = LalKitabData::planetHi($cp) . ' ' . LalKitabData::houseOrdinalHi($ph) . ' भाव में';
                 }
             }
+            $present = $matched !== [];
             $out[] = [
                 'rin'         => (string) ($r['rin'] ?? ''),
-                'pehchan'     => $pehchan,
+                'pehchan'     => (string) ($r['pehchan'] ?? ''),
                 'ashubh_grah' => (string) ($r['ashubh_grah'] ?? ''),
                 'sanket'      => (string) ($r['sanket'] ?? ''),
                 'ashubh_phal' => (string) ($r['ashubh_phal'] ?? ''),
                 'upay'        => (string) ($r['upay'] ?? ''),
-                'possible'    => $possible,
+                'present'     => $present,           // exact chart match
+                'matched'     => $matched,           // "राहु पाँचवें भाव में" …
             ];
         }
         return $out;
@@ -874,13 +894,19 @@ final class LalKitabEngine
      *
      * @return array<string,mixed>
      */
-    private static function sadeSatiReadings(int $moonSign): array
+    private static function sadeSatiReadings(int $moonSign, array $active = []): array
     {
         $ssp = LalKitabData::section('sadesati_pehchan');
         $ssu = LalKitabData::section('sadesati_upay');
         $dhp = LalKitabData::section('dhaiya_pehchan');
         $dhu = LalKitabData::section('dhaiya_upay');
         $k = (string) $moonSign;
+
+        // running-now status from the controller's SadeSatiTimeline (via $active)
+        $ss = $active['sadesati'] ?? null;
+        $runningKind = is_array($ss) ? (string) ($ss['kind'] ?? '') : '';   // 'sadesati'|'dhaiya'|''
+        $runningPhase = is_array($ss) ? ($ss['phase'] ?? null) : null;       // 1|2|3|null
+
         return [
             'rashi_hi'        => LalKitabData::signHi(Charts::SIGNS[$moonSign]),
             'pehchan'         => $ssp[$k]['shani_on'] ?? '',
@@ -888,6 +914,9 @@ final class LalKitabEngine
             'upay'            => array_values($ssu[$k] ?? []),
             'dhaiya_pehchan'  => $dhp[$k]['shani_on'] ?? '',
             'dhaiya_upay'     => array_values($dhu[$k] ?? []),
+            'running'         => $runningKind !== '',      // is Saturn transiting now?
+            'running_kind'    => $runningKind === 'dhaiya' ? 'ढैय्या' : ($runningKind === 'sadesati' ? 'साढ़े साती' : ''),
+            'running_phase'   => $runningPhase,            // charan index for साढ़े साती
         ];
     }
 
@@ -909,10 +938,18 @@ final class LalKitabEngine
         if ($isManglik) {
             $upay = $mu[(string) $lagnaSign][(string) $mh] ?? '';
         }
+        // house-wise meaning of the offending Mars placement (1 शरीर · 4 सुख ·
+        // 7 दाम्पत्य · 8 आयु · 12 व्यय) — so the card is specific, not generic.
+        static $mhMean = [
+            1 => 'शरीर, स्वभाव व स्वास्थ्य पर', 4 => 'सुख, माता, भूमि-वाहन व घरेलू शांति पर',
+            7 => 'दाम्पत्य, जीवनसाथी व साझेदारी पर', 8 => 'आयु, दुर्घटना व अकस्मात बाधाओं पर',
+            12 => 'व्यय, शयन-सुख व विदेश पर',
+        ];
         return [
             'is'         => $isManglik,
             'mars_house' => $mh,
             'mars_ord'   => $mh ? LalKitabData::houseOrdinalHi($mh) : '',
+            'mars_effect'=> $isManglik ? ($mhMean[$mh] ?? '') : '',
             'lagna_hi'   => LalKitabData::signHi(Charts::SIGNS[$lagnaSign]),
             'upay'       => $upay,
             'parihar'    => LalKitabData::section('manglik_parihar'),
@@ -973,13 +1010,59 @@ final class LalKitabEngine
     }
 
     /**
-     * आयु योग (longevity) — the yoga→years list plus each planet's Lal Kitab
-     * influence-years chart.
+     * आयु योग (longevity) — which आयु-योग actually apply in THIS chart. Each
+     * ायु rule is "<ग्रह> <किसी/named ग्रह> के साथ" — a conjunction. A rule fires
+     * when its planet shares a house with the required companion (or any planet
+     * for "किसी भी ग्रह के साथ"). Applicable ones are flagged; the reference list
+     * + per-planet influence-year chart follow.
      *
+     * @param array<string,int> $house
+     * @param array<int,list<string>> $occupants
+     * @param array<string,mixed> $chart
      * @return array<string,mixed>
      */
-    private static function ayuReadings(): array
+    private static function ayuReadings(array $house = [], array $occupants = [], array $chart = []): array
     {
+        // house-mates for each planet
+        $mates = [];
+        foreach ($house as $p => $h) {
+            $mates[$p] = array_values(array_filter($occupants[$h] ?? [], static fn ($x) => $x !== $p));
+        }
+        // मंगल शुभ = own sign or exalted; else अशुभ (Lal Kitab longevity variant).
+        $isMarsShubh = static function () use ($chart): bool {
+            $s = (int) ($chart['planets']['Mars']['sign_index'] ?? -1);
+            if ($s < 0) { return true; }
+            return $s === (LalKitabData::EXALT['Mars'] ?? -1) || Charts::SIGN_LORDS[$s] === 'Mars';
+        };
+
+        $yogaOut = [];
+        foreach (LalKitabData::section('ayu_yog') as $r) {
+            $yog = (string) ($r['yog'] ?? '');
+            // lead planet = first planet name in the rule text
+            $lead = null; $others = [];
+            foreach (LalKitabData::PLANET_HI as $en => $hiName) {
+                if (mb_strpos($yog, $hiName) !== false) {
+                    if ($lead === null) { $lead = $en; } else { $others[] = $en; }
+                }
+            }
+            $applies = false; $why = '';
+            if ($lead !== null && isset($house[$lead])) {
+                $companions = $mates[$lead] ?? [];
+                if (mb_strpos($yog, 'किसी भी ग्रह') !== false) {
+                    // "with any planet" — but a Mars शुभ/अशुभ variant must match sign
+                    $variantOk = true;
+                    if (mb_strpos($yog, 'शुभ') !== false) { $variantOk = $isMarsShubh(); }
+                    elseif (mb_strpos($yog, 'अशुभ') !== false) { $variantOk = !$isMarsShubh(); }
+                    if ($companions !== [] && $variantOk) { $applies = true; $why = LalKitabData::planetHi($lead) . ' के साथ ' . LalKitabData::planetHi($companions[0]); }
+                } elseif ($others !== []) {
+                    foreach ($others as $o) {
+                        if (in_array($o, $companions, true)) { $applies = true; $why = LalKitabData::planetHi($lead) . '-' . LalKitabData::planetHi($o) . ' युति'; break; }
+                    }
+                }
+            }
+            $yogaOut[] = ['yog' => $yog, 'ayu' => (string) ($r['ayu'] ?? ''), 'applies' => $applies, 'why' => $why];
+        }
+
         $gc = LalKitabData::section('grah_chakra');
         $chakra = [];
         foreach (self::PLANETS as $p) {
@@ -993,25 +1076,32 @@ final class LalKitabEngine
                 ];
             }
         }
-        return [
-            'yoga'   => LalKitabData::section('ayu_yog'),
-            'chakra' => $chakra,
-        ];
+        return ['yoga' => $yogaOut, 'chakra' => $chakra];
     }
 
     /**
-     * रोग / संतान — mixed disease & progeny remedies, grouped by category (वर्ग).
+     * रोग / संतान — the mixed disease & progeny remedies, plus a chart-context
+     * note: which planets are अशुभ (whose रोग may need attention) so the section
+     * is not purely generic.
      *
-     * @return array<string,list<string>>
+     * @param list<array<string,mixed>> $planets
+     * @return array<string,mixed>
      */
-    private static function healthReadings(): array
+    private static function healthReadings(array $planets = []): array
     {
-        $out = [];
+        $groups = [];
         foreach (LalKitabData::section('rog_santan') as $r) {
             $varg = (string) ($r['varg'] ?? 'अन्य');
-            $out[$varg][] = (string) ($r['upay'] ?? '');
+            $groups[$varg][] = (string) ($r['upay'] ?? '');
         }
-        return $out;
+        // planets that are अशुभ → their रोग-areas need care (from ग्रह परिचय रंग/कारक)
+        $afflicted = [];
+        foreach ($planets as $pe) {
+            if (!empty($pe['is_ashubh'])) {
+                $afflicted[] = ['hi' => $pe['hi'], 'house_ord' => $pe['house_ord']];
+            }
+        }
+        return ['groups' => $groups, 'afflicted' => $afflicted];
     }
 
     /**
