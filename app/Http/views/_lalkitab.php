@@ -176,6 +176,7 @@ $scorePill = static function (int $score): string {
         <option value="health">🩺 रोग / संतान / Health</option>
         <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
         <option value="varsh">📅 वर्ष कुंडली ज्ञान / Annual</option>
+        <option value="inter">🔗 ग्रह अंतर्संबंध / Planet Inter-effects</option>
         <option value="supt">😴 सुप्त ग्रह / Sleeping Planets</option>
         <option value="drishti">👁 भाव दृष्टि / House Aspects</option>
         <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
@@ -782,6 +783,35 @@ $scorePill = static function (int $score): string {
         <h3 class="lk-h">🔍 खोज परिणाम</h3>
         <div id="lk-search-note" class="lk-txt" style="margin-bottom:9px;color:#64748b"></div>
         <div id="lk-search-results"></div>
+      </div>
+
+      <!-- ===== INTER-EFFECTS (कौन ग्रह किसको प्रभावित करता है) ===== -->
+      <div class="lk-view" data-lk="inter">
+        <h3 class="lk-h">ग्रह अंतर्संबंध — कौन ग्रह किसको प्रभावित कर रहा है</h3>
+        <div class="lk-txt" style="margin-bottom:9px">लाल किताब में ग्रह एक-दूसरे का फल बदलते हैं। नीचे इस कुंडली के लागू सूत्रों से बना प्रभाव-नक्शा है — <span style="color:#166534">हरा = शुभ प्रभाव</span>, <span style="color:#991b1b">लाल = अशुभ प्रभाव</span>।</div>
+        <?php if (empty($lk['inter'])): ?>
+          <div class="lk-card"><div class="lk-txt">इस कुंडली में ग्रहों के बीच कोई विशेष प्रभाव-सूत्र लागू नहीं होता।</div></div>
+        <?php else: foreach ($lk['inter'] as $I): ?>
+          <div class="lk-card">
+            <div class="lk-card-h"><?= $h((string) $I['hi']) ?></div>
+            <?php if (!empty($I['affects'])): ?>
+              <div class="lk-sub" style="margin-top:2px"><b>➡ यह ग्रह इन पर प्रभाव डालता है:</b></div>
+              <?php foreach ($I['affects'] as $a): $tc = $a['tone'] === 'pos' ? '#166534' : ($a['tone'] === 'neg' ? '#991b1b' : '#854d0e'); ?>
+                <div class="lk-txt" style="margin:2px 0;padding-left:10px;border-left:3px solid <?= $tc ?>">
+                  <b style="color:<?= $tc ?>"><?= $h((string) $I['hi']) ?> → <?= $h((string) $a['other']) ?></b> — <?= $h((string) $a['phal']) ?>
+                </div>
+              <?php endforeach; ?>
+            <?php endif; ?>
+            <?php if (!empty($I['affected_by'])): ?>
+              <div class="lk-sub" style="margin-top:5px"><b>⬅ इस ग्रह पर इनका प्रभाव है:</b></div>
+              <?php foreach ($I['affected_by'] as $a): $tc = $a['tone'] === 'pos' ? '#166534' : ($a['tone'] === 'neg' ? '#991b1b' : '#854d0e'); ?>
+                <div class="lk-txt" style="margin:2px 0;padding-left:10px;border-left:3px dashed <?= $tc ?>">
+                  <b style="color:<?= $tc ?>"><?= $h((string) $a['other']) ?> → <?= $h((string) $I['hi']) ?></b> — <?= $h((string) $a['phal']) ?>
+                </div>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+        <?php endforeach; endif; ?>
       </div>
 
       <!-- ===== SUPT (sleeping planets) ===== -->

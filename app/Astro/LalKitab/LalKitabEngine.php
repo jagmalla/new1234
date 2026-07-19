@@ -96,6 +96,8 @@ final class LalKitabEngine
         self::scorePlanets($planets, $supt, $yutiDosha, $active, $age);
         $priority  = self::priorityReadings($planets);
         $activeNow = self::activeReadings($house, $planets, $active, $age);
+        $yoga      = self::yogaReadings($house);
+        $inter     = self::interEffects($house, $yoga, $yutiDosha);
 
         return [
             'ok'          => true,
@@ -111,7 +113,8 @@ final class LalKitabEngine
             'yuti_dosha'  => $yutiDosha,
             'houses'      => self::houseReadings($house, $occupants, $planets),
             'karak'       => self::karakReadings($house, $planets),
-            'yoga'        => self::yogaReadings($house),
+            'yoga'        => $yoga,
+            'inter'       => $inter,
             'shrap'       => self::shrapReadings($house),
             'sadesati'    => self::sadeSatiReadings($moonSign, $active),
             'manglik'     => self::manglikReadings($chart, $lagnaSign, $house),
@@ -704,6 +707,85 @@ final class LalKitabEngine
         if ($pHits > 0 && $nHits === 0) { return 'pos'; }
         // both present ("अशुभ … परन्तु … शुभ" / "शुभ … किन्तु … हानि"): later wins.
         return $lastPos > $lastNeg ? 'pos' : 'neg';
+    }
+
+    /**
+     * ग्रह अंतर्संबंध — "कौन ग्रह किसका फल खा/दे रहा है". Built from the applicable
+     * भविष्यवाणी सूत्र whose "प्रभावित ग्रह" column names a real planet: the
+     * planet(s) named in the सूत्र's स्थिति are the SUBJECT, and प्रभावित is the
+     * TARGET they act on. Special युति-ग्रहण doshas are folded in too. For each
+     * planet the result lists whom it प्रभावित करता है (→) and किनसे प्रभावित है (←),
+     * each with the concrete फल and its tone. Data-backed, not interpretive.
+     *
+     * @param array<string,int> $house
+     * @param list<array<string,mixed>> $yoga  yogaReadings() output
+     * @param list<array<string,mixed>> $yutiDosha
+     * @return list<array<string,mixed>>
+     */
+    private static function interEffects(array $house, array $yoga, array $yutiDosha): array
+    {
+        $PLHI   = LalKitabData::PLANET_HI;              // en => hi
+        $hiToEn = array_flip($PLHI);
+        $out = [];
+        foreach (array_keys($house) as $p) {
+            $out[$p] = ['planet' => $p, 'hi' => LalKitabData::planetHi($p), 'affects' => [], 'affected_by' => []];
+        }
+        $addEdge = static function (string $from, string $to, string $phal, string $tone) use (&$out): void {
+            if (!isset($out[$from], $out[$to]) || $from === $to) { return; }
+            $out[$from]['affects'][] = ['other' => LalKitabData::planetHi($to), 'phal' => $phal, 'tone' => $tone];
+            $out[$to]['affected_by'][] = ['other' => LalKitabData::planetHi($from), 'phal' => $phal, 'tone' => $tone];
+        };
+
+        foreach ($yoga as $Y) {
+            if (empty($Y['applicable'])) { continue; }
+            $sthiti = (string) ($Y['sthiti'] ?? '');
+            $prab   = trim((string) ($Y['prabhavit'] ?? ''));
+            $phal   = (string) ($Y['phal'] ?? '');
+            $tone   = (string) ($Y['tone'] ?? 'mix');
+
+            // subjects = planets named in the स्थिति that are actually placed
+            $subjects = [];
+            foreach ($PLHI as $en => $hi) {
+                if ($hi !== '' && mb_strpos($sthiti, $hi) !== false && isset($house[$en])) { $subjects[] = $en; }
+            }
+            if ($subjects === []) { continue; }
+
+            if ($prab === 'दोनों' || $prab === 'दोनो') {
+                // each subject affects the other(s)
+                foreach ($subjects as $a) {
+                    foreach ($subjects as $b) { $addEdge($a, $b, $phal, $tone); }
+                }
+                continue;
+            }
+            // resolve प्रभावित to a planet key
+            $target = $hiToEn[$prab] ?? null;
+            if ($target === null) {
+                foreach ($PLHI as $en => $hi) {
+                    if ($hi !== '' && mb_strpos($prab, $hi) !== false) { $target = $en; break; }
+                }
+            }
+            if ($target === null || !isset($house[$target])) { continue; }   // जातक/पापी/- skipped
+            foreach ($subjects as $a) { $addEdge($a, $target, $phal, $tone); }
+        }
+
+        // fold the special ग्रहण/युति doshas (both planets affect each other)
+        foreach ($yutiDosha as $d) {
+            $ps = $d['planets'] ?? [];
+            if (count($ps) < 2) { continue; }
+            [$a, $b] = $ps;
+            $addEdge($a, $b, $d['desc'] ?? $d['name'], 'neg');
+            $addEdge($b, $a, $d['desc'] ?? $d['name'], 'neg');
+        }
+
+        // keep only planets that have at least one relation; canonical order
+        $order = self::PLANETS;
+        $res = [];
+        foreach ($order as $p) {
+            if (isset($out[$p]) && ($out[$p]['affects'] !== [] || $out[$p]['affected_by'] !== [])) {
+                $res[] = $out[$p];
+            }
+        }
+        return $res;
     }
 
     /**
