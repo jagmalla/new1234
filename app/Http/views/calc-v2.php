@@ -179,6 +179,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .l2-menu button { display: block; width: 100%; text-align: left; padding: 10px 14px;
             border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .95rem; }
         .l2-menu button:hover { background: var(--sindoor-soft); }
+        /* Menu-row emoji: fixed-width so labels align in a neat column. */
+        .l2-ic { display: inline-block; width: 1.5em; margin-right: 6px; text-align: center;
+            font-style: normal; }
         /* Kundali Milan opens a separate page, so it's an anchor styled as a menu row. */
         .l2-mi-link { display: block; width: 100%; text-align: left; padding: 10px 14px;
             border-left: 3px solid transparent; color: var(--ink); font-weight: 700; font-size: .95rem;
@@ -1115,23 +1118,23 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <!-- Side menu -->
         <nav id="side-menu" class="l2-menu l2-card" aria-label="Sections">
             <div class="l2-mi">
-                <button type="button" data-sec="profile">New / Profile</button>
+                <button type="button" data-sec="profile"><span class="l2-ic">👤</span>New / Profile</button>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="today">Today (आज का Consult)</button>
+                <button type="button" data-sec="today"><span class="l2-ic">📆</span>Today (आज का Consult)</button>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="custom">Custom Screen</button>
+                <button type="button" data-sec="custom"><span class="l2-ic">🧩</span>Custom Screen</button>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="home" class="active">Birth Chart</button>
+                <button type="button" data-sec="home" class="active"><span class="l2-ic">🌟</span>Birth Chart</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="home" data-target="chart-panel">Kundali Chart</button>
                     <button type="button" data-sec="home" data-target="pred-panel">Predictions</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="grah">Planet Positions</button>
+                <button type="button" data-sec="grah"><span class="l2-ic">🪐</span>Planet Positions</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="grah" data-target="card-native">Birth Details</button>
                     <button type="button" data-sec="grah" data-target="card-housedet">House Details</button>
@@ -1140,17 +1143,17 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="varga">Varga Charts</button>
+                <button type="button" data-sec="varga"><span class="l2-ic">🗂️</span>Varga Charts</button>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="dasha">Dasha</button>
+                <button type="button" data-sec="dasha"><span class="l2-ic">⏳</span>Dasha</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="dasha" data-target="card-curdasha">Current Dasha</button>
                     <button type="button" data-sec="dasha" data-target="card-vimtree">Vimshottari (5 levels)</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="bal">Bala (Strength)</button>
+                <button type="button" data-sec="bal"><span class="l2-ic">💪</span>Bala (Strength)</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="bal" data-tab="shad">Shadbala</button>
                     <button type="button" data-sec="bal" data-tab="bb">Bhava Bala</button>
@@ -1159,19 +1162,17 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="gochar">Gochar (Transit)</button>
+                <button type="button" data-sec="gochar"><span class="l2-ic">🔭</span>Gochar (Transit)</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="gochar" data-target="card-gocharcalc">Gochar Calculation</button>
-                    <button type="button" data-sec="gochar" data-target="card-gocharpair">Chart + Prediction (Row 1)</button>
-                    <button type="button" data-sec="gochar" data-target="card-gochardet">Chart + Prediction (Row 2)</button>
                     <button type="button" data-sec="gochar" data-target="yt-card">12-Month Timeline</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="muhurat">Mahurat (मुहूर्त)</button>
+                <button type="button" data-sec="muhurat"><span class="l2-ic">🕉️</span>Mahurat (मुहूर्त)</button>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="varsha">Varshaphal</button>
+                <button type="button" data-sec="varsha"><span class="l2-ic">🗓️</span>Varshaphal</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="varsha" data-target="card-vpbox">Year Selection</button>
                     <button type="button" data-sec="varsha" data-target="vp-output">Varsha Chart + Mudda Dasha</button>
@@ -1180,10 +1181,10 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="lalkitab">Laal Kitab (लाल किताब)</button>
+                <button type="button" data-sec="lalkitab"><span class="l2-ic">📕</span>Laal Kitab (लाल किताब)</button>
             </div>
             <div class="l2-mi">
-                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link">Kundali Milan</a>
+                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link"><span class="l2-ic">💑</span>Kundali Milan</a>
             </div>
         </nav>
         <!-- Backdrop for the mobile/tablet slide-in menu drawer. -->
@@ -3750,7 +3751,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     var LK_VIEW_NAMES = {
       overview: 'परिचय', planet: 'ग्रह फल', house: 'भाव फल', karak: 'कारक', yoga: 'योग',
       shrap: 'पैतृक ऋण', sadesati: 'साढ़े साती', manglik: 'मंगलीक', ayu: 'आयु योग',
-      health: 'रोग/संतान', bhavan: 'गृह निर्माण', varsh: 'वर्ष चक्र', supt: 'सुप्त ग्रह',
+      health: 'रोग/संतान', bhavan: 'गृह निर्माण', varsh: 'वर्ष चक्र', supt: 'सुप्त / जागृत ग्रह',
       drishti: 'भाव दृष्टि', remedy: 'उपाय', rules: 'नियम', reference: 'संदर्भ', compare: 'तुलना'
     };
     function lkSearch(label, terms) {

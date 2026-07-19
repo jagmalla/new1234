@@ -34,7 +34,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     <link href="https://fonts.googleapis.com/css2?family=Martel:wght@800&family=Mukta:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #F3EEE4; --card: #FFFFFF; --ink: #26221C; --ink-soft: #6B6156;
+            --bg: #FBF7F0; --paper: #FBF7F0; --card: #FFFFFF; --ink: #26221C; --ink-soft: #6B6156;
             --line: #E4DCCE; --accent: #b45309; --accent2: #7c3aed;
             --header-bg: #1F2A33; --sindoor: #B3341C; --sindoor-soft: #F6E3DD; --shubh: #2E6E4E;
         }
@@ -184,20 +184,19 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         table.pl th, table.pl td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; }
         table.pl th { color: var(--ink-soft); font-weight: 700; }
         .banner { color: var(--ink-soft); font-size: .85rem; }
-        /* Left menu (mirrors the main calculator) so Milan sits beside it. */
+        /* Left menu — identical look to the main calculator (#side-menu) so the
+           Milan page feels like the same website. */
         .layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; align-items: start; }
-        .side { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+        #milan-side { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
             box-shadow: 0 1px 3px rgba(38,34,28,.08); padding: 6px 0; position: sticky; top: 16px; overflow: hidden; }
-        .side a { display: block; padding: 10px 14px; border-left: 3px solid transparent;
-            color: var(--ink); font-weight: 500; font-size: .95rem; text-decoration: none; }
-        .side a:hover { background: #f6efe3; }
-        .side a.active { background: #f6efe3; border-left-color: var(--accent); color: var(--accent); font-weight: 700; }
+        .l2-mi-link { display: block; width: 100%; text-align: left; padding: 10px 14px;
+            border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .95rem;
+            text-decoration: none; }
+        .l2-mi-link:hover { background: var(--sindoor-soft); color: var(--sindoor); }
+        .l2-mi-link.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
+            color: var(--sindoor); font-weight: 700; }
+        .l2-ic { display: inline-block; width: 1.5em; margin-right: 6px; text-align: center; font-style: normal; }
         .content { min-width: 0; }
-        @media (max-width: 900px) {
-            .layout { grid-template-columns: 1fr; }
-            .side { position: static; display: flex; flex-wrap: wrap; }
-            .side a { border-left: 0; }
-        }
         @media (max-width: 820px) {
             .forms, .res-head, .kgrid, .pair, .chartbox, .mangal-grid { grid-template-columns: 1fr; }
             .res-head { text-align: center; }
@@ -334,18 +333,24 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     <?php endif; ?>
 
     <div class="layout">
-        <!-- Left menu — mirrors the main calculator so Milan opens beside it. -->
-        <nav id="milan-side" class="side noprint" aria-label="Sections">
+        <!-- Left menu — identical to the main calculator's #side-menu (same items,
+             emojis and sindoor colours) so the client feels on the same website.
+             Every item links back into /calc; Kundali Milan is the active page. -->
+        <nav id="milan-side" class="l2-menu noprint" aria-label="Sections">
             <?php $calc = $h($asset('/calc')); ?>
-            <a href="<?= $calc ?>">New / Profile</a>
-            <a href="<?= $calc ?>">Birth Chart</a>
-            <a href="<?= $calc ?>">Planet Positions</a>
-            <a href="<?= $calc ?>">Varga Charts</a>
-            <a href="<?= $calc ?>">Dasha</a>
-            <a href="<?= $calc ?>">Bala (Strength)</a>
-            <a href="<?= $calc ?>">Gochar (Transit)</a>
-            <a href="<?= $calc ?>">Varshaphal</a>
-            <a href="<?= $h($asset('/milan')) ?>" class="active">Kundali Milan</a>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">👤</span>New / Profile</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">📆</span>Today (आज का Consult)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🧩</span>Custom Screen</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🌟</span>Birth Chart</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🪐</span>Planet Positions</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🗂️</span>Varga Charts</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">⏳</span>Dasha</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">💪</span>Bala (Strength)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🔭</span>Gochar (Transit)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🕉️</span>Mahurat (मुहूर्त)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🗓️</span>Varshaphal</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">📕</span>Laal Kitab (लाल किताब)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link active" href="<?= $h($asset('/milan')) ?>"><span class="l2-ic">💑</span>Kundali Milan</a></div>
         </nav>
 
         <div class="content" id="milan-content">

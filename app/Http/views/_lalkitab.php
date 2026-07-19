@@ -177,7 +177,7 @@ $scorePill = static function (int $score): string {
         <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
         <option value="varsh">📅 वर्ष कुंडली ज्ञान / Annual</option>
         <option value="inter">🔗 ग्रह अंतर्संबंध / Planet Inter-effects</option>
-        <option value="supt">😴 सुप्त / निष्फल ग्रह / Sleeping &amp; Weak</option>
+        <option value="supt">😴 सुप्त / जागृत ग्रह / Supt &amp; Jagrit</option>
         <option value="drishti">👁 भाव दृष्टि / House Aspects</option>
         <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
         <option value="remedy">🛠 उपाय / Remedy</option>
@@ -300,8 +300,8 @@ $scorePill = static function (int $score): string {
                 <?php endforeach; ?>
               </div>
               <?php endif; ?>
-              <div class="lk-anlz-row"><span class="lk-anlz-k">😴 सुप्त</span>
-                <?= !empty($p['asleep']) ? '<b style="color:#991b1b">सुप्त — जगाने वाला ग्रह कुंडली में नहीं; फल दबा रहेगा</b>' : 'जागृत — फल सक्रिय' ?>
+              <div class="lk-anlz-row"><span class="lk-anlz-k"><?= !empty($p['asleep']) ? '😴' : '⚡' ?> सुप्त / जागृत</span>
+                <?= !empty($p['asleep']) ? '<b style="color:#991b1b">😴 सुप्त — जगाने वाला ग्रह कुंडली में नहीं; फल दबा रहेगा</b>' : '<b style="color:#166534">⚡ जागृत — फल सक्रिय</b>' ?>
               </div>
               <?php if (!empty($p['verdict_why'])): ?>
               <div class="lk-anlz-row lk-anlz-final"><span class="lk-anlz-k">⚖ निष्कर्ष</span>
@@ -387,7 +387,7 @@ $scorePill = static function (int $score): string {
           <div class="lk-card <?= $hCls ?>" data-bad="<?= $hBad ? '1' : '0' ?>">
             <div class="lk-card-h"><?= (int) $H['house'] ?>. <?= $h((string) $H['house_ord']) ?> भाव — <?= $h((string) $H['rashi']) ?>
               <?= $pill((string) $H['verdict'], 'v') ?>
-              <?php if (empty($H['awake'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php else: ?><span class="lk-pill" style="background:#dcfce7;color:#166534">जागृत</span><?php endif; ?>
+              <?php if (empty($H['awake'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php else: ?><span class="lk-pill" style="background:#dcfce7;color:#166534">⚡ जागृत</span><?php endif; ?>
               <?= $srcTag('भाव विचार + दृष्टि चक्र') ?>
             </div>
 
@@ -404,11 +404,11 @@ $scorePill = static function (int $score): string {
                 <?php if ($H['lord_house']): ?>— <?= $h(\AutoBusiness\Astro\LalKitab\LalKitabData::houseOrdinalHi((int) $H['lord_house'])) ?> भाव में<?php endif; ?>
                 <?php if (!empty($H['lord_verdict'])): ?><span class="lk-pill" style="<?= $H['lord_verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($H['lord_verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $H['lord_verdict']) ?></span><?php endif; ?>
               </div>
-              <div class="lk-anlz-row"><span class="lk-anlz-k">😴 जागृति</span>
+              <div class="lk-anlz-row"><span class="lk-anlz-k"><?= !empty($H['awake']) ? '⚡' : '😴' ?> सुप्त / जागृत</span>
                 <?php if (!empty($H['awake'])): ?>
-                  जागृत — <?= $h((string) $H['awake_by']) ?>
+                  <b style="color:#166534">⚡ जागृत</b> — <?= $h((string) $H['awake_by']) ?>
                 <?php else: ?>
-                  <b style="color:#991b1b">सुप्त</b> — जगाने वाला ग्रह <b><?= $h((string) $H['waker_hi']) ?></b>; इस भाव के विषय दबे रहेंगे
+                  <b style="color:#991b1b">😴 सुप्त</b> — जगाने वाला ग्रह <b><?= $h((string) $H['waker_hi']) ?></b>; इस भाव के विषय दबे रहेंगे
                 <?php endif; ?>
               </div>
               <?php if (!empty($H['in_hits'])): ?>
@@ -484,7 +484,7 @@ $scorePill = static function (int $score): string {
                 <?php if ($kk['placed']): ?>
                   — <?= $h((string) $kk['placed_ord']) ?> भाव में
                   <?= $pill((string) $kk['verdict'], 's') ?>
-                  <?php if (!empty($kk['asleep'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">सुप्त</span><?php endif; ?>
+                  <?php if (!empty($kk['asleep'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php endif; ?>
                   <?php if (!empty($kk['weak'])): ?><span style="color:#991b1b"> — इस भाव का फल दुर्बल</span><?php endif; ?>
                 <?php else: ?>
                   — स्थिति अज्ञात
@@ -857,7 +857,7 @@ $scorePill = static function (int $score): string {
           <div class="lk-card <?= $s['awake'] ? 'good' : 'bad' ?>">
             <div class="lk-card-h">
               <?= $h((string) $s['hi']) ?> — <?= $h((string) $s['house_ord']) ?> भाव में
-              <?= $pill($s['awake'] ? 'जागृत' : 'सुप्त', 's') ?>
+              <?php if ($s['awake']): ?><span class="lk-pill" style="background:#dcfce7;color:#166534">⚡ जागृत</span><?php else: ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php endif; ?>
             </div>
             <div class="lk-sub"><b>जगाने वाला ग्रह:</b> <?= $h((string) $s['waker']) ?><?= $s['awake'] ? ' — कुंडली में उपस्थित (सक्रिय)' : ' — कुंडली में अनुपस्थित (सुप्त रहेगा)' ?></div>
             <?php if (trim((string) $s['jagega']) !== ''): ?><div class="lk-sub"><b>कब जागेगा:</b> <?= $h((string) $s['jagega']) ?><?= trim((string) $s['aayu']) !== '' ? ' (' . $h((string) $s['aayu']) . ')' : '' ?></div><?php endif; ?>
