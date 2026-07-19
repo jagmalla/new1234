@@ -1278,6 +1278,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <?php foreach (['धन' => '💰', 'विवाह' => '💑', 'संतान' => '👶', 'रोग' => '🩺', 'नौकरी' => '💼', 'शिक्षा' => '🎓', 'विदेश' => '✈'] as $tpc => $tpi): ?>
                 <button type="button" class="lk-chip" data-topic="<?= $h($tpc) ?>" style="border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:1px 9px;font-size:.72rem;color:#475569;cursor:pointer"><?= $tpi ?> <?= $h($tpc) ?></button>
                 <?php endforeach; ?>
+                <!-- Computed foreign-settlement topic (full analysis, not keyword search). -->
+                <button type="button" class="lk-chip" data-videsh="1" style="border:1px solid #f0c98a;background:#fff6e8;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#92400e;font-weight:700;cursor:pointer">✈ विदेश यात्रा व निवास</button>
             </div>
             <div id="pred-scroll">
 
@@ -1774,7 +1776,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             </div><!-- /pred-view dosha -->
 
             <div class="pred-view hidden" data-pred="search">
-                <div class="bg-white rounded-lg shadow p-4 text-sm">
+                <!-- विदेश यात्रा व स्थायी निवास — computed topic (hidden until its chip is clicked). -->
+                <?php require __DIR__ . '/_videsh_settlement.php'; ?>
+                <div id="pred-keyword-wrap" class="bg-white rounded-lg shadow p-4 text-sm">
                     <h2 class="font-semibold mb-1">🔍 खोज परिणाम</h2>
                     <div id="pred-search-note" class="text-xs text-gray-500 mb-3"></div>
                     <div id="pred-search-results"></div>
@@ -3587,6 +3591,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
           ? ('"' + label + '" — ' + blocks.length + ' परिणाम' + (blocks.length >= 60 ? ' (पहले 60)' : '') + '।')
           : ('"' + label + '" के लिए कोई परिणाम नहीं।');
       }
+      // keyword search shows the results box and hides the विदेश report.
+      var vr = document.getElementById('videsh-report');
+      if (vr) { vr.classList.add('hidden'); }
+      var kw = document.getElementById('pred-keyword-wrap');
+      if (kw) { kw.classList.remove('hidden'); }
       var sel = document.getElementById('pred-select');
       if (sel) {
         var so = sel.querySelector('option[value="search"]');
@@ -3595,8 +3604,25 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         sel.dispatchEvent(new Event('change'));
       }
     };
+    // Open the computed विदेश यात्रा व निवास report (a full analysis, not a keyword scan).
+    window.ABVideshTopic = function () {
+      var vr = document.getElementById('videsh-report');
+      var kw = document.getElementById('pred-keyword-wrap');
+      if (vr) { vr.classList.remove('hidden'); }
+      if (kw) { kw.classList.add('hidden'); }
+      var sel = document.getElementById('pred-select');
+      if (sel) {
+        var so = sel.querySelector('option[value="search"]');
+        if (so) { so.hidden = false; }
+        sel.value = 'search';
+        sel.dispatchEvent(new Event('change'));
+      }
+      var sc = document.getElementById('pred-scroll');
+      if (sc) { sc.scrollTop = 0; }
+    };
     document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
+        if (chip.hasAttribute('data-videsh')) { window.ABVideshTopic(); return; }
         var topic = chip.getAttribute('data-topic');
         window.ABTopicSearch(chip.textContent.trim(), TOPICS[topic] || [topic]);
       });

@@ -106,6 +106,18 @@ final class CalcController
             ), null);
 
             $vargas = $engine->vargaCharts($chart);
+            // विदेश यात्रा व स्थायी निवास — computed foreign-settlement analysis
+            // (promise / reason / settle-vs-return / PR timing / obstruction +
+            // remedy). Own try/catch so an edge-case never blanks the chart page.
+            try {
+                $videsh = \AutoBusiness\Astro\Phala\VideshEngine::compute(
+                    $chart, $vargas,
+                    (float) ($chart['planets']['Moon']['sidereal_lon'] ?? 0.0),
+                    $jd, $nowJd, $tz
+                );
+            } catch (\Throwable $e) {
+                $videsh = null;
+            }
             // North-chart payload of the annual chart for the v2 chart selector
             // (render-ready; same shape the varshaphal JSON endpoint returns).
             $varshaNorth = $vp !== null ? $engine->northPayload($vp['varsha_chart']) : null;
@@ -130,6 +142,7 @@ final class CalcController
             'vp' => $vp,
             'gochar' => $gochar,
             'vargas' => $vargas ?? null,
+            'videsh' => $videsh ?? null,
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
