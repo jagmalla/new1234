@@ -3651,8 +3651,63 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         var m = document.getElementById('lk-d1-mini');
         if (m) { window.ABChart.renderNorth(m, window.AB_VARGAS.D1, { showDeg: true, fit: true }); d1MiniDone = true; }
       }
+      if (key === 'calendar') { buildLkCalendar(); }
       applyLkFilters();
     }
+
+    // ---- उपाय-कैलेंडर: personalised, dated remedy plan. For each planet that
+    // needs an उपाय, start on the next occurrence of that planet's वार and run
+    // 43 days; list the weekly वार-dates as tick boxes.
+    var LK_VAAR = { 'रविवार': 0, 'सोमवार': 1, 'मंगलवार': 2, 'बुधवार': 3, 'गुरुवार': 4, 'शुक्रवार': 5, 'शनिवार': 6 };
+    var LK_MON = ['जनवरी','फरवरी','मार्च','अप्रैल','मई','जून','जुलाई','अगस्त','सितम्बर','अक्टूबर','नवम्बर','दिसम्बर'];
+    function lkFmt(d) { return d.getDate() + ' ' + LK_MON[d.getMonth()] + ' ' + d.getFullYear(); }
+    function lkVaarIndex(s) { var m = String(s || '').match(/रविवार|सोमवार|मंगलवार|बुधवार|गुरुवार|शुक्रवार|शनिवार/); return m ? LK_VAAR[m[0]] : null; }
+    function lkCalendarHTML() {
+      var cal = window.AB_LK_CAL || [];
+      if (!cal.length) {
+        return '<div class="lk-card good"><div class="lk-txt">✅ किसी ग्रह का उपाय आवश्यक नहीं — इस कुंडली में कोई ग्रह गंभीर अशुभ नहीं।</div></div>';
+      }
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var html = '';
+      cal.forEach(function (p) {
+        var di = lkVaarIndex(p.var);
+        var start = new Date(today);
+        if (di != null) { var add = (di - today.getDay() + 7) % 7; start.setDate(today.getDate() + add); }
+        var end = new Date(start); end.setDate(start.getDate() + 42);   // 43-day window inclusive
+        // weekly वार-dates within the window
+        var dates = [], d = new Date(start);
+        while (d <= end) { dates.push(new Date(d)); d.setDate(d.getDate() + 7); }
+        var timeHint = /सायं/.test(p.var || '') ? ' (सायंकाल)' : (/प्रातः/.test(p.var || '') ? ' (प्रातःकाल)' : '');
+        html += '<div class="lk-card ' + (p.verdict === 'अशुभ' ? 'bad' : '') + '">' +
+          '<div class="lk-card-h">' + esc(p.hi) + ' — उपाय (' + esc(p.house_ord) + ' भाव)</div>' +
+          '<div class="lk-sub"><b>वार:</b> ' + esc((p.var || '').replace(/\s*\(.*\)/, '')) + timeHint +
+            ' · <b>आरंभ:</b> ' + lkFmt(start) + ' · <b>समाप्ति (43 दिन):</b> ' + lkFmt(end) + '</div>';
+        if (p.remedies && p.remedies.length) {
+          html += '<div class="lk-rem"><div class="lk-rem-h">🛠 करने योग्य उपाय</div><ul class="lk-rem-list">';
+          p.remedies.forEach(function (r) { html += '<li>' + esc(r) + '</li>'; });
+          html += '</ul></div>';
+        }
+        html += '<div class="lk-sub" style="margin-top:6px"><b>साप्ताहिक ' + esc((p.var || '').replace(/\s*\(.*\)/, '')) + ' तिथियाँ (टिक करें):</b></div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">';
+        dates.forEach(function (dt, i) {
+          html += '<label style="border:1px solid #cbd5e1;border-radius:7px;padding:3px 8px;font-size:.76rem;cursor:pointer">' +
+            '<input type="checkbox" style="vertical-align:middle;margin-right:4px">' + (i + 1) + '. ' + lkFmt(dt) + '</label>';
+        });
+        html += '</div></div>';
+      });
+      html += '<div class="lk-card"><div class="lk-card-h" style="font-size:.86rem">⚠ नियम</div>' +
+        '<ul class="lk-rem-list" style="color:#475569">' +
+        '<li>उपाय सूर्योदय से सूर्यास्त के बीच करें; बीच में नागा न हो — नागा हो तो पुनः आरंभ करें।</li>' +
+        '<li>न्यूनतम 40 व अधिकतम 43 दिन निरंतर।</li>' +
+        '<li>वर्जित उपाय हेतु "उपाय नियम" श्रेणी देखें।</li></ul></div>';
+      return html;
+    }
+    function buildLkCalendar() {
+      var host = document.getElementById('lk-cal-body');
+      if (host) { host.innerHTML = lkCalendarHTML(); }
+    }
+    // esc helper (same as saved_charts) for safe HTML
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
     // Category dropdown → toggle the matching .lk-view.
     var sel = document.getElementById('lk-select');
     if (sel && !sel._bound) {
@@ -3668,6 +3723,16 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     if (pr) { pr.addEventListener('click', function () { window.ABPrintDoc('lk-report', 'Lal Kitab Report'); }); }
     var pc = document.getElementById('lk-print-checklist');
     if (pc) { pc.addEventListener('click', function () { window.ABPrintDoc('lk-checklist', 'Lal Kitab Upay Checklist'); }); }
+    var pcal = document.getElementById('lk-print-calendar');
+    if (pcal) {
+      pcal.addEventListener('click', function () {
+        buildLkCalendar();
+        var body = document.getElementById('lk-cal-body');
+        var html = '<div class="lkr-title">उपाय-कैलेंडर (Remedy Calendar)</div>' +
+          '<div class="lkr-sub">आज: ' + lkFmt(new Date()) + '</div>' + (body ? body.innerHTML : '');
+        window.ABPrintDoc({ html: html }, 'Lal Kitab Remedy Calendar');
+      });
+    }
 
     // ---- Topic search across every category. A chip (or typed text) collects
     // its synonym set, matching cards are cloned into the results view with an

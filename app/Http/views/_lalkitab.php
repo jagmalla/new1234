@@ -18,6 +18,7 @@ $ok = !empty($lk['ok']);
 $abbr = ['Sun' => 'Su', 'Moon' => 'Mo', 'Mars' => 'Ma', 'Mercury' => 'Me',
     'Jupiter' => 'Ju', 'Venus' => 'Ve', 'Saturn' => 'Sa', 'Rahu' => 'Ra', 'Ketu' => 'Ke'];
 $lkNorth = ['asc_sign' => 0, 'planets' => []];
+$lkCal = [];   // remedy-calendar payload: planets that need उपाय, with their वार
 if ($ok) {
     foreach ($lk['planets'] as $p) {
         $lkNorth['planets'][] = [
@@ -26,6 +27,17 @@ if ($ok) {
             'deg'   => 0,
             'retro' => !empty($p['retro']),
         ];
+        if (!empty($p['need_remedy'])) {
+            $rem = array_slice($p['remedies'], 0, 4);
+            if (trim((string) ($p['sheeghra'] ?? '')) !== '') { $rem[] = '⚡ शीघ्र: ' . $p['sheeghra']; }
+            $lkCal[] = [
+                'hi'       => $p['hi'],
+                'house_ord'=> $p['house_ord'],
+                'var'      => $p['var'],          // e.g. "रविवार" / "गुरुवार (सायं)"
+                'verdict'  => $p['verdict'],
+                'remedies' => array_values($rem),
+            ];
+        }
     }
 }
 
@@ -168,6 +180,7 @@ $scorePill = static function (int $score): string {
         <option value="drishti">👁 भाव दृष्टि / House Aspects</option>
         <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
         <option value="remedy">🛠 उपाय / Remedy</option>
+        <option value="calendar">🗓 उपाय-कैलेंडर / Remedy Calendar</option>
         <option value="rules">📜 उपाय नियम / Rules</option>
         <option value="reference">📚 संदर्भ चक्र / Reference</option>
         <option value="search" hidden>🔍 खोज परिणाम / Search Results</option>
@@ -833,6 +846,16 @@ $scorePill = static function (int $score): string {
         <?php endforeach; ?>
       </div>
 
+      <!-- ===== REMEDY CALENDAR (personalised, dated — filled by JS) ===== -->
+      <div class="lk-view" data-lk="calendar">
+        <h3 class="lk-h">🗓 उपाय-कैलेंडर — व्यक्तिगत योजना</h3>
+        <div class="lk-txt" style="margin-bottom:9px">जिन ग्रहों के उपाय आवश्यक हैं, उनका उपाय उसी ग्रह के <b>वार</b> को आरंभ कर <b>40–43 दिन निरंतर</b> करें। नीचे आज से आरंभ-तिथियाँ व साप्ताहिक तिथियाँ दी हैं।</div>
+        <div class="lk-flt" style="margin-bottom:8px">
+          <button type="button" id="lk-print-calendar" class="lk-btn">🖨 कैलेंडर Print करें</button>
+        </div>
+        <div id="lk-cal-body"></div>
+      </div>
+
       <!-- ===== RULES (do / don't) ===== -->
       <div class="lk-view" data-lk="rules">
         <?php $ru = $lk['rules']; ?>
@@ -1093,5 +1116,6 @@ $ssAct = $act['sadesati'] ?? null;
 
 <script>
   window.AB_LALKITAB = <?= json_encode($lkNorth, JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_LK_CAL   = <?= json_encode($lkCal, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <?php endif; ?>
