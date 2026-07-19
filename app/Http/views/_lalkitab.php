@@ -883,8 +883,32 @@ $scorePill = static function (int $score): string {
 
       <!-- ===== REMEDY ===== -->
       <div class="lk-view" data-lk="remedy">
-        <?php $rm = $lk['remedy']; ?>
-        <h3 class="lk-h">उपाय / टोटके (Remedies)</h3>
+        <?php $rm = $lk['remedy']; $rp = $lk['remedy_plan'] ?? []; ?>
+        <h3 class="lk-h">उपाय — श्रेणी-अनुसार योजना (सरल पहले)</h3>
+        <?php
+          $rpTiers = [
+            'quick'   => ['⚡ तुरंत / सरल उपाय', 'आज से शुरू करें — निःशुल्क व शीघ्र फल', '#166534', '#f0fdf4', '#bbf7d0'],
+            'main'    => ['🎯 मुख्य उपाय (नियमित)', '40–43 दिन निरंतर — भावगत टोटके', '#854d0e', '#fffbeb', '#fde68a'],
+            'worship' => ['🛕 पूजा / उपासना व दान', 'श्रद्धा-अनुसार', '#1e40af', '#eff6ff', '#bfdbfe'],
+            'big'     => ['🏺 बड़े / स्थापना उपाय', 'एक-बार — कुछ खर्च संभव, सोच-समझकर', '#7c2d12', '#fff7ed', '#fed7aa'],
+          ];
+          $anyPlan = false; foreach ($rpTiers as $tk => $x) { if (!empty($rp[$tk])) { $anyPlan = true; break; } }
+        ?>
+        <?php if ($anyPlan): ?>
+          <?php foreach ($rpTiers as $tk => $meta): if (empty($rp[$tk])) { continue; } ?>
+            <div class="lk-card" style="border-color:<?= $meta[4] ?>;background:<?= $meta[3] ?>">
+              <div class="lk-card-h" style="color:<?= $meta[2] ?>"><?= $meta[0] ?> <span style="font-weight:400;font-size:.74rem;color:#64748b">— <?= $meta[1] ?></span></div>
+              <ul class="lk-rem-list" style="color:<?= $meta[2] ?>">
+                <?php foreach ($rp[$tk] as $it): ?><li><b><?= $h((string) $it['hi']) ?>:</b> <?= $h((string) $it['text']) ?></li><?php endforeach; ?>
+              </ul>
+            </div>
+          <?php endforeach; ?>
+          <div class="lk-txt" style="color:#64748b;font-size:.78rem;margin:4px 0 10px">क्रम: पहले ⚡ सरल उपाय शुरू करें, फिर 🎯 मुख्य; 🏺 बड़े उपाय सोच-समझकर। "उपाय-कैलेंडर" में तिथियाँ देखें।</div>
+        <?php else: ?>
+          <div class="lk-card good"><div class="lk-txt">✅ कोई ग्रह गंभीर अशुभ नहीं — विशेष उपाय आवश्यक नहीं; नीचे सामान्य उपाय पर्याप्त।</div></div>
+        <?php endif; ?>
+
+        <h3 class="lk-h" style="margin-top:14px">अन्य उपाय (संदर्भ)</h3>
         <?php if ($rm['yuti']): ?>
           <div class="lk-card">
             <div class="lk-card-h">ग्रह-युति उपाय (एक ही भाव में ग्रह)</div>

@@ -119,6 +119,7 @@ final class LalKitabEngine
             'sadesati'    => self::sadeSatiReadings($moonSign, $active),
             'manglik'     => self::manglikReadings($chart, $lagnaSign, $house),
             'remedy'      => self::remedyReadings($house, $occupants),
+            'remedy_plan' => self::remedyPlan($planets),
             'ayu'         => self::ayuReadings($house, $occupants, $chart),
             'health'      => self::healthReadings($planets),
             'bhavan'      => LalKitabData::section('bhavan'),
@@ -1099,6 +1100,44 @@ final class LalKitabEngine
             'parihar'    => LalKitabData::section('manglik_parihar'),
             'vichar'     => LalKitabData::section('manglik_vichar'),
         ];
+    }
+
+    /**
+     * उपाय की श्रेणी / लागत — an effort-graded action plan for the afflicted
+     * planets so the native knows which remedies to start with. Tiers, easiest
+     * first:
+     *   ⚡ तुरंत/सरल  — शीघ्र उपाय (immediate, no cost)
+     *   🎯 मुख्य      — भावगत उपाय (regular टोटके, 40–43 दिन)
+     *   🛕 पूजा-दान   — उपासना/पाठ व दान
+     *   🏺 बड़े उपाय   — स्थापना/धारण (one-time, may cost)
+     *
+     * @param list<array<string,mixed>> $planets
+     * @return array<string,list<array{hi:string,text:string}>>
+     */
+    private static function remedyPlan(array $planets): array
+    {
+        $sh  = LalKitabData::section('sheeghra');
+        $bg  = LalKitabData::section('bhavgat_upay');
+        $pd  = LalKitabData::section('puja_daan');
+        $stv = LalKitabData::section('sthapana_vastu');
+
+        $tiers = ['quick' => [], 'main' => [], 'worship' => [], 'big' => []];
+        foreach ($planets as $pe) {
+            if (empty($pe['is_ashubh']) && ($pe['status'] ?? '') !== 'नीच') { continue; }
+            $p = $pe['planet'];
+            $hi = $pe['hi'];
+            $h = (int) $pe['house'];
+            if (!empty($sh[$p])) {
+                $tiers['quick'][] = ['hi' => $hi, 'text' => (string) $sh[$p]];
+            }
+            foreach (array_slice($bg[$p][(string) $h] ?? [], 0, 3) as $t) {
+                $tiers['main'][] = ['hi' => $hi, 'text' => (string) $t];
+            }
+            if (!empty($pd[$p]['upasana'])) { $tiers['worship'][] = ['hi' => $hi, 'text' => 'उपासना/पाठ: ' . $pd[$p]['upasana']]; }
+            if (!empty($pd[$p]['daan'])) { $tiers['worship'][] = ['hi' => $hi, 'text' => 'दान: ' . $pd[$p]['daan']]; }
+            if (!empty($stv[$p])) { $tiers['big'][] = ['hi' => $hi, 'text' => (string) $stv[$p]]; }
+        }
+        return $tiers;
     }
 
     /**
