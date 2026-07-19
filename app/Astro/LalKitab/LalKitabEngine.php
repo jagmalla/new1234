@@ -276,6 +276,28 @@ final class LalKitabEngine
             $needRemedy = $isAshubh || $status === 'नीच' || ($doshaOf[$p] ?? []) !== [];
             $remedies = $bg[$p][(string) $h] ?? [];
 
+            // 6) फल — प्लेन-भाषा निष्कर्ष: कारक-भाव + स्थित-भाव के जीवन-क्षेत्र
+            //    (क्या प्रभावित होगा) + verdict-अनुसार क्या होगा + ठोस applied-note
+            //    प्रभाव। यही "आखिर होगा क्या" वाला उत्तर है।
+            $areaHouses = self::parseHouses((string) ($gp[$p]['karak_bhav'] ?? ''));
+            if (!in_array($h, $areaHouses, true)) { $areaHouses[] = $h; }
+            sort($areaHouses);
+            $areas = [];
+            foreach ($areaHouses as $ah) {
+                if (isset(LalKitabData::HOUSE_TOPIC[$ah])) { $areas[] = LalKitabData::HOUSE_TOPIC[$ah]; }
+            }
+            $effectVerb = $verdict === 'शुभ'
+                ? 'इन क्षेत्रों में उन्नति, लाभ व अनुकूल फल मिलेगा।'
+                : ($verdict === 'अशुभ'
+                    ? 'इन क्षेत्रों में बाधा, कष्ट व हानि की सम्भावना है — उपाय आवश्यक।'
+                    : 'इन क्षेत्रों में मिश्रित/सामान्य फल रहेगा।');
+            if ($isAsleep) {
+                $effectVerb .= ' (ग्रह सुप्त होने से यह फल देर से व दबे रूप में प्रकट होगा।)';
+            }
+            $predHead = LalKitabData::planetHi($p) . ' के कारक क्षेत्र — ' . implode('; ', array_unique($areas))
+                . ' — पर इस स्थिति का असर पड़ता है। ' . $effectVerb;
+            $predEffects = array_map(static fn ($na) => (string) $na['text'], $notesApplied);
+
             $out[] = [
                 'planet'    => $p,
                 'hi'        => LalKitabData::planetHi($p),
@@ -297,6 +319,8 @@ final class LalKitabEngine
                 'out_hits'  => $outHits,
                 'notes_applied' => $notesApplied,
                 'notes_ref' => $notesRef,
+                'pred_head' => $predHead,      // plain-language "क्या होगा" headline
+                'pred_effects' => $predEffects, // concrete applied-note effects
                 'need_remedy' => $needRemedy,
                 'var'       => $gp[$p]['var'] ?? '',
                 'karak_bhav'=> $gp[$p]['karak_bhav'] ?? '',

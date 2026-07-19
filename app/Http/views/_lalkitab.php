@@ -296,15 +296,34 @@ $scorePill = static function (int $score): string {
               <?php endif; ?>
             </div>
 
-            <!-- इस कुंडली में लागू फल (टिप्पणी के जाँचे हुए नियम) -->
+            <!-- 📢 फल — आखिर क्या होगा (सब निष्कर्षों का सार, जीवन-क्षेत्र सहित) -->
+            <?php if (trim((string) ($p['pred_head'] ?? '')) !== ''):
+                $predBg = $p['verdict'] === 'अशुभ' ? 'background:#fef2f2;border-color:#fecaca;color:#7f1d1d'
+                    : ($p['verdict'] === 'शुभ' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#14532d'
+                    : 'background:#fffbeb;border-color:#fde68a;color:#713f12'); ?>
+              <div style="border:1px solid;border-radius:9px;padding:8px 11px;margin-top:8px;<?= $predBg ?>">
+                <div style="font-weight:700;font-size:.84rem;margin-bottom:3px">📢 फल — क्या होगा</div>
+                <div style="font-size:.85rem;line-height:1.6"><?= $h((string) $p['pred_head']) ?></div>
+                <?php if (!empty($p['pred_effects'])): ?>
+                  <ul style="margin:5px 0 0;padding-left:18px;font-size:.83rem;line-height:1.55">
+                    <?php foreach ($p['pred_effects'] as $pe): ?><li><?= $h((string) $pe) ?></li><?php endforeach; ?>
+                  </ul>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
+
+            <!-- नियम-आधार (क्यों) — the applied टिप्पणी clauses with the reason
+                 each one holds; folded, since the फल block already states them. -->
             <?php if (!empty($p['notes_applied'])): ?>
-              <div class="lk-sub" style="margin-top:7px"><b>📌 इस कुंडली में लागू फल:</b></div>
-              <?php foreach ($p['notes_applied'] as $na): ?>
-                <div class="lk-txt" style="margin:3px 0;padding-left:10px;border-left:3px solid #0f766e">
-                  <?= $h((string) $na['text']) ?>
-                  <span style="font-size:.72rem;color:#0f766e">(<?= $h((string) $na['why']) ?>)</span>
-                </div>
-              <?php endforeach; ?>
+              <details style="margin-top:5px">
+                <summary style="cursor:pointer;font-size:.76rem;color:#0f766e">📌 नियम-आधार — यह फल किन नियमों से बना (<?= count($p['notes_applied']) ?>)</summary>
+                <?php foreach ($p['notes_applied'] as $na): ?>
+                  <div class="lk-txt" style="margin:3px 0;padding-left:10px;border-left:3px solid #0f766e">
+                    <?= $h((string) $na['text']) ?>
+                    <span style="font-size:.72rem;color:#0f766e">(<?= $h((string) $na['why']) ?>)</span>
+                  </div>
+                <?php endforeach; ?>
+              </details>
             <?php endif; ?>
             <?php if (!empty($p['notes_ref'])): ?>
               <details style="margin-top:5px">
