@@ -502,6 +502,113 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         </div>
     </div>
 
+    <!-- ============ लाल किताब मिलान (Lal Kitab compatibility) ============ -->
+    <?php $lk = $view['lkMilan'] ?? null; if ($lk !== null && !empty($lk['ok'])):
+        // tone -> chip/border class + Hindi tag
+        $toneChip = ['pos' => 'k-full', 'mix' => 'k-part', 'neg' => 'k-zero'];
+        $toneBar  = ['pos' => '#22c55e', 'mix' => '#f59e0b', 'neg' => '#ef4444'];
+        $toneTag  = ['pos' => 'शुभ', 'mix' => 'मिश्र', 'neg' => 'अशुभ'];
+        $lkGauge  = 'g-' . ($lk['tier'] === 'shubh' ? 'shubh' : ($lk['tier'] === 'ashubh' ? 'ashubh' : 'mishrit'));
+    ?>
+    <style>
+        .lkm-axes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        @media (max-width: 820px) { .lkm-axes { grid-template-columns: 1fr; } }
+        .lkm-axis { border: 1px solid var(--line); border-left-width: 5px; border-radius: 10px; padding: 12px 14px; background: #fff; }
+        .lkm-axis h3 { font-size: 1rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .lkm-axis .rsn { font-size: .9rem; color: var(--ink); }
+        .lkm-axis ul { margin: 8px 0 0; padding-left: 18px; font-size: .85rem; color: var(--ink-soft); }
+        .lkm-axis ul li { margin-bottom: 3px; }
+        .lkm-tag { font-weight: 800; border-radius: 999px; padding: 2px 12px; font-size: .78rem; white-space: nowrap; }
+        table.lkm { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 6px; }
+        table.lkm th, table.lkm td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+        table.lkm th { color: var(--ink-soft); font-weight: 700; }
+        table.lkm td.stat { white-space: nowrap; }
+        .st-bad { color: #991b1b; font-weight: 700; }
+        .st-good { color: #166534; font-weight: 700; }
+        .lkm-rem { border-left: 4px solid var(--accent); background: #fff8ef; border-radius: 0 8px 8px 0; padding: 10px 14px; margin-top: 12px; }
+        .lkm-rem li { margin-bottom: 5px; font-size: .9rem; }
+        .lkm-rem .who { font-weight: 700; color: var(--accent); }
+    </style>
+    <div class="card mt">
+        <h2 class="sec-title">📕 लाल किताब मिलान — Lal Kitab Compatibility</h2>
+        <div class="res-head">
+            <div class="mini">
+                <div class="nm">वर — <?= $h($lk['nameA']) ?></div>
+                <div class="dt">लाल किताब तेवा</div>
+            </div>
+            <div class="gauge <?= $lkGauge ?>">
+                <div class="big"><?= (int) $lk['percent'] ?><span style="font-size:1.1rem">%</span></div>
+                <div class="lbl">अनुकूलता</div>
+            </div>
+            <div class="mini">
+                <div class="nm">कन्या — <?= $h($lk['nameB']) ?></div>
+                <div class="dt">लाल किताब तेवा</div>
+            </div>
+        </div>
+        <div class="warn" style="background:#f8fafc;border-color:var(--line);color:var(--ink);font-weight:600;margin-top:12px">
+            <?= $h($lk['tier_hi']) ?> — <?= $h($lk['verdict']) ?>
+        </div>
+
+        <!-- three axes: मंगल · पितृ-ऋण · ग्रह-स्थिति -->
+        <div class="lkm-axes" style="margin-top:14px">
+            <?php foreach ($lk['axes'] as $ax): $t = (string) $ax['tone']; ?>
+                <div class="lkm-axis" style="border-left-color:<?= $toneBar[$t] ?? '#94a3b8' ?>">
+                    <h3><?= $h($ax['label']) ?>
+                        <span class="lkm-tag <?= $toneChip[$t] ?? '' ?>"><?= $h($toneTag[$t] ?? '') ?></span>
+                    </h3>
+                    <div class="rsn"><?= $h($ax['reason']) ?></div>
+                    <?php if (!empty($ax['detail'])): ?>
+                        <ul><?php foreach ($ax['detail'] as $d): ?><li><?= $h($d) ?></li><?php endforeach; ?></ul>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- planet-by-planet harmony -->
+        <?php if (!empty($lk['pairs'])): ?>
+        <h3 style="font-size:1.02rem;margin:16px 0 4px">ग्रह-स्थिति तुलना</h3>
+        <div style="overflow-x:auto">
+        <table class="lkm">
+            <thead><tr>
+                <th>ग्रह</th>
+                <th><?= $h($lk['nameA']) ?> (भाव · स्थिति)</th>
+                <th><?= $h($lk['nameB']) ?> (भाव · स्थिति)</th>
+                <th>निष्कर्ष</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($lk['pairs'] as $pr): ?>
+                <tr>
+                    <td><b><?= $h($pr['hi']) ?></b></td>
+                    <td class="stat"><?= (int) $pr['a_house'] ?> · <span class="<?= $pr['a_bad'] ? 'st-bad' : 'st-good' ?>"><?= $h($pr['a_status']) ?></span></td>
+                    <td class="stat"><?= (int) $pr['b_house'] ?> · <span class="<?= $pr['b_bad'] ? 'st-bad' : 'st-good' ?>"><?= $h($pr['b_status']) ?></span></td>
+                    <td>
+                        <span class="lkm-tag <?= $toneChip[$pr['tone']] ?? '' ?>" style="font-size:.7rem"><?= $h($toneTag[$pr['tone']] ?? '') ?></span>
+                        <?= $h($pr['note']) ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        </div>
+        <?php endif; ?>
+
+        <!-- combined remedies for every negative finding -->
+        <?php if (!empty($lk['remedies'])): ?>
+        <div class="lkm-rem">
+            <div style="font-weight:700;color:var(--accent);margin-bottom:6px">🛠 उपाय (मिलान के अनुसार)</div>
+            <ul style="margin:0;padding-left:18px">
+                <?php foreach ($lk['remedies'] as $rm): ?>
+                    <li><span class="who"><?= $h($rm['who']) ?><?= trim((string) $rm['hi']) !== '' ? ' · ' . $h($rm['hi']) : '' ?>:</span> <?= $h($rm['text']) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php else: ?>
+        <div style="margin-top:12px;color:#166534;font-weight:600">✓ किसी दोष के लिए उपाय की आवश्यकता नहीं — मिलान शुभ है।</div>
+        <?php endif; ?>
+    </div>
+
+    <?php endif; ?>
+
     <?php endif; ?>
         </div><!-- /.content -->
     </div><!-- /.layout -->

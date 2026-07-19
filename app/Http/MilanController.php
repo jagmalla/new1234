@@ -7,6 +7,8 @@ use AutoBusiness\Astro\Calc\CalculationEngine;
 use AutoBusiness\Astro\Calc\Charts;
 use AutoBusiness\Astro\Calc\Drishti;
 use AutoBusiness\Astro\Ephemeris\EphemerisFactory;
+use AutoBusiness\Astro\LalKitab\LalKitabEngine;
+use AutoBusiness\Astro\LalKitab\LalKitabMilan;
 use AutoBusiness\Astro\Milan\GunaMilan;
 use AutoBusiness\Astro\Milan\MilanRepository;
 use AutoBusiness\Astro\Time\JulianDay;
@@ -50,6 +52,18 @@ final class MilanController
                 $cfg
             );
             $milan['rules_error'] = MilanRepository::lastError();
+
+            // लाल किताब कुंडली-मिलान — compute each Lal Kitab teva, then match
+            // them across मंगल / पितृ-ऋण / ग्रह-स्थिति. Independent of the guna
+            // engine; never blanks the page if a bank entry is missing.
+            $lkBoy = LalKitabEngine::compute($boyChart['chart']);
+            $lkGirl = LalKitabEngine::compute($girlChart['chart']);
+            $lkMilan = LalKitabMilan::match(
+                $lkBoy,
+                $lkGirl,
+                $boyIn['name'] !== '' ? $boyIn['name'] : 'वर',
+                $girlIn['name'] !== '' ? $girlIn['name'] : 'कन्या'
+            );
         } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
@@ -61,6 +75,7 @@ final class MilanController
             'lang' => $lang,
             'error' => $error,
             'milan' => $milan,
+            'lkMilan' => $lkMilan ?? null,
             'boy' => $boyChart,   // ['chart'=>..,'d1'=>payload,'d9'=>payload,'planets'=>rows]
             'girl' => $girlChart,
         ];
