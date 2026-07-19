@@ -177,7 +177,7 @@ $scorePill = static function (int $score): string {
         <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
         <option value="varsh">📅 वर्ष कुंडली ज्ञान / Annual</option>
         <option value="inter">🔗 ग्रह अंतर्संबंध / Planet Inter-effects</option>
-        <option value="supt">😴 सुप्त ग्रह / Sleeping Planets</option>
+        <option value="supt">😴 सुप्त / निष्फल ग्रह / Sleeping &amp; Weak</option>
         <option value="drishti">👁 भाव दृष्टि / House Aspects</option>
         <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
         <option value="remedy">🛠 उपाय / Remedy</option>
@@ -814,10 +814,45 @@ $scorePill = static function (int $score): string {
         <?php endforeach; endif; ?>
       </div>
 
-      <!-- ===== SUPT (sleeping planets) ===== -->
+      <!-- ===== SUPT + special weak states ===== -->
       <div class="lk-view" data-lk="supt">
-        <h3 class="lk-h">सुप्त ग्रह (Sleeping Planets)</h3>
-        <div class="lk-txt" style="margin-bottom:9px">लाल किताब में हर भाव में बैठा ग्रह तब तक "सुप्त" (सोया) रहता है जब तक उस भाव का <b>जगाने वाला ग्रह</b> कुंडली में उपस्थित न हो। नीचे प्रत्येक ग्रह की जागृत/सुप्त स्थिति है।</div>
+        <?php $sp = $lk['special'] ?? ['combust' => [], 'ratandh' => false, 'neech' => []]; ?>
+        <h3 class="lk-h">विशेष निष्फल/दुर्बल अवस्थाएँ</h3>
+        <div class="lk-txt" style="margin-bottom:9px">जिन अवस्थाओं में ग्रह अपना फल ठीक से नहीं दे पाता — अस्त (सूर्य के अति निकट), रतांध योग, नीच व सुप्त। ये गणना-सिद्ध हैं।</div>
+
+        <?php if (!empty($sp['combust'])): ?>
+          <div class="lk-card bad">
+            <div class="lk-card-h">🔥 अस्त ग्रह (Combust — जला हुआ)</div>
+            <div class="lk-txt">सूर्य के अति निकट होने से इनका फल दुर्बल/निष्फल हो जाता है:</div>
+            <?php foreach ($sp['combust'] as $c): ?>
+              <div class="lk-sub"><b><?= $h((string) $c['hi']) ?></b> — सूर्य से केवल <?= $h((string) $c['deg']) ?>° दूर (<?= $h((string) $c['house_ord']) ?> भाव) — <span style="color:#991b1b">अस्त</span></div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+
+        <?php if (!empty($sp['ratandh'])): ?>
+          <div class="lk-card bad">
+            <div class="lk-card-h">🌑 रतांध ग्रह योग</div>
+            <div class="lk-txt">सूर्य चौथे व शनि सातवें भाव में — रतांध (रात्रि-अंध) ग्रह योग बनता है; ग्रह अपना पूर्ण फल नहीं देख पाते।</div>
+          </div>
+        <?php endif; ?>
+
+        <?php if (!empty($sp['neech'])): ?>
+          <div class="lk-card bad">
+            <div class="lk-card-h">⬇ नीच ग्रह</div>
+            <div class="lk-txt">नीच राशि में होने से इनका फल दुर्बल — उपाय "ग्रह फल" में देखें:</div>
+            <?php foreach ($sp['neech'] as $n): ?>
+              <div class="lk-sub"><b><?= $h((string) $n['hi']) ?></b> — <?= $h((string) $n['house_ord']) ?> भाव में (नीच)</div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+
+        <?php if (empty($sp['combust']) && empty($sp['ratandh']) && empty($sp['neech'])): ?>
+          <div class="lk-card good"><div class="lk-txt">✅ कोई ग्रह अस्त/रतांध/नीच नहीं — इस दृष्टि से सभी ग्रह फल देने में सक्षम।</div></div>
+        <?php endif; ?>
+
+        <h3 class="lk-h" style="margin-top:14px">सुप्त / जागृत ग्रह</h3>
+        <div class="lk-txt" style="margin-bottom:9px">लाल किताब में हर भाव में बैठा ग्रह तब तक "सुप्त" (सोया) रहता है जब तक उस भाव का <b>जगाने वाला ग्रह</b> कुंडली में उपस्थित न हो।</div>
         <?php foreach ($lk['supt'] as $s): ?>
           <div class="lk-card <?= $s['awake'] ? 'good' : 'bad' ?>">
             <div class="lk-card-h">

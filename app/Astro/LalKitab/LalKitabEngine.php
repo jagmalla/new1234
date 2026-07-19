@@ -125,6 +125,7 @@ final class LalKitabEngine
             'varsh_gyan'  => self::varshGyanReadings($age),
             'rules'       => self::ruleReadings(),
             'supt'        => $supt,
+            'special'     => self::specialStates($chart, $house, $planets),
             'drishti'     => self::drishtiReadings($house, $occupants),
             'reference'   => self::referenceReadings($age),
             'age'         => $age,
@@ -1316,6 +1317,49 @@ final class LalKitabEngine
             ];
         }
         return $out;
+    }
+
+    /**
+     * विशेष निष्फल/दुर्बल अवस्थाएँ — conditions in which a planet cannot give its
+     * result properly (Lal Kitab "अंधा/रतांध" family), computed exactly:
+     *   - अस्त (combust): planet within the classical combustion orb of the Sun
+     *     (astronomical — Moon 12°, Mars 17°, Mercury 13°, Jupiter 11°, Venus 9°,
+     *     Saturn 15°); such a planet is "जला हुआ" and gives feeble result.
+     *   - रतांध ग्रह योग: सूर्य 4थे व शनि 7वें भाव में (भविष्यवाणी सूत्र 12).
+     *   - नीच ग्रह: debilitated planets (weak/blind-like result).
+     *
+     * @param array<string,mixed> $chart
+     * @param array<string,int> $house
+     * @param list<array<string,mixed>> $planets   planetReadings output (for नीच)
+     * @return array<string,mixed>
+     */
+    private static function specialStates(array $chart, array $house, array $planets): array
+    {
+        $P = $chart['planets'] ?? [];
+        $sunLon = (float) ($P['Sun']['sidereal_lon'] ?? 0.0);
+        $orb = ['Moon' => 12.0, 'Mars' => 17.0, 'Mercury' => 13.0, 'Jupiter' => 11.0, 'Venus' => 9.0, 'Saturn' => 15.0];
+        $combust = [];
+        foreach ($orb as $p => $o) {
+            if (!isset($P[$p])) { continue; }
+            $d = abs(fmod(((float) $P[$p]['sidereal_lon'] - $sunLon) + 540.0, 360.0) - 180.0);
+            if ($d <= $o) {
+                $combust[] = [
+                    'hi' => LalKitabData::planetHi($p),
+                    'deg' => round($d, 1),
+                    'house_ord' => LalKitabData::houseOrdinalHi($house[$p] ?? 0),
+                ];
+            }
+        }
+        // रतांध योग — exact from sutra 12.
+        $ratandh = (($house['Sun'] ?? 0) === 4) && (($house['Saturn'] ?? 0) === 7);
+        // नीच ग्रह from the computed planet analysis.
+        $neech = [];
+        foreach ($planets as $pe) {
+            if (($pe['status'] ?? '') === 'नीच') {
+                $neech[] = ['hi' => $pe['hi'], 'house_ord' => $pe['house_ord']];
+            }
+        }
+        return ['combust' => $combust, 'ratandh' => $ratandh, 'neech' => $neech];
     }
 
     /**
