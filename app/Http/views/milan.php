@@ -206,6 +206,52 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
             body { background: #fff; } .noprint { display: none !important; }
             .card { box-shadow: none; break-inside: avoid; }
         }
+        /* --- per-side Save / Open (Kundali Milan) --- */
+        .fcol-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .fcol-head h2 { margin-bottom: 0; }
+        .fcol-acts { display: flex; gap: 6px; }
+        .mlk-btn { background: var(--accent); color: #fff; border: 0; border-radius: 7px; padding: 6px 12px;
+            font: inherit; font-weight: 700; font-size: .82rem; cursor: pointer; line-height: 1.2; }
+        .mlk-btn:hover { filter: brightness(1.07); }
+        .mlk-btn-ghost { background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+        .mlk-btn-ghost:hover { background: #faf5ef; }
+        .mlk-btn-sm { padding: 5px 10px; font-size: .78rem; }
+        /* modal overlays */
+        .mlk-modal-overlay { position: fixed; inset: 0; z-index: 1200; background: rgba(20,16,10,.5);
+            display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .mlk-modal-overlay.hidden { display: none; }
+        .mlk-modal { background: #fff; border-radius: 12px; width: min(560px, 96vw); max-height: 88vh; overflow-y: auto;
+            box-shadow: 0 12px 40px rgba(0,0,0,.28); }
+        .mlk-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 1.02rem; }
+        .mlk-modal-x { background: none; border: 0; font-size: 1.1rem; cursor: pointer; color: var(--ink-soft); }
+        .mlk-modal-body { padding: 14px 16px; }
+        .mlk-modal-foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+        .mlk-open-count { color: var(--ink-soft); font-weight: 400; font-size: .82rem; }
+        .mlk-open-search { padding: 10px 16px 0; }
+        .mlk-open-search input { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; }
+        .mlk-open-list { padding: 8px 16px 14px; max-height: 56vh; overflow-y: auto; }
+        .mlk-open-empty { color: var(--ink-soft); text-align: center; padding: 22px 8px; }
+        .mlk-open-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center;
+            border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; margin-bottom: 8px; }
+        .mlk-open-name { font-weight: 700; }
+        .mlk-open-meta { font-size: .82rem; color: var(--ink-soft); }
+        .mlk-open-acts { display: flex; gap: 6px; }
+        .mlk-open-when { grid-column: 1 / -1; font-size: .72rem; color: #94a3b8; }
+        .mlk-save-sum { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; margin-bottom: 12px; font-size: .9rem; }
+        .mlk-save-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .mlk-save-grid label { display: block; font-size: .8rem; font-weight: 700; color: var(--ink-soft); }
+        .mlk-save-grid input { width: 100%; margin-top: 3px; border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; font: inherit; }
+        .mlk-req { color: #dc2626; }
+        .mlk-save-err { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 7px; padding: 8px 10px; margin-top: 10px; font-size: .88rem; }
+        .mlk-save-err.hidden { display: none; }
+        .mlk-note { font-size: .78rem; color: var(--ink-soft); margin: 8px 0 0; }
+        .mlk-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 1300;
+            padding: 10px 16px; border-radius: 9px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+        .mlk-toast.hidden { display: none; }
+        .mlk-toast-ok { background: #ecfdf5; color: #15803d; border: 1px solid #a7f3d0; }
+        .mlk-toast-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        @media (max-width: 520px) { .mlk-save-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -317,7 +363,13 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
                 $title = $p === 'boy' ? 'वर (Boy)' : 'कन्या (Girl)';
                 ?>
                 <div>
-                    <h2><?= $h($title) ?></h2>
+                    <div class="fcol-head">
+                        <h2><?= $h($title) ?></h2>
+                        <div class="fcol-acts">
+                            <button type="button" class="mlk-btn mlk-btn-ghost" data-mlk-open="<?= $p ?>" title="सहेजा गया चार्ट इस ओर खोलें">📂 Open</button>
+                            <button type="button" class="mlk-btn" data-mlk-save="<?= $p ?>" title="इस ओर का चार्ट सहेजें">💾 Save</button>
+                        </div>
+                    </div>
                     <div class="fld"><label>नाम / Name</label><input name="<?= $p ?>_name" value="<?= $h($in['name']) ?>"></div>
                     <div class="row2">
                         <div class="fld"><label>जन्म तिथि (DD-MM-YYYY)</label><input name="<?= $p ?>_date" class="fmt-date" value="<?= $h($in['date']) ?>" placeholder="DD-MM-YYYY"></div>
@@ -666,6 +718,45 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
   if (window.ABDate && mForm) { window.ABDate.guardForm(mForm, fields); }
 })();
 </script>
+
+<!-- ===== Per-side Save / Open (Kundali Milan) — shares storage with birth chart ===== -->
+<div id="mlk-open-modal" class="mlk-modal-overlay hidden" aria-hidden="true">
+    <div class="mlk-modal" role="dialog" aria-modal="true">
+        <div class="mlk-modal-head"><span id="mlk-open-title">📂 सहेजे गए चार्ट खोलें</span>
+            <span id="mlk-open-count" class="mlk-open-count"></span>
+            <button type="button" class="mlk-modal-x" data-mlk-close aria-label="बंद करें">✕</button></div>
+        <div class="mlk-open-search">
+            <input id="mlk-open-q" type="text" autocomplete="off" placeholder="🔎 नाम, फ़ोन, email, शहर, स्थान या तारीख़ से खोजें…">
+        </div>
+        <div id="mlk-open-list" class="mlk-open-list"></div>
+    </div>
+</div>
+
+<div id="mlk-save-modal" class="mlk-modal-overlay hidden" aria-hidden="true">
+    <div class="mlk-modal" role="dialog" aria-modal="true">
+        <div class="mlk-modal-head">💾 चार्ट सहेजें — Profile
+            <button type="button" class="mlk-modal-x" data-mlk-close aria-label="बंद करें">✕</button></div>
+        <div class="mlk-modal-body">
+            <div id="mlk-save-sum" class="mlk-save-sum"></div>
+            <div class="mlk-save-grid">
+                <label>नाम (Name) <span class="mlk-req">*</span><input id="mlk-sv-name" type="text" autocomplete="off"></label>
+                <label>फ़ोन नंबर (Phone)<input id="mlk-sv-phone" type="text" inputmode="tel" autocomplete="off"></label>
+                <label>Email ID<input id="mlk-sv-email" type="email" autocomplete="off"></label>
+                <label>पता (Address)<input id="mlk-sv-address" type="text" autocomplete="off"></label>
+                <label>शहर (City)<input id="mlk-sv-city" type="text" autocomplete="off"></label>
+                <label>देश (Country)<input id="mlk-sv-country" type="text" autocomplete="off"></label>
+            </div>
+            <div id="mlk-save-err" class="mlk-save-err hidden"></div>
+            <p class="mlk-note">* नाम तथा जन्म-तिथि/समय/स्थान अनिवार्य हैं; शेष विवरण optional। चार्ट जन्म-कुंडली पेज के समान स्थान पर सहेजा जाता है।</p>
+        </div>
+        <div class="mlk-modal-foot">
+            <button type="button" class="mlk-btn" id="mlk-save-confirm">💾 सहेजें / Save</button>
+            <button type="button" class="mlk-btn mlk-btn-ghost" data-mlk-close>रद्द करें / Cancel</button>
+        </div>
+    </div>
+</div>
+<div id="mlk-toast" class="mlk-toast hidden" role="status" aria-live="polite"></div>
+<script src="<?= $h($asset('/assets/js/milan_charts.js')) ?>"></script>
 
 <!-- Prediction-text translation (same as /calc) so the language toggle works here too. -->
 <script src="<?= $h($asset('/assets/js/translate.js')) ?>"></script>

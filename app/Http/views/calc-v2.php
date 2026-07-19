@@ -1255,15 +1255,15 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <div class="l2-picker" style="flex:1; margin-bottom:0">
                 <span class="pick-tag">Select ▾</span>
                 <select id="pred-select" class="l2-select" aria-label="फलादेश चुनें" style="margin-bottom:0">
-                    <option value="general" selected>General Overview</option>
-                    <option value="dasha">Dasha (दशा)</option>
-                    <option value="grah">Planet (ग्रह)</option>
-                    <option value="bhav">House (भाव)</option>
-                    <option value="bhavesh">Bhavesh (भावेश)</option>
-                    <option value="karak">Karak (कारक)</option>
-                    <option value="yoga">Kundali Yog (योग)</option>
-                    <option value="dosha">Dosha (दोष व परिहार)</option>
-                    <option value="shaap">Shrap (पूर्वशाप व सन्तान)</option>
+                    <option value="general" selected>🔎 General Overview</option>
+                    <option value="dasha">⏳ Dasha (दशा)</option>
+                    <option value="grah">🪐 Planet (ग्रह)</option>
+                    <option value="bhav">🏠 House (भाव)</option>
+                    <option value="bhavesh">🏛 Bhavesh (भावेश)</option>
+                    <option value="karak">🎯 Karak (कारक)</option>
+                    <option value="yoga">✨ Kundali Yog (योग)</option>
+                    <option value="dosha">⚠️ Dosha (दोष व परिहार)</option>
+                    <option value="shaap">🧬 Shrap (पूर्वशाप व सन्तान)</option>
                     <option value="search" hidden>🔍 खोज परिणाम</option>
                 </select>
                 </div>
@@ -2163,13 +2163,13 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <div class="l2-picker" style="margin-bottom:10px">
                     <span class="pick-tag">Varshaphal Prediction ▾</span>
                     <select id="vp-pred-type" class="l2-select">
-                        <option value="general" selected>General Overview</option>
-                        <option value="muntha">Muntha (मुंथा)</option>
-                        <option value="varshesh">Varshesh (वर्षेश)</option>
-                        <option value="dasha">Mudda Dasha (दशा फल)</option>
-                        <option value="tajik">Tajik Yog (ताजिक योग)</option>
-                        <option value="saham">Saham (सहम)</option>
-                        <option value="bhava">House (भाव वर्ष-फल)</option>
+                        <option value="general" selected>🔎 General Overview</option>
+                        <option value="muntha">📍 Muntha (मुंथा)</option>
+                        <option value="varshesh">👑 Varshesh (वर्षेश)</option>
+                        <option value="dasha">⏳ Mudda Dasha (दशा फल)</option>
+                        <option value="tajik">✨ Tajik Yog (ताजिक योग)</option>
+                        <option value="saham">🎯 Saham (सहम)</option>
+                        <option value="bhava">🏠 House (भाव वर्ष-फल)</option>
                     </select>
                 </div>
                 <div id="vp-pred-scroll" class="vp-pred-scroll">
@@ -3135,8 +3135,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
   }
   function gpPredCatalog() {
     return [
-      { key: 'phal',     label: 'Gochar Phal (गोचर फल)' },
-      { key: 'upcoming', label: 'Upcoming Gochar / Transit (आगामी गोचर)' }
+      { key: 'phal',     label: '🔮 Gochar Phal (गोचर फल)' },
+      { key: 'upcoming', label: '📅 Upcoming Gochar / Transit (आगामी गोचर)' }
     ];
   }
 
