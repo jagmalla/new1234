@@ -414,11 +414,27 @@ $scorePill = static function (int $score): string {
               <?php endif; ?>
             </div>
 
-            <div class="lk-txt" style="margin-top:5px">
-              <b>इस भाव के विषय<?= $H['verdict'] === 'अशुभ' ? ' (इनमें बाधा/सावधानी)' : ($H['verdict'] === 'शुभ' ? ' (इनमें उन्नति)' : '') ?>:</b>
-              <?= $h((string) $H['vishay']) ?>
-              <?php if (trim((string) $H['maas']) !== ''): ?><span style="color:#94a3b8"> · विशेष मास: <?= $h((string) $H['maas']) ?></span><?php endif; ?>
-            </div>
+            <!-- 📢 फल — क्या होगा (भाव) -->
+            <?php if (trim((string) ($H['pred_head'] ?? '')) !== ''):
+                $hpBg = $H['verdict'] === 'अशुभ' ? 'background:#fef2f2;border-color:#fecaca;color:#7f1d1d'
+                    : ($H['verdict'] === 'शुभ' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#14532d'
+                    : 'background:#fffbeb;border-color:#fde68a;color:#713f12'); ?>
+              <div style="border:1px solid;border-radius:9px;padding:8px 11px;margin-top:8px;<?= $hpBg ?>">
+                <div style="font-weight:700;font-size:.84rem;margin-bottom:3px">📢 फल — क्या होगा</div>
+                <div style="font-size:.85rem;line-height:1.6"><?= $h((string) $H['pred_head']) ?></div>
+                <?php if (!empty($H['pred_effects'])): ?>
+                  <ul style="margin:5px 0 0;padding-left:18px;font-size:.83rem;line-height:1.55">
+                    <?php foreach ($H['pred_effects'] as $pe): ?><li><?= $h((string) $pe) ?></li><?php endforeach; ?>
+                  </ul>
+                <?php endif; ?>
+                <?php if (trim((string) $H['maas']) !== ''): ?><div style="font-size:.76rem;margin-top:4px;opacity:.8">विशेष मास: <?= $h((string) $H['maas']) ?></div><?php endif; ?>
+              </div>
+            <?php endif; ?>
+
+            <details style="margin-top:5px">
+              <summary style="cursor:pointer;font-size:.76rem;color:#94a3b8">भाव-विषय (पूरी सूची)</summary>
+              <div class="lk-txt" style="margin-top:3px"><?= $h((string) $H['vishay']) ?></div>
+            </details>
 
             <?php if (!empty($H['need_remedy']) && !empty($H['remedies'])): ?>
               <?= $remBlock($H['remedies'], $H['house_ord'] . ' भाव — बल हेतु उपाय') ?>
@@ -437,7 +453,17 @@ $scorePill = static function (int $score): string {
             $kCls = $K['verdict'] === 'अशुभ' ? 'bad' : ($K['verdict'] === 'शुभ' ? 'good' : ''); ?>
           <div class="lk-card <?= $kCls ?>">
             <div class="lk-card-h"><?= (int) $K['house'] ?>. <?= $h((string) $K['house_ord']) ?> भाव के कारक <?= $pill((string) $K['verdict'], 'v') ?></div>
-            <?php if (trim((string) $K['vishay']) !== ''): ?><div class="lk-sub" style="color:#94a3b8"><?= $h(mb_substr((string) $K['vishay'], 0, 90)) ?>…</div><?php endif; ?>
+            <!-- 📢 फल — क्या होगा (कारक-बल से) -->
+            <?php if (trim((string) ($K['pred_head'] ?? '')) !== ''):
+                $kpBg = $K['verdict'] === 'अशुभ' ? 'background:#fef2f2;border-color:#fecaca;color:#7f1d1d'
+                    : ($K['verdict'] === 'शुभ' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#14532d'
+                    : 'background:#fffbeb;border-color:#fde68a;color:#713f12'); ?>
+              <div style="border:1px solid;border-radius:9px;padding:7px 10px;margin:4px 0 6px;<?= $kpBg ?>">
+                <div style="font-weight:700;font-size:.82rem;margin-bottom:2px">📢 फल — क्या होगा</div>
+                <div style="font-size:.84rem;line-height:1.55"><?= $h((string) $K['pred_head']) ?></div>
+                <?php if (!empty($K['weak_list'])): ?><div style="font-size:.78rem;margin-top:3px">दुर्बल कारक: <b><?= $h(implode(', ', $K['weak_list'])) ?></b></div><?php endif; ?>
+              </div>
+            <?php endif; ?>
             <?php foreach ($K['karaks'] as $kk): ?>
               <div class="lk-sub">
                 <b><?= $h((string) $kk['hi']) ?></b>

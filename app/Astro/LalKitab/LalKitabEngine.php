@@ -443,6 +443,25 @@ final class LalKitabEngine
             $verdict = $v > 0 ? 'शुभ' : ($v < 0 ? 'अशुभ' : 'मध्यम');
             if (!$isAwake && $verdict === 'शुभ') { $verdict = 'मध्यम'; }
 
+            // फल — क्या होगा: इस भाव के जीवन-क्षेत्र + verdict-अनुसार परिणाम।
+            $hTopic = LalKitabData::HOUSE_TOPIC[$h] ?? '';
+            $hEffect = $verdict === 'शुभ'
+                ? 'इन विषयों में उन्नति, सुख व अनुकूल फल मिलेगा।'
+                : ($verdict === 'अशुभ'
+                    ? 'इन विषयों में बाधा, कष्ट या हानि की सम्भावना है — उपाय आवश्यक।'
+                    : 'इन विषयों में मिश्रित/सामान्य फल रहेगा।');
+            if (!$isAwake) { $hEffect .= ' (भाव सुप्त होने से ये विषय दबे रहेंगे — समय पर पूरा फल नहीं मिलेगा।)'; }
+            $hPredHead = 'इस भाव से ' . $hTopic . ' का विचार होता है। ' . $hEffect;
+            $hPredEffects = [];
+            foreach ($occ as $oe) {
+                if ($oe['verdict'] === 'अशुभ') { $hPredEffects[] = $oe['hi'] . ' के अशुभ होने से इस भाव पर दबाव।'; }
+                elseif ($oe['verdict'] === 'शुभ') { $hPredEffects[] = $oe['hi'] . ' शुभ होकर इस भाव को बल देता है।'; }
+            }
+            if ($lordE !== null && ($lordE['verdict'] ?? '') === 'अशुभ') {
+                $hPredEffects[] = 'भाव-स्वामी ' . LalKitabData::planetHi($lord) . ' दुर्बल — भाव-फल में कमी।';
+            }
+            foreach ($warn as $wl) { $hPredEffects[] = $wl; }
+
             // 5) उपाय — only when the house needs strengthening.
             $needRemedy = $verdict === 'अशुभ' || !$isAwake;
             $remedies = [];
@@ -478,6 +497,8 @@ final class LalKitabEngine
                 'warn'       => $warn,
                 'verdict'    => $verdict,
                 'verdict_why' => $why,
+                'pred_head'  => $hPredHead,
+                'pred_effects' => $hPredEffects,
                 'maas'       => $bm[(string) $h] ?? '',
                 'need_remedy' => $needRemedy,
                 'remedies'   => $remedies,
@@ -538,12 +559,27 @@ final class LalKitabEngine
             // house-level verdict = worst of its karaks
             $anyWeak = false; $allStrong = $karaks !== [];
             foreach ($karaks as $k) { if ($k['weak']) { $anyWeak = true; } if ($k['verdict'] !== 'शुभ') { $allStrong = false; } }
+            $kVerdict = $anyWeak ? 'अशुभ' : ($allStrong ? 'शुभ' : 'मध्यम');
+
+            // फल — क्या होगा: कारक-बल से इस भाव के जीवन-क्षेत्र का परिणाम।
+            $kTopic = LalKitabData::HOUSE_TOPIC[$h] ?? '';
+            $kEffect = $kVerdict === 'शुभ'
+                ? 'इनका कारक बलवान है — ये विषय अच्छे व अनुकूल रहेंगे।'
+                : ($kVerdict === 'अशुभ'
+                    ? 'कारक दुर्बल होने से ये विषय कमजोर — इन क्षेत्रों में विशेष सावधानी व उपाय आवश्यक।'
+                    : 'कारक मध्यम — इन विषयों में सामान्य फल रहेगा।');
+            $kPredHead = 'इस भाव से ' . $kTopic . ' का विचार होता है। ' . $kEffect;
+            $kWeakList = [];
+            foreach ($karaks as $k) { if ($k['weak']) { $kWeakList[] = $k['hi']; } }
+
             $out[$h] = [
                 'house'     => $h,
                 'house_ord' => LalKitabData::houseOrdinalHi($h),
                 'vishay'    => LalKitabData::section('bhav_vichar')[(string) $h]['vishay'] ?? '',
                 'karaks'    => $karaks,
-                'verdict'   => $anyWeak ? 'अशुभ' : ($allStrong ? 'शुभ' : 'मध्यम'),
+                'verdict'   => $kVerdict,
+                'pred_head' => $kPredHead,
+                'weak_list' => $kWeakList,
             ];
         }
         return $out;
