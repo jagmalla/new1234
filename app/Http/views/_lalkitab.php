@@ -182,7 +182,7 @@ $scorePill = static function (int $score): string {
         <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
         <option value="remedy">🛠 उपाय / Remedy</option>
         <option value="calendar">🗓 उपाय-कैलेंडर / Remedy Calendar</option>
-        <option value="rules">📜 उपाय नियम / Rules</option>
+        <option value="rules">⛔ वर्जित उपाय व नियम / Rules &amp; Don'ts</option>
         <option value="reference">📚 संदर्भ चक्र / Reference</option>
         <option value="search" hidden>🔍 खोज परिणाम / Search Results</option>
       </select>
@@ -915,6 +915,15 @@ $scorePill = static function (int $score): string {
       <div class="lk-view" data-lk="calendar">
         <h3 class="lk-h">🗓 उपाय-कैलेंडर — व्यक्तिगत योजना</h3>
         <div class="lk-txt" style="margin-bottom:9px">जिन ग्रहों के उपाय आवश्यक हैं, उनका उपाय उसी ग्रह के <b>वार</b> को आरंभ कर <b>40–43 दिन निरंतर</b> करें। नीचे आज से आरंभ-तिथियाँ व साप्ताहिक तिथियाँ दी हैं।</div>
+        <?php $vjF = $lk['varjit']['forbidden'] ?? []; if (!empty($vjF)): ?>
+          <div class="lk-card bad" style="margin-bottom:8px">
+            <div class="lk-card-h">⛔ सावधान — इस कुंडली में कुछ उपाय वर्जित हैं</div>
+            <ul class="lk-rem-list" style="color:#991b1b">
+              <?php foreach ($vjF as $f): ?><li><?= $h((string) $f['varjit']) ?></li><?php endforeach; ?>
+            </ul>
+            <div class="lk-sub" style="color:#64748b">पूरा विवरण "वर्जित उपाय व नियम" श्रेणी में देखें — नीचे की योजना करते समय इन्हें अवश्य छोड़ें।</div>
+          </div>
+        <?php endif; ?>
         <div class="lk-flt" style="margin-bottom:8px">
           <button type="button" id="lk-print-calendar" class="lk-btn">🖨 कैलेंडर Print करें</button>
         </div>
@@ -923,30 +932,57 @@ $scorePill = static function (int $score): string {
 
       <!-- ===== RULES (do / don't) ===== -->
       <div class="lk-view" data-lk="rules">
-        <?php $ru = $lk['rules']; ?>
+        <?php $ru = $lk['rules']; $vj = $lk['varjit'] ?? ['forbidden' => [], 'general' => []]; ?>
         <h3 class="lk-h">उपाय के नियम व सावधानियाँ (Rules)</h3>
+
+        <!-- ⛔ इस कुंडली में वर्जित उपाय — chart-specific, सबसे ऊपर -->
+        <?php if (!empty($vj['forbidden'])): ?>
+          <div class="lk-card bad" style="border-width:2px">
+            <div class="lk-card-h">⛔ इस कुंडली में वर्जित उपाय — ये कदापि न करें</div>
+            <div class="lk-txt" style="color:#991b1b;margin-bottom:5px">नीचे वे उपाय हैं जो <b>आपकी ग्रह-स्थिति के कारण हानिकारक</b> हैं — इन्हें भूलकर भी न करें:</div>
+            <?php foreach ($vj['forbidden'] as $f): ?>
+              <div style="border:1px solid #fecaca;background:#fff;border-radius:8px;padding:7px 10px;margin:5px 0">
+                <div style="font-weight:700;color:#7f1d1d">🚫 <?= $h((string) $f['varjit']) ?></div>
+                <div class="lk-sub" style="color:#64748b">आधार: <?= $h((string) $f['sthiti']) ?> <span style="opacity:.7">(<?= $h((string) $f['src']) ?>)</span></div>
+                <?php if (trim((string) $f['parinam']) !== ''): ?><div class="lk-sub" style="color:#991b1b"><b>न मानने पर:</b> <?= $h((string) $f['parinam']) ?></div><?php endif; ?>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="lk-card good"><div class="lk-txt">✅ इस कुंडली में कोई विशेष उपाय वर्जित नहीं — फिर भी नीचे सामान्य निषेध-नियम पढ़ें।</div></div>
+        <?php endif; ?>
+        <?php if (!empty($vj['general'])): ?>
+          <div class="lk-card">
+            <div class="lk-card-h">सामान्य दान-निषेध (सबके लिए)</div>
+            <ul class="lk-rem-list" style="color:#334155"><?php foreach ($vj['general'] as $g): ?><li><?= $h((string) $g) ?></li><?php endforeach; ?></ul>
+          </div>
+        <?php endif; ?>
+
         <div class="lk-card">
           <div class="lk-card-h">उपाय के सामान्य नियम</div>
           <ul class="lk-rem-list" style="color:#334155">
             <?php foreach ($ru['upay_niyam'] as $n): ?><li><?= $h((string) $n) ?></li><?php endforeach; ?>
           </ul>
         </div>
-        <?php if ($ru['varjit']): ?>
-          <div class="lk-card bad">
-            <div class="lk-card-h">वर्जित उपाय (न करें)</div>
-            <?php foreach ($ru['varjit'] as $v): ?>
-              <div class="lk-sub"><b><?= $h((string) $v['sthiti']) ?>:</b> <?= $h((string) $v['varjit']) ?><?php if (trim((string) $v['parinam']) !== ''): ?> <span style="color:#991b1b">— <?= $h((string) $v['parinam']) ?></span><?php endif; ?></div>
-            <?php endforeach; ?>
-          </div>
-        <?php endif; ?>
-        <?php if ($ru['daan_nishedh']): ?>
-          <div class="lk-card">
-            <div class="lk-card-h">दान-निषेध</div>
-            <?php foreach ($ru['daan_nishedh'] as $d): ?>
-              <div class="lk-sub"><b><?= $h((string) $d['sthiti']) ?>:</b> <?= $h((string) $d['varjit']) ?></div>
-            <?php endforeach; ?>
-          </div>
-        <?php endif; ?>
+        <details style="margin-bottom:11px">
+          <summary style="cursor:pointer;font-size:.8rem;color:#94a3b8">सभी वर्जित-उपाय व दान-निषेध नियम (संदर्भ)</summary>
+          <?php if ($ru['varjit']): ?>
+            <div class="lk-card" style="margin-top:6px">
+              <div class="lk-card-h">वर्जित उपाय (शर्त-अनुसार)</div>
+              <?php foreach ($ru['varjit'] as $v): ?>
+                <div class="lk-sub"><b><?= $h((string) $v['sthiti']) ?>:</b> <?= $h((string) $v['varjit']) ?><?php if (trim((string) $v['parinam']) !== ''): ?> <span style="color:#991b1b">— <?= $h((string) $v['parinam']) ?></span><?php endif; ?></div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+          <?php if ($ru['daan_nishedh']): ?>
+            <div class="lk-card">
+              <div class="lk-card-h">दान-निषेध (शर्त-अनुसार)</div>
+              <?php foreach ($ru['daan_nishedh'] as $d): ?>
+                <div class="lk-sub"><b><?= $h((string) $d['sthiti']) ?>:</b> <?= $h((string) $d['varjit']) ?></div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </details>
         <?php if ($ru['paitrik_niyam']): ?>
           <div class="lk-card">
             <div class="lk-card-h">पैतृक ऋण — नियम</div>

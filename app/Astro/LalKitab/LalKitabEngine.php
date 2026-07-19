@@ -126,6 +126,7 @@ final class LalKitabEngine
             'rules'       => self::ruleReadings(),
             'supt'        => $supt,
             'special'     => self::specialStates($chart, $house, $planets),
+            'varjit'      => self::varjitReadings($house),
             'drishti'     => self::drishtiReadings($house, $occupants),
             'reference'   => self::referenceReadings($age),
             'age'         => $age,
@@ -1317,6 +1318,66 @@ final class LalKitabEngine
             ];
         }
         return $out;
+    }
+
+    /**
+     * वर्जित-उपाय चेतावनी — remedies FORBIDDEN for this chart. Each वर्जित /
+     * दान-निषेध rule's baked condition (planet(s)-in-house(s), mode and/or/single)
+     * is checked against the placements; only the rules that actually apply are
+     * flagged, so the native never does a remedy that would harm them.
+     *
+     * @param array<string,int> $house
+     * @return array{forbidden:list<array<string,mixed>>, general:list<string>}
+     */
+    private static function varjitReadings(array $house): array
+    {
+        $match = static function (?array $cond) use ($house): bool {
+            if (!is_array($cond) || empty($cond['clauses'])) { return false; }
+            $hit = static function (array $cl) use ($house): bool {
+                $p = $cl['planet'] ?? '';
+                $hs = $cl['houses'] ?? [];
+                return isset($house[$p]) && ($hs === [] || in_array($house[$p], $hs, true));
+            };
+            $mode = $cond['mode'] ?? 'single';
+            if ($mode === 'and') {
+                foreach ($cond['clauses'] as $cl) { if (!$hit($cl)) { return false; } }
+                return true;
+            }
+            // single / or → any clause matches
+            foreach ($cond['clauses'] as $cl) { if ($hit($cl)) { return true; } }
+            return false;
+        };
+
+        $forbidden = [];
+        $general = [];
+        // वर्जित उपाय
+        foreach (LalKitabData::section('varjit') as $r) {
+            if ($match($r['cond'] ?? null)) {
+                $forbidden[] = [
+                    'sthiti'  => (string) ($r['sthiti'] ?? ''),
+                    'varjit'  => (string) ($r['varjit'] ?? ''),
+                    'parinam' => (string) ($r['parinam'] ?? ''),
+                    'src'     => 'वर्जित उपाय',
+                ];
+            }
+        }
+        // दान-निषेध (skip the "सामान्य नियम" general row into $general)
+        foreach (LalKitabData::section('daan_nishedh') as $r) {
+            $cond = $r['cond'] ?? null;
+            if ($cond === null) {
+                if (trim((string) ($r['varjit'] ?? '')) !== '') { $general[] = (string) $r['varjit']; }
+                continue;
+            }
+            if ($match($cond)) {
+                $forbidden[] = [
+                    'sthiti'  => (string) ($r['sthiti'] ?? ''),
+                    'varjit'  => (string) ($r['varjit'] ?? ''),
+                    'parinam' => '',
+                    'src'     => 'दान-निषेध',
+                ];
+            }
+        }
+        return ['forbidden' => $forbidden, 'general' => $general];
     }
 
     /**
