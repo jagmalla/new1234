@@ -120,6 +120,20 @@ final class CalcController
             } catch (\Throwable $e) {
                 $videsh = null;
             }
+            // संतान-योग — computed child-birth analysis (4 pillars · yogas · shrap ·
+            // obstruction+remedy · dasha-gochar timing · boy/girl · sphuta · vargas).
+            // Own try/catch so an edge-case never blanks the chart page.
+            try {
+                $santan = \AutoBusiness\Astro\Phala\SantanEngine::compute(
+                    $chart, $vargas,
+                    (float) ($chart['planets']['Moon']['sidereal_lon'] ?? 0.0),
+                    $jd, $nowJd, $tz, $engine, [$Y, $Mo, $D, $H, $Mi, $lat, $lon],
+                    strtolower($gender) === 'female' || $gender === 'स्त्री' ? 'female'
+                        : (strtolower($gender) === 'male' || $gender === 'पुरुष' ? 'male' : '')
+                );
+            } catch (\Throwable $e) {
+                $santan = null;
+            }
             // North-chart payload of the annual chart for the v2 chart selector
             // (render-ready; same shape the varshaphal JSON endpoint returns).
             $varshaNorth = $vp !== null ? $engine->northPayload($vp['varsha_chart']) : null;
@@ -145,6 +159,7 @@ final class CalcController
             'gochar' => $gochar,
             'vargas' => $vargas ?? null,
             'videsh' => $videsh ?? null,
+            'santan' => $santan ?? null,
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
