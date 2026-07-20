@@ -390,7 +390,16 @@ async function startDownload(
       concurrency: settings.segmentConcurrency,
       maxSegments: settings.maxSegments,
     });
-    await ensureOffscreen();
+    try {
+      await ensureOffscreen();
+    } catch (e) {
+      await patchDownloadRow(id, {
+        state: 'error',
+        error: `Could not start worker: ${e instanceof Error ? e.message : String(e)}`,
+      });
+      return { ok: false, message: 'Could not start the download worker.' };
+    }
+    watchdog(id);
     return { ok: true };
   } catch (e) {
     return { ok: false, message: String(e) };
@@ -427,6 +436,45 @@ chrome.contextMenus.onClicked.addListener((info) => {
 async function activeTabId(): Promise<number | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab?.id ?? undefined;
+}
+
+async function patchDownloadRow(
+  id: string,
+  patch: Partial<{ state: string; error: string }>,
+): Promise<void> {
+  const store = await chrome.storage.session.get('downloads');
+  const list = store.downloads ?? [];
+  const idx = list.findIndex((d: { id: string }) => d.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...patch };
+    await chrome.storage.session.set({ downloads: list });
+  }
+}
+
+// If a job is still 'preparing' after a grace period the offscreen worker never
+// picked it up — retry ensuring the document, then surface an error if still stuck.
+function watchdog(id: string): void {
+  setTimeout(async () => {
+    const store = await chrome.storage.session.get('downloads');
+    const row = (store.downloads ?? []).find((d: { id: string }) => d.id === id);
+    if (row && row.state === 'preparing') {
+      try {
+        await ensureOffscreen();
+      } catch {
+        /* handled below */
+      }
+    }
+  }, 6000);
+  setTimeout(async () => {
+    const store = await chrome.storage.session.get('downloads');
+    const row = (store.downloads ?? []).find((d: { id: string }) => d.id === id);
+    if (row && row.state === 'preparing') {
+      await patchDownloadRow(id, {
+        state: 'error',
+        error: 'Worker did not start. Reload the extension, then try again.',
+      });
+    }
+  }, 25000);
 }
 
 async function enqueueJob(job: HlsJob): Promise<void> {
@@ -548,5 +596,20 @@ chrome.tabs.onRemoved.addListener((tabId) => void clearTab(tabId));
 chrome.runtime.onInstalled.addListener((d) => {
   console.log('[JIM Video Catcher] installed:', d.reason);
 });
+
+// If the service worker restarted while jobs were queued, re-create the offscreen
+// document so those downloads resume instead of hanging at 'preparing'.
+async function recoverPendingJobs(): Promise<void> {
+  const store = await chrome.storage.session.get(JOBS_KEY);
+  const jobs: HlsJob[] = store[JOBS_KEY] ?? [];
+  if (jobs.length > 0) {
+    try {
+      await ensureOffscreen();
+    } catch {
+      /* nothing more we can do here */
+    }
+  }
+}
+void recoverPendingJobs();
 
 export {};

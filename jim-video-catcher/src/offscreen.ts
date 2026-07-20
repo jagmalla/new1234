@@ -20,6 +20,7 @@ const MAX_RETRIES = 3;
 const started = new Set<string>();
 let canceled = new Set<string>();
 
+console.log('[JIM offscreen] document loaded, draining queue');
 // Pick up jobs already queued when this document loaded, and any added later.
 void drain();
 chrome.storage.session.onChanged.addListener((changes) => {
@@ -59,11 +60,23 @@ async function removeJob(id: string): Promise<void> {
 
 // ---- fetch with retry -------------------------------------------------------
 
+// fetch with an abort timeout so a hanging host surfaces as an error instead of
+// leaving the download stuck forever.
+async function fetchTimeout(url: string, ms = 25000): Promise<Response> {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), ms);
+  try {
+    return await fetch(url, { credentials: 'include', signal: c.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function fetchBuf(url: string, tries = MAX_RETRIES): Promise<ArrayBuffer> {
   let lastErr: unknown;
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { credentials: 'include' });
+      const r = await fetchTimeout(url);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return await r.arrayBuffer();
     } catch (e) {
@@ -80,8 +93,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function runHls(job: HlsJob): Promise<void> {
   const { id, filename } = job;
+  console.log('[JIM offscreen] starting job', id, job.playlistUrl);
   try {
-    await patchProgress(id, { state: 'preparing' });
+    await patchProgress(id, { state: 'preparing', error: undefined });
 
     // Resolve to a media playlist (follow the master + chosen variant if needed).
     let playlistText = await fetchText(job.playlistUrl);
@@ -171,7 +185,7 @@ async function runHls(job: HlsJob): Promise<void> {
 }
 
 async function fetchText(url: string): Promise<string> {
-  const r = await fetch(url, { credentials: 'include' });
+  const r = await fetchTimeout(url);
   if (!r.ok) throw new Error(`HTTP ${r.status} fetching playlist`);
   return r.text();
 }
