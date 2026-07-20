@@ -219,9 +219,19 @@ function render(state: TabState): void {
   }
 
   if (items.length === 0) {
-    body.innerHTML =
-      '<p class="placeholder">No video detected on this page yet.<br>' +
-      'Press <b>play</b> — many sites don’t load the stream until playback starts.</p>';
+    // A <video> is clearly playing (often a blob:/MSE source) but we never caught
+    // its network stream — usually because the manifest loaded before the popup.
+    const playing = state.elements.some((e) => e.playing || e.isBlob);
+    if (playing) {
+      body.innerHTML =
+        '<p class="placeholder">A video is playing, but its stream wasn’t captured.<br>' +
+        'Press <b>F5</b> to reload the page, then press <b>play</b> — the stream ' +
+        'is only requested once, and JIM needs to be watching when it happens.</p>';
+    } else {
+      body.innerHTML =
+        '<p class="placeholder">No video detected on this page yet.<br>' +
+        'Press <b>play</b> — many sites don’t load the stream until playback starts.</p>';
+    }
     return;
   }
 
