@@ -63,6 +63,32 @@ export function parseHls(text: string, baseUrl: string): HlsParse {
   return { isMaster: true, variants };
 }
 
+// Segments of a media playlist (for actual downloading).
+export interface HlsSegments {
+  initUrl?: string;      // #EXT-X-MAP (fMP4 init segment)
+  segmentUrls: string[]; // in order
+  isFmp4: boolean;
+}
+
+export function parseHlsSegments(text: string, baseUrl: string): HlsSegments {
+  const lines = text.split(/\r?\n/);
+  const segmentUrls: string[] = [];
+  let initUrl: string | undefined;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    const mapMatch = /^#EXT-X-MAP:.*URI="([^"]+)"/.exec(line);
+    if (mapMatch) {
+      initUrl = resolve(baseUrl, mapMatch[1]);
+      continue;
+    }
+    if (line.startsWith('#')) continue;
+    segmentUrls.push(resolve(baseUrl, line));
+  }
+  const isFmp4 = !!initUrl || segmentUrls.some((u) => /\.m4s(\?|#|$)/i.test(u));
+  return { initUrl, segmentUrls, isFmp4 };
+}
+
 // ---- DASH -----------------------------------------------------------------
 
 export interface DashParse {

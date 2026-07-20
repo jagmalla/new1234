@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>JIM downloader</title>
+  </head>
+  <body>
+    <!-- Invisible worker document: does HLS segment fetching + assembly so the
+         MV3 service worker can sleep without killing the download. -->
+    <script type="module" src="./offscreen.ts"></script>
+  </body>
+</html>

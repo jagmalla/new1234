@@ -2,11 +2,13 @@
 // Direct-file download is wired for real here; streams/MP3 use the Module 5 engine.
 
 import type { NetworkDetection, TabState, Variant } from '../lib/types';
+import { DOWNLOADS_KEY, type DownloadProgress } from '../lib/download-types';
 
 const versionEl = document.getElementById('version')!;
 versionEl.textContent = `v${chrome.runtime.getManifest().version}`;
 
 const body = document.getElementById('body')!;
+const downloadsEl = document.getElementById('downloads')!;
 const settingsBtn = document.getElementById('settings')!;
 const notice = document.getElementById('notice')!;
 const noticeOk = document.getElementById('notice-ok')!;
@@ -216,8 +218,74 @@ function render(state: TabState): void {
   items.forEach((it, i) => body.append(buildCard(it, i === 0 ? state.meta?.thumbnail : undefined)));
 }
 
+// ---- Active downloads (progress rows) --------------------------------------
+function fmtSpeed(bps?: number): string {
+  if (!bps) return '';
+  return `${fmtBytes(bps)}/s`;
+}
+function fmtEta(sec?: number): string {
+  if (sec == null || !Number.isFinite(sec) || sec <= 0) return '';
+  const s = Math.round(sec);
+  const m = Math.floor(s / 60);
+  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+}
+
+function renderDownloads(list: DownloadProgress[]): void {
+  const active = list.filter((d) => d.state !== 'done' && d.state !== 'canceled');
+  downloadsEl.innerHTML = '';
+  for (const d of active) {
+    const row = document.createElement('div');
+    row.className = 'dl';
+
+    const top = document.createElement('div');
+    top.className = 'dl-top';
+    top.innerHTML =
+      `<span class="dl-name" title="${d.filename}">${d.filename}</span>` +
+      (d.state === 'error'
+        ? `<span class="dl-err">${d.error || 'error'}</span>`
+        : `<span class="dl-pct">${d.percent}%</span>`);
+
+    const bar = document.createElement('div');
+    bar.className = 'dl-bar';
+    const fill = document.createElement('div');
+    fill.className = 'dl-fill';
+    fill.style.width = `${d.percent}%`;
+    if (d.state === 'error') fill.style.background = '#ef4444';
+    bar.append(fill);
+
+    const info = document.createElement('div');
+    info.className = 'dl-info';
+    const stateLabel =
+      d.state === 'downloading'
+        ? `${d.segDone}/${d.segTotal} · ${fmtSpeed(d.speed)} · ${fmtEta(d.etaSec)}`
+        : d.state;
+    const cancel = document.createElement('button');
+    cancel.className = 'dl-cancel';
+    cancel.textContent = d.state === 'error' ? 'Dismiss' : 'Cancel';
+    cancel.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ type: 'CANCEL_DOWNLOAD', id: d.id });
+      void dismiss(d.id);
+    });
+    info.innerHTML = `<span>${stateLabel}</span>`;
+    info.append(cancel);
+
+    row.append(top, bar, info);
+    downloadsEl.append(row);
+  }
+}
+
+async function dismiss(id: string): Promise<void> {
+  const store = await chrome.storage.session.get(DOWNLOADS_KEY);
+  const list: DownloadProgress[] = store[DOWNLOADS_KEY] ?? [];
+  await chrome.storage.session.set({
+    [DOWNLOADS_KEY]: list.filter((d) => d.id !== id),
+  });
+}
+
 async function load(): Promise<void> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const dl = await chrome.storage.session.get(DOWNLOADS_KEY);
+  renderDownloads(dl[DOWNLOADS_KEY] ?? []);
   if (tab?.id == null) return;
   const res = await chrome.storage.session.get(`tab:${tab.id}`);
   render((res[`tab:${tab.id}`] as TabState) ?? { network: [], elements: [], drm: false });

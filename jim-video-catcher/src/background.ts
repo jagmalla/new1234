@@ -290,7 +290,7 @@ chrome.runtime.onMessage.addListener((msg: ContentMessage, sender, sendResponse)
   return true; // async response
 });
 
-// ---- Downloads (Module 4: direct files for real; streams land in Module 5). ----
+// ---- Downloads (Module 5: direct + HLS engine). ----------------------------
 
 interface DownloadRequest {
   type: 'DOWNLOAD';
@@ -300,31 +300,167 @@ interface DownloadRequest {
   format: 'video' | 'audio';
   variantIndex?: number;
 }
+interface CancelRequest {
+  type: 'CANCEL_DOWNLOAD';
+  id: string;
+}
 
-chrome.runtime.onMessage.addListener((msg: DownloadRequest, _sender, sendResponse) => {
-  if (msg?.type !== 'DOWNLOAD') return; // handled by the other listener
-  void (async () => {
-    if (msg.kind !== 'DIRECT') {
-      sendResponse({
-        ok: false,
-        message: 'Streams (HLS/DASH) & MP3 download arrives in Module 5.',
-      });
-      return;
-    }
-    if (msg.format === 'audio') {
-      sendResponse({ ok: false, message: 'Audio-only (MP3) extraction arrives in Module 5.' });
-      return;
-    }
-    try {
-      const filename = (msg.title || urlFilename(msg.url)).replace(/[\\/:*?"<>|]/g, '');
-      await chrome.downloads.download({ url: msg.url, filename });
+chrome.runtime.onMessage.addListener(
+  (msg: DownloadRequest | CancelRequest, _sender, sendResponse) => {
+    if (msg?.type === 'CANCEL_DOWNLOAD') {
+      void chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'CANCEL', id: msg.id });
       sendResponse({ ok: true });
-    } catch (e) {
-      sendResponse({ ok: false, message: String(e) });
+      return true;
     }
-  })();
-  return true; // async response
-});
+    if (msg?.type !== 'DOWNLOAD') return; // handled by the content-message listener
+
+    void (async () => {
+      if (msg.format === 'audio') {
+        sendResponse({
+          ok: false,
+          message: 'Audio-only (MP3) extraction needs the Module 7 native host (yt-dlp/ffmpeg).',
+        });
+        return;
+      }
+      if (msg.kind === 'DASH') {
+        sendResponse({
+          ok: false,
+          message: 'DASH needs separate video+audio muxing — use the Module 7 native host.',
+        });
+        return;
+      }
+
+      try {
+        const state = await getState((await activeTabId()) ?? -1);
+        const det = state.network.find((n) => n.url === msg.url);
+        const headers: CapturedHeaders = det?.headers ?? {};
+        const rawName = msg.title || urlFilename(msg.url);
+        const filename = rawName.replace(/[\\/:*?"<>|]/g, '');
+
+        if (msg.kind === 'DIRECT') {
+          await addHeaderRule(msg.url, headers, det?.pageUrl);
+          await chrome.downloads.download({ url: msg.url, filename });
+          sendResponse({ ok: true });
+          return;
+        }
+
+        // HLS -> offscreen engine.
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        await registerDownload(id, filename, msg.kind);
+        await addHeaderRule(msg.url, headers, det?.pageUrl);
+        await ensureOffscreen();
+        await chrome.runtime.sendMessage({
+          target: 'offscreen',
+          cmd: 'START_HLS',
+          id,
+          playlistUrl: msg.url,
+          variantIndex: msg.variantIndex,
+          headers,
+          filename,
+          title: filename,
+        });
+        sendResponse({ ok: true });
+      } catch (e) {
+        sendResponse({ ok: false, message: String(e) });
+      }
+    })();
+    return true;
+  },
+);
+
+async function activeTabId(): Promise<number | undefined> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab?.id ?? undefined;
+}
+
+async function registerDownload(id: string, filename: string, kind: string): Promise<void> {
+  const store = await chrome.storage.session.get('downloads');
+  const list = store.downloads ?? [];
+  list.unshift({
+    id,
+    title: filename,
+    filename,
+    kind,
+    state: 'preparing',
+    segDone: 0,
+    segTotal: 0,
+    received: 0,
+    percent: 0,
+    startedAt: Date.now(),
+  });
+  await chrome.storage.session.set({ downloads: list });
+}
+
+// ---- Offscreen document lifecycle ------------------------------------------
+
+let creatingOffscreen: Promise<void> | null = null;
+async function ensureOffscreen(): Promise<void> {
+  const has = await chrome.offscreen.hasDocument();
+  if (has) return;
+  if (!creatingOffscreen) {
+    creatingOffscreen = chrome.offscreen
+      .createDocument({
+        url: 'src/offscreen.html',
+        reasons: [chrome.offscreen.Reason.BLOBS],
+        justification: 'Assemble HLS segments into a downloadable file.',
+      })
+      .finally(() => (creatingOffscreen = null));
+  }
+  await creatingOffscreen;
+}
+
+// ---- Header replay via declarativeNetRequest (kills 403s) -------------------
+
+let ruleId = 1000;
+async function addHeaderRule(
+  url: string,
+  headers: CapturedHeaders,
+  pageUrl?: string,
+): Promise<void> {
+  const SET = chrome.declarativeNetRequest.HeaderOperation.SET;
+  const requestHeaders: chrome.declarativeNetRequest.ModifyHeaderInfo[] = [];
+  const referer = headers.referer || pageUrl;
+  if (referer) requestHeaders.push({ header: 'referer', operation: SET, value: referer });
+  if (headers.userAgent)
+    requestHeaders.push({ header: 'user-agent', operation: SET, value: headers.userAgent });
+  if (headers.cookie)
+    requestHeaders.push({ header: 'cookie', operation: SET, value: headers.cookie });
+  if (headers.origin)
+    requestHeaders.push({ header: 'origin', operation: SET, value: headers.origin });
+  if (requestHeaders.length === 0) return;
+
+  let host = '*';
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    /* keep wildcard */
+  }
+  const id = ++ruleId;
+  await chrome.declarativeNetRequest.updateSessionRules({
+    addRules: [
+      {
+        id,
+        priority: 1,
+        action: {
+          type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+          requestHeaders,
+        },
+        condition: {
+          urlFilter: `||${host}`,
+          resourceTypes: [
+            chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
+            chrome.declarativeNetRequest.ResourceType.MEDIA,
+            chrome.declarativeNetRequest.ResourceType.OTHER,
+          ],
+        },
+      },
+    ],
+  });
+  // Rules are best-effort and cheap; drop this one after 10 min.
+  setTimeout(() => {
+    void chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [id] });
+  }, 600_000);
+}
 
 // ---- Lifecycle: clear on navigation and tab close.
 

@@ -10,6 +10,11 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
+    rollupOptions: {
+      // The offscreen document isn't referenced by the manifest, so name it
+      // explicitly as an input for crxjs/rollup to build it.
+      input: { offscreen: 'src/offscreen.html' },
+    },
   },
   server: {
     port: 5173,

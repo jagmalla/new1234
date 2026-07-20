@@ -3,10 +3,23 @@
 A Microsoft Edge (Manifest V3) extension that detects video playing on the current
 page and shows its name, size, resolution and format with a Download button.
 
-> **Status:** Module 4 — popup UI. Product-grade cards (thumbnail, name, badges,
-> quality dropdown, Video/Audio toggle, Download button), DRM greyed out, empty
-> state, first-run legal notice, options page, light/dark themes. Direct-file
-> downloads work now; streams/MP3 arrive with the Module 5 engine.
+> **Status:** Module 5 — download engine. Direct files and **HLS streams**
+> download for real: segments fetched with concurrency 6 + retry in an offscreen
+> document (so the download survives the MV3 worker sleeping), assembled into a
+> playable `.ts`/`.mp4`, with a live progress bar (%, speed, ETA, cancel).
+> Referer/Cookie/UA are replayed via declarativeNetRequest to avoid 403s.
+> DASH muxing and MP3 transcoding are deferred to the Module 7 native host.
+
+### Header replay — what Edge allows
+`chrome.downloads` cannot set Referer/Cookie/User-Agent directly. Module 5 instead
+installs short-lived `declarativeNetRequest` session rules that set those request
+headers for the media host, which covers the common 403 case. Cookies for the media
+host are also sent automatically because fetches use `credentials: 'include'`.
+
+### Surviving the service-worker being killed
+The worker only *starts* a download; all fetching/assembly runs in the **offscreen
+document**, which is not subject to the ~30s idle-kill. Progress is written directly
+to `storage.session`, so the popup shows live state even if the worker has slept.
 
 ## Module 2 test plan
 

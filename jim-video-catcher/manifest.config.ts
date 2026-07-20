@@ -61,6 +61,8 @@ export default defineManifest({
     'activeTab',  // Act on the tab the user is currently looking at when they open the popup.
     'scripting',  // Inject/execute detection logic on demand.
     'tabs',       // Map detections to the correct tab and clear them on navigation/close.
+    'offscreen',  // Run the HLS assembler in a document that outlives the worker.
+    'declarativeNetRequestWithHostAccess', // Replay Referer/Cookie/UA on downloads to avoid 403s.
   ],
 
   // Needed so detection and downloads work on arbitrary sites, including private/self-hosted ones.
