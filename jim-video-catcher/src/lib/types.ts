@@ -11,6 +11,23 @@ export interface CapturedHeaders {
   origin?: string;
 }
 
+// A single quality variant from an HLS master / DASH MPD.
+export interface Variant {
+  url: string;
+  width: number | null;
+  height: number | null;
+  bandwidth?: number;   // bits per second
+  codecs?: string;
+}
+
+// Page-level metadata gathered by the content script.
+export interface PageMeta {
+  title?: string;
+  thumbnail?: string;   // data: URL or remote image URL
+  durationSec?: number;
+  pageUrl: string;
+}
+
 // A media resource seen on the network layer.
 export interface NetworkDetection {
   id: string;            // stable id (the URL)
@@ -22,6 +39,16 @@ export interface NetworkDetection {
   headers: CapturedHeaders;
   tabId: number;
   firstSeen: number;
+
+  // ---- Module 3 enrichment (filled in asynchronously) ----
+  enriched?: boolean;
+  title?: string;             // resolved, sanitized display/file name
+  sizeBytes?: number;         // exact (direct) or estimated (stream)
+  sizeEstimated?: boolean;    // true -> show with "~"
+  durationSec?: number;
+  variants?: Variant[];       // quality list for HLS/DASH
+  width?: number | null;
+  height?: number | null;
 }
 
 // A <video> element observed in the page by the content script.
@@ -39,7 +66,8 @@ export interface ElementDetection {
 // Messages from content script -> background.
 export type ContentMessage =
   | { type: 'ELEMENTS'; elements: ElementDetection[] }
-  | { type: 'DRM_DETECTED'; keySystem: string };
+  | { type: 'DRM_DETECTED'; keySystem: string }
+  | { type: 'PAGE_META'; meta: PageMeta };
 
 // Messages the popup may request from background.
 export type PopupRequest =
@@ -50,4 +78,5 @@ export interface TabState {
   elements: ElementDetection[];
   drm: boolean;
   drmKeySystem?: string;
+  meta?: PageMeta;
 }

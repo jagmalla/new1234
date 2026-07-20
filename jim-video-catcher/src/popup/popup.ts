@@ -29,6 +29,15 @@ function fileName(url: string): string {
   }
 }
 
+function fmtDuration(sec?: number): string | null {
+  if (!sec || !Number.isFinite(sec)) return null;
+  const s = Math.round(sec);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
 function render(state: TabState): void {
   body.innerHTML = '';
 
@@ -67,17 +76,47 @@ function render(state: TabState): void {
   for (const it of items) {
     const card = document.createElement('div');
     card.className = 'item';
+
+    // Thumbnail (from page meta), shown once per list.
+    if (state.meta?.thumbnail && items.indexOf(it) === 0) {
+      const img = document.createElement('img');
+      img.className = 'thumb';
+      img.src = state.meta.thumbnail;
+      img.alt = '';
+      card.append(img);
+    }
+
     const name = document.createElement('div');
     name.className = 'item-name';
-    name.textContent = fileName(it.url);
-    name.title = it.url;
+    name.textContent = it.title || fileName(it.url);
+    name.title = it.title || it.url;
 
     const meta = document.createElement('div');
     meta.className = 'item-meta';
-    const badge = `<span class="badge">${it.kind}</span>`;
-    const size = it.kind === 'DIRECT' ? fmtBytes(it.contentLength) : 'Size in Module 3';
-    meta.innerHTML = `${badge}<span>${size}</span>`;
 
+    const bits: string[] = [`<span class="badge">${it.kind}</span>`];
+
+    // Size: exact or estimated with "~", else honest "Unknown size".
+    const sizeVal = it.sizeBytes ?? it.contentLength;
+    if (sizeVal) {
+      bits.push(`<span>${it.sizeEstimated ? '~' : ''}${fmtBytes(sizeVal)}</span>`);
+    } else if (it.enriched) {
+      bits.push('<span>Unknown size</span>');
+    } else {
+      bits.push('<span class="dim">reading…</span>');
+    }
+
+    const dur = fmtDuration(it.durationSec);
+    if (dur) bits.push(`<span>${dur}</span>`);
+
+    const res = it.height ? `${it.height}p` : null;
+    if (res) bits.push(`<span>${res}</span>`);
+
+    if (it.variants && it.variants.length > 1) {
+      bits.push(`<span class="dim">${it.variants.length} qualities</span>`);
+    }
+
+    meta.innerHTML = bits.join('');
     card.append(name, meta);
     body.append(card);
   }

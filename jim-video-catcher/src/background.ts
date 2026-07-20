@@ -4,10 +4,13 @@
 // never modify or cancel requests — we only watch them to learn what media a tab loads.
 
 import { classify } from './lib/classify';
+import { parseDash, parseHls, estimateBytes } from './lib/manifest-parse';
+import { extFor, sanitizeFilename, urlFilename } from './lib/name';
 import type {
   CapturedHeaders,
   ContentMessage,
   NetworkDetection,
+  PageMeta,
   TabState,
 } from './lib/types';
 
@@ -113,6 +116,147 @@ async function recordNetwork(det: NetworkDetection): Promise<void> {
   if (state.network.some((n) => n.url === det.url)) return; // dedupe by URL
   state.network = [...state.network, det];
   await setState(det.tabId, state);
+  void enrich(det.tabId, det.url); // async — updates the record when done
+}
+
+// ---- Module 3: metadata enrichment (size, qualities, duration, title) ------
+
+const enriching = new Set<string>();
+const enrichCache = new Map<string, Partial<NetworkDetection>>();
+
+async function enrich(tabId: number, url: string): Promise<void> {
+  if (enriching.has(url)) return;
+  enriching.add(url);
+  try {
+    const cached = enrichCache.get(url);
+    const patch = cached ?? (await computeEnrichment(tabId, url));
+    enrichCache.set(url, patch);
+
+    const state = await getState(tabId);
+    const idx = state.network.findIndex((n) => n.url === url);
+    if (idx < 0) return;
+    state.network[idx] = { ...state.network[idx], ...patch, enriched: true };
+    await setState(tabId, state);
+  } catch (e) {
+    console.warn('[JIM] enrich failed', url, e);
+  } finally {
+    enriching.delete(url);
+  }
+}
+
+async function computeEnrichment(
+  tabId: number,
+  url: string,
+): Promise<Partial<NetworkDetection>> {
+  const state = await getState(tabId);
+  const det = state.network.find((n) => n.url === url);
+  if (!det) return {};
+
+  const meta = state.meta;
+  const patch: Partial<NetworkDetection> = {};
+
+  // Title: prefer page metadata, fall back to the URL filename.
+  const ext = extFor(url, det.kind);
+  patch.title = sanitizeFilename(meta?.title || urlFilename(url), ext);
+  if (meta?.durationSec) patch.durationSec = meta.durationSec;
+
+  if (det.kind === 'DIRECT') {
+    patch.sizeBytes = det.contentLength ?? (await headSize(url));
+    patch.sizeEstimated = false;
+  } else if (det.kind === 'HLS') {
+    Object.assign(patch, await enrichHls(url, meta));
+  } else if (det.kind === 'DASH') {
+    Object.assign(patch, await enrichDash(url, meta));
+  }
+
+  return patch;
+}
+
+// Exact size for direct files: HEAD, then Range 0-0 fallback.
+async function headSize(url: string): Promise<number | undefined> {
+  try {
+    const r = await fetch(url, { method: 'HEAD', credentials: 'include' });
+    const len = r.headers.get('content-length');
+    if (len) return Number(len);
+  } catch {
+    /* fall through */
+  }
+  try {
+    const r = await fetch(url, {
+      headers: { Range: 'bytes=0-0' },
+      credentials: 'include',
+    });
+    const cr = r.headers.get('content-range'); // e.g. "bytes 0-0/12345"
+    const total = cr?.split('/')?.[1];
+    if (total && total !== '*') return Number(total);
+  } catch {
+    /* unknown */
+  }
+  return undefined;
+}
+
+async function enrichHls(
+  url: string,
+  meta?: PageMeta,
+): Promise<Partial<NetworkDetection>> {
+  const text = await fetchText(url);
+  if (!text) return {};
+  const master = parseHls(text, url);
+
+  if (master.isMaster && master.variants.length) {
+    const top = master.variants[0];
+    // Duration: page meta, else fetch the top media playlist and sum EXTINF.
+    let duration = meta?.durationSec;
+    if (!duration && top.url) {
+      const media = await fetchText(top.url);
+      if (media) duration = parseHls(media, top.url).durationSec;
+    }
+    const size = estimateBytes(top.bandwidth, duration);
+    return {
+      variants: master.variants,
+      width: top.width,
+      height: top.height,
+      durationSec: duration,
+      sizeBytes: size,
+      sizeEstimated: size != null,
+    };
+  }
+
+  // Media playlist directly: single quality, duration known.
+  return {
+    durationSec: master.durationSec,
+    sizeEstimated: true,
+  };
+}
+
+async function enrichDash(
+  url: string,
+  meta?: PageMeta,
+): Promise<Partial<NetworkDetection>> {
+  const xml = await fetchText(url);
+  if (!xml) return {};
+  const dash = parseDash(xml);
+  const top = dash.variants.find((v) => v.height) ?? dash.variants[0];
+  const duration = meta?.durationSec ?? dash.durationSec;
+  const size = estimateBytes(top?.bandwidth, duration);
+  return {
+    variants: dash.variants,
+    width: top?.width ?? null,
+    height: top?.height ?? null,
+    durationSec: duration,
+    sizeBytes: size,
+    sizeEstimated: size != null,
+  };
+}
+
+async function fetchText(url: string): Promise<string | undefined> {
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (!r.ok) return undefined;
+    return await r.text();
+  } catch {
+    return undefined;
+  }
 }
 
 // ---- Content-script reports (elements + DRM).
@@ -128,9 +272,19 @@ chrome.runtime.onMessage.addListener((msg: ContentMessage, sender, sendResponse)
     } else if (msg.type === 'DRM_DETECTED') {
       state.drm = true;
       state.drmKeySystem = msg.keySystem;
+    } else if (msg.type === 'PAGE_META') {
+      state.meta = msg.meta;
     }
     await setState(tabId, state);
     sendResponse({ ok: true });
+
+    // If page metadata just arrived, re-title any detections that used the URL fallback.
+    if (msg.type === 'PAGE_META') {
+      for (const n of state.network) {
+        enrichCache.delete(n.url);
+        void enrich(tabId, n.url);
+      }
+    }
   })();
 
   return true; // async response

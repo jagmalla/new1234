@@ -81,6 +81,19 @@ h1 {
   color: var(--muted);
 }
 
+.item-meta .dim { color: var(--muted); opacity: 0.8; }
+
+.thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--border);
+}
+
 .badge {
   font-size: 10px;
   font-weight: 700;

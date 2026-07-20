@@ -3,9 +3,9 @@
 A Microsoft Edge (Manifest V3) extension that detects video playing on the current
 page and shows its name, size, resolution and format with a Download button.
 
-> **Status:** Module 2 — detection engine. Sniffs media network requests, scans
-> `<video>` elements, flags DRM pages, and shows a toolbar badge count. Metadata,
-> polished UI and downloading arrive in later modules.
+> **Status:** Module 3 — metadata. On top of detection it resolves each video's
+> title, real size (direct) or `~`estimate (HLS/DASH), duration, resolution,
+> quality count and a thumbnail. Polished UI and downloading arrive next.
 
 ## Module 2 test plan
 
