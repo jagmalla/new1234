@@ -12,6 +12,7 @@ import {
   getSettings,
   withSubfolder,
 } from './lib/settings';
+import { CANCELED_KEY, JOBS_KEY, type HlsJob } from './lib/download-types';
 import type {
   CapturedHeaders,
   ContentMessage,
@@ -322,7 +323,7 @@ interface CancelRequest {
 chrome.runtime.onMessage.addListener(
   (msg: DownloadRequest | CancelRequest, _sender, sendResponse) => {
     if (msg?.type === 'CANCEL_DOWNLOAD') {
-      void chrome.runtime.sendMessage({ target: 'offscreen', cmd: 'CANCEL', id: msg.id });
+      void cancelJob(msg.id);
       sendResponse({ ok: true });
       return true;
     }
@@ -374,14 +375,12 @@ async function startDownload(
       return { ok: true };
     }
 
-    // HLS -> offscreen engine.
+    // HLS -> offscreen engine. Enqueue the job in storage BEFORE creating the
+    // offscreen document, so the document picks it up on load (no message race).
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     await registerDownload(id, templated, msg.kind);
     await addHeaderRule(msg.url, headers, det?.pageUrl);
-    await ensureOffscreen();
-    await chrome.runtime.sendMessage({
-      target: 'offscreen',
-      cmd: 'START_HLS',
+    await enqueueJob({
       id,
       playlistUrl: msg.url,
       variantIndex: msg.variantIndex,
@@ -391,6 +390,7 @@ async function startDownload(
       concurrency: settings.segmentConcurrency,
       maxSegments: settings.maxSegments,
     });
+    await ensureOffscreen();
     return { ok: true };
   } catch (e) {
     return { ok: false, message: String(e) };
@@ -427,6 +427,20 @@ chrome.contextMenus.onClicked.addListener((info) => {
 async function activeTabId(): Promise<number | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab?.id ?? undefined;
+}
+
+async function enqueueJob(job: HlsJob): Promise<void> {
+  const store = await chrome.storage.session.get(JOBS_KEY);
+  const jobs: HlsJob[] = store[JOBS_KEY] ?? [];
+  jobs.push(job);
+  await chrome.storage.session.set({ [JOBS_KEY]: jobs });
+}
+
+async function cancelJob(id: string): Promise<void> {
+  const store = await chrome.storage.session.get(CANCELED_KEY);
+  const ids: string[] = store[CANCELED_KEY] ?? [];
+  if (!ids.includes(id)) ids.push(id);
+  await chrome.storage.session.set({ [CANCELED_KEY]: ids });
 }
 
 async function registerDownload(id: string, filename: string, kind: string): Promise<void> {

@@ -26,20 +26,19 @@ export interface DownloadProgress {
   startedAt: number;
 }
 
-// Service worker -> offscreen document.
-export type ToOffscreen =
-  | {
-      target: 'offscreen';
-      cmd: 'START_HLS';
-      id: string;
-      playlistUrl: string;   // chosen variant media playlist, or master
-      variantIndex?: number; // if playlistUrl is a master
-      headers: CapturedHeaders;
-      filename: string;
-      title: string;
-      concurrency?: number;
-      maxSegments?: number;
-    }
-  | { target: 'offscreen'; cmd: 'CANCEL'; id: string };
+// A download job handed from the service worker to the offscreen document
+// through storage.session (avoids a message-before-listener startup race).
+export interface HlsJob {
+  id: string;
+  playlistUrl: string;   // chosen variant media playlist, or master
+  variantIndex?: number; // if playlistUrl is a master
+  headers: CapturedHeaders;
+  filename: string;
+  title: string;
+  concurrency?: number;
+  maxSegments?: number;
+}
 
 export const DOWNLOADS_KEY = 'downloads';
+export const JOBS_KEY = 'jobs';
+export const CANCELED_KEY = 'canceledIds';

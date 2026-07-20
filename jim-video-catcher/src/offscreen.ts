@@ -1,26 +1,44 @@
-// Offscreen download engine (Module 5).
-// Downloads HLS segments with bounded concurrency + retry, assembles a playable
-// file, and saves it via chrome.downloads. Writes progress straight to
-// storage.session so the popup stays live even if the service worker is asleep.
+// Offscreen download engine (Module 5, storage-queue model in 0.6.2).
+// Reads HLS jobs from storage.session (set on load AND on change, so there is no
+// message-before-listener race), downloads segments with bounded concurrency +
+// retry, assembles a playable file, and saves it via chrome.downloads. Progress
+// is written straight to storage.session so the popup stays live even if the
+// service worker is asleep.
 
 import { parseHls, parseHlsSegments } from './lib/manifest-parse';
-import { DOWNLOADS_KEY, type DownloadProgress, type ToOffscreen } from './lib/download-types';
+import {
+  CANCELED_KEY,
+  DOWNLOADS_KEY,
+  JOBS_KEY,
+  type DownloadProgress,
+  type HlsJob,
+} from './lib/download-types';
 import { addHistory } from './lib/settings';
 
 const DEFAULT_CONCURRENCY = 6;
 const MAX_RETRIES = 3;
-const canceled = new Set<string>();
+const started = new Set<string>();
+let canceled = new Set<string>();
 
-chrome.runtime.onMessage.addListener((msg: ToOffscreen) => {
-  if (msg?.target !== 'offscreen') return;
-  if (msg.cmd === 'CANCEL') {
-    canceled.add(msg.id);
-    return;
+// Pick up jobs already queued when this document loaded, and any added later.
+void drain();
+chrome.storage.session.onChanged.addListener((changes) => {
+  if (changes[CANCELED_KEY]) {
+    canceled = new Set((changes[CANCELED_KEY].newValue as string[]) ?? []);
   }
-  if (msg.cmd === 'START_HLS') {
-    void runHls(msg);
-  }
+  if (changes[JOBS_KEY]) void drain();
 });
+
+async function drain(): Promise<void> {
+  const store = await chrome.storage.session.get([JOBS_KEY, CANCELED_KEY]);
+  canceled = new Set((store[CANCELED_KEY] as string[]) ?? []);
+  const jobs: HlsJob[] = store[JOBS_KEY] ?? [];
+  for (const job of jobs) {
+    if (started.has(job.id)) continue;
+    started.add(job.id);
+    void runHls(job); // run jobs concurrently
+  }
+}
 
 // ---- progress persistence ---------------------------------------------------
 
@@ -30,6 +48,13 @@ async function patchProgress(id: string, patch: Partial<DownloadProgress>): Prom
   const idx = list.findIndex((d) => d.id === id);
   if (idx >= 0) list[idx] = { ...list[idx], ...patch };
   await chrome.storage.session.set({ [DOWNLOADS_KEY]: list });
+}
+
+// Remove a finished job from the queue so it isn't reprocessed.
+async function removeJob(id: string): Promise<void> {
+  const store = await chrome.storage.session.get(JOBS_KEY);
+  const jobs: HlsJob[] = store[JOBS_KEY] ?? [];
+  await chrome.storage.session.set({ [JOBS_KEY]: jobs.filter((j) => j.id !== id) });
 }
 
 // ---- fetch with retry -------------------------------------------------------
@@ -53,18 +78,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ---- main HLS routine -------------------------------------------------------
 
-async function runHls(msg: Extract<ToOffscreen, { cmd: 'START_HLS' }>): Promise<void> {
-  const { id, filename, headers } = msg;
-  void headers; // header replay is applied by the service worker via declarativeNetRequest
+async function runHls(job: HlsJob): Promise<void> {
+  const { id, filename } = job;
   try {
     await patchProgress(id, { state: 'preparing' });
 
     // Resolve to a media playlist (follow the master + chosen variant if needed).
-    let playlistText = await fetchText(msg.playlistUrl);
-    let playlistUrl = msg.playlistUrl;
+    let playlistText = await fetchText(job.playlistUrl);
+    let playlistUrl = job.playlistUrl;
     const master = parseHls(playlistText, playlistUrl);
     if (master.isMaster && master.variants.length) {
-      const v = master.variants[msg.variantIndex ?? 0] ?? master.variants[0];
+      const v = master.variants[job.variantIndex ?? 0] ?? master.variants[0];
       playlistUrl = v.url;
       playlistText = await fetchText(playlistUrl);
     }
@@ -75,18 +99,16 @@ async function runHls(msg: Extract<ToOffscreen, { cmd: 'START_HLS' }>): Promise<
     if (segmentUrls.length === 0) throw new Error('No segments found in playlist');
 
     // Livestream safeguard: never fetch more than the configured cap.
-    const cap = msg.maxSegments ?? 20000;
+    const cap = job.maxSegments ?? 20000;
     if (segmentUrls.length > cap) segmentUrls = segmentUrls.slice(0, cap);
-    const concurrency = Math.max(1, Math.min(msg.concurrency ?? DEFAULT_CONCURRENCY, 12));
+    const concurrency = Math.max(1, Math.min(job.concurrency ?? DEFAULT_CONCURRENCY, 12));
 
     const segTotal = segmentUrls.length;
     await patchProgress(id, { state: 'downloading', segTotal, segDone: 0 });
 
-    // Download init segment first (fMP4).
     const parts: ArrayBuffer[] = [];
     if (initUrl) parts.push(await fetchBuf(initUrl));
 
-    // Bounded-concurrency segment download, preserving order.
     const buffers: (ArrayBuffer | null)[] = new Array(segTotal).fill(null);
     let done = 0;
     let received = initUrl ? parts[0].byteLength : 0;
@@ -105,54 +127,46 @@ async function runHls(msg: Extract<ToOffscreen, { cmd: 'START_HLS' }>): Promise<
         const speed = elapsed > 0 ? received / elapsed : undefined;
         const percent = Math.round((done / segTotal) * 100);
         const remaining = speed ? ((received / done) * (segTotal - done)) / speed : undefined;
-        await patchProgress(id, {
-          segDone: done,
-          received,
-          percent,
-          speed,
-          etaSec: remaining,
-        });
+        await patchProgress(id, { segDone: done, received, percent, speed, etaSec: remaining });
       }
     }
 
     await Promise.all(Array.from({ length: Math.min(concurrency, segTotal) }, worker));
 
     if (canceled.has(id)) {
-      canceled.delete(id);
       await patchProgress(id, { state: 'canceled' });
+      await removeJob(id);
       return;
     }
 
-    // Assemble in order. Plain concatenation is playable for MPEG-TS and for
-    // fMP4 (init + fragments); no ffmpeg needed for single-track HLS.
+    // Plain concatenation is playable for MPEG-TS and for fMP4 (init + fragments).
     await patchProgress(id, { state: 'assembling', percent: 100 });
     for (const b of buffers) if (b) parts.push(b);
     const type = isFmp4 ? 'video/mp4' : 'video/mp2t';
     const blob = new Blob(parts, { type });
 
-    // Save. Correct the extension now that we know the container.
+    // Correct the extension now that we know the container.
     const ext = isFmp4 ? '.mp4' : '.ts';
     const base = filename.replace(/\.(mp4|ts|m3u8|m4s|webm)$/i, '');
     const finalName = base + ext;
     await patchProgress(id, { state: 'saving', filename: finalName });
     const url = URL.createObjectURL(blob);
     await chrome.downloads.download({ url, filename: finalName });
-    // Give the download a beat to read the blob, then release memory.
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
 
     await addHistory({
-      title: msg.title,
+      title: job.title,
       filename: finalName,
-      url: msg.playlistUrl,
+      url: job.playlistUrl,
       kind: 'HLS',
       sizeBytes: blob.size,
       when: Date.now(),
     });
     await patchProgress(id, { state: 'done', percent: 100, speed: undefined, etaSec: 0 });
+    await removeJob(id);
   } catch (e) {
     await patchProgress(id, { state: 'error', error: e instanceof Error ? e.message : String(e) });
-  } finally {
-    canceled.delete(id);
+    await removeJob(id);
   }
 }
 
