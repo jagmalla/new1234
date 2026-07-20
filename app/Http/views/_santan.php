@@ -99,6 +99,10 @@ $chip = static function (string $txt, string $tone) use ($h, $toneCol, $toneBg):
                     <?php if ($r): ?><?= $chip($r['label'], $r['tone']) ?><?php endif; ?>
                     <div class="sn-why"><?= $h($w['why']) ?></div>
                     <?php if (!empty($w['gochar'])): ?><div class="sn-sig <?= $h($w['gochar']['tone']) ?>" style="margin-top:4px"><b>गोचर:</b> <?= $h($w['gochar']['text']) ?></div><?php endif; ?>
+                    <?php if (!empty($w['gochar']['gender_hint'])): $gh = $w['gochar']['gender_hint'];
+                        $ghc = $gh === 'पुत्र-संकेत' ? '#1d4ed8' : ($gh === 'पुत्री-संकेत' ? '#be185d' : '#854d0e'); ?>
+                        <div class="sn-sig" style="color:<?= $ghc ?>"><b>पुत्र/पुत्री (पारंपरिक, इस अवधि में):</b> <?= $h($gh) ?> — <span style="color:#6b6156"><?= $h($w['gochar']['gender_why']) ?></span></div>
+                    <?php endif; ?>
                     <?php if ($r): ?><div class="sn-why" style="color:<?= ($r['tone'] === 'pos') ? '#166534' : '#854d0e' ?>"><?= $h($r['text']) ?></div><?php endif; ?>
                 </div>
             <?php endforeach; ?>
@@ -110,17 +114,25 @@ $chip = static function (string $txt, string $tone) use ($h, $toneCol, $toneBg):
         <div class="sn-why" style="margin-top:6px"><?= $h($sn['timing']['note']) ?></div>
     </div>
 
-    <!-- boy / girl (with strong caveat) -->
-    <div class="sn-card">
-        <h3>⚧ पुत्र या पुत्री? (पारंपरिक — अनिश्चित) <?= $chip($sn['gender']['lean'], 'info') ?></h3>
-        <div style="font-size:.84rem;margin-bottom:6px">पारंपरिक सूत्रों का बहुमत — पुत्र-संकेत: <b><?= (int) $sn['gender']['putra'] ?></b> · पुत्री-संकेत: <b><?= (int) $sn['gender']['putri'] ?></b></div>
-        <?php foreach ($sn['gender']['bits'] as $b): ?>
+    <!-- boy / girl — traditional prediction (for entertainment) -->
+    <?php $gn = $sn['gender']; $gCol = $gn['strength'] === 'pos' ? ($gn['putra'] >= $gn['putri'] ? '#1d4ed8' : '#be185d') : '#854d0e'; ?>
+    <div class="sn-card" style="border-left:5px solid <?= $gCol ?>">
+        <h3>⚧ पुत्र या पुत्री? — पारंपरिक भविष्यवाणी 🎈</h3>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px">
+            <div style="text-align:center;padding:8px 18px;border-radius:12px;background:<?= $gn['strength'] === 'pos' ? ($gn['putra'] >= $gn['putri'] ? '#dbeafe' : '#fce7f3') : '#fef9c3' ?>;color:<?= $gCol ?>">
+                <div style="font-size:1.3rem;font-weight:800;line-height:1.1"><?= $h($gn['verdict']) ?></div>
+                <div style="font-size:.72rem">संकेत-बल ~<?= (int) $gn['percent'] ?>%</div>
+            </div>
+            <div style="font-size:.86rem">पारंपरिक सूत्रों का बहुमत —<br>👦 पुत्र-संकेत: <b style="color:#1d4ed8"><?= (int) $gn['putra'] ?></b> &nbsp; 👧 पुत्री-संकेत: <b style="color:#be185d"><?= (int) $gn['putri'] ?></b></div>
+        </div>
+        <div style="font-size:.78rem;color:#6b6156;font-weight:700;margin:6px 0 2px">सूत्र-वार संकेत:</div>
+        <?php foreach ($gn['bits'] as $b): ?>
             <div class="sn-sig" style="color:<?= $b['side'] === 'putra' ? '#1d4ed8' : '#be185d' ?>"><?= $h($b['why']) ?></div>
         <?php endforeach; ?>
-        <?php if (!empty($sn['gender']['boy_note'])): ?>
-            <div class="sn-why" style="margin-top:6px"><b>पुत्र-संतान की अगली अवधि:</b> <?= $h($sn['gender']['boy_note']) ?></div>
+        <?php if (!empty($gn['boy_note'])): ?>
+            <div class="sn-why" style="margin-top:8px"><b>पुत्र-संतान के लिए:</b> <?= $h($gn['boy_note']) ?></div>
         <?php endif; ?>
-        <div class="sn-warn">⚠ <?= $h($sn['gender']['caveat']) ?></div>
+        <div class="sn-warn">🎈 <?= $h($gn['caveat']) ?></div>
     </div>
 
     <!-- shrap -->

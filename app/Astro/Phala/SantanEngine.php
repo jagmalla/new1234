@@ -49,6 +49,11 @@ final class SantanEngine
 
     private const MALE = ['Sun', 'Mars', 'Jupiter'];
     private const FEMALE = ['Moon', 'Venus'];
+    /** नक्षत्र-लिंग (yoni-based, 0=Ashwini..26=Revati): 'M'=पुरुष, 'F'=स्त्री. */
+    private const NAK_GENDER = [
+        'M', 'M', 'F', 'M', 'F', 'F', 'F', 'M', 'M', 'M', 'F', 'M', 'F', 'F',
+        'M', 'M', 'F', 'M', 'M', 'M', 'F', 'F', 'F', 'F', 'M', 'F', 'F',
+    ];
     /** जल/बहु-प्रसव rashis (Cancer, Scorpio, Pisces) vs अल्प-संतान (Gemini, Leo, Virgo). */
     private const FERTILE = [3, 7, 11];
     private const BARREN = [2, 4, 5];
@@ -709,8 +714,15 @@ final class SantanEngine
     private static function gocharDoubleTransit(\AutoBusiness\Astro\Calc\CalculationEngine $engine, array $ctx, float $jd): array
     {
         $asc = (int) $ctx['asc'];
-        $jH = Charts::houseFromAsc($engine->planetSiderealLon('Jupiter', $jd), $asc);
+        $jLon = $engine->planetSiderealLon('Jupiter', $jd);
+        $sunLon = $engine->planetSiderealLon('Sun', $jd);
+        $jH = Charts::houseFromAsc($jLon, $asc);
         $sH = Charts::houseFromAsc($engine->planetSiderealLon('Saturn', $jd), $asc);
+        // पारंपरिक लिंग-संकेत (मुहूर्त): गर्भ-काल का सूर्य/गुरु विषम राशि में = पुत्र, सम = पुत्री।
+        $sunSign = (int) floor(Charts::norm($sunLon) / 30.0);
+        $jupSign = (int) floor(Charts::norm($jLon) / 30.0);
+        $putraVotes = ($sunSign % 2 === 0 ? 1 : 0) + ($jupSign % 2 === 0 ? 1 : 0);
+        $genderHint = $putraVotes === 2 ? 'पुत्र-संकेत' : ($putraVotes === 0 ? 'पुत्री-संकेत' : 'मिश्र (अनिश्चित)');
         $touch = static function (int $from, array $off, int $t): bool {
             if ($from === $t) {
                 return true;
@@ -739,7 +751,10 @@ final class SantanEngine
             $text = 'इस अवधि में गुरु-शनि का 5वें/पंचमेश पर द्विग्रह गोचर नहीं — गोचर-समर्थन दुर्बल।';
             $tone = 'info';
         }
-        return ['jup_house' => $jH, 'sat_house' => $sH, 'double' => $double, 'any' => $jup5 || $sat5, 'text' => $text, 'tone' => $tone];
+        return ['jup_house' => $jH, 'sat_house' => $sH, 'double' => $double, 'any' => $jup5 || $sat5,
+            'text' => $text, 'tone' => $tone,
+            'gender_hint' => $genderHint,
+            'gender_why' => 'गर्भ-काल गोचर: सूर्य ' . self::signHi($sunSign) . ' (' . ($sunSign % 2 === 0 ? 'विषम' : 'सम') . '), गुरु ' . self::signHi($jupSign) . ' (' . ($jupSign % 2 === 0 ? 'विषम' : 'सम') . ')।'];
     }
 
     private static function windowVerdict(array $w): array
@@ -821,22 +836,39 @@ final class SantanEngine
                 $vote($isOdd($d7guruSign) ? 'putra' : 'putri', 'D7 में गुरु ' . ($isOdd($d7guruSign) ? 'विषम राशि (पुत्र)' : 'सम राशि (पुत्री)'));
             }
         }
-        // 7) Panchamesh nakshatra gender (odd nak index → treat as per common tables)
-        // (kept out of the tally to avoid a disputed rule dominating; shown as note only)
+        // 7) Panchamesh nakshatra gender (नक्षत्र-लिंग, §8.2)
+        $nakIdx = (int) ($ctx['pl'][$L5]['nakshatra']['index'] ?? 0);
+        $nakG = self::NAK_GENDER[$nakIdx % 27] ?? 'M';
+        $nakName = (string) ($ctx['pl'][$L5]['nakshatra']['name'] ?? '');
+        $vote($nakG === 'M' ? 'putra' : 'putri', 'पंचमेश ' . self::HI[$L5] . ' जिस नक्षत्र (' . $nakName . ') में है वह ' . ($nakG === 'M' ? 'पुरुष-लिंग नक्षत्र (पुत्र)' : 'स्त्री-लिंग नक्षत्र (पुत्री)'));
+        // 8) Beeja sphuta odd/even (§11) — पुरुष-बीज का विषम राशि में होना पुत्र-संकेत
+        $lon = static fn (string $p): float => (float) ($ctx['pl'][$p]['sidereal_lon'] ?? 0.0);
+        $beeja = fmod($lon('Sun') + $lon('Venus') + $lon('Jupiter'), 360.0);
+        $beejaSign = (int) floor($beeja / 30.0);
+        $vote($isOdd($beejaSign) ? 'putra' : 'putri', 'बीज-स्फुट ' . self::signHi($beejaSign) . ' — ' . ($isOdd($beejaSign) ? 'विषम (पुत्र)' : 'सम (पुत्री)'));
 
         $total = $votes['putra'] + $votes['putri'];
-        $diff = abs($votes['putra'] - $votes['putri']);
+        $diff = $votes['putra'] - $votes['putri'];
+        $ad = abs($diff);
+        // clear entertainment-style verdict with a strength band
         if ($total === 0) {
-            $lean = 'अनिश्चित';
-        } elseif ($diff <= 1) {
-            $lean = 'अनिश्चित (लगभग बराबर)';
+            $lean = 'अनिश्चित'; $verdict = 'अनिश्चित'; $strength = 'info';
+        } elseif ($ad >= 4) {
+            $lean = $diff > 0 ? 'पुत्र (लड़का)' : 'पुत्री (लड़की)';
+            $verdict = ($diff > 0 ? 'पुत्र' : 'पुत्री') . ' — प्रबल संकेत'; $strength = 'pos';
+        } elseif ($ad >= 2) {
+            $lean = $diff > 0 ? 'पुत्र की ओर झुकाव' : 'पुत्री की ओर झुकाव';
+            $verdict = ($diff > 0 ? 'पुत्र' : 'पुत्री') . ' की ओर झुकाव'; $strength = 'pos';
         } else {
-            $lean = $votes['putra'] > $votes['putri'] ? 'पुत्र की ओर झुकाव' : 'पुत्री की ओर झुकाव';
+            $lean = 'लगभग बराबर (अनिश्चित)'; $verdict = 'दोनों की समान संभावना'; $strength = 'info';
         }
+        $pct = $total > 0 ? (int) round(max($votes['putra'], $votes['putri']) / $total * 100) : 50;
+
         return [
-            'putra' => $votes['putra'], 'putri' => $votes['putri'], 'lean' => $lean, 'bits' => $bits,
-            'boy_note' => 'पुत्र-संतान की "अगली अवधि" को अलग से निश्चित नहीं किया जा सकता — ऊपर "अगली संतान-संभावना" में दी खिड़कियाँ ही गर्भ-धारण की संभावित अवधियाँ हैं। पारंपरिक मुहूर्त-मत में गर्भ-धारण के समय चन्द्र/लग्न विषम (odd) राशि में तथा सूर्य-गुरु का बल पुत्र का संकेत माना जाता है — पर यह मुहूर्त (चयन) का विषय है, भविष्यवाणी का नहीं; शास्त्र इसे 50-50 व अनिश्चित कहता है।',
-            'caveat' => 'सावधानी: लिंग-निर्धारण के ये पारंपरिक सूत्र शास्त्र में भी विवादित हैं और व्यवहार में लगभग 50-50 (अनिश्चित) पाए जाते हैं। भारत में गर्भ का लिंग जानना/बताना PCPNDT Act के अंतर्गत क़ानूनन अपराध है — अतः यह केवल शास्त्र-अध्ययन हेतु है, निर्णय हेतु कदापि नहीं।',
+            'putra' => $votes['putra'], 'putri' => $votes['putri'], 'lean' => $lean,
+            'verdict' => $verdict, 'strength' => $strength, 'percent' => $pct, 'bits' => $bits,
+            'boy_note' => 'पुत्र-संतान के लिए विशेष रूप से: पारंपरिक मुहूर्त-मत में गर्भ-धारण के समय चन्द्र/लग्न का विषम (odd) राशि में होना तथा सूर्य-गुरु का बल पुत्र का संकेत देता है। नीचे "अगली संतान-संभावना" की प्रत्येक खिड़की पर उस समय के गोचर-अनुसार पुत्र/पुत्री का पारंपरिक झुकाव भी दिया गया है।',
+            'caveat' => 'मनोरंजन हेतु 🎈 — ज्योतिष कोई सटीक उत्तर नहीं देता, यह केवल रुचि/मनोरंजन के लिए है। लिंग-संकेत के ये पारंपरिक वैदिक सूत्र आपस में भी भिन्न फल देते हैं और अनिश्चित हैं; इन्हें किसी निर्णय का आधार न बनाएँ।',
         ];
     }
 
@@ -937,7 +969,7 @@ final class SantanEngine
             $parts[] = 'दशा-अनुसार निकटतम संभावित अवधि: ' . $w['label'] . ' (' . $w['from'] . ' – ' . $w['to'] . ')। गर्भ-धारण इससे ~9–10 माह पूर्व की अवधि में देखें।';
         }
         $parts[] = $obstruction['present'] ? 'बाधा हेतु ऊपर दिए उपाय करें।' : 'कोई बड़ी ग्रह-बाधा नहीं।';
-        $parts[] = 'पुत्र/पुत्री: ' . $gender['lean'] . ' — पर यह अनिश्चित शास्त्रीय संकेत मात्र है (क़ानूनन लिंग-निर्धारण वर्जित)।';
+        $parts[] = 'पुत्र/पुत्री (पारंपरिक, मनोरंजन हेतु): ' . $gender['verdict'] . '।';
         $parts[] = 'महत्वपूर्ण: शास्त्र कभी "संतान नहीं होगी" नहीं कहता; दोष प्रायः "विलंब/प्रयास" का संकेत है। अंतिम निर्णय दोनों जीवनसाथियों की कुंडली मिलाकर, तथा आवश्यकता होने पर चिकित्सक से परामर्श करके लें।';
         return implode(' ', $parts);
     }
