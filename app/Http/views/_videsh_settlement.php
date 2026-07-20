@@ -104,10 +104,24 @@ $chip = static function (string $txt, string $tone) use ($h, $toneCol, $toneBg):
         <h3>🗓️ PR / Green Card का समय (दशा-आधारित खिड़कियाँ)</h3>
         <?php if (!empty($vd['timing']['windows'])): ?>
             <?php foreach ($vd['timing']['windows'] as $w): ?>
-                <div class="vd-win <?= $w['both'] ? '' : 'one' ?>">
+                <?php $r3 = $w['rule3'] ?? null; $wtone = $r3['tone'] ?? ($w['both'] ? 'pos' : 'info'); ?>
+                <div class="vd-win <?= $wtone === 'pos' ? '' : 'one' ?>">
                     <b><?= $h($w['label']) ?></b> &nbsp; <?= $h($w['from']) ?> → <?= $h($w['to']) ?>
-                    <?= $chip($w['both'] ? 'प्रबल' : 'सामान्य', $w['both'] ? 'pos' : 'info') ?>
+                    <?php if ($r3 !== null): ?>
+                        <?= $chip($r3['label'], $r3['tone']) ?>
+                    <?php else: ?>
+                        <?= $chip($w['both'] ? 'प्रबल' : 'सामान्य', $w['both'] ? 'pos' : 'info') ?>
+                    <?php endif; ?>
                     <div class="vd-why"><?= $h($w['why']) ?></div>
+                    <?php if (!empty($w['gochar'])): ?>
+                        <div class="vd-sig <?= $h($w['gochar']['tone']) ?>" style="margin-top:4px"><b>गोचर:</b> <?= $h($w['gochar']['text']) ?></div>
+                    <?php endif; ?>
+                    <?php if (!empty($w['varsha'])): ?>
+                        <div class="vd-sig <?= $h($w['varsha']['tone']) ?>"><b>वर्षफल (<?= (int) $w['varsha']['year'] ?>):</b> <?= $h($w['varsha']['text']) ?></div>
+                    <?php endif; ?>
+                    <?php if ($r3 !== null): ?>
+                        <div class="vd-why" style="margin-top:3px;color:<?= $r3['tone'] === 'pos' ? '#166534' : '#854d0e' ?>"><?= $h($r3['text']) ?></div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         <?php elseif (empty($vd['timing']['has_dasha'])): ?>

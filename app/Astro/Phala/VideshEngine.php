@@ -74,6 +74,11 @@ final class VideshEngine
      * @param float|null $birthJd natal Julian Day (UT)
      * @param float|null $nowJd   current Julian Day (UT)
      * @param float $tz           birth timezone (hours) for date display
+     * @param \AutoBusiness\Astro\Calc\CalculationEngine|null $engine when given,
+     *        each PR window is auto-confirmed with the गुरु-शनि द्विग्रह गोचर and
+     *        that year's वर्षफल (मुंथा/वर्षेश/इत्थशाल) — the doc's "Rule of 3".
+     * @param array{0:int,1:int,2:int,3:int,4:int,5:float,6:float}|null $birth
+     *        [year, month, day, hour, minute, lat, lonEast] for the annual chart.
      * @return array<string,mixed>
      */
     public static function compute(
@@ -82,7 +87,9 @@ final class VideshEngine
         ?float $moonLon = null,
         ?float $birthJd = null,
         ?float $nowJd = null,
-        float $tz = 0.0
+        float $tz = 0.0,
+        ?\AutoBusiness\Astro\Calc\CalculationEngine $engine = null,
+        ?array $birth = null
     ): array {
         if (empty($chart['planets']) || empty($chart['ascendant'])) {
             return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
@@ -134,7 +141,7 @@ final class VideshEngine
         $settle  = self::settleVerdict($ctx, $vargas);
         $karyesh = self::karyeshList($ctx);
         $obstruction = self::obstruction($ctx, $karyesh);
-        $timing  = self::timing($ctx, $karyesh, $moonLon, $birthJd, $nowJd, $tz);
+        $timing  = self::timing($ctx, $karyesh, $moonLon, $birthJd, $nowJd, $tz, $engine, $chart, $birth);
         $vargaNotes = self::vargaNotes($ctx, $vargas);
 
         $conclusion = self::conclusion($promise, $reasons, $settle, $timing, $obstruction);
@@ -593,8 +600,10 @@ final class VideshEngine
 
     // ---------------------------------------------------------------- timing
 
-    private static function timing(array $ctx, array $karyesh, ?float $moonLon, ?float $birthJd, ?float $nowJd, float $tz): array
-    {
+    private static function timing(
+        array $ctx, array $karyesh, ?float $moonLon, ?float $birthJd, ?float $nowJd, float $tz,
+        ?\AutoBusiness\Astro\Calc\CalculationEngine $engine = null, array $chart = [], ?array $birth = null
+    ): array {
         $karSet = [];
         foreach ($karyesh as $k) {
             $karSet[$k['planet']] = true;
@@ -642,6 +651,7 @@ final class VideshEngine
                         'from' => JulianDay::toDmy(max($ad['start_jd'], $nowJd), $tz),
                         'to' => JulianDay::toDmy($ad['end_jd'], $tz),
                         'from_jd' => $ad['start_jd'],
+                        'end_jd' => $ad['end_jd'],
                         'why' => implode(', ', $why) . '।',
                         'both' => $mdKar && $adKar,
                     ];
@@ -654,14 +664,212 @@ final class VideshEngine
                 }
                 return $a['from_jd'] <=> $b['from_jd'];
             });
-            $windows = array_slice($windows, 0, 4);
+            $windows = array_slice($windows, 0, 3);
         }
+
+        // Auto-confirm each window with the गुरु-शनि द्विग्रह गोचर and that year's
+        // वर्षफल (मुंथा/वर्षेश/इत्थशाल) → the doc's "Rule of 3" verdict.
+        $auto = $engine !== null && $birth !== null && !empty($chart['planets']);
+        foreach ($windows as &$w) {
+            if (!$auto) {
+                $w['rule3'] = null;
+                continue;
+            }
+            $midJd = ($w['from_jd'] < $nowJd ? $nowJd : $w['from_jd']);
+            $midJd = ($midJd + $w['end_jd']) / 2.0;
+            try {
+                $w['gochar'] = self::gocharDoubleTransit($engine, $ctx, $midJd);
+            } catch (\Throwable $e) {
+                $w['gochar'] = null;
+            }
+            try {
+                $year = (int) (JulianDay::toGregorian($midJd, $tz)[0] ?? 0);
+                $w['varsha'] = self::varshaConfirm($engine, $chart, $birth, $tz, $year, $ctx, $karSet);
+            } catch (\Throwable $e) {
+                $w['varsha'] = null;
+            }
+            $w['rule3'] = self::rule3($w);
+        }
+        unset($w);
 
         $note = 'आदर्श PR-योग: द्वादशेश की महादशा/अंतर्दशा + चतुर्थेश या सूर्य की अंतर्दशा/प्रत्यंतर्दशा, '
             . 'और उसी अवधि में गुरु-शनि का 12वें/चतुर्थ भाव पर द्विग्रह गोचर तथा वर्षफल में मुंथा/वर्षेश की पुष्टि। '
-            . 'ऊपर दी अवधियाँ केवल दशा-आधारित खिड़कियाँ हैं — अंतिम माह गोचर व वर्षफल से मिलाएँ।';
+            . ($auto
+                ? 'नीचे प्रत्येक खिड़की पर तीनों स्तर (दशा · गोचर · वर्षफल) की स्वतः-जाँच दी गई है — अंतिम माह प्रत्यंतर्दशा से निकालें।'
+                : 'ऊपर दी अवधियाँ केवल दशा-आधारित खिड़कियाँ हैं — अंतिम माह गोचर व वर्षफल से मिलाएँ।');
 
-        return ['windows' => $windows, 'note' => $note, 'has_dasha' => $moonLon !== null];
+        return ['windows' => $windows, 'note' => $note, 'has_dasha' => $moonLon !== null, 'auto' => $auto];
+    }
+
+    /**
+     * गुरु-शनि द्विग्रह गोचर — do transiting Jupiter AND Saturn together touch the
+     * natal 12th and/or 4th house (or that house's lord's natal position)?
+     */
+    private static function gocharDoubleTransit(\AutoBusiness\Astro\Calc\CalculationEngine $engine, array $ctx, float $jd): array
+    {
+        $asc = (int) $ctx['asc'];
+        $jH = Charts::houseFromAsc($engine->planetSiderealLon('Jupiter', $jd), $asc);
+        $sH = Charts::houseFromAsc($engine->planetSiderealLon('Saturn', $jd), $asc);
+
+        $touch = static function (int $from, array $offsets, int $target): bool {
+            if ($from === $target) {
+                return true;
+            }
+            foreach ($offsets as $k) {
+                if (((($from - 1) + ($k - 1)) % 12) + 1 === $target) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        $jup = [5, 7, 9];   // Jupiter's full aspects
+        $sat = [3, 7, 10];  // Saturn's full aspects
+
+        $hits = static function (int $house, string $lordHouseKey) use ($ctx, $touch, $jH, $sH, $jup, $sat): array {
+            $lordH = (int) ($ctx['house'][$ctx[$lordHouseKey]] ?? 0);
+            $jup_ = $touch($jH, $jup, $house) || ($lordH && $touch($jH, $jup, $lordH));
+            $sat_ = $touch($sH, $sat, $house) || ($lordH && $touch($sH, $sat, $lordH));
+            return ['jup' => $jup_, 'sat' => $sat_, 'double' => $jup_ && $sat_];
+        };
+        $h12 = $hits(12, 'L12');
+        $h4  = $hits(4, 'L4');
+
+        $tone = 'info';
+        if ($h12['double'] && $h4['double']) {
+            $tone = 'pos';
+            $text = 'गुरु-शनि का 12वें व चतुर्थ — दोनों पर द्विग्रह गोचर: विदेश-निवास व स्थायी घर दोनों सिद्ध।';
+        } elseif ($h12['double']) {
+            $tone = 'pos';
+            $text = 'गुरु-शनि दोनों का 12वें भाव/द्वादशेश पर गोचर — विदेश-निवास द्विग्रह-पुष्ट।';
+        } elseif ($h4['double']) {
+            $tone = 'pos';
+            $text = 'गुरु-शनि दोनों का चतुर्थ भाव/चतुर्थेश पर गोचर — स्थायी घर द्विग्रह-पुष्ट।';
+        } elseif ($h12['jup'] || $h12['sat'] || $h4['jup'] || $h4['sat']) {
+            $text = 'गुरु/शनि में से एक ही 12वें/चतुर्थ को स्पर्श कर रहा — गोचर आंशिक; पूर्ण द्विग्रह की प्रतीक्षा।';
+        } else {
+            $text = 'इस अवधि में गुरु-शनि का 12वें/चतुर्थ पर द्विग्रह गोचर नहीं — गोचर दुर्बल।';
+        }
+        return [
+            'jup_house' => $jH, 'sat_house' => $sH,
+            'd12' => $h12['double'], 'd4' => $h4['double'],
+            'any' => $h12['double'] || $h4['double'],
+            'text' => $text, 'tone' => $tone,
+        ];
+    }
+
+    /**
+     * वर्षफल पुष्टि — for the window's year: Muntha house (12/9/4/10 favourable),
+     * Varshesh (is it a PR कार्येश?), and an इत्थशाल between the Varsha-lagnesh and a
+     * natal कार्येश (द्वादशेश/चतुर्थेश/सूर्य).
+     *
+     * @param array<int,mixed> $birth [Y,Mo,D,H,Mi,lat,lon]
+     */
+    private static function varshaConfirm(
+        \AutoBusiness\Astro\Calc\CalculationEngine $engine, array $chart, array $birth,
+        float $tz, int $year, array $ctx, array $karSet
+    ): array {
+        [$bY, $bMo, $bD, $bH, $bMi, $lat, $lon] = $birth;
+        $vp = \AutoBusiness\Astro\Calc\Varshaphal::compute(
+            $engine, $chart, $bY, $bMo, $bD, $bH, $bMi, $tz, (float) $lat, (float) $lon, $year
+        );
+        $asc = (int) $ctx['asc'];
+        $munthaSign = array_search($vp['muntha']['sign'] ?? '', Charts::SIGNS, true);
+        $munthaSign = $munthaSign === false ? 0 : (int) $munthaSign;
+        $munthaHouse = (($munthaSign - $asc) % 12 + 12) % 12 + 1;
+        $munthaOk = in_array($munthaHouse, [12, 9, 4, 10], true);
+
+        $vlord = (string) ($vp['varshesh']['lord'] ?? '');
+        $vKar = isset($karSet[$vlord]);
+
+        // इत्थशाल: varsha-lagnesh with a natal karyesh present in the varsha chart
+        $vChart = $vp['varsha_chart'] ?? [];
+        $vLagnesh = Charts::signLord((int) ($vChart['ascendant']['sign_index'] ?? 0));
+        $ith = null;
+        foreach ([$ctx['L12'], $ctx['L4'], 'Sun'] as $kp) {
+            $r = self::ithashala($vChart['planets'] ?? [], $vLagnesh, $kp);
+            if ($r !== null) {
+                $ith = ['a' => self::HI[$vLagnesh] ?? $vLagnesh, 'b' => self::HI[$kp] ?? $kp, 'kind' => $r];
+                break;
+            }
+        }
+
+        $ok = $munthaOk || $vKar || $ith !== null;
+        $bits = [];
+        $bits[] = 'मुंथा ' . self::ord($munthaHouse) . ' भाव' . ($munthaOk ? ' ✓' : '');
+        $bits[] = 'वर्षेश ' . (self::HI[$vlord] ?? $vlord) . ($vKar ? ' (कार्येश ✓)' : '');
+        if ($ith !== null) {
+            $bits[] = $ith['a'] . '–' . $ith['b'] . ' इत्थशाल ✓';
+        }
+        return [
+            'year' => $year,
+            'muntha_house' => $munthaHouse, 'muntha_ok' => $munthaOk,
+            'varshesh' => self::HI[$vlord] ?? $vlord, 'varshesh_karyesh' => $vKar,
+            'ithashala' => $ith,
+            'ok' => $ok,
+            'tone' => $ok ? 'pos' : 'info',
+            'text' => implode(' · ', $bits) . '।',
+        ];
+    }
+
+    /**
+     * Lightweight इत्थशाल between two planets in a chart: a friendly Tajik aspect
+     * (or conjunction) that is APPLYING (faster planet at a lower degree) within
+     * the mean दीप्तांश. Returns 'वर्तमान'|'भविष्य'|null.
+     *
+     * @param array<string,mixed> $planets chart planets (with sign_index, deg_in_sign)
+     */
+    private static function ithashala(array $planets, string $a, string $b): ?string
+    {
+        if ($a === $b || !isset($planets[$a], $planets[$b])) {
+            return null;
+        }
+        static $deep = ['Sun' => 15.0, 'Moon' => 12.0, 'Mars' => 8.0, 'Mercury' => 7.0,
+            'Jupiter' => 9.0, 'Venus' => 7.0, 'Saturn' => 9.0];
+        static $speed = ['Moon' => 0, 'Mercury' => 1, 'Venus' => 2, 'Sun' => 3, 'Mars' => 4, 'Jupiter' => 5, 'Saturn' => 6];
+        $sA = (int) ($planets[$a]['sign_index'] ?? -1);
+        $sB = (int) ($planets[$b]['sign_index'] ?? -1);
+        $dA = (float) ($planets[$a]['deg_in_sign'] ?? 0.0);
+        $dB = (float) ($planets[$b]['deg_in_sign'] ?? 0.0);
+        if ($sA < 0 || $sB < 0) {
+            return null;
+        }
+        $count = (($sB - $sA) % 12 + 12) % 12 + 1;   // 1..12 sign distance b from a
+        $friendly = in_array($count, [1, 3, 5, 9, 11], true);   // conjunction + sneha aspects
+        if (!$friendly) {
+            return null;
+        }
+        // faster planet must be applying (lower degree) toward the slower
+        $fast = ($speed[$a] ?? 9) <= ($speed[$b] ?? 9) ? $a : $b;
+        $slow = $fast === $a ? $b : $a;
+        $fastDeg = $fast === $a ? $dA : $dB;
+        $slowDeg = $fast === $a ? $dB : $dA;
+        $orb = (($deep[$a] ?? 8.0) + ($deep[$b] ?? 8.0)) / 2.0;
+        $gap = abs($dA - $dB);
+        if ($gap > $orb) {
+            return null;   // outside the light-orb
+        }
+        return $fastDeg <= $slowDeg ? 'वर्तमान' : 'भविष्य';   // applying vs separating
+    }
+
+    /** The doc's "Rule of 3": दशा (always ✓ here) · गोचर · वर्षफल → verdict. */
+    private static function rule3(array $w): array
+    {
+        $g = !empty($w['gochar']['any']);
+        $v = !empty($w['varsha']['ok']);
+        if ($g && $v) {
+            return ['label' => '★ सर्वोत्तम — तीनों स्तर सहमत', 'tone' => 'pos',
+                'text' => 'दशा · गोचर · वर्षफल — तीनों एक स्वर में; PR इसी अवधि में सर्वाधिक संभावित। माह प्रत्यंतर्दशा + सूर्य/चंद्र गोचर से।'];
+        }
+        if ($g) {
+            return ['label' => 'प्रबल — दशा + गोचर', 'tone' => 'pos',
+                'text' => 'दशा-खिड़की पर गुरु-शनि द्विग्रह गोचर बैठ रहा — प्रबल; वर्षफल की पुष्टि पर निश्चित।'];
+        }
+        if ($v) {
+            return ['label' => 'प्रक्रिया — दशा + वर्षफल', 'tone' => 'info',
+                'text' => 'दशा व वर्षफल सहमत, पर पूर्ण द्विग्रह गोचर की प्रतीक्षा — प्रक्रिया आगे बढ़ेगी, स्वीकृति अगले अनुकूल गोचर पर।'];
+        }
+        return ['label' => 'प्रयास — केवल दशा', 'tone' => 'info',
+            'text' => 'केवल दशा-खिड़की खुली है; गोचर व वर्षफल का समर्थन अभी नहीं — प्रयास व प्रतीक्षा।'];
     }
 
     // ----------------------------------------------------------------- vargas

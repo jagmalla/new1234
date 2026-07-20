@@ -113,7 +113,9 @@ final class CalcController
                 $videsh = \AutoBusiness\Astro\Phala\VideshEngine::compute(
                     $chart, $vargas,
                     (float) ($chart['planets']['Moon']['sidereal_lon'] ?? 0.0),
-                    $jd, $nowJd, $tz
+                    $jd, $nowJd, $tz,
+                    // engine + birth params → auto गुरु-शनि गोचर + वर्षफल per PR window
+                    $engine, [$Y, $Mo, $D, $H, $Mi, $lat, $lon]
                 );
             } catch (\Throwable $e) {
                 $videsh = null;
