@@ -3,8 +3,23 @@
 A Microsoft Edge (Manifest V3) extension that detects video playing on the current
 page and shows its name, size, resolution and format with a Download button.
 
-> **Status:** Module 1 — empty working skeleton. It loads into Edge and opens a popup.
-> Detection, metadata, UI and downloading arrive in later modules.
+> **Status:** Module 2 — detection engine. Sniffs media network requests, scans
+> `<video>` elements, flags DRM pages, and shows a toolbar badge count. Metadata,
+> polished UI and downloading arrive in later modules.
+
+## Module 2 test plan
+
+Test each category and confirm the described behavior:
+
+| Site type | Example | Correct behavior |
+|---|---|---|
+| Direct file | a page linking a plain `.mp4` | Item listed as `DIRECT` with a real byte size; badge shows `1` |
+| HLS | an `.m3u8` test stream | Item listed as `HLS` after you press play; size deferred to Module 3 |
+| DASH | an `.mpd` test stream | Item listed as `DASH` after play |
+| Login-required | a site needing sign-in | Detection still works; captured Cookie/Referer make Module 5 downloads succeed |
+| DRM | a Widevine/PlayReady page | Popup shows "Protected — cannot be downloaded"; badge greyed, count 0; no capture |
+
+Nothing appears until playback starts on most sites — that is expected.
 
 ## Build & load (short version)
 

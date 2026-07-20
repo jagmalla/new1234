@@ -35,6 +35,16 @@ export default defineManifest({
 
   content_scripts: [
     {
+      // Runs in the page's OWN JS world at the earliest moment so it can wrap
+      // navigator.requestMediaKeySystemAccess before the site calls it (DRM detection).
+      matches: ['<all_urls>'],
+      js: ['src/lib/eme-hook.ts'],
+      run_at: 'document_start',
+      all_frames: true,
+      world: 'MAIN',
+    },
+    {
+      // Isolated world: scans <video> elements and relays messages to the worker.
       matches: ['<all_urls>'],
       js: ['src/content.ts'],
       run_at: 'document_idle',
