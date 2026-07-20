@@ -37,6 +37,8 @@ export type ToOffscreen =
       headers: CapturedHeaders;
       filename: string;
       title: string;
+      concurrency?: number;
+      maxSegments?: number;
     }
   | { target: 'offscreen'; cmd: 'CANCEL'; id: string };
 

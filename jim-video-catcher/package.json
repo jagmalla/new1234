@@ -1,6 +1,6 @@
 {
   "name": "jim-video-catcher",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Detects videos playing on the current page and shows name, size, resolution and format with a Download button.",
   "private": true,
   "type": "module",

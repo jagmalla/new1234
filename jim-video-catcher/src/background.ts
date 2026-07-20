@@ -6,6 +6,12 @@
 import { classify } from './lib/classify';
 import { parseDash, parseHls, estimateBytes } from './lib/manifest-parse';
 import { extFor, sanitizeFilename, urlFilename } from './lib/name';
+import {
+  addHistory,
+  applyTemplate,
+  getSettings,
+  withSubfolder,
+} from './lib/settings';
 import type {
   CapturedHeaders,
   ContentMessage,
@@ -46,8 +52,13 @@ function downloadableCount(state: TabState): number {
 }
 
 async function updateBadge(tabId: number, state: TabState): Promise<void> {
+  const settings = await getSettings();
   const n = downloadableCount(state);
   try {
+    if (!settings.badge) {
+      await chrome.action.setBadgeText({ tabId, text: '' });
+      return;
+    }
     await chrome.action.setBadgeBackgroundColor({ tabId, color: state.drm ? '#9ca3af' : '#4f46e5' });
     await chrome.action.setBadgeText({ tabId, text: n > 0 ? String(n) : '' });
   } catch {
@@ -111,9 +122,12 @@ chrome.webRequest.onHeadersReceived.addListener(
   ['responseHeaders', 'extraHeaders'],
 );
 
+const MAX_DETECTIONS = 100; // robustness: cap pages that emit hundreds of media requests
+
 async function recordNetwork(det: NetworkDetection): Promise<void> {
   const state = await getState(det.tabId);
   if (state.network.some((n) => n.url === det.url)) return; // dedupe by URL
+  if (state.network.length >= MAX_DETECTIONS) return;       // stop growing unbounded
   state.network = [...state.network, det];
   await setState(det.tabId, state);
   void enrich(det.tabId, det.url); // async — updates the record when done
@@ -313,60 +327,102 @@ chrome.runtime.onMessage.addListener(
       return true;
     }
     if (msg?.type !== 'DOWNLOAD') return; // handled by the content-message listener
-
-    void (async () => {
-      if (msg.format === 'audio') {
-        sendResponse({
-          ok: false,
-          message: 'Audio-only (MP3) extraction needs the Module 7 native host (yt-dlp/ffmpeg).',
-        });
-        return;
-      }
-      if (msg.kind === 'DASH') {
-        sendResponse({
-          ok: false,
-          message: 'DASH needs separate video+audio muxing — use the Module 7 native host.',
-        });
-        return;
-      }
-
-      try {
-        const state = await getState((await activeTabId()) ?? -1);
-        const det = state.network.find((n) => n.url === msg.url);
-        const headers: CapturedHeaders = det?.headers ?? {};
-        const rawName = msg.title || urlFilename(msg.url);
-        const filename = rawName.replace(/[\\/:*?"<>|]/g, '');
-
-        if (msg.kind === 'DIRECT') {
-          await addHeaderRule(msg.url, headers, det?.pageUrl);
-          await chrome.downloads.download({ url: msg.url, filename });
-          sendResponse({ ok: true });
-          return;
-        }
-
-        // HLS -> offscreen engine.
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        await registerDownload(id, filename, msg.kind);
-        await addHeaderRule(msg.url, headers, det?.pageUrl);
-        await ensureOffscreen();
-        await chrome.runtime.sendMessage({
-          target: 'offscreen',
-          cmd: 'START_HLS',
-          id,
-          playlistUrl: msg.url,
-          variantIndex: msg.variantIndex,
-          headers,
-          filename,
-          title: filename,
-        });
-        sendResponse({ ok: true });
-      } catch (e) {
-        sendResponse({ ok: false, message: String(e) });
-      }
-    })();
+    void startDownload(msg).then(sendResponse);
     return true;
   },
 );
+
+async function startDownload(
+  msg: DownloadRequest,
+): Promise<{ ok: boolean; message?: string }> {
+  if (msg.format === 'audio') {
+    return {
+      ok: false,
+      message: 'Audio-only (MP3) extraction needs the Module 7 native host (yt-dlp/ffmpeg).',
+    };
+  }
+  if (msg.kind === 'DASH') {
+    return {
+      ok: false,
+      message: 'DASH needs separate video+audio muxing — use the Module 7 native host.',
+    };
+  }
+
+  try {
+    const settings = await getSettings();
+    const state = await getState((await activeTabId()) ?? -1);
+    const det = state.network.find((n) => n.url === msg.url);
+    const headers: CapturedHeaders = det?.headers ?? {};
+
+    const resolution = det?.height ? `${det.height}p` : undefined;
+    const ext = extFor(msg.url, msg.kind);
+    const baseTitle = sanitizeFilename(msg.title || urlFilename(msg.url), '').replace(ext, '');
+    const templated = applyTemplate(settings.filenameTemplate, { title: baseTitle, resolution }, ext);
+    const filename = withSubfolder(settings.subfolder, templated);
+
+    if (msg.kind === 'DIRECT') {
+      await addHeaderRule(msg.url, headers, det?.pageUrl);
+      await chrome.downloads.download({ url: msg.url, filename });
+      await addHistory({
+        title: baseTitle,
+        filename,
+        url: msg.url,
+        kind: msg.kind,
+        sizeBytes: det?.sizeBytes ?? det?.contentLength,
+        when: Date.now(),
+      });
+      return { ok: true };
+    }
+
+    // HLS -> offscreen engine.
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    await registerDownload(id, templated, msg.kind);
+    await addHeaderRule(msg.url, headers, det?.pageUrl);
+    await ensureOffscreen();
+    await chrome.runtime.sendMessage({
+      target: 'offscreen',
+      cmd: 'START_HLS',
+      id,
+      playlistUrl: msg.url,
+      variantIndex: msg.variantIndex,
+      headers,
+      filename,
+      title: baseTitle,
+      concurrency: settings.segmentConcurrency,
+      maxSegments: settings.maxSegments,
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: String(e) };
+  }
+}
+
+// ---- Right-click context menu on <video> -----------------------------------
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'jim-download',
+    title: 'Download this video with JIM',
+    contexts: ['video'],
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info) => {
+  const src = info.srcUrl;
+  if (!src) return;
+  if (src.startsWith('blob:')) {
+    // A blob src has no downloadable URL — the network layer holds the real
+    // stream. Point the user at the popup which lists it.
+    return;
+  }
+  const kind = classify(src);
+  void startDownload({
+    type: 'DOWNLOAD',
+    url: src,
+    kind: kind === 'IGNORE' || kind === 'SEGMENT' ? 'DIRECT' : kind,
+    format: 'video',
+  });
+});
 
 async function activeTabId(): Promise<number | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

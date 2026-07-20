@@ -5,33 +5,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JIM Video Catcher — Settings</title>
     <style>
-      :root { color-scheme: light dark; }
+      :root {
+        color-scheme: light dark;
+        --fg: #1f2430; --muted: #6b7280; --border: #e5e7eb; --accent: #4f46e5; --bg: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --fg: #e8eaf0; --muted: #9aa1ac; --border: #2a2e37; --accent: #818cf8; --bg: #16181d; }
+      }
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-        max-width: 560px;
-        margin: 40px auto;
-        padding: 0 20px;
-        line-height: 1.5;
+        max-width: 640px; margin: 40px auto; padding: 0 22px; color: var(--fg);
+        background: var(--bg); line-height: 1.5;
       }
-      h1 { font-size: 20px; }
-      .row { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
-      label { font-weight: 600; }
-      input[type='text'] { padding: 6px 8px; flex: 1; }
-      .muted { color: #6b7280; font-size: 13px; }
+      h1 { font-size: 21px; }
+      h2 { font-size: 15px; margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+      .row { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
+      .row label { font-weight: 600; flex: 0 0 190px; }
+      input[type='text'], input[type='number'], select {
+        padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px;
+        background: var(--bg); color: var(--fg); font: inherit; flex: 1;
+      }
+      input[type='number'] { flex: 0 0 90px; }
+      .muted { color: var(--muted); font-size: 13px; }
+      .tokens code {
+        background: var(--border); padding: 1px 5px; border-radius: 4px; font-size: 12px;
+      }
+      button {
+        font: inherit; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border);
+        background: var(--accent); color: #fff; cursor: pointer; font-weight: 600;
+      }
+      button.secondary { background: var(--bg); color: var(--fg); }
+      #saved { color: #16a34a; font-size: 13px; }
+      ul { list-style: none; padding: 0; }
+      li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0;
+        border-bottom: 1px solid var(--border); font-size: 13px; }
+      li .when { color: var(--muted); white-space: nowrap; }
+      .site-row { display: flex; gap: 8px; }
+      .empty { color: var(--muted); font-style: italic; }
     </style>
   </head>
   <body>
-    <h1>JIM Video Catcher — Settings</h1>
-    <p class="muted">
-      Full settings (filename templates, per-site rules, history, themes) arrive in
-      Module 6. This page is here so the ⚙ button works today.
-    </p>
+    <h1>JIM Video Catcher — Settings <span id="saved" hidden>Saved ✓</span></h1>
 
+    <h2>Downloads</h2>
     <div class="row">
       <label for="subfolder">Download subfolder</label>
       <input type="text" id="subfolder" placeholder="JIM Video Catcher" />
     </div>
-    <p class="muted" id="saved" hidden>Saved.</p>
+    <div class="row">
+      <label for="template">Filename template</label>
+      <input type="text" id="template" placeholder="{title}" />
+    </div>
+    <p class="muted tokens">
+      Tokens: <code>{title}</code> <code>{resolution}</code> <code>{date}</code>.
+      Example: <code>{title} - {resolution} ({date})</code>
+    </p>
+    <div class="row">
+      <label for="format">Default format</label>
+      <select id="format"><option value="video">Video (MP4)</option><option value="audio">Audio (MP3)</option></select>
+    </div>
+    <div class="row">
+      <label for="quality">Default quality</label>
+      <select id="quality"><option value="highest">Highest</option><option value="lowest">Lowest</option></select>
+    </div>
+
+    <h2>Performance</h2>
+    <div class="row">
+      <label for="segconc">Segment concurrency</label>
+      <input type="number" id="segconc" min="1" max="12" />
+      <span class="muted">parallel HLS segment downloads (1–12)</span>
+    </div>
+    <div class="row">
+      <label for="maxseg">Max segments</label>
+      <input type="number" id="maxseg" min="100" max="100000" />
+      <span class="muted">livestream safeguard</span>
+    </div>
+
+    <h2>Appearance</h2>
+    <div class="row">
+      <label for="badge">Toolbar badge count</label>
+      <select id="badge"><option value="true">On</option><option value="false">Off</option></select>
+    </div>
+
+    <h2>Disabled sites</h2>
+    <p class="muted">Detection is turned off on these hostnames.</p>
+    <div class="site-row">
+      <input type="text" id="site" placeholder="example.com" />
+      <button id="addSite">Add</button>
+    </div>
+    <ul id="sites"></ul>
+
+    <h2>Download history</h2>
+    <ul id="history"></ul>
+    <button class="secondary" id="clearHistory">Clear history</button>
+
+    <p class="muted" style="margin-top:30px">
+      You are responsible for complying with the terms of service and copyright law of
+      the sites you use this on. DRM-protected content is never downloaded.
+    </p>
 
     <script type="module" src="./options.ts"></script>
   </body>

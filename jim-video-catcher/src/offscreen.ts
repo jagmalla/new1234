@@ -5,8 +5,9 @@
 
 import { parseHls, parseHlsSegments } from './lib/manifest-parse';
 import { DOWNLOADS_KEY, type DownloadProgress, type ToOffscreen } from './lib/download-types';
+import { addHistory } from './lib/settings';
 
-const CONCURRENCY = 6;
+const DEFAULT_CONCURRENCY = 6;
 const MAX_RETRIES = 3;
 const canceled = new Set<string>();
 
@@ -68,8 +69,15 @@ async function runHls(msg: Extract<ToOffscreen, { cmd: 'START_HLS' }>): Promise<
       playlistText = await fetchText(playlistUrl);
     }
 
-    const { initUrl, segmentUrls, isFmp4 } = parseHlsSegments(playlistText, playlistUrl);
+    const parsed = parseHlsSegments(playlistText, playlistUrl);
+    const { initUrl, isFmp4 } = parsed;
+    let { segmentUrls } = parsed;
     if (segmentUrls.length === 0) throw new Error('No segments found in playlist');
+
+    // Livestream safeguard: never fetch more than the configured cap.
+    const cap = msg.maxSegments ?? 20000;
+    if (segmentUrls.length > cap) segmentUrls = segmentUrls.slice(0, cap);
+    const concurrency = Math.max(1, Math.min(msg.concurrency ?? DEFAULT_CONCURRENCY, 12));
 
     const segTotal = segmentUrls.length;
     await patchProgress(id, { state: 'downloading', segTotal, segDone: 0 });
@@ -107,7 +115,7 @@ async function runHls(msg: Extract<ToOffscreen, { cmd: 'START_HLS' }>): Promise<
       }
     }
 
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, segTotal) }, worker));
+    await Promise.all(Array.from({ length: Math.min(concurrency, segTotal) }, worker));
 
     if (canceled.has(id)) {
       canceled.delete(id);
@@ -132,6 +140,14 @@ async function runHls(msg: Extract<ToOffscreen, { cmd: 'START_HLS' }>): Promise<
     // Give the download a beat to read the blob, then release memory.
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
 
+    await addHistory({
+      title: msg.title,
+      filename: finalName,
+      url: msg.playlistUrl,
+      kind: 'HLS',
+      sizeBytes: blob.size,
+      when: Date.now(),
+    });
     await patchProgress(id, { state: 'done', percent: 100, speed: undefined, etaSec: 0 });
   } catch (e) {
     await patchProgress(id, { state: 'error', error: e instanceof Error ? e.message : String(e) });

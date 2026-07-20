@@ -150,5 +150,13 @@ document.addEventListener('play', scheduleScan, true);
 document.addEventListener('loadedmetadata', scheduleScan, true);
 document.addEventListener('durationchange', scheduleScan, true);
 
-scan();
-sendMeta();
+// Respect the per-site disable list before doing any work.
+chrome.storage.local.get('settings').then((r) => {
+  const disabled: string[] = r.settings?.disabledSites ?? [];
+  if (disabled.includes(location.hostname)) {
+    observer.disconnect();
+    return;
+  }
+  scan();
+  sendMeta();
+});

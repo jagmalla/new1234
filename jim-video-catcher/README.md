@@ -3,7 +3,13 @@
 A Microsoft Edge (Manifest V3) extension that detects video playing on the current
 page and shows its name, size, resolution and format with a Download button.
 
-> **Status:** Module 5 — download engine. Direct files and **HLS streams**
+> **Status:** Module 6 — settings, polish & packaging. Full options page
+> (subfolder, filename templates `{title}/{resolution}/{date}`, default
+> format/quality, segment concurrency, livestream cap, badge toggle, per-site
+> disable), download history with clear, `Ctrl+Shift+Y` shortcut, right-click
+> "Download this video with JIM" on video elements, and robustness caps.
+>
+> Previous — Module 5 — download engine. Direct files and **HLS streams**
 > download for real: segments fetched with concurrency 6 + retry in an offscreen
 > document (so the download survives the MV3 worker sleeping), assembled into a
 > playable `.ts`/`.mp4`, with a live progress bar (%, speed, ETA, cancel).
@@ -50,6 +56,40 @@ Use `npm run dev` to rebuild on save; click the **reload** ↻ icon on the
 extension card in `edge://extensions` after each rebuild.
 
 See the module checklist for the full, click-by-click walkthrough.
+
+## Packaging & distribution
+
+**Zip for sharing/backup** (a loadable copy, no store):
+```bash
+cd jim-video-catcher
+npm run build
+cd dist && zip -r ../jim-video-catcher.zip .
+```
+Anyone can then `edge://extensions` → Developer mode → **Load unpacked** on the
+unzipped `dist`.
+
+**Load it permanently:** an unpacked extension stays loaded across restarts as long
+as its folder isn't deleted and Developer mode stays on. Keep the `dist` folder
+somewhere stable (not in Downloads/Temp).
+
+### Edge Add-ons store — the honest state
+
+This category is **hard to publish**. Both the Microsoft Edge Add-ons store and the
+Chrome Web Store restrict tools that download media from sites whose terms prohibit
+it. Realistically:
+
+- **What can pass review:** a downloader scoped to *direct media files* and to
+  *content the user owns or self-hosts*, with no built-in targeting of streaming
+  services, no DRM circumvention, and clear user-consent + legal notices (all of
+  which this extension has).
+- **What will get it rejected:** broad `<all_urls>` host permissions framed as a
+  general "download from any site" tool, anything that looks aimed at YouTube/Netflix,
+  and the Module 7 yt-dlp native host (bundling yt-dlp is a near-certain rejection).
+- **To have a realistic chance:** narrow `host_permissions` to the sites you actually
+  support, drop the generic streaming-site framing, keep DRM detection/refusal
+  prominent, and ship the native-host build **outside** the store (self-distributed).
+
+For personal use, **Load unpacked is the intended path** and needs no store approval.
 
 ## Legal
 

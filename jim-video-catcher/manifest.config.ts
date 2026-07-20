@@ -63,7 +63,15 @@ export default defineManifest({
     'tabs',       // Map detections to the correct tab and clear them on navigation/close.
     'offscreen',  // Run the HLS assembler in a document that outlives the worker.
     'declarativeNetRequestWithHostAccess', // Replay Referer/Cookie/UA on downloads to avoid 403s.
+    'contextMenus', // Right-click "Download this video with JIM" on <video> elements.
   ],
+
+  commands: {
+    _execute_action: {
+      suggested_key: { default: 'Ctrl+Shift+Y' },
+      description: 'Open JIM Video Catcher',
+    },
+  },
 
   // Needed so detection and downloads work on arbitrary sites, including private/self-hosted ones.
   host_permissions: ['<all_urls>'],

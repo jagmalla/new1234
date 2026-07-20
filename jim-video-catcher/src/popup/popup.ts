@@ -3,6 +3,13 @@
 
 import type { NetworkDetection, TabState, Variant } from '../lib/types';
 import { DOWNLOADS_KEY, type DownloadProgress } from '../lib/download-types';
+import { DEFAULT_SETTINGS, getSettings, type Settings } from '../lib/settings';
+
+let settings: Settings = DEFAULT_SETTINGS;
+void getSettings().then((s) => {
+  settings = s;
+  void load();
+});
 
 const versionEl = document.getElementById('version')!;
 versionEl.textContent = `v${chrome.runtime.getManifest().version}`;
@@ -99,6 +106,8 @@ function buildCard(it: NetworkDetection, thumb?: string): HTMLElement {
 
   const variants: Variant[] = it.variants ?? [];
   if (variants.length > 1) {
+    // Variants are sorted highest-first; honor the default-quality setting.
+    selectedVariant = settings.defaultQuality === 'lowest' ? variants.length - 1 : 0;
     const sel = document.createElement('select');
     variants.forEach((v, i) => {
       const opt = document.createElement('option');
@@ -106,6 +115,7 @@ function buildCard(it: NetworkDetection, thumb?: string): HTMLElement {
       const br = v.bandwidth ? ` · ${Math.round(v.bandwidth / 1000)} kbps` : '';
       opt.value = String(i);
       opt.textContent = label + br;
+      if (i === selectedVariant) opt.selected = true;
       sel.append(opt);
     });
     sel.addEventListener('change', () => (selectedVariant = Number(sel.value)));
@@ -113,14 +123,14 @@ function buildCard(it: NetworkDetection, thumb?: string): HTMLElement {
   }
 
   // Format toggle: Video (MP4) / Audio (MP3)
-  let format: 'video' | 'audio' = 'video';
+  let format: 'video' | 'audio' = settings.defaultFormat;
   const toggle = document.createElement('div');
   toggle.className = 'toggle';
   const vBtn = document.createElement('button');
   vBtn.textContent = 'Video';
-  vBtn.className = 'active';
   const aBtn = document.createElement('button');
   aBtn.textContent = 'Audio';
+  (format === 'audio' ? aBtn : vBtn).className = 'active';
   vBtn.addEventListener('click', () => {
     format = 'video';
     vBtn.classList.add('active');
