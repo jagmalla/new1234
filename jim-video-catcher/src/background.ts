@@ -290,6 +290,42 @@ chrome.runtime.onMessage.addListener((msg: ContentMessage, sender, sendResponse)
   return true; // async response
 });
 
+// ---- Downloads (Module 4: direct files for real; streams land in Module 5). ----
+
+interface DownloadRequest {
+  type: 'DOWNLOAD';
+  url: string;
+  kind: NetworkDetection['kind'];
+  title?: string;
+  format: 'video' | 'audio';
+  variantIndex?: number;
+}
+
+chrome.runtime.onMessage.addListener((msg: DownloadRequest, _sender, sendResponse) => {
+  if (msg?.type !== 'DOWNLOAD') return; // handled by the other listener
+  void (async () => {
+    if (msg.kind !== 'DIRECT') {
+      sendResponse({
+        ok: false,
+        message: 'Streams (HLS/DASH) & MP3 download arrives in Module 5.',
+      });
+      return;
+    }
+    if (msg.format === 'audio') {
+      sendResponse({ ok: false, message: 'Audio-only (MP3) extraction arrives in Module 5.' });
+      return;
+    }
+    try {
+      const filename = (msg.title || urlFilename(msg.url)).replace(/[\\/:*?"<>|]/g, '');
+      await chrome.downloads.download({ url: msg.url, filename });
+      sendResponse({ ok: true });
+    } catch (e) {
+      sendResponse({ ok: false, message: String(e) });
+    }
+  })();
+  return true; // async response
+});
+
 // ---- Lifecycle: clear on navigation and tab close.
 
 chrome.webNavigation?.onCommitted.addListener((details) => {

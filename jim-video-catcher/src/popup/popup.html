@@ -9,12 +9,22 @@
   <body>
     <main class="panel">
       <header class="head">
-        <img src="/icons/icon32.png" alt="" width="24" height="24" />
+        <img src="/icons/icon32.png" alt="" width="22" height="22" />
         <div class="titles">
           <h1>JIM Video Catcher</h1>
           <span class="version" id="version">v0.0.0</span>
         </div>
+        <button class="icon-btn" id="settings" title="Settings" aria-label="Settings">⚙</button>
       </header>
+
+      <!-- First-run legal notice -->
+      <section class="notice" id="notice" hidden>
+        <p>
+          You are responsible for complying with the terms of service and copyright
+          law of the sites you use this on. DRM-protected content is never downloaded.
+        </p>
+        <button class="btn btn-small" id="notice-ok">Got it</button>
+      </section>
 
       <section class="body" id="body">
         <p class="placeholder">Scanning…</p>

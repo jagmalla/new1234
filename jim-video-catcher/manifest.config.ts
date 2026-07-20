@@ -27,6 +27,8 @@ export default defineManifest({
     },
   },
 
+  options_page: 'src/options.html',
+
   background: {
     // MV3 service worker (event-based, can be killed when idle — we design for that later).
     service_worker: 'src/background.ts',

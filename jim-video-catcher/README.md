@@ -3,9 +3,10 @@
 A Microsoft Edge (Manifest V3) extension that detects video playing on the current
 page and shows its name, size, resolution and format with a Download button.
 
-> **Status:** Module 3 — metadata. On top of detection it resolves each video's
-> title, real size (direct) or `~`estimate (HLS/DASH), duration, resolution,
-> quality count and a thumbnail. Polished UI and downloading arrive next.
+> **Status:** Module 4 — popup UI. Product-grade cards (thumbnail, name, badges,
+> quality dropdown, Video/Audio toggle, Download button), DRM greyed out, empty
+> state, first-run legal notice, options page, light/dark themes. Direct-file
+> downloads work now; streams/MP3 arrive with the Module 5 engine.
 
 ## Module 2 test plan
 
