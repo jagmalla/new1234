@@ -12,7 +12,8 @@ import {
   getSettings,
   withSubfolder,
 } from './lib/settings';
-import { CANCELED_KEY, JOBS_KEY, type HlsJob } from './lib/download-types';
+import { CANCELED_KEY, JOBS_KEY, type DownloadProgress, type HlsJob } from './lib/download-types';
+import { nativeDownload, pingNative } from './lib/native';
 import type {
   CapturedHeaders,
   ContentMessage,
@@ -342,12 +343,35 @@ interface CancelRequest {
   type: 'CANCEL_DOWNLOAD';
   id: string;
 }
+interface CheckNativeRequest {
+  type: 'CHECK_NATIVE';
+}
+interface NativeDownloadRequest {
+  type: 'NATIVE_DOWNLOAD';
+  url: string;
+  format: 'video' | 'audio';
+  quality?: number;
+  title?: string;
+  drm?: boolean;
+}
 
 chrome.runtime.onMessage.addListener(
-  (msg: DownloadRequest | CancelRequest, _sender, sendResponse) => {
+  (
+    msg: DownloadRequest | CancelRequest | CheckNativeRequest | NativeDownloadRequest,
+    _sender,
+    sendResponse,
+  ) => {
     if (msg?.type === 'CANCEL_DOWNLOAD') {
       void cancelJob(msg.id);
       sendResponse({ ok: true });
+      return true;
+    }
+    if (msg?.type === 'CHECK_NATIVE') {
+      void pingNative().then(sendResponse);
+      return true;
+    }
+    if (msg?.type === 'NATIVE_DOWNLOAD') {
+      void startNativeDownload(msg).then(sendResponse);
       return true;
     }
     if (msg?.type !== 'DOWNLOAD') return; // handled by the content-message listener
@@ -355,6 +379,49 @@ chrome.runtime.onMessage.addListener(
     return true;
   },
 );
+
+// Route a download through the yt-dlp native helper, streaming progress to the popup.
+async function startNativeDownload(
+  msg: NativeDownloadRequest,
+): Promise<{ ok: boolean; message?: string }> {
+  if (msg.drm) return { ok: false, message: 'Protected content is never downloaded.' };
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const title = (msg.title || 'video').replace(/[\\/:*?"<>|]/g, '');
+  await registerDownload(id, title, 'yt-dlp');
+  await patchDownloadRow(id, { via: 'ytdlp', state: 'preparing' });
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
+    };
+    nativeDownload(
+      { url: msg.url, format: msg.format, quality: msg.quality, drm: msg.drm },
+      (e) => {
+        if (e.type === 'progress') {
+          void patchDownloadRow(id, {
+            state: 'downloading',
+            percent: e.percent,
+            speedText: e.speedText,
+            etaText: e.etaText,
+          });
+        } else if (e.type === 'done') {
+          void patchDownloadRow(id, { state: 'done', percent: 100 });
+          finish();
+        } else if (e.type === 'error') {
+          void patchDownloadRow(id, { state: 'error', error: e.message });
+          finish();
+        } else if (e.type === 'disconnect') {
+          finish();
+        }
+      },
+    );
+  });
+  return { ok: true };
+}
 
 async function startDownload(
   msg: DownloadRequest,
@@ -461,13 +528,10 @@ async function activeTabId(): Promise<number | undefined> {
   return tab?.id ?? undefined;
 }
 
-async function patchDownloadRow(
-  id: string,
-  patch: Partial<{ state: string; error: string }>,
-): Promise<void> {
+async function patchDownloadRow(id: string, patch: Partial<DownloadProgress>): Promise<void> {
   const store = await chrome.storage.session.get('downloads');
-  const list = store.downloads ?? [];
-  const idx = list.findIndex((d: { id: string }) => d.id === id);
+  const list: DownloadProgress[] = store.downloads ?? [];
+  const idx = list.findIndex((d) => d.id === id);
   if (idx >= 0) {
     list[idx] = { ...list[idx], ...patch };
     await chrome.storage.session.set({ downloads: list });

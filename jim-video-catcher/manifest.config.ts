@@ -9,6 +9,10 @@ export default defineManifest({
   version: pkg.version,
   description: pkg.description,
 
+  // Fixed public key -> stable extension ID (gnaljceaknidngnpjgkpbaeoimkkfkdo),
+  // so the native messaging host can whitelist this extension by ID.
+  key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArxEQvs2eGIgpTwE29ATEMZ8yhaf02jdUM56KAh4/L5NSMlJDO7xgxssr4AXzE9IWW80M67Q/gig/c4yIvdMlTBW9NDQW4SA6eXEocDxsB1Q9WIyjKZaTzChobFQ18oNgnQPOzztohX+DKH9vn0i0Ns39Lhn7u05MIFtnYMmm+IZfQQgOJarvn1XOLeCOaBdHsfZT3A+NLlU6H4CWEpWW7g+CLIZz0TYaSQoGfVWjgGlc1QTZh/PuL7BQmD/jbvv7jb+DHNLi7PnlXt70p/EEkAhUzvgQsjLr6C15ienpdrEEFi/prLFmJvZXgilwgFpgjoT4XQgCf49dKFsPZR/y/wIDAQAB',
+
   icons: {
     16: 'icons/icon16.png',
     32: 'icons/icon32.png',
@@ -64,6 +68,7 @@ export default defineManifest({
     'offscreen',  // Run the HLS assembler in a document that outlives the worker.
     'declarativeNetRequestWithHostAccess', // Replay Referer/Cookie/UA on downloads to avoid 403s.
     'contextMenus', // Right-click "Download this video with JIM" on <video> elements.
+    'nativeMessaging', // Talk to the optional yt-dlp native helper (Module 7).
   ],
 
   commands: {

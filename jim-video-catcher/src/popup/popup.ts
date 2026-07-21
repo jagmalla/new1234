@@ -6,10 +6,33 @@ import { DOWNLOADS_KEY, type DownloadProgress } from '../lib/download-types';
 import { DEFAULT_SETTINGS, getSettings, type Settings } from '../lib/settings';
 
 let settings: Settings = DEFAULT_SETTINGS;
+let native: { available: boolean; ytdlp?: string | null } = { available: false };
+let currentTabUrl = '';
+
 void getSettings().then((s) => {
   settings = s;
   void load();
 });
+
+// Detect the native helper (Module 7) and reflect it in the UI.
+chrome.runtime.sendMessage({ type: 'CHECK_NATIVE' }, (status) => {
+  if (chrome.runtime.lastError) return;
+  native = status ?? { available: false };
+  renderNativeBadge();
+  void load();
+});
+
+function renderNativeBadge(): void {
+  const el = document.getElementById('native-badge')!;
+  el.hidden = false;
+  if (native.available) {
+    el.className = 'native-badge on';
+    el.innerHTML = `<span class="dot"></span>Native helper: on${native.ytdlp ? ` · yt-dlp ${native.ytdlp}` : ''}`;
+  } else {
+    el.className = 'native-badge off';
+    el.innerHTML = '<span class="dot"></span>Native helper: off — install it to download YouTube/DASH/MP3';
+  }
+}
 
 const versionEl = document.getElementById('version')!;
 versionEl.textContent = `v${chrome.runtime.getManifest().version}`;
@@ -57,6 +80,96 @@ function fileName(url: string): string {
   } catch {
     return url;
   }
+}
+
+// ---- Native (yt-dlp) card for adaptive sites like YouTube -------------------
+function buildNativeCard(state: TabState): HTMLElement {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  if (state.meta?.thumbnail) {
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    img.src = state.meta.thumbnail;
+    img.alt = '';
+    card.append(img);
+  }
+
+  const name = document.createElement('div');
+  name.className = 'card-name';
+  name.textContent = state.meta?.title || state.adaptiveSite || 'This video';
+  card.append(name);
+
+  const meta = document.createElement('div');
+  meta.className = 'meta-row';
+  meta.innerHTML = `<span class="badge">yt-dlp</span><span class="dim">${state.adaptiveSite ?? 'adaptive'}</span>`;
+  card.append(meta);
+
+  let quality = 0; // 0 = best
+  let format: 'video' | 'audio' = settings.defaultFormat;
+
+  const controls = document.createElement('div');
+  controls.className = 'controls';
+  const sel = document.createElement('select');
+  for (const [label, val] of [['Best', 0], ['1080p', 1080], ['720p', 720], ['480p', 480]] as const) {
+    const o = document.createElement('option');
+    o.value = String(val);
+    o.textContent = label;
+    sel.append(o);
+  }
+  sel.addEventListener('change', () => (quality = Number(sel.value)));
+  controls.append(sel);
+
+  const toggle = document.createElement('div');
+  toggle.className = 'toggle';
+  const vBtn = document.createElement('button');
+  vBtn.textContent = 'Video';
+  const aBtn = document.createElement('button');
+  aBtn.textContent = 'Audio';
+  (format === 'audio' ? aBtn : vBtn).className = 'active';
+  vBtn.addEventListener('click', () => {
+    format = 'video';
+    vBtn.classList.add('active');
+    aBtn.classList.remove('active');
+  });
+  aBtn.addEventListener('click', () => {
+    format = 'audio';
+    aBtn.classList.add('active');
+    vBtn.classList.remove('active');
+  });
+  toggle.append(vBtn, aBtn);
+  controls.append(toggle);
+  card.append(controls);
+
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.textContent = 'Download';
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  btn.addEventListener('click', () => {
+    if (!currentTabUrl) {
+      hint.textContent = 'No page URL available.';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+    chrome.runtime.sendMessage(
+      {
+        type: 'NATIVE_DOWNLOAD',
+        url: currentTabUrl,
+        format,
+        quality: quality || undefined,
+        title: state.meta?.title,
+      },
+      (res: { ok: boolean; message?: string }) => {
+        btn.disabled = false;
+        btn.textContent = 'Download';
+        if (!res?.ok) hint.textContent = res?.message || 'Could not start.';
+      },
+    );
+  });
+  card.append(btn, hint);
+  return card;
 }
 
 // ---- Card rendering ---------------------------------------------------------
@@ -155,15 +268,26 @@ function buildCard(it: NetworkDetection, thumb?: string): HTMLElement {
   btn.addEventListener('click', () => {
     btn.disabled = true;
     btn.textContent = 'Starting…';
+    // Route to the native helper when it's the right tool: audio (MP3) or DASH.
+    const useNative = native.available && (format === 'audio' || it.kind === 'DASH');
+    const message = useNative
+      ? {
+          type: 'NATIVE_DOWNLOAD',
+          url: it.pageUrl || it.url,
+          format,
+          quality: it.height ?? undefined,
+          title: it.title,
+        }
+      : {
+          type: 'DOWNLOAD',
+          url: it.url,
+          kind: it.kind,
+          title: it.title,
+          format,
+          variantIndex: variants.length > 1 ? selectedVariant : undefined,
+        };
     chrome.runtime.sendMessage(
-      {
-        type: 'DOWNLOAD',
-        url: it.url,
-        kind: it.kind,
-        title: it.title,
-        format,
-        variantIndex: variants.length > 1 ? selectedVariant : undefined,
-      },
+      message,
       (res: { ok: boolean; message?: string }) => {
         if (res?.ok) {
           btn.textContent = 'Download started ✓';
@@ -219,15 +343,18 @@ function render(state: TabState): void {
   }
 
   if (items.length === 0) {
-    // Protected adaptive site (YouTube etc.) — no downloadable single URL exists.
+    // Protected adaptive site (YouTube etc.).
     if (state.adaptive) {
-      body.innerHTML =
-        `<p class="placeholder">🔒 <b>${state.adaptiveSite ?? 'This site'}</b> streams video in ` +
-        'protected adaptive chunks with rotating tokens.<br><br>' +
-        'The in-browser engine can’t reassemble it into a file — this needs the ' +
-        '<b>JIM native helper</b> (Module&nbsp;7, yt-dlp based), which also handles your ' +
-        'own private uploads using your account.<br><br>' +
-        '<span class="dim">Direct files and normal HLS/DASH sites work without it.</span></p>';
+      if (native.available) {
+        body.append(buildNativeCard(state));
+      } else {
+        body.innerHTML =
+          `<p class="placeholder">🔒 <b>${state.adaptiveSite ?? 'This site'}</b> streams video in ` +
+          'protected adaptive chunks with rotating tokens.<br><br>' +
+          'Install the <b>JIM native helper</b> (Module&nbsp;7, yt-dlp based) to download ' +
+          'this — including your own private uploads, using your Edge login.<br><br>' +
+          '<span class="dim">See the native-host folder → run install-host.ps1.</span></p>';
+      }
       return;
     }
     // A <video> is clearly playing (often a blob:/MSE source) but we never caught
@@ -288,7 +415,9 @@ function renderDownloads(list: DownloadProgress[]): void {
     info.className = 'dl-info';
     const stateLabel =
       d.state === 'downloading'
-        ? `${d.segDone}/${d.segTotal} · ${fmtSpeed(d.speed)} · ${fmtEta(d.etaSec)}`
+        ? d.via === 'ytdlp'
+          ? `yt-dlp · ${d.speedText ?? ''} ${d.etaText ? `ETA ${d.etaText}` : ''}`.trim()
+          : `${d.segDone}/${d.segTotal} · ${fmtSpeed(d.speed)} · ${fmtEta(d.etaSec)}`
         : d.state;
     const cancel = document.createElement('button');
     cancel.className = 'dl-cancel';
@@ -315,6 +444,7 @@ async function dismiss(id: string): Promise<void> {
 
 async function load(): Promise<void> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  currentTabUrl = tab?.url ?? '';
   const dl = await chrome.storage.session.get(DOWNLOADS_KEY);
   renderDownloads(dl[DOWNLOADS_KEY] ?? []);
   if (tab?.id == null) return;

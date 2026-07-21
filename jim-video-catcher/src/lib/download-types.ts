@@ -22,6 +22,9 @@ export interface DownloadProgress {
   percent: number;       // 0..100
   speed?: number;        // bytes/sec (rolling)
   etaSec?: number;
+  speedText?: string;    // yt-dlp reports text (e.g. "2.00MiB/s")
+  etaText?: string;      // yt-dlp reports text (e.g. "00:30")
+  via?: 'engine' | 'ytdlp';
   error?: string;
   startedAt: number;
 }
