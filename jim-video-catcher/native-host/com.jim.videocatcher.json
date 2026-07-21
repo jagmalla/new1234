@@ -1,7 +1,0 @@
-{
-  "name": "com.jim.videocatcher",
-  "description": "JIM Video Catcher native helper (yt-dlp)",
-  "path": "__HOST_BAT_PATH__",
-  "type": "stdio",
-  "allowed_origins": ["chrome-extension://gnaljceaknidngnpjgkpbaeoimkkfkdo/"]
-}

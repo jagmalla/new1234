@@ -65,17 +65,21 @@ over Chrome native messaging. With it installed, YouTube (incl. your own private
 uploads, via your Edge login), DASH, and real MP3 all work; without it, the extension
 falls back to its built-in engine and never shows a broken state.
 
+The helper is a **single Python file**, `native-host/JIM_Video_Catcher_Helper.pyw`:
+double-click it for a small install window; Edge runs it automatically for downloads.
+
 **Install (Windows):**
 1. Keep the `native-host` folder somewhere stable (not Temp).
-2. Right-click `native-host/install-host.ps1` → **Run with PowerShell**. It downloads
-   `yt-dlp.exe` + `ffmpeg.exe`, writes the native-messaging manifest, and registers it
-   under `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.jim.videocatcher`.
-3. Fully quit and reopen Edge. The popup shows **“Native helper: on”**.
+2. Install Python 3 (tick “Add python.exe to PATH”).
+3. Double-click `JIM_Video_Catcher_Helper.pyw` → **Install / Register**. It downloads
+   `yt-dlp.exe` + `ffmpeg.exe`, writes its launcher + manifest, and registers under
+   `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.jim.videocatcher`.
+4. Fully quit and reopen Edge. The popup shows **“Native helper: on”**.
 
-Requires Node.js on PATH (same one used to build). The extension's ID is pinned via a
-`key` in the manifest (`gnaljceaknidngnpjgkpbaeoimkkfkdo`) so the host can whitelist it.
+The extension's ID is pinned via a `key` in the manifest
+(`gnaljceaknidngnpjgkpbaeoimkkfkdo`) so the host can whitelist it.
 
-**Uninstall:** run `native-host/uninstall-host.ps1`, then delete the folder.
+**Uninstall:** double-click the app → **Uninstall**, then delete the folder.
 
 **Store note:** bundling yt-dlp is not publishable on the Edge/Chrome stores — the
 native helper is self-distributed only. The pure extension is the store-candidate half.

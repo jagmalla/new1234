@@ -353,7 +353,8 @@ function render(state: TabState): void {
           'protected adaptive chunks with rotating tokens.<br><br>' +
           'Install the <b>JIM native helper</b> (Module&nbsp;7, yt-dlp based) to download ' +
           'this — including your own private uploads, using your Edge login.<br><br>' +
-          '<span class="dim">See the native-host folder → run install-host.ps1.</span></p>';
+          '<span class="dim">Open the native-host folder → double-click ' +
+          'JIM_Video_Catcher_Helper.pyw → Install.</span></p>';
       }
       return;
     }

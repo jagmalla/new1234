@@ -1,53 +1,51 @@
 # JIM Video Catcher — Native Helper (Module 7)
 
-This small helper lets the extension download YouTube (including your own private
-uploads), DASH, and real MP3 by driving **yt-dlp** + **ffmpeg**.
+A single Python app that lets the extension download YouTube (including your own
+private uploads), DASH, and real MP3 by driving **yt-dlp** + **ffmpeg**.
+
+There is just **one file**: `JIM_Video_Catcher_Helper.pyw`.
+
+- **Double-click it** → a small window opens (Install / Update / Uninstall).
+- **Edge launches it automatically** in the background when you download — you don't
+  run it by hand for downloads.
 
 ## Install (Windows)
 
-1. Put this `native-host` folder somewhere permanent — e.g. `C:\JIM\native-host`.
-   **Not** in Downloads or Temp.
-2. Make sure **Node.js** is installed (https://nodejs.org, LTS). Verify in PowerShell:
-   ```
-   node -v
-   ```
-3. Right-click **`install-host.ps1`** → **Run with PowerShell**.
-   - If Windows blocks it, open PowerShell and run:
-     ```
-     powershell -ExecutionPolicy Bypass -File .\install-host.ps1
-     ```
-4. It downloads `yt-dlp.exe` and `ffmpeg.exe`, writes the manifest, and registers the
-   helper for Edge (and Chrome).
-5. **Fully quit Edge** (close every window) and reopen it.
+1. Put this `native-host` folder somewhere permanent — e.g. `C:\JIM\native-host`
+   (**not** Downloads or Temp; if you move it later, re-run Install).
+2. Install **Python 3** if you don't have it: https://www.python.org/downloads/
+   — on the first installer screen, tick **“Add python.exe to PATH”**.
+3. **Double-click `JIM_Video_Catcher_Helper.pyw`.** A window titled
+   “JIM Video Catcher — Helper” appears.
+4. Click **Install / Register**. It downloads yt-dlp + ffmpeg, writes its launcher and
+   manifest, and registers itself for Edge. Wait for **“DONE”**.
+5. **Fully quit Edge** (every window) and reopen it.
 6. Open the JIM popup — it should show **“Native helper: on · yt-dlp <version>”**.
 
 ## Use
 
 - On a YouTube page, open the popup → a card appears with a quality dropdown and a
   Video/Audio toggle → **Download**. The file lands in your Downloads folder.
-- Private/unlisted videos work because yt-dlp reads your Edge cookies
-  (`--cookies-from-browser edge`) — stay logged into YouTube in Edge.
+- Private/unlisted videos work because yt-dlp reads your **Edge** cookies — stay logged
+  into that YouTube account in Edge.
 
 ## Update yt-dlp
 
-Sites break yt-dlp often. To update, either re-run `install-host.ps1` after deleting
-`yt-dlp.exe`, or run in this folder:
-```
-.\yt-dlp.exe -U
-```
+Sites break yt-dlp often. Double-click the app and click **Update yt-dlp**.
 
 ## Uninstall
 
-Run **`uninstall-host.ps1`**, then delete this folder.
+Double-click the app → **Uninstall** (removes the registry keys). Then delete this
+folder to remove yt-dlp/ffmpeg.
 
-## Files
+## How it works (for the curious)
 
-| File | What it is |
-|---|---|
-| `host.mjs` | The native-messaging host (Node), drives yt-dlp |
-| `host.bat` | Launcher Edge invokes (runs `host.mjs` via Node) |
-| `com.jim.videocatcher.json` | Native-messaging manifest template |
-| `install-host.ps1` / `uninstall-host.ps1` | Installer / uninstaller |
+The same file runs in two modes. When Edge starts it, it passes the extension origin
+(`chrome-extension://…`) as an argument; the app detects that and runs as a
+native-messaging host over stdio. With no such argument (a double-click) it opens the
+Tkinter GUI instead. Install writes `run_host.bat` (which calls Python on this file),
+`com.jim.videocatcher.json`, and the `HKCU\…\NativeMessagingHosts\com.jim.videocatcher`
+registry values for Edge and Chrome.
 
 ## Legal
 
