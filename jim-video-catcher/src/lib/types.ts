@@ -79,4 +79,6 @@ export interface TabState {
   drm: boolean;
   drmKeySystem?: string;
   meta?: PageMeta;
+  adaptive?: boolean;      // site streams in protected adaptive chunks (e.g. YouTube)
+  adaptiveSite?: string;   // human label for that site
 }

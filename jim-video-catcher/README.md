@@ -57,6 +57,31 @@ extension card in `edge://extensions` after each rebuild.
 
 See the module checklist for the full, click-by-click walkthrough.
 
+## What it can and cannot download
+
+| Source | Works in the pure extension? |
+|---|---|
+| Direct `.mp4` / `.webm` / `.mkv` / `.m4a` | ✅ Yes |
+| Standard **HLS** (`.m3u8`) | ✅ Yes |
+| Standard **DASH** (`.mpd`, single track) | ⚠️ Detected; muxing separate A/V needs the native host |
+| **YouTube** (incl. your own private uploads) | ❌ No — needs the Module 7 native helper |
+| Netflix / Prime / other **DRM** | ❌ Never (protected, by design) |
+
+**Why YouTube can't work in the browser:** YouTube serves video as adaptive DASH
+over `googlevideo.com` — separate audio/video, chunked, behind rotating tokens and a
+throttling parameter (`n`) that must be de-scrambled by executing YouTube's own player
+JavaScript. There is no single downloadable URL to capture; the only requests visible
+are tiny chunks/handshakes. Defeating this reliably is what **yt-dlp** does, which is
+why it lives in the optional **Module 7 native host**. When JIM detects such a site it
+says so plainly instead of listing useless chunks.
+
+## Testing
+
+Pure logic (classifier, HLS/DASH parsing, filename templates) has unit tests:
+```bash
+npm test
+```
+
 ## Packaging & distribution
 
 **Zip for sharing/backup** (a loadable copy, no store):

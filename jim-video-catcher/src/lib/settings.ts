@@ -63,21 +63,35 @@ export async function clearHistory(): Promise<void> {
   await chrome.storage.local.remove(HISTORY_KEY);
 }
 
-// Apply the filename template. Missing tokens collapse cleanly (no "__" or stray " - ").
+// Apply the filename template. An EMPTY token takes its adjacent separator /
+// brackets with it, so "{title} - {resolution}" with no resolution becomes just
+// the title — while separators between PRESENT tokens are preserved.
 export function applyTemplate(
   template: string,
   tokens: { title: string; resolution?: string; date?: string },
   ext: string,
 ): string {
-  const date = tokens.date ?? new Date().toISOString().slice(0, 10);
-  let name = template
-    .replace(/\{title\}/g, tokens.title || 'video')
-    .replace(/\{resolution\}/g, tokens.resolution ?? '')
-    .replace(/\{date\}/g, date);
+  const values: Record<string, string> = {
+    title: tokens.title || 'video',
+    resolution: tokens.resolution ?? '',
+    date: tokens.date ?? new Date().toISOString().slice(0, 10),
+  };
+
+  let name = template;
+  for (const [key, val] of Object.entries(values)) {
+    const tok = `\\{${key}\\}`;
+    if (val) {
+      name = name.replace(new RegExp(tok, 'g'), val);
+    } else {
+      // Consume a leading separator/open-bracket and an optional close-bracket.
+      name = name.replace(new RegExp(`\\s*[-_]?\\s*\\(?${tok}\\)?`, 'g'), '');
+    }
+  }
+
   name = name
     .replace(/[\\/:*?"<>|]/g, '')
-    .replace(/[ _-]{2,}/g, ' ')
-    .replace(/^[ _-]+|[ _-]+$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s_-]+|[\s_-]+$/g, '')
     .trim();
   if (!name) name = 'video';
   const hasExt = new RegExp(`${ext.replace('.', '\\.')}$`, 'i').test(name);

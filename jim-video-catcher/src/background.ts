@@ -93,6 +93,11 @@ chrome.webRequest.onSendHeaders.addListener(
 
 // ---- Response: classify, capture Content-Type/Length, store the detection.
 
+// Hosts/paths that serve protected adaptive chunks with no downloadable single
+// URL (YouTube & co). We flag the tab rather than listing the useless chunks.
+const ADAPTIVE_JUNK = /(\.googlevideo\.com\/|\/videoplayback\?|\.c\.youtube\.com\/)/i;
+const MIN_DIRECT_BYTES = 50 * 1024; // below this a "DIRECT" hit is a chunk/handshake, not the media
+
 chrome.webRequest.onHeadersReceived.addListener(
   (details) => {
     const requestId = details.requestId;
@@ -100,12 +105,22 @@ chrome.webRequest.onHeadersReceived.addListener(
     pendingHeaders.delete(requestId);
     if (details.tabId < 0) return;
 
+    // Protected adaptive streaming (YouTube): don't list chunks, flag the tab.
+    if (ADAPTIVE_JUNK.test(details.url)) {
+      void markAdaptive(details.tabId, /googlevideo|youtube/i.test(details.url) ? 'YouTube' : 'this site');
+      return;
+    }
+
     const contentType = pick(details.responseHeaders, 'content-type');
     const kind = classify(details.url, contentType);
     if (kind === 'IGNORE' || kind === 'SEGMENT') return; // segments infer a stream, not listed
 
     const lenRaw = pick(details.responseHeaders, 'content-length');
     const contentLength = lenRaw ? Number(lenRaw) : undefined;
+
+    // Drop tiny "DIRECT" responses — these are adaptive chunks / handshakes /
+    // tracking pixels, not a real downloadable file. Streams are kept regardless.
+    if (kind === 'DIRECT' && contentLength != null && contentLength < MIN_DIRECT_BYTES) return;
 
     void recordNetwork({
       id: details.url,
@@ -124,6 +139,14 @@ chrome.webRequest.onHeadersReceived.addListener(
 );
 
 const MAX_DETECTIONS = 100; // robustness: cap pages that emit hundreds of media requests
+
+async function markAdaptive(tabId: number, site: string): Promise<void> {
+  const state = await getState(tabId);
+  if (state.adaptive) return; // already flagged
+  state.adaptive = true;
+  state.adaptiveSite = site;
+  await setState(tabId, state);
+}
 
 async function recordNetwork(det: NetworkDetection): Promise<void> {
   const state = await getState(det.tabId);

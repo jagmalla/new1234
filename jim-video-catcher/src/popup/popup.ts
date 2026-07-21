@@ -219,6 +219,17 @@ function render(state: TabState): void {
   }
 
   if (items.length === 0) {
+    // Protected adaptive site (YouTube etc.) — no downloadable single URL exists.
+    if (state.adaptive) {
+      body.innerHTML =
+        `<p class="placeholder">🔒 <b>${state.adaptiveSite ?? 'This site'}</b> streams video in ` +
+        'protected adaptive chunks with rotating tokens.<br><br>' +
+        'The in-browser engine can’t reassemble it into a file — this needs the ' +
+        '<b>JIM native helper</b> (Module&nbsp;7, yt-dlp based), which also handles your ' +
+        'own private uploads using your account.<br><br>' +
+        '<span class="dim">Direct files and normal HLS/DASH sites work without it.</span></p>';
+      return;
+    }
     // A <video> is clearly playing (often a blob:/MSE source) but we never caught
     // its network stream — usually because the manifest loaded before the popup.
     const playing = state.elements.some((e) => e.playing || e.isBlob);

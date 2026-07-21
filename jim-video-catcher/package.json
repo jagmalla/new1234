@@ -1,12 +1,13 @@
 {
   "name": "jim-video-catcher",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Detects videos playing on the current page and shows name, size, resolution and format with a Download button.",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite build --watch --mode development",
-    "build": "tsc --noEmit && vite build"
+    "build": "tsc --noEmit && vite build",
+    "test": "esbuild test/logic.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/logic.mjs && node node_modules/.cache/logic.mjs"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.23",
