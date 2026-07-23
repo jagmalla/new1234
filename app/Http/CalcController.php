@@ -134,6 +134,18 @@ final class CalcController
             } catch (\Throwable $e) {
                 $santan = null;
             }
+            // करियर / नौकरी-व्यवसाय — computed career analysis (10th house · Navamsha
+            // Karmajiva · D-10 · Shadbala · Vimshopaka · Bhavat-Bhavam/7th · yogas ·
+            // Saturn/6th · profession · job-vs-business · dasha · promotion/downfall).
+            try {
+                $career = \AutoBusiness\Astro\Phala\CareerEngine::compute(
+                    $chart, $vargas,
+                    (float) ($chart['planets']['Moon']['sidereal_lon'] ?? 0.0),
+                    $jd, $nowJd, $tz, $engine, [$Y, $Mo, $D, $H, $Mi, $lat, $lon]
+                );
+            } catch (\Throwable $e) {
+                $career = null;
+            }
             // North-chart payload of the annual chart for the v2 chart selector
             // (render-ready; same shape the varshaphal JSON endpoint returns).
             $varshaNorth = $vp !== null ? $engine->northPayload($vp['varsha_chart']) : null;
@@ -160,6 +172,7 @@ final class CalcController
             'vargas' => $vargas ?? null,
             'videsh' => $videsh ?? null,
             'santan' => $santan ?? null,
+            'career' => $career ?? null,
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
