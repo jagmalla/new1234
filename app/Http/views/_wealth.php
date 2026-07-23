@@ -72,6 +72,77 @@ $chip = static function (string $txt, string $tone) use ($h, $toneCol, $toneBg):
         </div>
     </details>
 
+    <!-- SCALE #2 — age/dasha "today" scale + 0-100 wealth curve -->
+    <?php $aw = $wl['age_wealth'] ?? null; if ($aw !== null && !empty($aw['has_dasha'])): ?>
+    <div class="wl-card" style="border-left:5px solid #7c3aed">
+        <h3>📈 आयु-अनुसार धन (दूसरा पैमाना) <?= $chip('आज (' . (int) $aw['current_age'] . ' वर्ष): ' . $aw['today_score'] . '/10', $aw['today_tone']) ?></h3>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;margin-bottom:6px">
+            <div>🎯 <b>पहला पैमाना</b> (जीवन-भर की क्षमता): <b><?= $h($wl['scale']['score']) ?>/10</b></div>
+            <div>📍 <b>दूसरा पैमाना</b> (आज, दशा-अनुसार): <b style="color:<?= $toneCol[$aw['today_tone']] ?? '#475569' ?>"><?= $h($aw['today_score']) ?>/10</b> — <?= $h($aw['today_band']) ?></div>
+        </div>
+        <div class="wl-sig"><b>अवस्था:</b> <?= $h($aw['phase']) ?> · काम-आरंभ ~<?= (int) $aw['career_start'] ?> वर्ष · धन-शिखर ~<?= (int) $aw['peak_age'] ?> वर्ष (~<?= $h($aw['peak_score']) ?>/10)</div>
+        <div class="wl-sig"><b>अध्ययन:</b> <?= $h($aw['study']['profile']) ?></div>
+        <div class="wl-sig"><b>माता-पिता का सहयोग:</b> <?= $h($aw['parents']['text']) ?></div>
+
+        <?php
+        // ---- inline SVG wealth-vs-age curve (0..100 yrs, 0..10 wealth) ----
+        $padL = 30; $padT = 10; $plotW = 600; $plotH = 170; $vw = $padL + $plotW + 12; $vh = $padT + $plotH + 22;
+        $xOf = static fn (int $age): float => $padL + ($age / 100.0) * $plotW;
+        $yOf = static fn (float $w): float => $padT + (1.0 - $w / 10.0) * $plotH;
+        $pts = [];
+        foreach ($aw['curve'] as $c) {
+            $pts[] = round($xOf((int) $c['age']), 1) . ',' . round($yOf((float) $c['w']), 1);
+        }
+        $cs = (int) $aw['career_start']; $ca = (int) $aw['current_age']; $pa = (int) $aw['peak_age'];
+        ?>
+        <div style="overflow-x:auto;margin-top:8px">
+        <svg viewBox="0 0 <?= $vw ?> <?= $vh ?>" style="width:100%;min-width:340px;max-width:660px;font-family:inherit" role="img" aria-label="आयु-अनुसार धन-वक्र">
+            <!-- Y gridlines 0..10 -->
+            <?php for ($g = 0; $g <= 10; $g += 2): $gy = $yOf($g); ?>
+                <line x1="<?= $padL ?>" y1="<?= round($gy, 1) ?>" x2="<?= $padL + $plotW ?>" y2="<?= round($gy, 1) ?>" stroke="#eee5d6" stroke-width="1"/>
+                <text x="<?= $padL - 4 ?>" y="<?= round($gy + 3, 1) ?>" text-anchor="end" font-size="9" fill="#94a3b8"><?= $g ?></text>
+            <?php endfor; ?>
+            <!-- X ticks 0..100 -->
+            <?php for ($x = 0; $x <= 100; $x += 20): ?>
+                <text x="<?= round($xOf($x), 1) ?>" y="<?= $padT + $plotH + 14 ?>" text-anchor="middle" font-size="9" fill="#94a3b8"><?= $x ?></text>
+            <?php endfor; ?>
+            <text x="<?= $padL + $plotW / 2 ?>" y="<?= $vh - 1 ?>" text-anchor="middle" font-size="9" fill="#6b6156">आयु (वर्ष) →</text>
+            <!-- childhood shade -->
+            <rect x="<?= $padL ?>" y="<?= $padT ?>" width="<?= round($xOf($cs) - $padL, 1) ?>" height="<?= $plotH ?>" fill="#f5f3ff" opacity="0.7"/>
+            <text x="<?= round(($padL + $xOf($cs)) / 2, 1) ?>" y="<?= $padT + 12 ?>" text-anchor="middle" font-size="8" fill="#a78bfa">बचपन/पढ़ाई</text>
+            <!-- wealth curve -->
+            <polyline points="<?= implode(' ', $pts) ?>" fill="none" stroke="#b45309" stroke-width="2.2"/>
+            <!-- career-start marker (dashed) -->
+            <line x1="<?= round($xOf($cs), 1) ?>" y1="<?= $padT ?>" x2="<?= round($xOf($cs), 1) ?>" y2="<?= $padT + $plotH ?>" stroke="#7c3aed" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="<?= round($xOf($cs), 1) ?>" y="<?= $padT + $plotH - 3 ?>" text-anchor="middle" font-size="8" fill="#7c3aed">काम ~<?= $cs ?></text>
+            <!-- peak marker -->
+            <circle cx="<?= round($xOf($pa), 1) ?>" cy="<?= round($yOf((float) $aw['peak_score']), 1) ?>" r="3" fill="#166534"/>
+            <text x="<?= round($xOf($pa), 1) ?>" y="<?= round($yOf((float) $aw['peak_score']) - 5, 1) ?>" text-anchor="middle" font-size="8" fill="#166534">शिखर ~<?= $pa ?></text>
+            <!-- current age marker (solid red) -->
+            <line x1="<?= round($xOf($ca), 1) ?>" y1="<?= $padT ?>" x2="<?= round($xOf($ca), 1) ?>" y2="<?= $padT + $plotH ?>" stroke="#dc2626" stroke-width="1.5"/>
+            <circle cx="<?= round($xOf($ca), 1) ?>" cy="<?= round($yOf((float) $aw['today_score']), 1) ?>" r="3.5" fill="#dc2626"/>
+            <text x="<?= round($xOf($ca), 1) ?>" y="<?= $padT + 9 ?>" text-anchor="middle" font-size="8" fill="#dc2626" font-weight="700">आज <?= $ca ?></text>
+        </svg>
+        </div>
+        <div class="wl-why">वक्र दशा-क्रम पर आधारित है: बचपन/पढ़ाई में धन कम (कमाई नहीं), काम-आरंभ पर वृद्धि, प्रबल दशा में शिखर, कमज़ोर दशा में ठहराव/गिरावट (बचत से संभला)। यह सापेक्ष रुझान है, रुपये की मात्रा नहीं।</div>
+
+        <?php if (!empty($aw['periods'])): ?>
+        <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;font-size:.85rem">📋 महादशा-वार धन-रुझान (आयु-सहित)</summary>
+            <div style="overflow-x:auto;margin-top:6px">
+            <table class="wl-tbl">
+                <thead><tr><th>महादशा</th><th>आयु</th><th>धन-रुझान</th></tr></thead>
+                <tbody>
+                <?php foreach ($aw['periods'] as $p): ?>
+                    <tr><td><?= $h($p['lord']) ?></td><td><?= (int) $p['from_age'] ?>–<?= (int) $p['to_age'] ?> वर्ष</td><td><?= $chip($p['kind'], $p['tone']) ?></td></tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            </div>
+        </details>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <!-- wealth sources -->
     <div class="wl-card">
         <h3>🧭 धन के स्रोत (कहाँ से कितना)</h3>

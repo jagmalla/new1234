@@ -142,12 +142,15 @@ final class WealthEngine
         $vargaNotes = self::vargaNotes($ctx, $vargas);
         $dasha = self::dashaSection($ctx, $moonLon, $birthJd, $nowJd, $tz);
         $timing = self::timing($ctx, $moonLon, $birthJd, $nowJd, $tz, $engine, $chart, $birth);
+        // दूसरा पैमाना — आयु/दशा के अनुसार आज की धन-स्थिति + 0–100 वर्ष का धन-वक्र
+        // (बचपन/पढ़ाई के वर्ष, काम शुरू होने की आयु, अध्ययन-अवधि, माता-पिता का सहयोग)।
+        $ageWealth = self::ageWealth($ctx, $scale['score'], $moonLon, $birthJd, $nowJd);
         $remedies = self::remedies($ctx);
-        $conclusion = self::conclusion($scale, $sources, $savings, $timing);
+        $conclusion = self::conclusion($scale, $sources, $savings, $timing, $ageWealth);
 
         return [
             'ok' => true, 'lagna_hi' => self::signHi($asc),
-            'scale' => $scale, 'scorecard' => $scorecard,
+            'scale' => $scale, 'scorecard' => $scorecard, 'age_wealth' => $ageWealth,
             'sources' => $sources, 'savings' => $savings, 'houses' => $houses,
             'drishti' => $drishti, 'yoga' => $yoga, 'strength' => $strength,
             'varga' => $vargaNotes, 'dasha' => $dasha, 'timing' => $timing,
@@ -494,6 +497,208 @@ final class WealthEngine
             'text' => 'धन-पैमाने पर स्थिति: ' . $score10 . '/10 — ' . $band
                 . '। (यह 15-सूत्रीय गणना (§22) का सापेक्ष अंक है; धन की मात्रा (रुपये) नहीं, तुलनात्मक स्थिति बताता है।)',
         ];
+    }
+
+    // ----------------------------------------- age/dasha wealth curve (scale #2)
+
+    /**
+     * दूसरा पैमाना: आयु व दशा के अनुसार आज की धन-स्थिति + 0–100 वर्ष का धन-वक्र।
+     * पहला पैमाना ($potential) = जीवन-भर की चरम क्षमता; यह विधि उस क्षमता को दशा-
+     * क्रम पर बिछाकर बचपन/पढ़ाई (कमाई नहीं), काम-आरंभ, अध्ययन-अवधि व माता-पिता के
+     * सहयोग सहित प्रत्येक आयु की धन-स्थिति निकालती है।
+     */
+    private static function ageWealth(array $ctx, float $potential, ?float $moonLon, ?float $birthJd, ?float $nowJd): array
+    {
+        if ($moonLon === null || $birthJd === null || $nowJd === null) {
+            return ['has_dasha' => false];
+        }
+        $currentAge = (int) floor(($nowJd - $birthJd) / 365.2564);
+
+        // ---- study length + career-start age ----
+        $study = self::studyProfile($ctx);
+        // ---- parental support → childhood base level ----
+        $parents = self::parentalSupport($ctx);
+        $childBase = max(0.5, min(3.5, 1.0 + $parents['score']));   // childhood wealth level (0–10)
+
+        // Vimshottari mahadasha timeline → per-year MD lord
+        $seq = VimshottariDasha::sequence($moonLon, $birthJd);
+        $mdAtAge = [];        // age(0..100) => MD lord
+        $periods = [];
+        foreach ($seq['mahadashas'] as $md) {
+            $a0 = (int) floor(($md['start_jd'] - $birthJd) / 365.2564);
+            $a1 = (int) ceil(($md['end_jd'] - $birthJd) / 365.2564);
+            $periods[] = ['lord' => $md['lord'], 'from_age' => max(0, $a0), 'to_age' => min(100, $a1),
+                'velocity' => self::dashaVelocity($ctx, $md['lord'])];
+            for ($a = max(0, $a0); $a < min(101, $a1); $a++) {
+                if (!isset($mdAtAge[$a])) {
+                    $mdAtAge[$a] = $md['lord'];
+                }
+            }
+        }
+
+        // refine career-start: first earning-dasha (links 10/6/11/2) at/after the
+        // study-based minimum, capped at the study-based maximum.
+        $careerStart = $study['start_base'];
+        for ($a = $study['start_min']; $a <= $study['start_max']; $a++) {
+            $lord = $mdAtAge[$a] ?? null;
+            if ($lord !== null && (self::linked($ctx, $lord, 10) || self::linked($ctx, $lord, 6)
+                || self::linked($ctx, $lord, 11) || self::linked($ctx, $lord, 2))) {
+                $careerStart = $a;
+                break;
+            }
+        }
+
+        // ---- target-tracking wealth model ----
+        // Each dasha sets a TARGET level = childBase + quality×(potential−childBase).
+        // Wealth rises fast toward a higher target (good dasha), falls slowly toward
+        // a lower one (savings make wealth sticky), never below a savings-cushioned
+        // high-water floor. → realistic rise, plateau and gentle old-age change; the
+        // peak lands during the strongest dasha, not at age 100.
+        $save2 = self::savHouse($ctx, 2);
+        $retention = 0.5 + min(0.35, max(0.0, ($save2 - 22) / 40.0));   // 0.50..0.85
+        $curve = [];
+        $peakAge = $careerStart; $peakW = $childBase;
+        $W = $childBase; $peakSoFar = $childBase;
+        for ($a = 0; $a <= 100; $a++) {
+            if ($a < $careerStart) {
+                // childhood: gentle ramp from 0.3 (infancy) to childBase, family-dependent
+                $w = $careerStart > 0 ? 0.3 + ($childBase - 0.3) * ($a / $careerStart) : $childBase;
+            } else {
+                $lord = $mdAtAge[$a] ?? null;
+                $v = $lord !== null ? self::dashaVelocity($ctx, $lord) : 0.0;   // −2.5..2.5
+                $q = max(0.0, min(1.0, ($v + 2.5) / 5.0));                       // 0..1
+                $target = $childBase + $q * ($potential - $childBase);
+                if ($a >= 62 && $save2 < 26) {
+                    $target -= 0.5;   // weak savings → old-age drawdown
+                }
+                $gap = $target - $W;
+                $W += $gap * ($gap > 0 ? 0.28 : 0.14) + 0.04;   // rise fast, fall slow, tiny drift
+                $floor = $peakSoFar * $retention;               // savings-cushioned high-water floor
+                if ($W < $floor) {
+                    $W = $floor;
+                }
+                $W = max(0.3, min($potential + 0.4, $W));
+                $peakSoFar = max($peakSoFar, $W);
+                $w = $W;
+            }
+            $w = round(max(0.3, min(10.0, $w)), 1);
+            $curve[] = ['age' => $a, 'w' => $w];
+            if ($w > $peakW) {
+                $peakW = $w;
+                $peakAge = $a;
+            }
+        }
+        $todayW = $curve[min(100, max(0, $currentAge))]['w'];
+        $todayBand = self::SCALE[max(0, min(10, (int) round($todayW)))][1];
+        $todayTone = $todayW >= 7 ? 'pos' : ($todayW >= 4 ? 'info' : 'neg');
+
+        // where has the person come from → what phase are they in
+        $phase = $currentAge < $careerStart
+            ? 'अभी अध्ययन/आरंभिक काल — कमाई का आरंभ शेष'
+            : ($currentAge < $peakAge ? 'वृद्धि-काल — धन बढ़ रहा है' : ($currentAge <= $peakAge + 3 ? 'शिखर के निकट' : 'परिपक्व/स्थिरता-काल'));
+
+        return [
+            'has_dasha' => true, 'current_age' => $currentAge,
+            'career_start' => $careerStart, 'child_base' => round($childBase, 1),
+            'study' => $study, 'parents' => $parents,
+            'today_score' => $todayW, 'today_band' => $todayBand, 'today_tone' => $todayTone,
+            'peak_age' => $peakAge, 'peak_score' => $peakW, 'potential' => $potential,
+            'phase' => $phase, 'curve' => $curve, 'periods' => self::periodTable($ctx, $periods),
+            'text' => 'दूसरा पैमाना — आयु ' . $currentAge . ' वर्ष पर आज की धन-स्थिति: ' . $todayW . '/10 (' . $todayBand . ')। '
+                . 'काम-आरंभ ~' . $careerStart . ' वर्ष; धन-शिखर ~' . $peakAge . ' वर्ष (~' . $peakW . '/10)। '
+                . 'पहला पैमाना (' . $potential . '/10) जीवन-भर की चरम क्षमता है; यह दूसरा पैमाना दशा-क्रम पर आज की वास्तविक स्थिति दिखाता है।',
+        ];
+    }
+
+    /** Education profile → study length + career-start window. */
+    private static function studyProfile(array $ctx): array
+    {
+        $s = 0.0;   // higher = longer study
+        // strong 4th (schooling/base), 5th (intellect), Jupiter & Mercury (learning), 9th (higher knowledge)
+        if (self::houseScore($ctx, 4) >= 3.0) { $s += 1; }
+        if (self::houseScore($ctx, 5) >= 3.0) { $s += 1; }
+        if (self::houseScore($ctx, 9) >= 3.0) { $s += 1; }
+        if (self::isStrong($ctx, 'Jupiter')) { $s += 1; }
+        if (self::isStrong($ctx, 'Mercury')) { $s += 1; }
+        // Saturn/Ketu on 5th or 4th → interrupted/late education
+        $interrupt = self::linked($ctx, 'Saturn', 5) || self::linked($ctx, 'Ketu', 5);
+        if ($s >= 3.5) {
+            $profile = 'दीर्घ अध्ययन (उच्च शिक्षा) — करियर देर से आरंभ';
+            $base = 25; $min = 23; $max = 29;
+        } elseif ($s >= 2.0) {
+            $profile = 'मध्यम अध्ययन (स्नातक स्तर) — सामान्य आयु में करियर';
+            $base = 22; $min = 20; $max = 25;
+        } else {
+            $profile = 'अल्प अध्ययन — जल्दी काम/कमाई का आरंभ';
+            $base = 19; $min = 17; $max = 22;
+        }
+        if ($interrupt) {
+            $profile .= '; शिक्षा में रुकावट/देरी संभव (शनि/केतु का 5वें से संबंध)';
+            $base += 1; $max += 1;
+        }
+        return ['profile' => $profile, 'start_base' => $base, 'start_min' => $min, 'start_max' => $max,
+            'text' => 'अध्ययन-प्रोफ़ाइल: ' . $profile . '।'];
+    }
+
+    /** Parental support (mother 4th/Moon, father 9th-10th/Sun, family 2nd). */
+    private static function parentalSupport(array $ctx): array
+    {
+        $sc = 0.0;
+        if (self::houseScore($ctx, 4) >= 2.5) { $sc += 0.6; }
+        if (self::houseScore($ctx, 9) >= 2.5) { $sc += 0.5; }
+        if (self::houseScore($ctx, 2) >= 2.5) { $sc += 0.5; }
+        if (self::isStrong($ctx, 'Moon')) { $sc += 0.4; }
+        if (self::isStrong($ctx, 'Sun')) { $sc += 0.4; }
+        if (self::isAfflicted($ctx, 'Moon') && self::isAfflicted($ctx, 'Sun')) { $sc -= 0.6; }
+        $sc = max(0.0, min(2.5, $sc));
+        $support = $sc >= 1.6 ? 'अच्छा' : ($sc >= 0.8 ? 'मध्यम' : 'सीमित');
+        $text = $support === 'अच्छा'
+            ? 'माता-पिता का अच्छा सहयोग — आरंभिक जीवन सुखद, पढ़ाई व शुरुआत में सहारा।'
+            : ($support === 'मध्यम' ? 'माता-पिता का सामान्य सहयोग — कुछ सहारा, कुछ स्व-प्रयास।'
+                : 'कम पारिवारिक सहयोग — आरंभिक संघर्ष, जल्दी स्वावलंबन की आवश्यकता।');
+        return ['support' => $support, 'score' => round($sc, 2), 'text' => $text];
+    }
+
+    /** per-mahadasha wealth velocity (−2.5..+2.5). */
+    private static function dashaVelocity(array $ctx, string $lord): float
+    {
+        $gain = 0;
+        foreach ([2, 11, 10, 5, 9] as $h) {
+            if (self::linked($ctx, $lord, $h)) {
+                $gain++;
+            }
+        }
+        $loss = 0;
+        foreach ([6, 8, 12] as $h) {
+            if (self::linked($ctx, $lord, $h) || ($ctx['house'][$lord] ?? 0) === $h) {
+                $loss++;
+            }
+        }
+        $v = min(3, $gain) * 0.8 - $loss * 0.7;
+        if (self::isStrong($ctx, $lord)) {
+            $v += 0.6;
+        }
+        if (self::isAfflicted($ctx, $lord)) {
+            $v -= 0.5;
+        }
+        return max(-2.5, min(2.5, round($v, 2)));
+    }
+
+    /** @return list<array<string,mixed>> mahadasha rows with kind label. */
+    private static function periodTable(array $ctx, array $periods): array
+    {
+        $out = [];
+        foreach ($periods as $p) {
+            if ($p['to_age'] < 0 || $p['from_age'] > 100) {
+                continue;
+            }
+            $v = $p['velocity'];
+            $kind = $v >= 1.2 ? 'प्रबल वृद्धि' : ($v >= 0.3 ? 'वृद्धि' : ($v > -0.3 ? 'स्थिर' : ($v > -1.2 ? 'दबाव/खर्च' : 'हानि-प्रवण')));
+            $tone = $v >= 0.3 ? 'pos' : ($v > -0.3 ? 'info' : 'neg');
+            $out[] = ['lord' => self::HI[$p['lord']] ?? $p['lord'], 'from_age' => $p['from_age'], 'to_age' => $p['to_age'],
+                'kind' => $kind, 'tone' => $tone];
+        }
+        return $out;
     }
 
     // --------------------------------------------------------- wealth sources
@@ -942,10 +1147,13 @@ final class WealthEngine
 
     // --------------------------------------------------------- conclusion
 
-    private static function conclusion(array $scale, array $sources, array $savings, array $timing): string
+    private static function conclusion(array $scale, array $sources, array $savings, array $timing, array $ageWealth = []): string
     {
         $parts = [];
-        $parts[] = 'धन-पैमाना: ' . $scale['score'] . '/10 — ' . $scale['band'] . '।';
+        $parts[] = 'धन-पैमाना (क्षमता): ' . $scale['score'] . '/10 — ' . $scale['band'] . '।';
+        if (!empty($ageWealth['has_dasha'])) {
+            $parts[] = 'आयु ' . $ageWealth['current_age'] . ' वर्ष पर आज की स्थिति: ' . $ageWealth['today_score'] . '/10 (काम-आरंभ ~' . $ageWealth['career_start'] . ', शिखर ~' . $ageWealth['peak_age'] . ' वर्ष)।';
+        }
         $topTwo = array_slice($sources, 0, 2);
         $parts[] = 'सबसे प्रबल धन-स्रोत: ' . implode(', ', array_map(fn ($s) => $s['name'] . ' (' . $s['level'] . ')', $topTwo)) . '।';
         $parts[] = 'बचत: ' . $savings['verdict'] . '।';
