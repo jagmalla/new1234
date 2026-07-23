@@ -947,11 +947,37 @@ final class CalcController
      */
     public static function parseDate(string $s): array
     {
-        // Separators: dash, slash, dot or whitespace (e.g. 01-12-1980 or 1 12 1980).
-        $parts = preg_split('/[-\/.\s]+/', trim($s), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        // Separators: dash, slash, dot, comma or whitespace (e.g. 01-12-1980,
+        // 1 12 1980, or 20-Jan-1983). A month word is accepted in any position.
+        $parts = preg_split('/[-\/.,\s]+/', trim($s), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         if (count($parts) !== 3) {
             return [(int) date('Y'), 1, 1];
         }
+
+        static $months = [
+            'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4, 'may' => 5, 'jun' => 6,
+            'jul' => 7, 'aug' => 8, 'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
+        ];
+
+        // If one field is a month name, map it and read day/year from the rest.
+        $monthIdx = null;
+        foreach ($parts as $i => $p) {
+            if (preg_match('/[A-Za-z]/', $p)) {
+                $monthIdx = $i;
+                break;
+            }
+        }
+        if ($monthIdx !== null) {
+            $m = $months[strtolower(substr($parts[$monthIdx], 0, 3))] ?? 0;
+            $rest = array_values(array_map('intval', array_diff_key($parts, [$monthIdx => true])));
+            // The 4-digit (or >31) value is the year; the other is the day.
+            [$x, $y2] = [$rest[0] ?? 0, $rest[1] ?? 0];
+            if (strlen((string) ($rest[0] ?? '')) === 4 || $x > 31) {
+                return [$x, $m, $y2];
+            }
+            return [$y2, $m, $x];
+        }
+
         [$a, $b, $c] = array_map('intval', $parts);
         // A 4-digit first field means YYYY-MM-DD; otherwise DD-MM-YYYY.
         return $a > 31 ? [$a, $b, $c] : [$c, $b, $a];
