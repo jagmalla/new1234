@@ -1275,10 +1275,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             <div id="pred-topic-row" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:6px 0 4px">
                 <input type="text" id="pred-q" placeholder="🔍 विषय खोजें…" aria-label="फलादेश में खोजें"
                        style="flex:1;min-width:110px;border:1px solid #cbd5e1;border-radius:8px;padding:3px 9px;font-size:.76rem">
-                <?php foreach (['धन' => '💰', 'विवाह' => '💑', 'रोग' => '🩺', 'शिक्षा' => '🎓', 'विदेश' => '✈'] as $tpc => $tpi): ?>
+                <?php foreach (['विवाह' => '💑', 'रोग' => '🩺', 'शिक्षा' => '🎓', 'विदेश' => '✈'] as $tpc => $tpi): ?>
                 <button type="button" class="lk-chip" data-topic="<?= $h($tpc) ?>" style="border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:1px 9px;font-size:.72rem;color:#475569;cursor:pointer"><?= $tpi ?> <?= $h($tpc) ?></button>
                 <?php endforeach; ?>
                 <!-- Computed topics (full analysis, not keyword search). -->
+                <button type="button" class="lk-chip" data-wealth="1" style="border:1px solid #fcd34d;background:#fffbeb;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#92400e;font-weight:700;cursor:pointer">💰 धन-योग</button>
                 <button type="button" class="lk-chip" data-career="1" style="border:1px solid #7dd3fc;background:#f0f9ff;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#075985;font-weight:700;cursor:pointer">💼 नौकरी / व्यवसाय</button>
                 <button type="button" class="lk-chip" data-santan="1" style="border:1px solid #d8b4fe;background:#faf5ff;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#6b21a8;font-weight:700;cursor:pointer">👶 संतान-योग</button>
                 <button type="button" class="lk-chip" data-videsh="1" style="border:1px solid #f0c98a;background:#fff6e8;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#92400e;font-weight:700;cursor:pointer">✈ विदेश यात्रा व निवास</button>
@@ -1784,6 +1785,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <?php require __DIR__ . '/_santan.php'; ?>
                 <!-- करियर / नौकरी-व्यवसाय — computed topic (hidden until its chip is clicked). -->
                 <?php require __DIR__ . '/_career.php'; ?>
+                <!-- धन-योग — computed topic (hidden until its chip is clicked). -->
+                <?php require __DIR__ . '/_wealth.php'; ?>
                 <div id="pred-keyword-wrap" class="bg-white rounded-lg shadow p-4 text-sm">
                     <h2 class="font-semibold mb-1">🔍 खोज परिणाम</h2>
                     <div id="pred-search-note" class="text-xs text-gray-500 mb-3"></div>
@@ -3598,7 +3601,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
           : ('"' + label + '" के लिए कोई परिणाम नहीं।');
       }
       // keyword search shows the results box and hides the computed reports.
-      ['videsh-report', 'santan-report', 'career-report'].forEach(function (x) {
+      ['videsh-report', 'santan-report', 'career-report', 'wealth-report'].forEach(function (x) {
         var el = document.getElementById(x); if (el) { el.classList.add('hidden'); }
       });
       var kw = document.getElementById('pred-keyword-wrap');
@@ -3614,7 +3617,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     // Open a computed report (full analysis, not a keyword scan). id = the report
     // element to show; the other computed reports and the keyword box are hidden.
     function openComputed(id) {
-      ['videsh-report', 'santan-report', 'career-report'].forEach(function (x) {
+      ['videsh-report', 'santan-report', 'career-report', 'wealth-report'].forEach(function (x) {
         var el = document.getElementById(x);
         if (el) { el.classList.toggle('hidden', x !== id); }
       });
@@ -3633,11 +3636,13 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     window.ABVideshTopic = function () { openComputed('videsh-report'); };
     window.ABSantanTopic = function () { openComputed('santan-report'); };
     window.ABCareerTopic = function () { openComputed('career-report'); };
+    window.ABWealthTopic = function () { openComputed('wealth-report'); };
     document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         if (chip.hasAttribute('data-videsh')) { window.ABVideshTopic(); return; }
         if (chip.hasAttribute('data-santan')) { window.ABSantanTopic(); return; }
         if (chip.hasAttribute('data-career')) { window.ABCareerTopic(); return; }
+        if (chip.hasAttribute('data-wealth')) { window.ABWealthTopic(); return; }
         var topic = chip.getAttribute('data-topic');
         window.ABTopicSearch(chip.textContent.trim(), TOPICS[topic] || [topic]);
       });

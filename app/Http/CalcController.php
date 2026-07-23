@@ -146,6 +146,18 @@ final class CalcController
             } catch (\Throwable $e) {
                 $career = null;
             }
+            // धन-योग — computed wealth analysis (0-10 scale · sources · savings ·
+            // houses/bhavesh · drishti · yogas · Shadbala/BhavaBala/Ashtakavarga/
+            // Vimshopaka/Navamsa · D2/D4/D9/D10 · dasha · past+upcoming profit-loss).
+            try {
+                $wealth = \AutoBusiness\Astro\Phala\WealthEngine::compute(
+                    $chart, $vargas,
+                    (float) ($chart['planets']['Moon']['sidereal_lon'] ?? 0.0),
+                    $jd, $nowJd, $tz, $engine, [$Y, $Mo, $D, $H, $Mi, $lat, $lon]
+                );
+            } catch (\Throwable $e) {
+                $wealth = null;
+            }
             // North-chart payload of the annual chart for the v2 chart selector
             // (render-ready; same shape the varshaphal JSON endpoint returns).
             $varshaNorth = $vp !== null ? $engine->northPayload($vp['varsha_chart']) : null;
@@ -173,6 +185,7 @@ final class CalcController
             'videsh' => $videsh ?? null,
             'santan' => $santan ?? null,
             'career' => $career ?? null,
+            'wealth' => $wealth ?? null,
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
