@@ -888,6 +888,47 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             background: var(--card); color: var(--ink); font-weight: 600; font-size: .85rem; }
         .cs-opt:hover { border-color: var(--sindoor); background: var(--sindoor-soft); color: var(--sindoor); }
 
+        /* ---- D1 quick-access tab launcher (bottom of birth chart) + popup ---- */
+        .d1-tabbar { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+            padding: 12px 14px; margin-top: 2px; }
+        .d1-tabbar-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; margin-bottom: 10px; }
+        .d1-tabbar-title { font-weight: 800; font-size: 1rem; color: var(--ink); }
+        .d1-tabbar-hint { font-size: .76rem; color: var(--ink-soft); }
+        .d1-tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .d1-tab-group { width: 100%; font-size: .74rem; font-weight: 800; color: var(--sindoor);
+            margin: 8px 0 1px; }
+        .d1-tab-group:first-child { margin-top: 0; }
+        .d1-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px;
+            border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink);
+            font-size: .86rem; font-weight: 600; line-height: 1.1; cursor: pointer; white-space: nowrap;
+            transition: background .12s, border-color .12s, transform .04s; }
+        .d1-tab:hover { background: var(--sindoor-soft); border-color: var(--sindoor); color: var(--sindoor); }
+        .d1-tab:active { transform: translateY(1px); }
+        .d1-tab:focus-visible { outline: 2px solid var(--sindoor); outline-offset: 2px; }
+        .d1-tab .d1-tab-emo { font-size: 1.02rem; line-height: 1; }
+        /* popup */
+        .d1-pop { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center;
+            justify-content: center; background: rgba(20,16,10,.55); padding: 14px; }
+        .d1-pop.hidden { display: none; }
+        .d1-pop-box { background: var(--card); border-radius: 14px; width: 100%; max-width: 780px;
+            max-height: 88vh; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+        .d1-pop-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+            border-bottom: 1px solid var(--line); background: var(--sindoor-soft); }
+        .d1-pop-title { flex: 1; min-width: 0; font-weight: 800; font-size: 1rem; color: var(--sindoor);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .d1-pop-x { flex: none; width: 34px; height: 34px; border-radius: 8px; font-size: 1.05rem;
+            color: var(--ink-soft); background: #fff; border: 1px solid var(--line); cursor: pointer; }
+        .d1-pop-x:hover { background: var(--sindoor); color: #fff; border-color: var(--sindoor); }
+        .d1-pop-body { padding: 14px 16px; overflow: auto; -webkit-overflow-scrolling: touch; }
+        .d1-pop-body.cs-body-chart { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .d1-pop-body .cs-chart-host { flex: none; width: min(100%, 460px); height: min(80vw, 460px); }
+        @media (max-width: 640px) {
+            .d1-pop-box { max-height: 92vh; border-radius: 12px; }
+            .d1-tab { font-size: .82rem; padding: 6px 11px; }
+            .d1-tabbar-title { font-size: .94rem; }
+        }
+
         /* ---- Save / Open charts: top-bar Save button, modals, toast ---- */
         .btn-save { background: #0f766e; color: #fff; border: none; border-radius: 8px;
             padding: 7px 13px; font-weight: 700; font-size: .82rem; cursor: pointer; white-space: nowrap; }
@@ -1660,6 +1701,28 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
             </div>
         </section>
+
+        <!-- ===== D1 quick-access launcher: every chart & prediction as an emoji
+             tab; each opens in a popup. Sits below the birth chart + predictions
+             (their positions are unchanged). Hidden on non-home sections. ===== -->
+        <div id="d1-tabbar" class="l2-full d1-tabbar" aria-label="अन्य चार्ट व फलादेश — त्वरित पहुँच">
+            <div class="d1-tabbar-head">
+                <span class="d1-tabbar-title">✨ और देखें — All Charts &amp; Predictions</span>
+                <span class="d1-tabbar-hint">किसी भी टैब पर टैप करें — जानकारी पॉप-अप में खुलेगी</span>
+            </div>
+            <div id="d1-tabbar-scroll" class="d1-tabs"><!-- tabs injected by JS --></div>
+        </div>
+
+        <!-- D1 quick-access popup -->
+        <div id="d1-pop" class="d1-pop hidden" role="dialog" aria-modal="true" aria-labelledby="d1-pop-title">
+            <div class="d1-pop-box">
+                <div class="d1-pop-head">
+                    <span id="d1-pop-title" class="d1-pop-title">…</span>
+                    <button type="button" id="d1-pop-x" class="d1-pop-x" aria-label="बंद करें / Close">✕</button>
+                </div>
+                <div id="d1-pop-body" class="d1-pop-body"></div>
+            </div>
+        </div>
 
         <!-- ============ New / Profile (full-width section) — the birth-details
              form, shown beside the menu like the Gochar Calculation card ======= -->
@@ -2892,6 +2955,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
           window.AB_GOCHAR = g;
           window.AB_GOCHAR_META = meta || null;
           if (typeof gpRefreshTransit === 'function') { gpRefreshTransit(); }
+          // गोचर फल is now in #gochar-phal — refresh the D1 tabs so Gochar /
+          // Muhurat / Sade-Sati appear (they clone from that freshly-loaded block).
+          if (typeof window.ABRebuildD1Tabs === 'function') { window.ABRebuildD1Tabs(); }
         }
       });
     }
@@ -3326,6 +3392,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     var pp = document.getElementById('pred-panel');
     if (cp) cp.classList.toggle('hidden', !homeMode);
     if (pp) pp.classList.toggle('hidden', !homeMode);
+    // The D1 quick-access tab bar belongs to the birth-chart view only.
+    var tb = document.getElementById('d1-tabbar');
+    if (tb) { tb.classList.toggle('hidden', !homeMode); }
     // Custom Screen: full-width work area; the side menu becomes an off-canvas
     // drawer (reachable via the ☰ Menu button, which we force-show at all widths
     // through body.cs-mode) + show the "Birth Chart" jump.
@@ -3578,6 +3647,9 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       { g:'vp', key:'vp_bhava',   label:'Bhava-Phal (भाव-फल)', kind:'clone', sel:'#vp-pred-bhava' },
       { g:'vp', key:'vp_dasha',   label:'Dasha-Phal (दशा-फल)', kind:'clone', sel:'#vp-pred-dasha' },
       { g:'go', key:'go_phal',    label:'Gochar Phal (गोचर फल)', kind:'clone', sel:'#gochar-phal', needs:'Gochar' },
+      { g:'go', key:'go_muhurat', label:'Mahurat (मुहूर्त)',      kind:'clone', sel:'#gochar-phal .gochar-cat[data-cat="muhurat"]', needs:'Gochar' },
+      { g:'go', key:'go_sade',    label:'Sade-Sati (साढ़े साती)',  kind:'clone', sel:'#gochar-phal .gochar-cat[data-cat="shani"]',   needs:'Gochar' },
+      { g:'go', key:'go_upcoming',label:'Upcoming Gochar (आगामी गोचर)', kind:'clone', sel:'#gpblock-upcoming' },
       { g:'dasha', key:'vimshottari', label:'Vimshottari Dasha', kind:'dasha', data:'AB_DASHA' },
       { g:'dasha', key:'mudda',       label:'Mudda Dasha',       kind:'dasha', data:'AB_MUDDA' },
       { g:'bala', key:'shadbala',   label:'Shadbala',        kind:'clone', sel:'.bal-tab[data-bal="shad"]' },
@@ -3699,7 +3771,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         var t = document.createElement('div'); t.className = 'cs-group-title'; t.textContent = grp.label; host.appendChild(t);
         var wrap = document.createElement('div'); wrap.className = 'cs-opts';
         items.forEach(function (p) {
-          var b = document.createElement('button'); b.className = 'cs-opt'; b.textContent = p.label;
+          var b = document.createElement('button'); b.className = 'cs-opt'; b.textContent = panelEmoji(p) + ' ' + p.label;
           b.onclick = function () { fillSlot(targetSlot, p.key); closePicker(); saveLayout(); };
           wrap.appendChild(b);
         });
@@ -3757,6 +3829,26 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       });
     }
     window.ABCustom = { ensure: ensure };
+
+    // ---- Emoji per group / panel (used by the picker + the D1 quick tabs) ----
+    var GROUP_EMOJI = { chart:'📊', d1:'📜', vp:'🎯', go:'🌌', dasha:'⏳', bala:'💪', other:'✨' };
+    var PANEL_EMOJI = {
+      D1:'🪔', D9:'💍', gochar:'🔭', varsha:'🎂',
+      p_general:'📋', p_dasha:'🗓️', p_bhavesh:'🏠', p_grah:'🪐', p_bhav:'🏛️', p_karak:'🧭', p_yoga:'🧘', p_shaap:'🙏',
+      vp_general:'📋', vp_saham:'➗', vp_tajik:'✴️', vp_varshesh:'👑', vp_muntha:'📌', vp_bhava:'🏛️', vp_dasha:'🗓️',
+      go_phal:'🌌', go_muhurat:'🕒', go_sade:'🪐', go_upcoming:'🔜',
+      vimshottari:'⏳', mudda:'🌀',
+      shadbala:'💪', bhavabala:'🏛️', av:'🔢', vimshopaka:'📊',
+      milan:'💑'
+    };
+    function panelEmoji(p) {
+      if (PANEL_EMOJI[p.key]) { return PANEL_EMOJI[p.key]; }
+      if (p.kind === 'chart') { return '📊'; }
+      return GROUP_EMOJI[p.g] || '•';
+    }
+    // Public API so the D1 quick-access tab bar can reuse the same catalogue +
+    // renderer (single source of truth — add a panel once, it appears in both).
+    window.ABPanels = { catalog: catalog, renderPanel: renderPanel, groups: GROUPS, panelEmoji: panelEmoji };
   })();
   // "Birth Chart (D1)" top-bar button → leave the Custom Screen.
   var csBack = document.getElementById('cs-back');
@@ -3791,6 +3883,66 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     try { document.execCommand('copy'); } catch (e) {}
     document.body.removeChild(ta);
   }
+
+  // ---- D1 quick-access tabs: every chart & prediction, each opens in a popup.
+  // Reuses the Custom-Screen catalogue + renderer (window.ABPanels) so there is a
+  // single source of truth — a panel added there shows up here automatically.
+  (function () {
+    var bar = document.getElementById('d1-tabbar');
+    var scroll = document.getElementById('d1-tabbar-scroll');
+    var pop = document.getElementById('d1-pop');
+    var P = window.ABPanels;
+    if (!bar || !scroll || !pop || !P) { return; }
+    var titleEl = document.getElementById('d1-pop-title');
+    var bodyEl = document.getElementById('d1-pop-body');
+
+    function openPanel(key, title) {
+      titleEl.textContent = title;
+      bodyEl.className = 'd1-pop-body';
+      P.renderPanel(bodyEl, key);
+      pop.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      // Charts use fit:true, which measures the (now visible) host — nudge a
+      // resize so the North chart scales correctly inside the popup.
+      setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 40);
+    }
+    function closePop() {
+      pop.classList.add('hidden');
+      document.body.style.overflow = '';
+      bodyEl.innerHTML = '';
+    }
+    document.getElementById('d1-pop-x').addEventListener('click', closePop);
+    pop.addEventListener('click', function (e) { if (e.target === pop) { closePop(); } });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !pop.classList.contains('hidden')) { closePop(); }
+    });
+
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function build() {
+      var cat = P.catalog();
+      scroll.innerHTML = '';
+      P.groups.forEach(function (grp) {
+        var items = cat.filter(function (p) { return p.g === grp.id; });
+        if (!items.length) { return; }
+        var gl = document.createElement('div'); gl.className = 'd1-tab-group'; gl.textContent = grp.label;
+        scroll.appendChild(gl);
+        items.forEach(function (p) {
+          var emo = P.panelEmoji(p);
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'd1-tab';
+          b.innerHTML = '<span class="d1-tab-emo">' + esc(emo) + '</span><span>' + esc(p.label) + '</span>';
+          b.addEventListener('click', function () { openPanel(p.key, emo + ' ' + p.label); });
+          scroll.appendChild(b);
+        });
+      });
+    }
+    build();
+    // Transit-based panels (Gochar / Muhurat / Sade-Sati) load async after the
+    // gochar fetch; expose a rebuild hook (called from that onResult) + a
+    // one-time fallback so those tabs appear once their data is ready.
+    window.ABRebuildD1Tabs = build;
+    setTimeout(build, 3000);
+  })();
 
   // Boot: render charts/trees/panels once; menu default = जन्म कुंडली.
   buildAllV2();
