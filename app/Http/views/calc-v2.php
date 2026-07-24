@@ -3671,6 +3671,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     window.ABCareerTopic = function () { openComputed('career-report'); };
     window.ABWealthTopic = function () { openComputed('wealth-report'); };
     window.ABPoliticsTopic = function () { openComputed('politics-report'); };
+
+    // मुहूर्त-चिन्तामणि category selector (delegated — the muhurat फल fragment is
+    // re-injected on each date/time change, so we listen on the document).
+    document.addEventListener('change', function (e) {
+      var sel = e.target.closest ? e.target.closest('#mc-cat-select') : null;
+      if (!sel) { return; }
+      var root = sel.closest('[data-cat="muhurat"]') || document;
+      var val = sel.value;
+      root.querySelectorAll('.mc-panel').forEach(function (p) {
+        p.classList.toggle('hidden', p.getAttribute('data-mc') !== val);
+      });
+    });
+
     document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         if (chip.hasAttribute('data-videsh')) { window.ABVideshTopic(); return; }

@@ -21,6 +21,7 @@ $cardCls = static fn(string $t): string => $t === 'pos' ? 'gcard-pos' : ($t === 
 $av = $gp['av'] ?? ['bindu' => [], 'kaksha' => [], 'sav' => []];
 $ss = $gp['shani_special'] ?? null;
 $mu = $gp['muhurat'] ?? null;
+$gm = $gp['general_muhurat'] ?? null;   // 🗓️ Muhurta-Chintamani General Muhurat (Phase 1)
 $hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null || $mu !== null);
 if ($hasAny):
     $l1 = $gp['layer1'] ?? [];
@@ -272,6 +273,96 @@ if ($hasAny):
         <div class="gochar-cat" data-cat="muhurat">
             <div class="gph-section-title">मुहूर्त <span class="text-xs text-gray-400 font-normal">(राहु काल · दिशा शूल · तिथि · जन्म-नक्षत्र वारफल · अस्त · कष्ट-राशि)</span></div>
             <div class="text-xs text-gray-500" style="margin:2px 0 6px">वार: <b><?= $h($mu['weekday_hi']) ?></b> · गोचर चन्द्र नक्षत्र: <b><?= $h($mu['nakshatra']['transit']['name']) ?></b> पाद <?= (int) $mu['nakshatra']['transit']['pada'] ?> · जन्म-नक्षत्र: <b><?= $h($mu['nakshatra']['janma']['name']) ?></b></div>
+
+            <!-- ============ मुहूर्त-चिन्तामणि — कार्य/श्रेणी चयन (Phase 1) ============ -->
+            <style>
+            .mc-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
+            .mc-picker label{font-size:.74rem;font-weight:700;color:#6b21a8}
+            .mc-cat-select{border:1px solid #e2c9f0;background:#faf5ff;border-radius:8px;padding:6px 11px;
+              font-size:.86rem;font-weight:700;color:#6b21a8;max-width:100%}
+            .mc-panel.hidden{display:none}
+            .mc-verdict{border:1px solid #e4dcce;border-left:5px solid #b45309;border-radius:12px;
+              padding:12px 14px;margin-bottom:12px;background:linear-gradient(180deg,#fffdf8,#fdf6ec)}
+            .mc-verdict h4{font-size:1.02rem;margin:0 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+            .mc-grade{font-weight:800;border-radius:999px;padding:2px 12px;font-size:.8rem}
+            .mc-pos{background:#dcfce7;color:#166534}.mc-neg{background:#fee2e2;color:#991b1b}.mc-info{background:#fef9c3;color:#854d0e}
+            .mc-pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px 14px;margin:8px 0}
+            .mc-pi{font-size:.82rem;color:#4b4433}.mc-pi b{color:#6b5d3e}
+            .mc-line{font-size:.85rem;line-height:1.55;margin:3px 0;padding-left:16px;position:relative}
+            .mc-line::before{content:'•';position:absolute;left:3px}
+            .mc-line.g::before{content:'✓';color:#166534}.mc-line.d::before{content:'✕';color:#b91c1c}
+            .mc-rem{font-size:.76rem;color:#8a5a1a;margin:1px 0 4px 16px}
+            .mc-soon{border:1px dashed #cbb6e0;border-radius:12px;padding:16px;background:#faf7fd;text-align:center}
+            .mc-soon .e{font-size:1.6rem}.mc-soon b{color:#6b21a8}
+            .mc-chitta{font-size:.76rem;color:#6b6156;background:#f8fafc;border:1px solid #e4dcce;
+              border-radius:8px;padding:8px 11px;margin-top:8px}
+            </style>
+            <div class="mc-picker">
+                <label for="mc-cat-select">🕉️ कार्य / श्रेणी चुनें</label>
+                <select id="mc-cat-select" class="mc-cat-select">
+                    <option value="general">🗓️ सामान्य मुहूर्त (पंचांग-शुद्धि)</option>
+                    <option value="personal">🙋 व्यक्तिगत मुहूर्त (आपकी कुण्डली से)</option>
+                    <option value="vivaha">💍 विवाह मुहूर्त + गुण-मिलान</option>
+                    <option value="sanskar">🧒 संस्कार (नामकरण·मुण्डन·उपनयन)</option>
+                    <option value="vastu">🏗️ गृहारम्भ / वास्तु</option>
+                    <option value="grihapravesh">🚪 गृहप्रवेश</option>
+                    <option value="yatra">🧳 यात्रा</option>
+                    <option value="rajyabhishek">👑 राज्याभिषेक / शपथ-ग्रहण</option>
+                </select>
+            </div>
+
+            <?php // ---- 🗓️ General Muhurat verdict (Muhurta-Chintamani) ----
+            if ($gm !== null && !empty($gm['ok'])): $P = $gm['panchang']; ?>
+            <div class="mc-panel" data-mc="general">
+                <div class="mc-verdict">
+                    <h4>🗓️ सामान्य मुहूर्त — पंचांग-शुद्धि
+                        <span class="mc-grade mc-<?= $h($gm['tone']) ?>"><?= $h($gm['grade']) ?></span></h4>
+                    <div style="font-size:.9rem;font-weight:600"><?= $h($gm['verdict']) ?></div>
+                    <div class="mc-pgrid">
+                        <div class="mc-pi"><b>वार:</b> <?= $h($P['vaar']) ?></div>
+                        <div class="mc-pi"><b>तिथि:</b> <?= $h($P['tithi']) ?> <span style="color:#854d0e">(<?= $h($P['tithi_grade']) ?>)</span></div>
+                        <div class="mc-pi"><b>नक्षत्र:</b> <?= $h($P['nakshatra']) ?></div>
+                        <div class="mc-pi"><b>संज्ञा·गण:</b> <?= $h($P['sanjna']) ?> · <?= $h($P['gana']) ?></div>
+                        <div class="mc-pi"><b>नित्य-योग:</b> <?= $h($P['yoga']) ?></div>
+                        <div class="mc-pi"><b>करण:</b> <?= $h($P['karana']) ?></div>
+                    </div>
+                    <div class="mc-pi" style="margin-bottom:6px"><b>उपयुक्त कार्य (नक्षत्र-संज्ञा):</b> <?= $h($P['sanjna_karya']) ?><?= $P['ananda'] ? ' · आनन्दादि योग: ' . $h($P['ananda']) : '' ?></div>
+                    <?php foreach ($gm['shubh'] as $s): ?>
+                        <div class="mc-line g"><b><?= $h($s['name']) ?></b> — <?= $h($s['why']) ?></div>
+                    <?php endforeach; ?>
+                    <?php foreach ($gm['dosha'] as $d): ?>
+                        <div class="mc-line d"><b><?= $h($d['name']) ?></b> — <?= $h($d['why']) ?></div>
+                        <div class="mc-rem">🛠 <?= $h($d['rem']) ?></div>
+                    <?php endforeach; ?>
+                    <?php if ($gm['shubh'] === [] && $gm['dosha'] === []): ?>
+                        <div class="mc-line">कोई विशेष शुभ योग या दोष नहीं — सामान्य पंचांग।</div>
+                    <?php endif; ?>
+                    <div class="mc-chitta">🧘 <?= $h($gm['chitta']) ?></div>
+                </div>
+                <div class="text-xs text-gray-500" style="margin:2px 0 6px;font-weight:700">आधार पंचांग विवरण (राहु काल · दिशा शूल · तिथि · वारफल)</div>
+            </div>
+            <?php endif; ?>
+
+            <?php // ---- placeholders for categories arriving in later phases ----
+            $mcSoon = [
+                'personal' => ['🙋', 'व्यक्तिगत मुहूर्त', 'आपकी जन्म-कुण्डली से — तारा-बल, चन्द्र-बल, गोचर-वेध, घात-चक्र व अष्टकवर्ग-बिन्दु। (Phase 2)'],
+                'vivaha' => ['💍', 'विवाह मुहूर्त', 'विवाह-विहित नक्षत्र/तिथि, 36-गुण मिलान, मंगल-दोष व 14 परिहार, वेध-दोष। कुण्डली-मिलान से जुड़ेगा। (Phase 4)'],
+                'sanskar' => ['🧒', 'संस्कार मुहूर्त', 'नामकरण · अन्नप्राशन · मुण्डन · कर्णवेध · उपनयन · विद्यारम्भ — प्रत्येक का विहित नक्षत्र/तिथि। (Phase 3)'],
+                'vastu' => ['🏗️', 'गृहारम्भ / वास्तु', 'गृह-पिण्ड, आय-साधन, गृहारम्भ मास/नक्षत्र, राहुमुख, भूमि-परीक्षा। (Phase 6)'],
+                'grihapravesh' => ['🚪', 'गृहप्रवेश', 'अपूर्व/सपूर्व प्रवेश, कुम्भ-चक्र, वास्तु-पूजन काल। (Phase 6)'],
+                'yatra' => ['🧳', 'यात्रा मुहूर्त', 'दिशा-शूल, त्याज्य घटी, घात-चक्र, योगिनी, शकुन — गोचर से जुड़ेगा। (Phase 5)'],
+                'rajyabhishek' => ['👑', 'राज्याभिषेक / शपथ', 'काल-शुद्धि, ग्रह-भाव-बल, स्थिर-लग्न — राजनीति-मॉड्यूल से जुड़ेगा। (Phase 6)'],
+            ];
+            foreach ($mcSoon as $key => $info): ?>
+            <div class="mc-panel hidden" data-mc="<?= $h($key) ?>">
+                <div class="mc-soon">
+                    <div class="e"><?= $info[0] ?></div>
+                    <div style="margin:4px 0"><b><?= $h($info[1]) ?></b> — यह श्रेणी शीघ्र जोड़ी जाएगी।</div>
+                    <div style="font-size:.82rem;color:#6b6156"><?= $h($info[2]) ?></div>
+                    <div style="font-size:.78rem;color:#94a3b8;margin-top:6px">तब तक नीचे 🗓️ <b>सामान्य मुहूर्त</b> का पंचांग-शुद्धि फल देखें।</div>
+                </div>
+            </div>
+            <?php endforeach; ?>
 
             <?php if (!empty($mu['rahu_kaal'])): $rk = $mu['rahu_kaal']; ?>
             <div class="saham-card gochar-card gcard-neg" data-planet="all">

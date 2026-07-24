@@ -183,6 +183,22 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 🗓️ सामान्य मुहूर्त (Muhurta-Chintamani, Phase 1) — additive ---------
+        // Panchang-shuddhi of the muhurat instant from the granth: siddha /
+        // sarvartha-siddhi / ravi yoga, dagdha / bhadra / dosha + parihara grade.
+        $generalMuhurat = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdG = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonG = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonG = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            $moonSignG = (int) ($transits['Moon']['sign_index'] ?? 0);
+            try {
+                $generalMuhurat = \AutoBusiness\Astro\Muhurat\GeneralMuhuratEngine::compute($sunLonG, $moonLonG, (int) $wdG, $moonSignG);
+            } catch (\Throwable $e) {
+                $generalMuhurat = null;
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -192,6 +208,7 @@ final class GocharPhalEngine
             'av' => $av,
             'has_av' => $bav !== [],
             'muhurat' => $muhurat,
+            'general_muhurat' => $generalMuhurat,
         ];
     }
 
