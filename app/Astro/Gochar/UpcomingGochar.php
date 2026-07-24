@@ -282,10 +282,24 @@ final class UpcomingGochar
         };
 
         // -- अस्त (combustion): past / current / future per planet --
+        // Moon combustion recurs ~monthly (around अमावस्या) and only the recent
+        // & next window matter, so it uses ONE small shared scan (also feeds the
+        // चन्द्र-पक्ष card). Coarser steps + tighter windows keep this fast — the
+        // exact boundary dates are still pinned by bisection inside scanWindows.
+        $moonCombWins = $scanWindows(static fn (float $j): bool => $isComb('Moon', $j), 0.4, 30.0, 45.0);
+        // [coarse-step, days-back, days-forward] per planet.
+        $combCfg = [
+            'Mercury' => [2.0, 180.0, 280.0], 'Venus' => [2.0, 200.0, 300.0],
+            'Mars' => [2.5, 200.0, 320.0], 'Jupiter' => [2.5, 200.0, 320.0], 'Saturn' => [2.5, 200.0, 320.0],
+        ];
         $combParts = ['current' => [], 'past' => [], 'future' => []];
         foreach (['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Moon'] as $p) {
-            $step = $p === 'Moon' ? 0.2 : (($p === 'Mercury' || $p === 'Venus') ? 1.0 : 2.0);
-            $wins = $scanWindows(static fn (float $j): bool => $isComb($p, $j), $step, 240.0, 400.0);
+            if ($p === 'Moon') {
+                $wins = $moonCombWins;
+            } else {
+                [$st, $bk, $fw] = $combCfg[$p];
+                $wins = $scanWindows(static fn (float $j): bool => $isComb($p, $j), $st, $bk, $fw);
+            }
             $c = $classify($wins);
             if ($c['current'] !== null) {
                 $cc = $card($p, $c['current'], 'end');   // sign at "now" via end rep is close; use now
@@ -300,7 +314,7 @@ final class UpcomingGochar
         // -- वक्री (retrograde): past / current / future per planet --
         $retroParts = ['current' => [], 'past' => [], 'future' => []];
         foreach (self::RETRO_P as $p) {
-            $wins = $scanWindows(static fn (float $j): bool => $spd($p, $j) < 0.0, 2.0, 260.0, 420.0);
+            $wins = $scanWindows(static fn (float $j): bool => $spd($p, $j) < 0.0, 3.0, 220.0, 340.0);
             $c = $classify($wins);
             if ($c['current'] !== null) {
                 $cc = $card($p, $c['current'], 'start');
@@ -326,8 +340,7 @@ final class UpcomingGochar
             return null;
         };
         $tithiNum = (int) floor($elong / 12.0) + 1;   // 1..30
-        $moonWins = $scanWindows(static fn (float $j): bool => $isComb('Moon', $j), 0.2, 20.0, 40.0);
-        $mc = $classify($moonWins);
+        $mc = $classify($moonCombWins);   // reuse the shared Moon-combust scan
         $moonCombWin = $mc['current'] ?? $mc['future'];
         $pakshaCal = [
             'name' => $paksha['name'], 'waxing' => $paksha['waxing'],

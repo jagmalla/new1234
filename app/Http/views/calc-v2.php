@@ -134,7 +134,12 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             border-radius: 8px; background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
         .test-banner a { color: #FFFFFF; text-decoration: underline; font-weight: 800; }
         .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
-            flex-wrap: wrap; font-size: .85rem; color: #C9C2B4; }
+            flex-wrap: nowrap; font-size: .85rem; color: #C9C2B4; min-width: 0; }
+        .topbar .meta > span { white-space: nowrap; flex: 0 0 auto; }
+        /* Long chart names must not push the meta onto a second line — truncate
+           with an ellipsis instead of wrapping. */
+        .topbar .meta > span:first-child { flex: 0 1 auto; min-width: 0; max-width: 24ch;
+            overflow: hidden; text-overflow: ellipsis; }
         .topbar .meta b { color: #FFFFFF; font-weight: 600; }
         .topbar select { background: #2A3742; color: #F7F3EA; border: 1px solid #3B4854;
             padding: 6px 10px; min-height: 44px; font-size: .85rem; }
@@ -259,7 +264,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             padding: 1px 8px; font-size: .72rem; font-weight: 700; vertical-align: 1px; }
 
         /* ---- Prediction panel (Phase 4) ---- */
-        .pred-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .pred-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+            flex-wrap: wrap; min-width: 0; }
         .pred-expand { width: 44px; height: 44px; min-height: 44px; flex: 0 0 auto; margin-left: auto;
             display: inline-flex; align-items: center; justify-content: center;
             border: 1px solid var(--line); border-radius: 6px; color: var(--sindoor);
@@ -2253,6 +2259,11 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         <!-- ============ आज का Consult (full-width section) ============ -->
         <div id="sec-today" class="l2-section l2-full hidden space-y-4 md:space-y-6">
         <?php require __DIR__ . '/_today_dashboard.php'; ?>
+        <!-- Full dated Gochar panel (retrograde वक्री→मार्गी, अस्त→उदय, राशि-परिवर्तन,
+             चन्द्र-पक्ष) so every transit date is available on the Today screen. -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <?php $ug = $view['upcoming_gochar'] ?? null; require __DIR__ . '/_upcoming_gochar.php'; ?>
+        </div>
         </div><!-- /sec-today -->
 
         <!-- ============ लाल किताब (full-width section) ============ -->

@@ -178,6 +178,36 @@ $P = $ug['paksha_cal'];
     <?php endif; ?>
 
     <?php
+    // =========================== MOON PAKSHA ===========================
+    // Placed high — right under the "next events" strip — so the day's Moon
+    // paksha / tithi is visible without scrolling.
+    $copy[] = '';
+    $copy[] = '🌙 ' . $P['name'] . ' · तिथि ' . $P['tithi'] . ' · चन्द्रमा ' . $P['sign_hi'] . ' (' . $P['nak'] . ')';
+    if (!empty($P['next_amavasya'])) { $copy[] = '  🌑 अगली अमावस्या: ' . $P['next_amavasya']; }
+    if (!empty($P['next_purnima'])) { $copy[] = '  🌕 अगली पूर्णिमा: ' . $P['next_purnima']; }
+    if (!empty($P['moon_combust_start'])) { $copy[] = '  ☀️ चन्द्र-अस्त: ' . $P['moon_combust_start'] . ' → ' . ($P['moon_combust_end'] ?? '?'); }
+    ?>
+    <div class="ugx-sec">
+        <div class="ugx-sec-h">🌙 चन्द्र-पक्ष व तिथि <span class="ugx-tag">Moon paksha</span></div>
+        <div class="ugx-paksha">
+            <div class="ugx-moon <?= !empty($P['waxing']) ? 'waxing' : 'waning' ?>"></div>
+            <div class="ugx-pk-info">
+                <div class="ugx-pk-name"><?= $h($P['name']) ?>
+                    <span class="ugx-tithi">तिथि <?= (int) $P['tithi'] ?>/30 · <?= !empty($P['waxing']) ? 'चन्द्र बढ़ रहा 🌔' : 'चन्द्र घट रहा 🌘' ?></span>
+                </div>
+                <div class="ugx-pk-row">चन्द्रमा <b><?= $h($P['sign_emo']) ?> <?= $h($P['sign_hi']) ?></b> राशि · <b><?= $h($P['nak']) ?></b> नक्षत्र</div>
+                <div class="ugx-pk-chips">
+                    <?php if (!empty($P['next_amavasya'])): ?><span class="ugx-chip ama">🌑 अमावस्या <?= $h($P['next_amavasya']) ?></span><?php endif; ?>
+                    <?php if (!empty($P['next_purnima'])): ?><span class="ugx-chip pur">🌕 पूर्णिमा <?= $h($P['next_purnima']) ?></span><?php endif; ?>
+                    <?php if (!empty($P['moon_combust_start'])): ?>
+                        <span class="ugx-chip comb">☀️ चन्द्र-अस्त <?= $h($P['moon_combust_start']) ?><?= !empty($P['moon_combust_end']) ? ' → ' . $h($P['moon_combust_end']) : '' ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php
     // ============================ COMBUSTION ============================
     $cp = $ug['combust_parts'];
     $copy[] = ''; $copy[] = '☀️ अस्त (सूर्य के निकट):';
@@ -255,34 +285,6 @@ $P = $ug['paksha_cal'];
         </div>
     </div>
     <?php endif; ?>
-
-    <?php
-    // =========================== MOON PAKSHA ===========================
-    $copy[] = '';
-    $copy[] = '🌙 ' . $P['name'] . ' · तिथि ' . $P['tithi'] . ' · चन्द्रमा ' . $P['sign_hi'] . ' (' . $P['nak'] . ')';
-    if (!empty($P['next_amavasya'])) { $copy[] = '  🌑 अगली अमावस्या: ' . $P['next_amavasya']; }
-    if (!empty($P['next_purnima'])) { $copy[] = '  🌕 अगली पूर्णिमा: ' . $P['next_purnima']; }
-    if (!empty($P['moon_combust_start'])) { $copy[] = '  ☀️ चन्द्र-अस्त: ' . $P['moon_combust_start'] . ' → ' . ($P['moon_combust_end'] ?? '?'); }
-    ?>
-    <div class="ugx-sec">
-        <div class="ugx-sec-h">🌙 चन्द्र-पक्ष व तिथि <span class="ugx-tag">Moon paksha</span></div>
-        <div class="ugx-paksha">
-            <div class="ugx-moon <?= !empty($P['waxing']) ? 'waxing' : 'waning' ?>"></div>
-            <div class="ugx-pk-info">
-                <div class="ugx-pk-name"><?= $h($P['name']) ?>
-                    <span class="ugx-tithi">तिथि <?= (int) $P['tithi'] ?>/30 · <?= !empty($P['waxing']) ? 'चन्द्र बढ़ रहा 🌔' : 'चन्द्र घट रहा 🌘' ?></span>
-                </div>
-                <div class="ugx-pk-row">चन्द्रमा <b><?= $h($P['sign_emo']) ?> <?= $h($P['sign_hi']) ?></b> राशि · <b><?= $h($P['nak']) ?></b> नक्षत्र</div>
-                <div class="ugx-pk-chips">
-                    <?php if (!empty($P['next_amavasya'])): ?><span class="ugx-chip ama">🌑 अमावस्या <?= $h($P['next_amavasya']) ?></span><?php endif; ?>
-                    <?php if (!empty($P['next_purnima'])): ?><span class="ugx-chip pur">🌕 पूर्णिमा <?= $h($P['next_purnima']) ?></span><?php endif; ?>
-                    <?php if (!empty($P['moon_combust_start'])): ?>
-                        <span class="ugx-chip comb">☀️ चन्द्र-अस्त <?= $h($P['moon_combust_start']) ?><?= !empty($P['moon_combust_end']) ? ' → ' . $h($P['moon_combust_end']) : '' ?></span>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <?php
     // ===================== SLOW PLANETS / SADE SATI =====================

@@ -67,7 +67,10 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
             border-radius: 8px; background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
         .test-banner a { color: #FFFFFF; text-decoration: underline; font-weight: 800; }
         .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
-            flex-wrap: wrap; font-size: .85rem; color: #C9C2B4; }
+            flex-wrap: nowrap; font-size: .85rem; color: #C9C2B4; min-width: 0; }
+        .topbar .meta > span { white-space: nowrap; flex: 0 0 auto; }
+        .topbar .meta > span:first-child { flex: 0 1 auto; min-width: 0; max-width: 24ch;
+            overflow: hidden; text-overflow: ellipsis; }
         .topbar .meta b { color: #fff; font-weight: 600; }
         .btn-sindoor { background: var(--sindoor); color: #fff; font-weight: 600; font-size: .9rem;
             padding: 8px 16px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; }
