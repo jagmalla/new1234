@@ -26,6 +26,7 @@ $pm = $gp['personal_muhurat'] ?? null;  // 🙋 Personal Muhurat (Phase 2)
 $sk = $gp['sanskara_muhurat'] ?? null;  // 🧒 Sanskara Muhurat (Phase 3)
 $vv = $gp['vivaha_muhurat'] ?? null;    // 💍 Vivaha Muhurat (Phase 4)
 $mg = $gp['mangal_dosha'] ?? null;      // 💍 Mangal Dosha (Phase 4)
+$ya = $gp['yatra_muhurat'] ?? null;     // 🧳 Yatra Muhurat (Phase 5)
 $hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null || $mu !== null);
 if ($hasAny):
     $l1 = $gp['layer1'] ?? [];
@@ -456,11 +457,38 @@ if ($hasAny):
             </div>
             <?php endif; ?>
 
+            <?php // ---- 🧳 यात्रा मुहूर्त (Phase 5) — per-direction ----
+            if ($ya !== null && !empty($ya['ok'])): ?>
+            <div class="mc-panel hidden" data-mc="yatra">
+                <div class="mc-picker" style="margin-bottom:6px">
+                    <label for="mc-dir-select">🧳 दिशा चुनें</label>
+                    <select id="mc-dir-select" class="mc-cat-select">
+                        <?php foreach ($ya['dirs'] as $dd): $emo = ['शुभ' => '🟢', 'मध्यम' => '🟡', 'अशुभ' => '🔴'][$dd['grade']] ?? ''; ?>
+                            <option value="<?= $h($dd['dir']) ?>"><?= $emo ?> <?= $h($dd['dir']) ?> — <?= $h($dd['grade']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: नक्षत्र <b><?= $h($ya['nakshatra']) ?></b><?= $ya['sarvadig'] ? ' (सर्वदिग् — शूल-नाशक)' : ($ya['vihit_nak'] ? ' (यात्रा-विहित)' : '') ?> · तिथि <b><?= (int) $ya['tithi'] ?></b> · वार <b><?= $h($ya['vaar']) ?></b> · वार-शूल <b><?= $h($ya['vaar_shool_dir']) ?></b> · योगिनी <b><?= $h($ya['yogini_dir']) ?></b></div>
+                <?php foreach ($ya['dirs'] as $i => $dd): ?>
+                <div class="mc-rite <?= $i === 0 ? '' : 'hidden' ?>" data-rite="<?= $h($dd['dir']) ?>">
+                    <div class="mc-verdict" style="border-left-color:#0d9488;background:linear-gradient(180deg,#f5fdfc,#ecfbf8)">
+                        <h4>🧭 <?= $h($dd['dir']) ?> दिशा <span style="font-size:.72rem;color:#64748b">(स्वामी <?= $h($dd['swami']) ?><?= $dd['vahana'] ? ' · वाहन ' . $h($dd['vahana']) : '' ?>)</span>
+                            <span class="mc-grade mc-<?= $h($dd['tone']) ?>"><?= $h($dd['grade']) ?></span></h4>
+                        <?php foreach ($dd['issues'] as $x): ?>
+                            <div class="mc-line d"><b><?= $h($x['name']) ?></b> — <?= $h($x['why']) ?></div>
+                        <?php endforeach; ?>
+                        <?php if (!empty($dd['ok_note'])): ?><div class="mc-line g"><?= $h($dd['ok_note']) ?></div><?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+                <div class="mc-chitta">📍 <?= $h($ya['note']) ?></div>
+            </div>
+            <?php endif; ?>
+
             <?php // ---- placeholders for categories arriving in later phases ----
             $mcSoon = [
                 'vastu' => ['🏗️', 'गृहारम्भ / वास्तु', 'गृह-पिण्ड, आय-साधन, गृहारम्भ मास/नक्षत्र, राहुमुख, भूमि-परीक्षा। (Phase 6)'],
                 'grihapravesh' => ['🚪', 'गृहप्रवेश', 'अपूर्व/सपूर्व प्रवेश, कुम्भ-चक्र, वास्तु-पूजन काल। (Phase 6)'],
-                'yatra' => ['🧳', 'यात्रा मुहूर्त', 'दिशा-शूल, त्याज्य घटी, घात-चक्र, योगिनी, शकुन — गोचर से जुड़ेगा। (Phase 5)'],
                 'rajyabhishek' => ['👑', 'राज्याभिषेक / शपथ', 'काल-शुद्धि, ग्रह-भाव-बल, स्थिर-लग्न — राजनीति-मॉड्यूल से जुड़ेगा। (Phase 6)'],
             ];
             foreach ($mcSoon as $key => $info): ?>

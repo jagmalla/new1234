@@ -239,6 +239,19 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 🧳 यात्रा मुहूर्त (Phase 5) — per-direction ---------
+        $yatraMuhurat = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdY = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonY = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonY = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $yatraMuhurat = \AutoBusiness\Astro\Muhurat\YatraMuhuratEngine::computeAll($sunLonY, $moonLonY, (int) $wdY);
+            } catch (\Throwable $e) {
+                $yatraMuhurat = null;
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -253,6 +266,7 @@ final class GocharPhalEngine
             'sanskara_muhurat' => $sanskaraMuhurat,
             'vivaha_muhurat' => $vivahaMuhurat,
             'mangal_dosha' => $mangalDosha,
+            'yatra_muhurat' => $yatraMuhurat,
         ];
     }
 

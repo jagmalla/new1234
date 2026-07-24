@@ -3686,8 +3686,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         });
         return;
       }
-      // संस्कार rite sub-selector — toggle the per-rite cards
-      var rsel = e.target.closest('#mc-rite-select');
+      // संस्कार rite / यात्रा direction sub-selector — toggle the per-item cards
+      var rsel = e.target.closest('#mc-rite-select') || e.target.closest('#mc-dir-select');
       if (rsel) {
         var rroot = rsel.closest('.mc-panel') || document;
         var rv = rsel.value;
