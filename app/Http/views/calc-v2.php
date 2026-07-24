@@ -1307,6 +1307,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <button type="button" class="lk-chip" data-career="1" style="border:1px solid #7dd3fc;background:#f0f9ff;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#075985;font-weight:700;cursor:pointer">💼 नौकरी / व्यवसाय</button>
                 <button type="button" class="lk-chip" data-santan="1" style="border:1px solid #d8b4fe;background:#faf5ff;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#6b21a8;font-weight:700;cursor:pointer">👶 संतान-योग</button>
                 <button type="button" class="lk-chip" data-videsh="1" style="border:1px solid #f0c98a;background:#fff6e8;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#92400e;font-weight:700;cursor:pointer">✈ विदेश यात्रा व निवास</button>
+                <button type="button" class="lk-chip" data-politics="1" style="border:1px solid #fdba74;background:#fff7ed;border-radius:999px;padding:1px 10px;font-size:.72rem;color:#9a3412;font-weight:700;cursor:pointer">🏛️ राजनीति</button>
             </div>
             <div id="pred-scroll">
 
@@ -1811,6 +1812,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <?php require __DIR__ . '/_career.php'; ?>
                 <!-- धन-योग — computed topic (hidden until its chip is clicked). -->
                 <?php require __DIR__ . '/_wealth.php'; ?>
+                <!-- राजनीति — computed topic (hidden until its chip is clicked). -->
+                <?php require __DIR__ . '/_politics.php'; ?>
                 <div id="pred-keyword-wrap" class="bg-white rounded-lg shadow p-4 text-sm">
                     <h2 class="font-semibold mb-1">🔍 खोज परिणाम</h2>
                     <div id="pred-search-note" class="text-xs text-gray-500 mb-3"></div>
@@ -3631,7 +3634,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
           : ('"' + label + '" के लिए कोई परिणाम नहीं।');
       }
       // keyword search shows the results box and hides the computed reports.
-      ['videsh-report', 'santan-report', 'career-report', 'wealth-report'].forEach(function (x) {
+      ['videsh-report', 'santan-report', 'career-report', 'wealth-report', 'politics-report'].forEach(function (x) {
         var el = document.getElementById(x); if (el) { el.classList.add('hidden'); }
       });
       var kw = document.getElementById('pred-keyword-wrap');
@@ -3647,7 +3650,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     // Open a computed report (full analysis, not a keyword scan). id = the report
     // element to show; the other computed reports and the keyword box are hidden.
     function openComputed(id) {
-      ['videsh-report', 'santan-report', 'career-report', 'wealth-report'].forEach(function (x) {
+      ['videsh-report', 'santan-report', 'career-report', 'wealth-report', 'politics-report'].forEach(function (x) {
         var el = document.getElementById(x);
         if (el) { el.classList.toggle('hidden', x !== id); }
       });
@@ -3667,12 +3670,14 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     window.ABSantanTopic = function () { openComputed('santan-report'); };
     window.ABCareerTopic = function () { openComputed('career-report'); };
     window.ABWealthTopic = function () { openComputed('wealth-report'); };
+    window.ABPoliticsTopic = function () { openComputed('politics-report'); };
     document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         if (chip.hasAttribute('data-videsh')) { window.ABVideshTopic(); return; }
         if (chip.hasAttribute('data-santan')) { window.ABSantanTopic(); return; }
         if (chip.hasAttribute('data-career')) { window.ABCareerTopic(); return; }
         if (chip.hasAttribute('data-wealth')) { window.ABWealthTopic(); return; }
+        if (chip.hasAttribute('data-politics')) { window.ABPoliticsTopic(); return; }
         var topic = chip.getAttribute('data-topic');
         window.ABTopicSearch(chip.textContent.trim(), TOPICS[topic] || [topic]);
       });

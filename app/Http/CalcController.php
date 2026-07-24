@@ -146,6 +146,19 @@ final class CalcController
             } catch (\Throwable $e) {
                 $career = null;
             }
+            // राजनीति — computed political-career analysis (houses 10/6/11 · Sun/
+            // Mars/Saturn/Rahu · raj/viparita/neechbhanga/mahapurusha yogas · D9/D10 ·
+            // shadbala/ashtakavarga/vimshopaka · dasha · varshaphal · gochar · level
+            // scale · promotion). Own try/catch so an edge-case never blanks the page.
+            try {
+                $politics = \AutoBusiness\Astro\Phala\PoliticsEngine::compute(
+                    $chart, $vargas,
+                    (float) ($chart['planets']['Moon']['sidereal_lon'] ?? 0.0),
+                    $jd, $nowJd, $tz, $engine, [$Y, $Mo, $D, $H, $Mi, $lat, $lon], $vp
+                );
+            } catch (\Throwable $e) {
+                $politics = null;
+            }
             // धन-योग — computed wealth analysis (0-10 scale · sources · savings ·
             // houses/bhavesh · drishti · yogas · Shadbala/BhavaBala/Ashtakavarga/
             // Vimshopaka/Navamsa · D2/D4/D9/D10 · dasha · past+upcoming profit-loss).
@@ -186,6 +199,7 @@ final class CalcController
             'santan' => $santan ?? null,
             'career' => $career ?? null,
             'wealth' => $wealth ?? null,
+            'politics' => $politics ?? null,
             'meta' => $meta,
             'birthJs' => $birthJs ?? null,
             'dashaNow' => $dashaNow ?? null,
