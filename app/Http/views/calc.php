@@ -56,6 +56,18 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     <title>Auto Business — Chart Calculator (test)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* === Global readability: larger, device-responsive base font size ===
+           Root font-size scales every rem/em-based text (Tailwind utilities +
+           custom CSS) up fluidly on all devices — phones, tablets, desktops. */
+        html { font-size: clamp(17px, 15.8px + 0.5vw, 20.5px);
+               -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        /* === Device compatibility: keep content within the screen (no
+           horizontal page-scroll) on phones, tablets and desktops. Wide data
+           tables scroll inside their own box instead of stretching the page. */
+        img, video { max-width: 100%; height: auto; }
+        svg { max-width: 100%; }
+        pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+        table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         /* Soft page background so the white cards don't look flat. */
         body { background: linear-gradient(160deg, #eef2ff 0%, #f5f7fb 45%, #fdf2f8 100%); background-attachment: fixed; }
         /* Detail-view cards: gentle tint + definition; headers get a colour accent. */

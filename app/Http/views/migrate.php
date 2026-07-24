@@ -14,6 +14,10 @@ $pending = array_values(array_filter($st, static fn ($x) => !$x['applied']));
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DB Sync — Migrations</title>
 <style>
+  html{font-size:clamp(17px,15.8px + 0.5vw,20.5px);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  img,svg{max-width:100%}
+  pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
+  table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
   body{font-family:"Noto Sans Devanagari",system-ui,Arial,sans-serif;background:#f1f5f9;color:#0f172a;margin:0;padding:24px}
   .wrap{max-width:860px;margin:0 auto}
   .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}

@@ -72,6 +72,18 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Martel:wght@800&family=Mukta:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* === Global readability: larger, device-responsive base font size ===
+           Root font-size scales every rem/em-based text (Tailwind utilities +
+           custom CSS) up fluidly on all devices — phones, tablets, desktops. */
+        html { font-size: clamp(17px, 15.8px + 0.5vw, 20.5px);
+               -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        /* === Device compatibility: keep content within the screen (no
+           horizontal page-scroll) on phones, tablets and desktops. Wide data
+           tables scroll inside their own box instead of stretching the page. */
+        img, video { max-width: 100%; height: auto; }
+        svg { max-width: 100%; }
+        pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+        table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         /* ============ APPROVED DESIGN TOKENS (layout v2) — single source ============ */
         :root {
             --paper:        #FBF7F0;   /* page background */

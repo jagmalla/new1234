@@ -27,6 +27,9 @@ $csrf = Csrf::token();
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow@0.0.59/dist/drawflow.min.css">
     <style>
+        /* === Global readability: larger, device-responsive base font size === */
+        html { font-size: clamp(17px, 15.8px + 0.5vw, 20.5px);
+               -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         #canvas { height: calc(100vh - 4rem); }
         .drawflow .drawflow-node { background:#1f2937; color:#f9fafb; border:1px solid #374151; border-radius:.5rem; min-width:180px; }
         .drawflow .drawflow-node .title { font-weight:600; padding:.25rem .5rem; border-bottom:1px solid #374151; }

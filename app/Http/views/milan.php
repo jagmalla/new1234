@@ -33,6 +33,17 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Martel:wght@800&family=Mukta:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* === Global readability: larger, device-responsive base font size ===
+           Root font-size scales every rem/em-based text up fluidly on all
+           devices — phones, tablets, desktops. */
+        html { font-size: clamp(17px, 15.8px + 0.5vw, 20.5px);
+               -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        /* === Device compatibility: keep content within the screen (no
+           horizontal page-scroll) on phones, tablets and desktops. === */
+        img, video { max-width: 100%; height: auto; }
+        svg { max-width: 100%; }
+        pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+        table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         :root {
             --bg: #FBF7F0; --paper: #FBF7F0; --card: #FFFFFF; --ink: #26221C; --ink-soft: #6B6156;
             --line: #E4DCCE; --accent: #b45309; --accent2: #7c3aed;
@@ -197,6 +208,24 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
             color: var(--sindoor); font-weight: 700; }
         .l2-ic { display: inline-block; width: 1.5em; margin-right: 6px; text-align: center; font-style: normal; }
         .content { min-width: 0; }
+        /* Re-assert the mobile drawer layout AFTER the base .layout / #milan-side
+           rules above. Media queries add no specificity, so the earlier ≤1099
+           overrides were being beaten by these later base rules — which kept the
+           190px sidebar in-flow on phones and squeezed the content column until
+           tables overflowed. Repeating them here (later source order) makes the
+           single-column drawer layout win on tablets & phones. */
+        @media (max-width: 1099px) {
+            .layout { grid-template-columns: 1fr; }
+            #milan-side {
+                position: fixed; top: 0; left: 0; z-index: 60;
+                width: min(84vw, 300px); height: 100dvh; overflow-y: auto;
+                margin: 0; border-radius: 0; padding: 8px 0;
+                box-shadow: 2px 0 18px rgba(0,0,0,.28);
+                transform: translateX(-100%); transition: transform .22s ease; display: block;
+            }
+            body.menu-open #milan-side { transform: translateX(0); }
+        }
+        @media (prefers-reduced-motion: reduce) { #milan-side { transition: none; } }
         @media (max-width: 820px) {
             .forms, .res-head, .kgrid, .pair, .chartbox, .mangal-grid { grid-template-columns: 1fr; }
             .res-head { text-align: center; }
