@@ -252,6 +252,19 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 🏗️ वास्तु · गृहप्रवेश · राज्याभिषेक (Phase 6) ---------
+        $vastuMuhurat = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdZ = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonZ = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonZ = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $vastuMuhurat = \AutoBusiness\Astro\Muhurat\VastuMuhuratEngine::computeAll($sunLonZ, $moonLonZ, (int) $wdZ, $transits);
+            } catch (\Throwable $e) {
+                $vastuMuhurat = null;
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -267,6 +280,7 @@ final class GocharPhalEngine
             'vivaha_muhurat' => $vivahaMuhurat,
             'mangal_dosha' => $mangalDosha,
             'yatra_muhurat' => $yatraMuhurat,
+            'vastu_muhurat' => $vastuMuhurat,
         ];
     }
 

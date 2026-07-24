@@ -27,6 +27,19 @@ $sk = $gp['sanskara_muhurat'] ?? null;  // 🧒 Sanskara Muhurat (Phase 3)
 $vv = $gp['vivaha_muhurat'] ?? null;    // 💍 Vivaha Muhurat (Phase 4)
 $mg = $gp['mangal_dosha'] ?? null;      // 💍 Mangal Dosha (Phase 4)
 $ya = $gp['yatra_muhurat'] ?? null;     // 🧳 Yatra Muhurat (Phase 5)
+$vz = $gp['vastu_muhurat'] ?? null;     // 🏗️ Vastu/Grihapravesh/Rajyabhishek (Phase 6)
+/** Reusable renderer for a simple {grade,checks,bad,note} muhurat block. */
+$mcBlock = static function (array $d, string $title, string $accent) use ($h): void { ?>
+    <div class="mc-verdict" style="border-left-color:<?= $accent ?>;background:linear-gradient(180deg,#fdfdfb,#f8f6f0)">
+        <h4><?= $title /* already-safe emoji+text */ ?> <span class="mc-grade mc-<?= $h($d['tone']) ?>"><?= $h($d['grade']) ?></span></h4>
+        <div style="font-size:.9rem;font-weight:600"><?= $h($d['verdict']) ?></div>
+        <div class="mc-pgrid">
+            <?php foreach ($d['checks'] as $c): ?><div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?></div><?php endforeach; ?>
+        </div>
+        <?php foreach ($d['bad'] as $x): ?><div class="mc-line d"><b><?= $h($x['name']) ?></b> — <?= $h($x['why']) ?></div><?php endforeach; ?>
+        <div class="mc-rem">📌 <?= $h($d['note']) ?></div>
+    </div>
+<?php };
 $hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null || $mu !== null);
 if ($hasAny):
     $l1 = $gp['layer1'] ?? [];
@@ -485,12 +498,28 @@ if ($hasAny):
             </div>
             <?php endif; ?>
 
+            <?php // ---- 🏗️ वास्तु · 🚪 गृहप्रवेश · 👑 राज्याभिषेक (Phase 6) ----
+            if ($vz !== null && !empty($vz['ok'])): ?>
+            <div class="mc-panel hidden" data-mc="vastu">
+                <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: चान्द्रमास <b><?= $h($vz['maasa']) ?></b> · <b><?= $vz['uttarayan'] ? 'उत्तरायण' : 'दक्षिणायन' ?></b></div>
+                <?php $mcBlock($vz['vastu'], '🏗️ गृहारम्भ / शिलान्यास', '#b45309'); ?>
+            </div>
+            <div class="mc-panel hidden" data-mc="grihapravesh">
+                <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: चान्द्रमास <b><?= $h($vz['maasa']) ?></b> · <b><?= $vz['uttarayan'] ? 'उत्तरायण' : 'दक्षिणायन' ?></b></div>
+                <?php $mcBlock($vz['grihapravesh'], '🚪 गृहप्रवेश', '#0d9488'); ?>
+            </div>
+            <div class="mc-panel hidden" data-mc="rajyabhishek">
+                <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: चान्द्रमास <b><?= $h($vz['maasa']) ?></b> · <b><?= $vz['uttarayan'] ? 'उत्तरायण' : 'दक्षिणायन' ?></b></div>
+                <?php $mcBlock($vz['rajya'], '👑 राज्याभिषेक / शपथ-ग्रहण', '#b45309'); ?>
+                <div class="mc-chitta" style="background:#fff7ed;border-color:#fcd34d">
+                    🏛️ नेता की <b>राजनीतिक क्षमता व पद-योग</b> हेतु D1 भविष्यवाणी में
+                    <b>राजनीति (Politics)</b> टैब देखें — वहाँ राजयोग, स्तर व पदोन्नति का पूर्ण विश्लेषण है। यह मुहूर्त उसी के साथ पढ़ें।
+                </div>
+            </div>
+            <?php endif; ?>
+
             <?php // ---- placeholders for categories arriving in later phases ----
-            $mcSoon = [
-                'vastu' => ['🏗️', 'गृहारम्भ / वास्तु', 'गृह-पिण्ड, आय-साधन, गृहारम्भ मास/नक्षत्र, राहुमुख, भूमि-परीक्षा। (Phase 6)'],
-                'grihapravesh' => ['🚪', 'गृहप्रवेश', 'अपूर्व/सपूर्व प्रवेश, कुम्भ-चक्र, वास्तु-पूजन काल। (Phase 6)'],
-                'rajyabhishek' => ['👑', 'राज्याभिषेक / शपथ', 'काल-शुद्धि, ग्रह-भाव-बल, स्थिर-लग्न — राजनीति-मॉड्यूल से जुड़ेगा। (Phase 6)'],
-            ];
+            $mcSoon = [];
             foreach ($mcSoon as $key => $info): ?>
             <div class="mc-panel hidden" data-mc="<?= $h($key) ?>">
                 <div class="mc-soon">
