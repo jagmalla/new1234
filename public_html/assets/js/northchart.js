@@ -259,6 +259,10 @@
       }
     }
 
+    // Mark every rendered chart so the click-to-zoom lightbox (chartzoom.js) can
+    // find it; carry a title for the popup header.
+    svg.classList.add('ab-chart-svg');
+    if (opts.title) { svg.setAttribute('data-chart-title', opts.title); }
     container.appendChild(svg);
   }
 

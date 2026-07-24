@@ -873,6 +873,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
 </script>
 <?php $asset = static fn(string $p): string => \AutoBusiness\Core\Asset::url($p); ?>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/chartzoom.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/gochar.js')) ?>"></script>

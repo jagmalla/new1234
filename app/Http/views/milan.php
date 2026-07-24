@@ -672,6 +672,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
 </main>
 
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/chartzoom.js')) ?>"></script>
 <?php if ($milan !== null && $boy !== null && $girl !== null): ?>
 <script>
   window.AB_MILAN = {

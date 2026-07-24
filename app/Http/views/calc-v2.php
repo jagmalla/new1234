@@ -2496,6 +2496,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
 <script src="<?= $h($asset('/assets/js/datefmt.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/chartzoom.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/gochar.js')) ?>"></script>
