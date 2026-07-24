@@ -3675,13 +3675,26 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
     // मुहूर्त-चिन्तामणि category selector (delegated — the muhurat फल fragment is
     // re-injected on each date/time change, so we listen on the document).
     document.addEventListener('change', function (e) {
-      var sel = e.target.closest ? e.target.closest('#mc-cat-select') : null;
-      if (!sel) { return; }
-      var root = sel.closest('[data-cat="muhurat"]') || document;
-      var val = sel.value;
-      root.querySelectorAll('.mc-panel').forEach(function (p) {
-        p.classList.toggle('hidden', p.getAttribute('data-mc') !== val);
-      });
+      if (!e.target.closest) { return; }
+      // category selector — toggle the top-level muhurat panels
+      var sel = e.target.closest('#mc-cat-select');
+      if (sel) {
+        var root = sel.closest('[data-cat="muhurat"]') || document;
+        var val = sel.value;
+        root.querySelectorAll('.mc-panel').forEach(function (p) {
+          p.classList.toggle('hidden', p.getAttribute('data-mc') !== val);
+        });
+        return;
+      }
+      // संस्कार rite sub-selector — toggle the per-rite cards
+      var rsel = e.target.closest('#mc-rite-select');
+      if (rsel) {
+        var rroot = rsel.closest('.mc-panel') || document;
+        var rv = rsel.value;
+        rroot.querySelectorAll('.mc-rite').forEach(function (r) {
+          r.classList.toggle('hidden', r.getAttribute('data-rite') !== rv);
+        });
+      }
     });
 
     document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {

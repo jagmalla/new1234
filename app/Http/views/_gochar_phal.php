@@ -23,6 +23,7 @@ $ss = $gp['shani_special'] ?? null;
 $mu = $gp['muhurat'] ?? null;
 $gm = $gp['general_muhurat'] ?? null;   // 🗓️ Muhurta-Chintamani General Muhurat (Phase 1)
 $pm = $gp['personal_muhurat'] ?? null;  // 🙋 Personal Muhurat (Phase 2)
+$sk = $gp['sanskara_muhurat'] ?? null;  // 🧒 Sanskara Muhurat (Phase 3)
 $hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null || $mu !== null);
 if ($hasAny):
     $l1 = $gp['layer1'] ?? [];
@@ -281,7 +282,7 @@ if ($hasAny):
             .mc-picker label{font-size:.74rem;font-weight:700;color:#6b21a8}
             .mc-cat-select{border:1px solid #e2c9f0;background:#faf5ff;border-radius:8px;padding:6px 11px;
               font-size:.86rem;font-weight:700;color:#6b21a8;max-width:100%}
-            .mc-panel.hidden{display:none}
+            .mc-panel.hidden,.mc-rite.hidden{display:none}
             .mc-verdict{border:1px solid #e4dcce;border-left:5px solid #b45309;border-radius:12px;
               padding:12px 14px;margin-bottom:12px;background:linear-gradient(180deg,#fffdf8,#fdf6ec)}
             .mc-verdict h4{font-size:1.02rem;margin:0 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -376,10 +377,41 @@ if ($hasAny):
             </div>
             <?php endif; ?>
 
+            <?php // ---- 🧒 संस्कार मुहूर्त (Phase 3) — per-rite viability ----
+            if ($sk !== null && !empty($sk['ok'])): ?>
+            <div class="mc-panel hidden" data-mc="sanskar">
+                <div class="mc-picker" style="margin-bottom:6px">
+                    <label for="mc-rite-select">🧒 संस्कार चुनें</label>
+                    <select id="mc-rite-select" class="mc-cat-select">
+                        <?php foreach ($sk['rites'] as $rt): ?>
+                            <option value="<?= $h($rt['key']) ?>"><?= $rt['emoji'] ?> <?= $h($rt['label']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: नक्षत्र <b><?= $h($sk['moon_nak']) ?></b> (<?= $h($sk['sanjna']) ?>) · तिथि <b><?= (int) $sk['tithi'] ?></b> · वार <b><?= $h($sk['vaar']) ?></b></div>
+                <?php foreach ($sk['rites'] as $i => $rt): ?>
+                <div class="mc-rite <?= $i === 0 ? '' : 'hidden' ?>" data-rite="<?= $h($rt['key']) ?>">
+                    <div class="mc-verdict" style="border-left-color:#7c3aed;background:linear-gradient(180deg,#fdfaff,#f6f0ff)">
+                        <h4><?= $rt['emoji'] ?> <?= $h($rt['label']) ?> <span style="font-size:.7rem;color:#a78bfa"><?= $h($rt['rule']) ?></span>
+                            <span class="mc-grade mc-<?= $h($rt['tone']) ?>"><?= $h($rt['grade']) ?></span></h4>
+                        <div style="font-size:.9rem;font-weight:600"><?= $h($rt['verdict']) ?></div>
+                        <div class="mc-pgrid">
+                            <?php foreach ($rt['checks'] as $c): ?>
+                                <div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?> <?= $c['ok'] ? '✅' : '❌' ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="mc-pi" style="margin-bottom:3px"><b>विहित:</b> <?= $h($rt['prescription']) ?></div>
+                        <div class="mc-rem">📌 <?= $h($rt['note']) ?></div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+                <div class="mc-chitta">📖 <?= $h($sk['note']) ?></div>
+            </div>
+            <?php endif; ?>
+
             <?php // ---- placeholders for categories arriving in later phases ----
             $mcSoon = [
                 'vivaha' => ['💍', 'विवाह मुहूर्त', 'विवाह-विहित नक्षत्र/तिथि, 36-गुण मिलान, मंगल-दोष व 14 परिहार, वेध-दोष। कुण्डली-मिलान से जुड़ेगा। (Phase 4)'],
-                'sanskar' => ['🧒', 'संस्कार मुहूर्त', 'नामकरण · अन्नप्राशन · मुण्डन · कर्णवेध · उपनयन · विद्यारम्भ — प्रत्येक का विहित नक्षत्र/तिथि। (Phase 3)'],
                 'vastu' => ['🏗️', 'गृहारम्भ / वास्तु', 'गृह-पिण्ड, आय-साधन, गृहारम्भ मास/नक्षत्र, राहुमुख, भूमि-परीक्षा। (Phase 6)'],
                 'grihapravesh' => ['🚪', 'गृहप्रवेश', 'अपूर्व/सपूर्व प्रवेश, कुम्भ-चक्र, वास्तु-पूजन काल। (Phase 6)'],
                 'yatra' => ['🧳', 'यात्रा मुहूर्त', 'दिशा-शूल, त्याज्य घटी, घात-चक्र, योगिनी, शकुन — गोचर से जुड़ेगा। (Phase 5)'],

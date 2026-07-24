@@ -212,6 +212,19 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 🧒 संस्कार मुहूर्त (Phase 3) — per-rite viability ---------
+        $sanskaraMuhurat = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdS = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonS = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonS = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $sanskaraMuhurat = \AutoBusiness\Astro\Muhurat\SanskaraMuhuratEngine::computeAll($sunLonS, $moonLonS, (int) $wdS);
+            } catch (\Throwable $e) {
+                $sanskaraMuhurat = null;
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -223,6 +236,7 @@ final class GocharPhalEngine
             'muhurat' => $muhurat,
             'general_muhurat' => $generalMuhurat,
             'personal_muhurat' => $personalMuhurat,
+            'sanskara_muhurat' => $sanskaraMuhurat,
         ];
     }
 
