@@ -225,6 +225,20 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 💍 विवाह मुहूर्त + मंगल-दोष (Phase 4) ---------
+        $vivahaMuhurat = null; $mangalDosha = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdV = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonV = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonV = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $vivahaMuhurat = \AutoBusiness\Astro\Muhurat\VivahaMuhuratEngine::muhurat($sunLonV, $moonLonV, (int) $wdV, $transits);
+                $mangalDosha = \AutoBusiness\Astro\Muhurat\VivahaMuhuratEngine::mangalDosha($natal);
+            } catch (\Throwable $e) {
+                $vivahaMuhurat = null; $mangalDosha = null;
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -237,6 +251,8 @@ final class GocharPhalEngine
             'general_muhurat' => $generalMuhurat,
             'personal_muhurat' => $personalMuhurat,
             'sanskara_muhurat' => $sanskaraMuhurat,
+            'vivaha_muhurat' => $vivahaMuhurat,
+            'mangal_dosha' => $mangalDosha,
         ];
     }
 

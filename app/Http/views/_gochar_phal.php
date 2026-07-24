@@ -24,6 +24,8 @@ $mu = $gp['muhurat'] ?? null;
 $gm = $gp['general_muhurat'] ?? null;   // 🗓️ Muhurta-Chintamani General Muhurat (Phase 1)
 $pm = $gp['personal_muhurat'] ?? null;  // 🙋 Personal Muhurat (Phase 2)
 $sk = $gp['sanskara_muhurat'] ?? null;  // 🧒 Sanskara Muhurat (Phase 3)
+$vv = $gp['vivaha_muhurat'] ?? null;    // 💍 Vivaha Muhurat (Phase 4)
+$mg = $gp['mangal_dosha'] ?? null;      // 💍 Mangal Dosha (Phase 4)
 $hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null || $mu !== null);
 if ($hasAny):
     $l1 = $gp['layer1'] ?? [];
@@ -409,9 +411,53 @@ if ($hasAny):
             </div>
             <?php endif; ?>
 
+            <?php // ---- 💍 विवाह मुहूर्त + मंगल-दोष (Phase 4) ----
+            if ($vv !== null && !empty($vv['ok'])): ?>
+            <div class="mc-panel hidden" data-mc="vivaha">
+                <div class="mc-verdict" style="border-left-color:#db2777;background:linear-gradient(180deg,#fffafd,#fdf0f7)">
+                    <h4>💍 विवाह मुहूर्त — तिथि-शुद्धि
+                        <span class="mc-grade mc-<?= $h($vv['tone']) ?>"><?= $h($vv['grade']) ?></span></h4>
+                    <div style="font-size:.9rem;font-weight:600"><?= $h($vv['verdict']) ?></div>
+                    <div class="mc-pgrid">
+                        <?php foreach ($vv['checks'] as $c): ?>
+                            <div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?> <?= $c['ok'] ? '✅' : '❌' ?></div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php foreach ($vv['bad'] as $d): ?>
+                        <div class="mc-line d"><b><?= $h($d['name']) ?></b> — <?= $h($d['why']) ?></div>
+                    <?php endforeach; ?>
+                    <div class="mc-rem">📌 <?= $h($vv['note']) ?></div>
+                </div>
+
+                <?php if ($mg !== null && !empty($mg['ok'])): ?>
+                <div class="mc-verdict" style="border-left-color:#dc2626;background:linear-gradient(180deg,#fffaf9,#fdf0ee)">
+                    <h4>🔴 मंगल (कुज) दोष — आपकी कुण्डली
+                        <span class="mc-grade mc-<?= $h($mg['tone']) ?>"><?= $h($mg['status']) ?></span></h4>
+                    <div style="font-size:.9rem;font-weight:600"><?= $h($mg['verdict']) ?></div>
+                    <div class="mc-pgrid">
+                        <?php foreach ($mg['bases'] as $lbl => $hh): $bad = in_array((int) $hh, [1, 2, 4, 7, 8, 12], true); ?>
+                            <div class="mc-pi"><b><?= $h($lbl) ?> से:</b> मंगल <?= (int) $hh ?>वें भाव <?= $bad ? '⚠️' : '✅' ?></div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="mc-pi" style="margin-bottom:3px">मंगल राशि: <b><?= $h($mg['mars_sign']) ?></b><?= $mg['mars_retro'] ? ' · वक्री' : '' ?><?= $mg['mars_combust'] ? ' · अस्त' : '' ?></div>
+                    <?php if (!empty($mg['parihara'])): ?>
+                        <div class="mc-pi" style="font-weight:700;color:#166534;margin-bottom:2px">✓ लागू परिहार:</div>
+                        <?php foreach ($mg['parihara'] as $p): ?><div class="mc-line g"><?= $h($p) ?></div><?php endforeach; ?>
+                    <?php endif; ?>
+                    <div class="mc-rem">📌 <?= $h($mg['note']) ?></div>
+                </div>
+                <?php endif; ?>
+
+                <div class="mc-chitta" style="background:#fdf2f8;border-color:#f9c0dd">
+                    💑 <b>36-गुण मिलान</b> (वर-कन्या की दो कुण्डलियों से) हेतु
+                    <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" style="color:#be185d;font-weight:700;text-decoration:underline">कुण्डली-मिलान पृष्ठ</a> खोलें —
+                    वहाँ अष्टकूट, गण/नाडी/भकूट व लाल-किताब अनुकूलता की पूर्ण जाँच है।
+                </div>
+            </div>
+            <?php endif; ?>
+
             <?php // ---- placeholders for categories arriving in later phases ----
             $mcSoon = [
-                'vivaha' => ['💍', 'विवाह मुहूर्त', 'विवाह-विहित नक्षत्र/तिथि, 36-गुण मिलान, मंगल-दोष व 14 परिहार, वेध-दोष। कुण्डली-मिलान से जुड़ेगा। (Phase 4)'],
                 'vastu' => ['🏗️', 'गृहारम्भ / वास्तु', 'गृह-पिण्ड, आय-साधन, गृहारम्भ मास/नक्षत्र, राहुमुख, भूमि-परीक्षा। (Phase 6)'],
                 'grihapravesh' => ['🚪', 'गृहप्रवेश', 'अपूर्व/सपूर्व प्रवेश, कुम्भ-चक्र, वास्तु-पूजन काल। (Phase 6)'],
                 'yatra' => ['🧳', 'यात्रा मुहूर्त', 'दिशा-शूल, त्याज्य घटी, घात-चक्र, योगिनी, शकुन — गोचर से जुड़ेगा। (Phase 5)'],
