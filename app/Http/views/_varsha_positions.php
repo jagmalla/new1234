@@ -15,7 +15,7 @@ if ($vp !== null): ?>
         <tbody>
         <?php foreach ($vp['varsha_chart']['planets'] as $name => $p): ?>
             <tr class="border-b border-gray-100"><td class="py-1 pr-3 font-semibold" style="color: <?= $pcolor($name) ?>"><?= $h($name) ?></td>
-                <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td></tr>
+                <td class="pr-3"><?= $h($p['formatted']) ?></td><td><?= (int) $p['house'] ?><?= $p['retro'] ? ' <sup style="color:#b91c1c;font-size:1em;font-weight:700">&#174;</sup>' : '' ?></td></tr>
         <?php endforeach; ?>
         </tbody>
     </table>

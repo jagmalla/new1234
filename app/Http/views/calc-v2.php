@@ -126,10 +126,12 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
         .topbar .brand { font-family: 'Martel', serif; font-weight: 800; font-size: 1.25rem; line-height: 1.3; }
         /* "Under testing" banner in the top-bar gap — high contrast, prominent. */
-        .test-banner { flex: 1 1 240px; text-align: center; font-size: 1rem; font-weight: 800;
-            color: #FFD84D; line-height: 1.4; min-width: 0; letter-spacing: .01em;
-            text-shadow: 0 1px 2px rgba(0,0,0,.45); padding: 4px 10px; border-radius: 8px;
-            background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
+        /* "Under testing" banner — compact: exactly two lines (nowrap on each,
+           split by <br>), sized to content so it no longer hogs the top bar. */
+        .test-banner { flex: 0 1 auto; text-align: center; font-size: .72rem; font-weight: 800;
+            color: #FFD84D; line-height: 1.3; min-width: 0; max-width: 360px; white-space: nowrap;
+            letter-spacing: .01em; text-shadow: 0 1px 2px rgba(0,0,0,.45); padding: 3px 12px;
+            border-radius: 8px; background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
         .test-banner a { color: #FFFFFF; text-decoration: underline; font-weight: 800; }
         .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
             flex-wrap: wrap; font-size: .85rem; color: #C9C2B4; }
@@ -179,7 +181,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         /* ---- Three-column shell (Phase 2) ---- */
         .l2-wrap { max-width: 1400px; }
-        .l2-grid { display: grid; grid-template-columns: 180px minmax(0, 50fr) minmax(0, 40fr);
+        .l2-grid { display: grid; grid-template-columns: 202px minmax(0, 50fr) minmax(0, 40fr);
             gap: 16px; align-items: start; }
         .l2-full { grid-column: 2 / 4; min-width: 0; }
         .l2-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
@@ -188,16 +190,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         .l2-panel-title { font-size: 1rem; font-weight: 800; margin-bottom: 6px; }
         .l2-legend { text-align: center; font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; }
         .l2-menu { padding: 6px 0; align-self: start; position: sticky; top: 76px; overflow: hidden; }
-        .l2-menu button { display: block; width: 100%; text-align: left; padding: 10px 14px;
-            border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .95rem; }
+        /* Menu rows: keep every label on ONE line (no wrap); font + padding sized
+           so the longest label fits the sidebar column. */
+        .l2-menu button { display: block; width: 100%; text-align: left; padding: 9px 10px;
+            border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .82rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .l2-menu button:hover { background: var(--sindoor-soft); }
         /* Menu-row emoji: fixed-width so labels align in a neat column. */
-        .l2-ic { display: inline-block; width: 1.5em; margin-right: 6px; text-align: center;
+        .l2-ic { display: inline-block; width: 1.25em; margin-right: 5px; text-align: center;
             font-style: normal; }
         /* Kundali Milan opens a separate page, so it's an anchor styled as a menu row. */
-        .l2-mi-link { display: block; width: 100%; text-align: left; padding: 10px 14px;
-            border-left: 3px solid transparent; color: var(--ink); font-weight: 700; font-size: .95rem;
-            text-decoration: none; }
+        .l2-mi-link { display: block; width: 100%; text-align: left; padding: 9px 10px;
+            border-left: 3px solid transparent; color: var(--ink); font-weight: 700; font-size: .82rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
         .l2-mi-link:hover { background: var(--sindoor-soft); color: var(--sindoor); }
         .l2-menu button.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
             color: var(--sindoor); font-weight: 700; }
@@ -869,7 +874,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
         body.cs-mode main.l2-wrap { padding-top: 6px; }
         body.cs-mode #sec-home { margin-top: 0 !important; }   /* drop the space-y-4 gap */
         body.cs-mode .cs-bar { margin-top: 0; margin-bottom: 8px; }
-        body.cs-mode .test-banner { font-size: .8rem; line-height: 1.2; padding: 3px 8px; flex-basis: 200px; }
+        body.cs-mode .test-banner { font-size: .68rem; line-height: 1.25; padding: 3px 10px; }
         .cs-bar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; }
         .cs-title { font-size: 1.15rem; font-weight: 800; color: var(--ink); }
         .cs-title-hi { color: var(--ink-soft); font-weight: 600; font-size: .95rem; }
@@ -1133,7 +1138,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 <button type="button" data-sec="profile"><span class="l2-ic">👤</span>New / Profile</button>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="today"><span class="l2-ic">📆</span>Today (आज का Consult)</button>
+                <button type="button" data-sec="today"><span class="l2-ic">📆</span>Today · आज</button>
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="custom"><span class="l2-ic">🧩</span>Custom Screen</button>
@@ -1181,19 +1186,19 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="muhurat"><span class="l2-ic">🕉️</span>Mahurat (मुहूर्त)</button>
+                <button type="button" data-sec="muhurat"><span class="l2-ic">🕉️</span>Mahurat · मुहूर्त</button>
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="varsha"><span class="l2-ic">🗓️</span>Varshaphal</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="varsha" data-target="card-vpbox">Year Selection</button>
-                    <button type="button" data-sec="varsha" data-target="vp-output">Varsha Chart + Mudda Dasha</button>
+                    <button type="button" data-sec="varsha" data-target="vp-output">Varsha + Mudda Dasha</button>
                     <button type="button" data-sec="varsha" data-target="card-varshadet">Annual Positions</button>
                     <button type="button" data-sec="varsha" data-target="vp-row3">Bala + Year Lord</button>
                 </div>
             </div>
             <div class="l2-mi">
-                <button type="button" data-sec="lalkitab"><span class="l2-ic">📕</span>Laal Kitab (लाल किताब)</button>
+                <button type="button" data-sec="lalkitab"><span class="l2-ic">📕</span>Laal Kitab</button>
             </div>
             <div class="l2-mi">
                 <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link"><span class="l2-ic">💑</span>Kundali Milan</a>
@@ -1287,7 +1292,8 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
             <div id="pred-topic-row" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:6px 0 4px">
                 <input type="text" id="pred-q" placeholder="🔍 विषय खोजें…" aria-label="फलादेश में खोजें"
                        style="flex:1;min-width:110px;border:1px solid #cbd5e1;border-radius:8px;padding:3px 9px;font-size:.76rem">
-                <?php foreach (['विवाह' => '💑', 'रोग' => '🩺', 'शिक्षा' => '🎓', 'विदेश' => '✈'] as $tpc => $tpi): ?>
+                <?php // 'विदेश' removed — duplicate of the computed "विदेश यात्रा व निवास" topic chip below. ?>
+                <?php foreach (['विवाह' => '💑', 'रोग' => '🩺', 'शिक्षा' => '🎓'] as $tpc => $tpi): ?>
                 <button type="button" class="lk-chip" data-topic="<?= $h($tpc) ?>" style="border:1px solid #e2e8f0;background:#f8fafc;border-radius:999px;padding:1px 9px;font-size:.72rem;color:#475569;cursor:pointer"><?= $tpi ?> <?= $h($tpc) ?></button>
                 <?php endforeach; ?>
                 <!-- Computed topics (full analysis, not keyword search). -->
@@ -2005,7 +2011,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
                     <td class="pr-3"><?= $h($p['nakshatra']['name']) ?> (<?= (int) $p['nakshatra']['pada'] ?>)</td>
                     <td class="pr-3"><?= $h($p['navamsa_sign']) ?></td>
                     <td class="pr-3"><?= $cmb !== null ? '<span style="color:#b45309;font-weight:600">' . (int) $cmb['pct'] . '%</span>' : '<span class="text-gray-300">—</span>' ?></td>
-                    <td><?= $p['retro'] ? '<sup style="color:#b91c1c;font-size:0.9em">&#174;</sup>' : '' ?></td>
+                    <td><?= $p['retro'] ? '<sup style="color:#b91c1c;font-size:1em;font-weight:700">&#174;</sup>' : '' ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

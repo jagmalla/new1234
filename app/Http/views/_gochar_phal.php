@@ -177,7 +177,7 @@ if ($hasAny):
                     <span class="saham-name" style="color:<?= $pcolor($e['planet']) ?>"><?= $h($e['planet_hi']) ?></span>
                     <span class="gph-house">भाव <?= (int) $e['house'] ?></span>
                     <?= $toneChip($e['tone']) ?>
-                    <span class="text-xs text-gray-500"><?= $h($e['deg']) ?><?= $e['retro'] ? ' <sup style="color:#b91c1c">®</sup>' : '' ?></span>
+                    <span class="text-xs text-gray-500"><?= $h($e['deg']) ?><?= $e['retro'] ? ' <sup style="color:#b91c1c;font-size:1em;font-weight:700">®</sup>' : '' ?></span>
                 </div>
                 <div class="saham-phal">● <?= $h($e['text']) ?></div>
                 <?php foreach (($e['notes'] ?? []) as $n): ?><div class="gph-note <?= $noteCls($n['t']) ?>"><?= $h($n['text']) ?></div><?php endforeach; ?>

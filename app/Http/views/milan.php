@@ -60,10 +60,11 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         .topbar-inner { max-width: 1400px; margin: 0 auto; padding: 10px 16px;
             display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
         .topbar .brand { font-family: 'Martel', serif; font-weight: 800; font-size: 1.25rem; color: #F7F3EA; }
-        .test-banner { flex: 1 1 240px; text-align: center; font-size: 1rem; font-weight: 800;
-            color: #FFD84D; line-height: 1.4; min-width: 0; letter-spacing: .01em;
-            text-shadow: 0 1px 2px rgba(0,0,0,.45); padding: 4px 10px; border-radius: 8px;
-            background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
+        /* "Under testing" banner — compact two-line version (see calc-v2). */
+        .test-banner { flex: 0 1 auto; text-align: center; font-size: .72rem; font-weight: 800;
+            color: #FFD84D; line-height: 1.3; min-width: 0; max-width: 360px; white-space: nowrap;
+            letter-spacing: .01em; text-shadow: 0 1px 2px rgba(0,0,0,.45); padding: 3px 12px;
+            border-radius: 8px; background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
         .test-banner a { color: #FFFFFF; text-decoration: underline; font-weight: 800; }
         .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
             flex-wrap: wrap; font-size: .85rem; color: #C9C2B4; }
@@ -197,16 +198,17 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         .banner { color: var(--ink-soft); font-size: .85rem; }
         /* Left menu — identical look to the main calculator (#side-menu) so the
            Milan page feels like the same website. */
-        .layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; align-items: start; }
+        .layout { display: grid; grid-template-columns: 202px minmax(0, 1fr); gap: 16px; align-items: start; }
         #milan-side { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
             box-shadow: 0 1px 3px rgba(38,34,28,.08); padding: 6px 0; position: sticky; top: 16px; overflow: hidden; }
-        .l2-mi-link { display: block; width: 100%; text-align: left; padding: 10px 14px;
-            border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .95rem;
-            text-decoration: none; }
+        /* Menu rows: keep every label on ONE line (matches the calc page). */
+        .l2-mi-link { display: block; width: 100%; text-align: left; padding: 9px 10px;
+            border-left: 3px solid transparent; color: var(--ink); font-weight: 500; font-size: .82rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
         .l2-mi-link:hover { background: var(--sindoor-soft); color: var(--sindoor); }
         .l2-mi-link.active { background: var(--sindoor-soft); border-left-color: var(--sindoor);
             color: var(--sindoor); font-weight: 700; }
-        .l2-ic { display: inline-block; width: 1.5em; margin-right: 6px; text-align: center; font-style: normal; }
+        .l2-ic { display: inline-block; width: 1.25em; margin-right: 5px; text-align: center; font-style: normal; }
         .content { min-width: 0; }
         /* Re-assert the mobile drawer layout AFTER the base .layout / #milan-side
            rules above. Media queries add no specificity, so the earlier ≤1099
@@ -368,7 +370,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         <nav id="milan-side" class="l2-menu noprint" aria-label="Sections">
             <?php $calc = $h($asset('/calc')); ?>
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">👤</span>New / Profile</a></div>
-            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">📆</span>Today (आज का Consult)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">📆</span>Today · आज</a></div>
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🧩</span>Custom Screen</a></div>
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🌟</span>Birth Chart</a></div>
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🪐</span>Planet Positions</a></div>
@@ -376,9 +378,9 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">⏳</span>Dasha</a></div>
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">💪</span>Bala (Strength)</a></div>
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🔭</span>Gochar (Transit)</a></div>
-            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🕉️</span>Mahurat (मुहूर्त)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🕉️</span>Mahurat · मुहूर्त</a></div>
             <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">🗓️</span>Varshaphal</a></div>
-            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">📕</span>Laal Kitab (लाल किताब)</a></div>
+            <div class="l2-mi"><a class="l2-mi-link" href="<?= $calc ?>"><span class="l2-ic">📕</span>Laal Kitab</a></div>
             <div class="l2-mi"><a class="l2-mi-link active" href="<?= $h($asset('/milan')) ?>"><span class="l2-ic">💑</span>Kundali Milan</a></div>
         </nav>
 
