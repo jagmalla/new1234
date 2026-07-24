@@ -199,6 +199,19 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 🙋 व्यक्तिगत मुहूर्त (Phase 2) — reads the D1 chart ---------
+        // Tara-bala, chandra-bala, ghata-chakra, ashtakavarga transit bindu &
+        // gochar-vedha from the natal Moon. Additive.
+        $personalMuhurat = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdP = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            try {
+                $personalMuhurat = \AutoBusiness\Astro\Muhurat\PersonalMuhuratEngine::compute($natal, $transits, (int) $wdP, null);
+            } catch (\Throwable $e) {
+                $personalMuhurat = null;
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -209,6 +222,7 @@ final class GocharPhalEngine
             'has_av' => $bav !== [],
             'muhurat' => $muhurat,
             'general_muhurat' => $generalMuhurat,
+            'personal_muhurat' => $personalMuhurat,
         ];
     }
 

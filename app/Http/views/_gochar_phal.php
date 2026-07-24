@@ -22,6 +22,7 @@ $av = $gp['av'] ?? ['bindu' => [], 'kaksha' => [], 'sav' => []];
 $ss = $gp['shani_special'] ?? null;
 $mu = $gp['muhurat'] ?? null;
 $gm = $gp['general_muhurat'] ?? null;   // 🗓️ Muhurta-Chintamani General Muhurat (Phase 1)
+$pm = $gp['personal_muhurat'] ?? null;  // 🙋 Personal Muhurat (Phase 2)
 $hasAny = $gp !== null && (!empty($gp['layer1']) || !empty($gp['layer3']) || !empty($av['bindu']) || $ss !== null || $mu !== null);
 if ($hasAny):
     $l1 = $gp['layer1'] ?? [];
@@ -343,9 +344,40 @@ if ($hasAny):
             </div>
             <?php endif; ?>
 
+            <?php // ---- 🙋 व्यक्तिगत मुहूर्त (Phase 2) — from the D1 chart ----
+            if ($pm !== null && !empty($pm['ok'])): ?>
+            <div class="mc-panel hidden" data-mc="personal">
+                <div class="mc-verdict" style="border-left-color:#0891b2;background:linear-gradient(180deg,#f6fdff,#ecfbff)">
+                    <h4>🙋 व्यक्तिगत मुहूर्त — आपकी कुण्डली से
+                        <span class="mc-grade mc-<?= $h($pm['tone']) ?>"><?= $h($pm['grade']) ?></span></h4>
+                    <div style="font-size:.9rem;font-weight:600"><?= $h($pm['verdict']) ?></div>
+                    <div class="text-xs text-gray-500" style="margin:4px 0">जन्म-राशि: <b><?= $h($pm['janma_rashi']) ?></b> · जन्म-नक्षत्र: <b><?= $h($pm['janma_nak']) ?></b></div>
+                    <div class="mc-pgrid">
+                        <?php foreach ($pm['core'] as $c): ?>
+                            <div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?> <?= $c['ok'] ? '✓' : '' ?></div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if (!empty($pm['av'])): ?>
+                    <div class="mc-pi" style="margin-bottom:4px"><b>अष्टकवर्ग गोचर-बिन्दु:</b>
+                        <?php foreach ($pm['av'] as $a): ?><span style="display:inline-block;margin:1px 4px 1px 0;padding:1px 8px;border-radius:999px;font-size:.72rem;background:<?= $a['ok'] ? '#dcfce7' : '#fee2e2' ?>;color:<?= $a['ok'] ? '#166534' : '#991b1b' ?>"><?= $h($a['planet']) ?> <?= $h($a['sign']) ?> · <?= (int) $a['bindu'] ?></span><?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($pm['slow'])): ?><div class="mc-pi" style="margin-bottom:4px"><b>गोचर-वेध:</b> <?= $h(implode(' · ', $pm['slow'])) ?></div><?php endif; ?>
+                    <?php foreach ($pm['good'] as $s): ?>
+                        <div class="mc-line g"><b><?= $h($s['name']) ?></b> — <?= $h($s['why']) ?></div>
+                    <?php endforeach; ?>
+                    <?php foreach ($pm['bad'] as $d): ?>
+                        <div class="mc-line d"><b><?= $h($d['name']) ?></b> — <?= $h($d['why']) ?></div>
+                        <div class="mc-rem">🛠 <?= $h($d['rem']) ?></div>
+                    <?php endforeach; ?>
+                    <?php if ($pm['good'] === [] && $pm['bad'] === []): ?><div class="mc-line">कोई विशेष व्यक्तिगत योग/दोष नहीं।</div><?php endif; ?>
+                    <div class="mc-chitta">🧘 सामान्य पंचांग शुभ हो पर व्यक्तिगत (तारा/घात) दुर्बल हो — तो शुभ तारा/चन्द्र-बल वाला दिन श्रेष्ठ। <?= $h($pm['chitta']) ?></div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <?php // ---- placeholders for categories arriving in later phases ----
             $mcSoon = [
-                'personal' => ['🙋', 'व्यक्तिगत मुहूर्त', 'आपकी जन्म-कुण्डली से — तारा-बल, चन्द्र-बल, गोचर-वेध, घात-चक्र व अष्टकवर्ग-बिन्दु। (Phase 2)'],
                 'vivaha' => ['💍', 'विवाह मुहूर्त', 'विवाह-विहित नक्षत्र/तिथि, 36-गुण मिलान, मंगल-दोष व 14 परिहार, वेध-दोष। कुण्डली-मिलान से जुड़ेगा। (Phase 4)'],
                 'sanskar' => ['🧒', 'संस्कार मुहूर्त', 'नामकरण · अन्नप्राशन · मुण्डन · कर्णवेध · उपनयन · विद्यारम्भ — प्रत्येक का विहित नक्षत्र/तिथि। (Phase 3)'],
                 'vastu' => ['🏗️', 'गृहारम्भ / वास्तु', 'गृह-पिण्ड, आय-साधन, गृहारम्भ मास/नक्षत्र, राहुमुख, भूमि-परीक्षा। (Phase 6)'],
