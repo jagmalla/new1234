@@ -56,18 +56,29 @@ $tHead = 'font-size:.72rem;font-weight:700;color:#94a3b8;letter-spacing:.03em;ma
         <div style="<?= $tileCss ?>">
             <div style="<?= $tHead ?>">🌌 आज का गोचर</div>
             <?php if ($ug !== null): ?>
+                <?php
+                $combNow = (array) ($ug['combust_parts']['current'] ?? []);
+                $retroNow = (array) ($ug['retro_parts']['current'] ?? []);
+                $topEv = array_slice((array) ($ug['top_events'] ?? []), 0, 3);
+                $toneCol = ['good' => '#15803d', 'warn' => '#b45309', 'move' => '#1d4ed8'];
+                ?>
                 <?php $ssU = $ug['sade_sati'] ?? null; if ($ssU !== null): ?>
                     <div class="text-sm" style="color:<?= !empty($ssU['active']) ? '#b91c1c' : '#475569' ?>">
-                        <b><?= $h((string) $ssU['kind']) ?></b> <?= !empty($ssU['active']) ? 'चल रही है' : 'आगामी' ?>
+                        🪐 <b><?= $h((string) $ssU['kind']) ?></b> <?= !empty($ssU['active']) ? 'चल रही है' : 'आगामी' ?>
                         <span class="text-xs text-gray-500">(<?= $h((string) $ssU['start']) ?> – <?= $h((string) $ssU['end']) ?>)</span>
                     </div>
                 <?php endif; ?>
-                <?php foreach (array_slice((array) ($ug['ingress'] ?? []), 0, 2) as $igU): ?>
-                    <div class="text-sm">♻ <?= $h((string) $igU['planet']) ?> — <?= $h((string) $igU['date']) ?> को <?= $h((string) $igU['sign_hi']) ?> में</div>
+                <?php if ($combNow !== []): foreach ($combNow as $cN): ?>
+                    <div class="text-sm" style="color:#b91c1c"><?= $h((string) $cN['emoji']) ?> <b><?= $h((string) $cN['planet']) ?></b> अस्त (<?= $h((string) $cN['sign_hi']) ?>)<?php if (!empty($cN['end'])): ?> — उदय <b><?= $h((string) $cN['end']) ?></b><?php endif; ?></div>
+                <?php endforeach; endif; ?>
+                <?php if ($retroNow !== []): ?>
+                    <div class="text-sm" style="color:#6d28d9">↩️ अभी वक्री: <?= $h(implode(', ', array_map(static fn ($r) => (string) $r['emoji'] . ' ' . (string) $r['planet'] . (!empty($r['end']) ? ' (मार्गी ' . $r['end'] . ')' : ''), $retroNow))) ?></div>
+                <?php endif; ?>
+                <?php foreach ($topEv as $eU): ?>
+                    <div class="text-sm" style="color:<?= $toneCol[$eU['tone']] ?? '#334155' ?>"><?= $h((string) $eU['emoji']) ?> <?= $h((string) $eU['text']) ?> — <?= $h((string) $eU['date']) ?> <span class="text-xs text-gray-500">(<?= (int) $eU['days'] ?> दिन)</span></div>
                 <?php endforeach; ?>
-                <?php $rsU = array_filter((array) ($ug['retro_periods'] ?? []), static fn ($r) => !empty($r['currently'])); ?>
-                <?php if ($rsU !== []): ?>
-                    <div class="text-sm" style="color:#92400e">↺ अभी वक्री: <?= $h(implode(', ', array_map(static fn ($r) => (string) $r['planet'], $rsU))) ?></div>
+                <?php if ($combNow === [] && $retroNow === [] && $topEv === []): ?>
+                    <div class="text-gray-400 italic text-sm">कोई प्रमुख गोचर घटना नहीं</div>
                 <?php endif; ?>
             <?php else: ?><div class="text-gray-400 italic text-sm">गोचर सारांश उपलब्ध नहीं</div><?php endif; ?>
         </div>

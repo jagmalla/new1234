@@ -25,6 +25,13 @@ final class UpcomingGochar
         'Jupiter' => 'गुरु', 'Venus' => 'शुक्र', 'Saturn' => 'शनि', 'Rahu' => 'राहु', 'Ketu' => 'केतु',
     ];
     private const S_HI = ['मेष', 'वृषभ', 'मिथुन', 'कर्क', 'सिंह', 'कन्या', 'तुला', 'वृश्चिक', 'धनु', 'मकर', 'कुम्भ', 'मीन'];
+    /** Planet → emoji (for the colourful gochar cards). */
+    private const P_EMO = [
+        'Sun' => '☀️', 'Moon' => '🌙', 'Mars' => '🔴', 'Mercury' => '🟢',
+        'Jupiter' => '🟡', 'Venus' => '⚪', 'Saturn' => '🪐', 'Rahu' => '🐉', 'Ketu' => '☄️',
+    ];
+    /** Sign (rashi) → zodiac emoji. */
+    private const S_EMO = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
     private const NAK_HI = [
         'अश्विनी', 'भरणी', 'कृत्तिका', 'रोहिणी', 'मृगशिरा', 'आर्द्रा', 'पुनर्वसु', 'पुष्य', 'आश्लेषा',
         'मघा', 'पूर्वाफाल्गुनी', 'उत्तराफाल्गुनी', 'हस्त', 'चित्रा', 'स्वाति', 'विशाखा', 'अनुराधा', 'ज्येष्ठा',
@@ -209,8 +216,190 @@ final class UpcomingGochar
             $sadeSati = self::safe(static fn () => SadeSatiTimeline::compute($birthMoonSign, $nowJd, static fn (float $j): float => $lon('Saturn', $j)));
         }
 
+        // =====================================================================
+        // ENRICHED DATA for the colourful gochar "charts" (cards): combustion &
+        // retrograde windows split into past / current / future, each carrying
+        // its own start & end DATE and the rashi involved, plus the Moon-paksha
+        // calendar (next amavasya / purnima, Moon-combust window) and the top
+        // few upcoming events. All boundaries are found by bisection.
+        // =====================================================================
+        $emo = static fn (string $p): string => self::P_EMO[$p] ?? '•';
+
+        // -- combustion helpers --
+        $combOrb = static function (string $p, float $jd) use ($spd): float {
+            $orb = self::ORB[$p] ?? 0.0;
+            if (isset(self::ORB_RETRO[$p]) && $spd($p, $jd) < 0.0) { $orb = self::ORB_RETRO[$p]; }
+            return $orb;
+        };
+        $sepFrom = static function (string $p, float $jd) use ($lon): float {
+            $e = Charts::norm($lon($p, $jd) - $lon('Sun', $jd));
+            return min($e, 360.0 - $e);
+        };
+        $isComb = static fn (string $p, float $jd): bool => $sepFrom($p, $jd) < $combOrb($p, $jd);
+
+        // Scan a boolean predicate over [now-PAST, now+FUT] and return the flip
+        // windows as [{start,end}] (start/end = null when open at a scan edge).
+        $scanWindows = static function (callable $pred, float $step, float $back, float $fwd) use ($nowJd, $bisect): array {
+            $lo = $nowJd - $back; $hi = $nowJd + $fwd;
+            $wins = []; $prev = $lo; $prevOn = $pred($lo); $start = null;   // unknown before scan
+            if ($prevOn) { $start = null; }
+            for ($jd = $lo + $step; $jd <= $hi; $jd += $step) {
+                $on = $pred($jd);
+                if ($on !== $prevOn) {
+                    $b = $bisect($prev, $jd, $pred);
+                    if ($on) { $start = $b; } else { $wins[] = ['start' => $start, 'end' => $b]; $start = null; }
+                    $prevOn = $on;
+                }
+                $prev = $jd;
+            }
+            if ($prevOn) { $wins[] = ['start' => $start, 'end' => null]; }
+            return $wins;
+        };
+        // Classify windows into the most-recent past, the current one, the next future.
+        $classify = static function (array $wins) use ($nowJd): array {
+            $past = null; $cur = null; $fut = null;
+            foreach ($wins as $w) {
+                $s = $w['start']; $e = $w['end'];
+                $isCur = ($s === null || $s <= $nowJd) && ($e === null || $e >= $nowJd);
+                if ($isCur) { $cur = $w; }
+                elseif ($e !== null && $e < $nowJd) { $past = $w; }              // keep last past (loop is time-ordered)
+                elseif ($s !== null && $s > $nowJd && $fut === null) { $fut = $w; }
+            }
+            return ['past' => $past, 'current' => $cur, 'future' => $fut];
+        };
+        $signHiAt = static fn (string $p, ?float $jd): string => self::S_HI[$signAt($p, $jd ?? $nowJd)];
+        $signEmoAt = static fn (string $p, ?float $jd): string => self::S_EMO[$signAt($p, $jd ?? $nowJd)];
+        $card = static function (string $p, array $w, string $repJd) use ($dmy, $days, $signHiAt, $signEmoAt, $emo, $nowJd): array {
+            $rep = $w[$repJd] ?? ($w['start'] ?? $w['end'] ?? $nowJd);
+            return [
+                'planet' => self::P_HI[$p], 'emoji' => $emo($p),
+                'sign_hi' => $signHiAt($p, $rep), 'sign_emo' => $signEmoAt($p, $rep),
+                'start' => $w['start'] !== null ? $dmy($w['start']) : null,
+                'end' => $w['end'] !== null ? $dmy($w['end']) : null,
+                'start_days' => $w['start'] !== null ? $days($w['start']) : null,
+                'end_days' => $w['end'] !== null ? $days($w['end']) : null,
+            ];
+        };
+
+        // -- अस्त (combustion): past / current / future per planet --
+        $combParts = ['current' => [], 'past' => [], 'future' => []];
+        foreach (['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Moon'] as $p) {
+            $step = $p === 'Moon' ? 0.2 : (($p === 'Mercury' || $p === 'Venus') ? 1.0 : 2.0);
+            $wins = $scanWindows(static fn (float $j): bool => $isComb($p, $j), $step, 240.0, 400.0);
+            $c = $classify($wins);
+            if ($c['current'] !== null) {
+                $cc = $card($p, $c['current'], 'end');   // sign at "now" via end rep is close; use now
+                $cc['sign_hi'] = self::S_HI[$pos[$p]['sign']]; $cc['sign_emo'] = self::S_EMO[$pos[$p]['sign']];
+                $cc['sep'] = round($sepFrom($p, $nowJd), 1);
+                $combParts['current'][] = $cc;
+            }
+            if ($c['past'] !== null)   { $combParts['past'][]   = $card($p, $c['past'], 'end'); }
+            if ($c['future'] !== null) { $combParts['future'][] = $card($p, $c['future'], 'start'); }
+        }
+
+        // -- वक्री (retrograde): past / current / future per planet --
+        $retroParts = ['current' => [], 'past' => [], 'future' => []];
+        foreach (self::RETRO_P as $p) {
+            $wins = $scanWindows(static fn (float $j): bool => $spd($p, $j) < 0.0, 2.0, 260.0, 420.0);
+            $c = $classify($wins);
+            if ($c['current'] !== null) {
+                $cc = $card($p, $c['current'], 'start');
+                $cc['sign_hi'] = self::S_HI[$pos[$p]['sign']]; $cc['sign_emo'] = self::S_EMO[$pos[$p]['sign']];
+                $retroParts['current'][] = $cc;
+            }
+            if ($c['past'] !== null)   { $retroParts['past'][]   = $card($p, $c['past'], 'start'); }
+            if ($c['future'] !== null) { $retroParts['future'][] = $card($p, $c['future'], 'start'); }
+        }
+
+        // -- चन्द्र-पक्ष कैलेंडर: next amavasya / purnima + Moon-combust window --
+        $nextElong = static function (float $target) use ($lon, $nowJd, $bisect): ?float {
+            $f = static function (float $jd) use ($lon, $target): float {
+                $x = Charts::norm(Charts::norm($lon('Moon', $jd) - $lon('Sun', $jd)) - $target);
+                return $x > 180.0 ? $x - 360.0 : $x;
+            };
+            $prev = $nowJd; $fp = $f($nowJd);
+            for ($jd = $nowJd + 0.5; $jd <= $nowJd + 31.0; $jd += 0.5) {
+                $fc = $f($jd);
+                if ($fp < 0.0 && $fc >= 0.0) { return $bisect($prev, $jd, static fn (float $j): bool => $f($j) >= 0.0); }
+                $prev = $jd; $fp = $fc;
+            }
+            return null;
+        };
+        $tithiNum = (int) floor($elong / 12.0) + 1;   // 1..30
+        $moonWins = $scanWindows(static fn (float $j): bool => $isComb('Moon', $j), 0.2, 20.0, 40.0);
+        $mc = $classify($moonWins);
+        $moonCombWin = $mc['current'] ?? $mc['future'];
+        $pakshaCal = [
+            'name' => $paksha['name'], 'waxing' => $paksha['waxing'],
+            'tithi' => $tithiNum, 'elong' => round($elong, 1),
+            'sign_hi' => self::S_HI[$pos['Moon']['sign']], 'sign_emo' => self::S_EMO[$pos['Moon']['sign']],
+            'nak' => self::NAK_HI[$nakIdx],
+            'next_amavasya' => ($j = $nextElong(0.0)) !== null ? $dmy($j) : null,
+            'next_purnima' => ($j = $nextElong(180.0)) !== null ? $dmy($j) : null,
+            'moon_combust_now' => !empty($paksha['moon_combust']),
+            'moon_combust_start' => ($moonCombWin && $moonCombWin['start'] !== null) ? $dmy($moonCombWin['start']) : null,
+            'moon_combust_end' => ($moonCombWin && $moonCombWin['end'] !== null) ? $dmy($moonCombWin['end']) : null,
+        ];
+
+        // -- राशि-परिवर्तन cards (skip Moon: changes every ~2¼ days) --
+        $ingressCards = [];
+        foreach ($ingress as $p => $ig) {
+            if ($ig === null || $p === 'Moon') { continue; }
+            $ingressCards[] = [
+                'planet' => self::P_HI[$p], 'emoji' => $emo($p), 'jd' => $ig['jd'],
+                'date' => $dmy($ig['jd']), 'days' => $days($ig['jd']),
+                'from_hi' => self::S_HI[$pos[$p]['sign']], 'from_emo' => self::S_EMO[$pos[$p]['sign']],
+                'to_hi' => self::S_HI[$ig['sign']], 'to_emo' => self::S_EMO[$ig['sign']],
+            ];
+        }
+        usort($ingressCards, static fn ($a, $b) => $a['jd'] <=> $b['jd']);
+
+        // -- top upcoming events (mixed: ingress + retro flips + combust + phases) --
+        $evAll = [];
+        foreach ($ingress as $p => $ig) {
+            if ($ig !== null && $p !== 'Moon') {
+                $evAll[] = ['jd' => $ig['jd'], 'emoji' => $emo($p), 'kind' => 'ingress',
+                    'text' => self::P_HI[$p] . ' → ' . self::S_HI[$ig['sign']] . ' राशि', 'tone' => 'move'];
+            }
+        }
+        foreach ($retro as $p => $r) {
+            if (!empty($r['retro_start_jd'])) {
+                $evAll[] = ['jd' => $r['retro_start_jd'], 'emoji' => '↩️', 'kind' => 'retro',
+                    'text' => self::P_HI[$p] . ' वक्री', 'tone' => 'warn'];
+            }
+            if (!empty($r['direct_jd']) && $r['currently']) {
+                $evAll[] = ['jd' => $r['direct_jd'], 'emoji' => '▶️', 'kind' => 'direct',
+                    'text' => self::P_HI[$p] . ' मार्गी', 'tone' => 'good'];
+            }
+        }
+        foreach ($combParts['current'] as $cc) {
+            if (!empty($cc['end'])) {
+                $evAll[] = ['jd' => $nowJd + (float) $cc['end_days'], 'emoji' => '🌟', 'kind' => 'combust_end',
+                    'text' => $cc['planet'] . ' अस्त-मुक्त (उदय)', 'tone' => 'good'];
+            }
+        }
+        if ($pakshaCal['next_amavasya'] !== null) {
+            $jA = $nextElong(0.0);
+            if ($jA !== null) { $evAll[] = ['jd' => $jA, 'emoji' => '🌑', 'kind' => 'amavasya', 'text' => 'अमावस्या', 'tone' => 'warn']; }
+        }
+        if ($pakshaCal['next_purnima'] !== null) {
+            $jP = $nextElong(180.0);
+            if ($jP !== null) { $evAll[] = ['jd' => $jP, 'emoji' => '🌕', 'kind' => 'purnima', 'text' => 'पूर्णिमा', 'tone' => 'good']; }
+        }
+        usort($evAll, static fn ($a, $b) => $a['jd'] <=> $b['jd']);
+        $topEvents = [];
+        foreach (array_slice($evAll, 0, 6) as $e) {
+            $topEvents[] = ['emoji' => $e['emoji'], 'text' => $e['text'], 'tone' => $e['tone'],
+                'date' => $dmy($e['jd']), 'days' => $days($e['jd'])];
+        }
+
         return [
             'now_dmy' => $dmy($nowJd),
+            'combust_parts' => $combParts,
+            'retro_parts' => $retroParts,
+            'paksha_cal' => $pakshaCal,
+            'ingress_cards' => $ingressCards,
+            'top_events' => $topEvents,
             'pos' => array_map(static fn ($x, $k) => ['planet' => self::P_HI[$k], 'sign_hi' => self::S_HI[$x['sign']], 'retro' => $x['retro']], $pos, array_keys($pos)),
             'retro_same' => $retroSame,
             'paksha' => $paksha,
