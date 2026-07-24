@@ -62,6 +62,13 @@ $bandInfo = [
         .pol-win.one { border-left-color:#854d0e; }
         .pol-rem { border-left:4px solid #b45309; background:#fff7ed; border-radius:0 8px 8px 0; padding:9px 12px; margin-top:6px; }
         .pol-pill { display:inline-flex; align-items:center; gap:4px; font-size:.78rem; font-weight:700; border-radius:999px; padding:2px 10px; margin:2px 3px 2px 0; }
+        /* capability trait meters */
+        .pol-traits { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:9px 16px; }
+        .pol-trait-top { display:flex; justify-content:space-between; align-items:baseline; font-size:.84rem; font-weight:700; gap:6px; }
+        .pol-trait-top b { font-size:.95rem; }
+        .pol-bar { height:9px; border-radius:999px; background:#eceafe; overflow:hidden; margin:3px 0 2px; }
+        .pol-bar-fill { height:100%; border-radius:999px; }
+        .pol-trait-why { font-size:.72rem; color:#8a7a55; }
     </style>
 
     <!-- HEADLINE: politician? -->
@@ -128,6 +135,25 @@ $bandInfo = [
             <?php endforeach; ?>
         </div>
     </div>
+
+    <!-- capability profile (speech/authority/leadership/… computed before verdict) -->
+    <?php if (!empty($po['capability'])): $cap = $po['capability']; ?>
+    <div class="pol-card">
+        <h3>🧬 राजनीतिक क्षमता प्रोफ़ाइल <?= $chip('सूचकांक ' . (int) $cap['index'] . '/100 · ' . $cap['index_band'], (int) $cap['index'] >= 60 ? 'pos' : ((int) $cap['index'] >= 45 ? 'mix' : 'neg')) ?></h3>
+        <div class="pol-why" style="margin:-2px 0 8px">प्रबल: <b style="color:#166534"><?= $h(implode(' · ', array_map(fn ($t) => $t['name'], $cap['top3']))) ?></b>
+            &nbsp;|&nbsp; सुधार-योग्य: <b style="color:#991b1b"><?= $h(implode(' · ', array_map(fn ($t) => $t['name'], $cap['low3']))) ?></b></div>
+        <div class="pol-traits">
+            <?php foreach ($cap['traits'] as $t): ?>
+                <div class="pol-trait">
+                    <div class="pol-trait-top"><span><?= $h($t['emoji']) ?> <?= $h($t['name']) ?></span><b style="color:<?= $t['col'] ?>"><?= (int) $t['score'] ?></b></div>
+                    <div class="pol-bar"><div class="pol-bar-fill" style="width:<?= (int) $t['score'] ?>%;background:<?= $t['col'] ?>"></div></div>
+                    <div class="pol-trait-why"><?= $h($t['top']) ?><?= $t['note'] ? ' · ' . $h($t['note']) : '' ?></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="pol-why" style="margin-top:7px"><?= $h($cap['note']) ?></div>
+    </div>
+    <?php endif; ?>
 
     <!-- pillars 10/6/11 -->
     <?php $pl = $po['pillars']; ?>

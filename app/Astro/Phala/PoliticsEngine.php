@@ -168,6 +168,11 @@ final class PoliticsEngine
         $yoga = self::yogas($ctx);
         $identify = self::identify($ctx, $yoga);
         $planets = self::keyPlanets($ctx);
+        // capability profile (speech · authority · leadership · courage · diplomacy
+        // · shrewdness · public-appeal · resilience · endurance · competitiveness ·
+        // wisdom · executive-drive · charisma · strategy · mass-connection ·
+        // dominance · ambition) — computed BEFORE the verdict; feeds it.
+        $capability = self::capability($ctx);
         $pillars = self::pillars($ctx);
         $navamsa = self::navamsa($ctx);
         $dashamsha = self::dashamsha($ctx);
@@ -181,13 +186,14 @@ final class PoliticsEngine
         $promotion = self::promotion($ctx, $dasha, $gochar, $varsha);
         $success = self::successCheck($ctx, $bala, $navamsa, $dashamsha);
         $remedies = self::remedies($ctx, $planets);
-        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga);
+        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability);
 
         return [
             'ok' => true,
             'lagna_hi' => self::signHi($asc),
             'identify' => $identify,
             'key_planets' => $planets,
+            'capability' => $capability,
             'pillars' => $pillars,
             'yoga' => $yoga,
             'navamsa' => $navamsa,
@@ -203,6 +209,155 @@ final class PoliticsEngine
             'success' => $success,
             'remedies' => $remedies,
             'conclusion' => $conclusion,
+        ];
+    }
+
+    // ====================================================== capability model
+
+    /** Normalised 0-100 political power of a planet (shadbala · dignity ·
+     *  combustion · placement · retro; house-based for Rahu/Ketu). */
+    private static function planetPower(array $ctx, string $p): int
+    {
+        $h = $ctx['house'][$p] ?? 0;
+        if ($p === 'Rahu' || $p === 'Ketu') {
+            $base = 50.0;
+            $good = $p === 'Rahu' ? [3, 6, 10, 11] : [3, 6, 11];
+            if (in_array($h, $good, true)) {
+                $base += 16;
+            } elseif (in_array($h, [8, 12], true)) {
+                $base -= 12;
+            } elseif (in_array($h, [1, 4, 7, 10, 5, 9], true)) {
+                $base += 6;
+            }
+            // benefic conjunction lifts a node
+            foreach (self::BENEFIC as $b) {
+                if (($ctx['house'][$b] ?? -1) === $h) { $base += 4; break; }
+            }
+            return (int) max(5, min(97, round($base)));
+        }
+        $ratio = self::ratio($ctx, $p);
+        $base = $ratio > 0 ? $ratio * 50.0 : 45.0;
+        static $tb = ['param_uchcha' => 20, 'exalt' => 18, 'moolatrikona' => 14, 'own' => 12,
+            'great_friend' => 6, 'friend' => 3, 'neutral' => 0, 'enemy' => -6, 'great_enemy' => -10, 'debil' => -14];
+        $base += $tb[self::tier($ctx, $p)] ?? 0;
+        if (self::combust($ctx, $p)) {
+            $base -= 11;
+        }
+        if (in_array($h, [1, 4, 7, 10], true)) {
+            $base += 6;
+        } elseif (in_array($h, [5, 9], true)) {
+            $base += 5;
+        } elseif (in_array($h, [6, 8, 12], true)) {
+            $base -= 3;
+        }
+        if (!empty($ctx['pl'][$p]['retro'])) {
+            $base += 3;   // chesta bala
+        }
+        return (int) max(5, min(99, round($base)));
+    }
+
+    /** Normalised 0-100 strength of a house (ashtakavarga · bhava-bala · lord). */
+    private static function houseStrength(array $ctx, int $h): int
+    {
+        $sav = self::savOfHouse($ctx, $h);
+        $savScore = max(0.0, min(100.0, ($sav - 18) / 22.0 * 100.0));
+        $bh = $ctx['bhava'][$h]['rupa'] ?? ($ctx['bhava'][$h]['total_virupa'] ?? null);
+        if (is_numeric($bh)) {
+            $rupa = (float) $bh > 60 ? ((float) $bh) / 60.0 : (float) $bh;
+            $bScore = max(0.0, min(100.0, $rupa / 10.0 * 100.0));
+        } else {
+            $bScore = 50.0;
+        }
+        $lp = self::planetPower($ctx, ($ctx['lordOf'])($h));
+        return (int) round(0.4 * $savScore + 0.25 * $bScore + 0.35 * $lp);
+    }
+
+    /**
+     * §3 + §10 — political capability profile. Each trait is a weighted blend
+     * of the karaka planet(s) power and the relevant house strength, plus the
+     * manual's special planet-combinations. Computed BEFORE the final verdict —
+     * these underlie the raj-yogas and the level score.
+     */
+    private static function capability(array $ctx): array
+    {
+        $conn = fn (string $a, string $b): bool => self::connect($ctx, $a, $b);
+        $conj = fn (string $a, string $b): bool => ($ctx['house'][$a] ?? -1) === ($ctx['house'][$b] ?? -2);
+        $waxing = false;   // Moon in shukla paksha ≈ far from Sun
+        $ms = (float) ($ctx['pl']['Moon']['sidereal_lon'] ?? 0); $ss = (float) ($ctx['pl']['Sun']['sidereal_lon'] ?? 0);
+        $el = fmod($ms - $ss + 360.0, 360.0);
+        $waxing = $el > 12 && $el < 348;
+
+        $blend = function (array $planets, array $houses, array $bonuses = []) use ($ctx): array {
+            $sum = 0.0; $wsum = 0.0; $contrib = [];
+            foreach ($planets as $p => $w) {
+                $v = self::planetPower($ctx, $p); $sum += $v * $w; $wsum += $w;
+                $contrib[self::HI[$p]] = $v * $w;
+            }
+            foreach ($houses as $hh => $w) {
+                $v = self::houseStrength($ctx, $hh); $sum += $v * $w; $wsum += $w;
+                $contrib[self::ord($hh) . ' भाव'] = $v * $w;
+            }
+            $score = $wsum > 0 ? $sum / $wsum : 50.0;
+            $note = '';
+            foreach ($bonuses as $bn) {
+                if ($bn[0]) { $score += $bn[1]; if ($bn[1] > 0 && $note === '') { $note = $bn[2]; } }
+            }
+            arsort($contrib);
+            $top = array_key_first($contrib);
+            return ['score' => (int) max(3, min(99, round($score))), 'top' => $top, 'note' => $note];
+        };
+
+        // trait spec: [emoji, name, planets{}, houses{}, bonuses[]]
+        $specs = [
+            ['🗣️', 'वाणी व वाक्पटुता', ['Mercury' => 3, 'Jupiter' => 1], [2 => 2],
+                [[$conn('Mercury', 'Jupiter'), 6, 'बुध-गुरु — ज्ञानपूर्ण वक्ता'], [$conn('Mercury', 'Venus'), 4, 'बुध-शुक्र — मधुर वाणी']]],
+            ['🧠', 'बुद्धि व मस्तिष्क', ['Mercury' => 3, 'Jupiter' => 2], [5 => 2], []],
+            ['👑', 'अधिकार', ['Sun' => 3], [10 => 2], [[self::digBala($ctx, 'Sun') >= 40, 6, 'सूर्य दिग्बली — पूर्ण अधिकार']]],
+            ['🧭', 'नेतृत्व', ['Sun' => 2], [1 => 2, 10 => 1], []],
+            ['⚔️', 'साहस', ['Mars' => 3], [3 => 2], []],
+            ['🤝', 'कूटनीति', ['Mercury' => 2, 'Venus' => 2], [7 => 2], []],
+            ['🦊', 'चतुराई', ['Mercury' => 2, 'Rahu' => 2], [8 => 1], [[$conn('Mercury', 'Rahu'), 8, 'बुध-राहु — प्रचार/चतुराई में माहिर']]],
+            ['🌟', 'जन-आकर्षण', ['Moon' => 2, 'Venus' => 2], [4 => 1], [[$waxing, 5, 'शुक्ल-पक्ष चन्द्र — जन-प्रिय']]],
+            ['🛡️', 'लचीलापन (Resilience)', ['Saturn' => 2, 'Mars' => 1], [8 => 1], [[self::housesRelated($ctx, 8, 1) || self::housesRelated($ctx, 6, 8), 8, 'विपरीत-राजयोग — संकट से उबरना']]],
+            ['⏳', 'सहनशक्ति (Endurance)', ['Saturn' => 3], [], [[in_array($ctx['asc'], [1, 4, 7, 10], true), 4, 'स्थिर लग्न — दीर्घ-सहनशीलता']]],
+            ['🥊', 'प्रतिस्पर्धा', ['Mars' => 2], [6 => 3], []],
+            ['📚', 'विवेक व ज्ञान', ['Jupiter' => 3], [9 => 2, 5 => 1], []],
+            ['⚙️', 'कार्यकारी प्रेरणा', ['Sun' => 2, 'Mars' => 2, 'Saturn' => 1], [10 => 2], []],
+            ['✨', 'करिश्मा', ['Venus' => 2, 'Sun' => 1, 'Moon' => 1], [1 => 2], []],
+            ['♟️', 'रणनीतिक सोच', ['Mercury' => 2, 'Saturn' => 2, 'Ketu' => 1], [5 => 1], [[$conn('Saturn', 'Rahu'), 4, 'शनि-राहु — भीड़-रणनीति']]],
+            ['📣', 'जन-संपर्क (Mass connection)', ['Saturn' => 2, 'Moon' => 2], [11 => 1, 4 => 1], [[$conn('Saturn', 'Rahu'), 5, 'शनि-राहु — जन-आंदोलन']]],
+            ['🏋️', 'प्रभुत्व (Dominance)', ['Sun' => 2, 'Mars' => 1, 'Saturn' => 1], [10 => 2], [[$conj('Sun', 'Mars'), 5, 'सूर्य-मंगल — सत्ता व संघर्ष']]],
+            ['🚀', 'महत्वाकांक्षा', ['Rahu' => 3, 'Mars' => 1], [11 => 1, 10 => 1], []],
+        ];
+
+        $band = static function (int $s): array {
+            if ($s >= 75) { return ['उत्कृष्ट', '#166534', '#dcfce7']; }
+            if ($s >= 60) { return ['बलवान', '#0f766e', '#ccfbf1']; }
+            if ($s >= 45) { return ['मध्यम', '#854d0e', '#fef9c3']; }
+            return ['कमज़ोर', '#991b1b', '#fee2e2'];
+        };
+
+        $traits = []; $total = 0;
+        foreach ($specs as [$emo, $name, $planets, $houses, $bonuses]) {
+            $r = $blend($planets, $houses, $bonuses);
+            [$bl, $col, $bg] = $band($r['score']);
+            $traits[] = ['emoji' => $emo, 'name' => $name, 'score' => $r['score'], 'band' => $bl,
+                'col' => $col, 'bg' => $bg, 'top' => $r['top'], 'note' => $r['note']];
+            $total += $r['score'];
+        }
+        $index = (int) round($total / count($specs));
+        // sort strongest-first for the profile, but keep a fixed "core" list too
+        $sorted = $traits;
+        usort($sorted, static fn ($a, $b) => $b['score'] <=> $a['score']);
+        $strong = array_values(array_filter($traits, static fn ($t) => $t['score'] >= 60));
+        $weak = array_values(array_filter($traits, static fn ($t) => $t['score'] < 45));
+        [$ibl] = $band($index);
+        return [
+            'traits' => $traits, 'top3' => array_slice($sorted, 0, 3), 'low3' => array_slice(array_reverse($sorted), 0, 3),
+            'index' => $index, 'index_band' => $ibl,
+            'strong_names' => array_map(static fn ($t) => $t['name'], array_slice($strong, 0, 6)),
+            'weak_names' => array_map(static fn ($t) => $t['name'], $weak),
+            'note' => 'हर गुण उसके कारक ग्रह(ों) के बल (षड्बल·दिग्नता·भाव) व सम्बन्धित भाव की अष्टकवर्ग/भाव-बल से आँका गया है — ये गुण ही राजयोग व स्तर की नींव हैं।',
         ];
     }
 
@@ -1042,7 +1197,7 @@ final class PoliticsEngine
 
     // ---------------------------------------------------------- conclusion
 
-    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga): array
+    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga, array $capability): array
     {
         // trividha (three-source) confirmation: chart-yog, dasha, gochar
         $chartOk = $identify['is_politician'];
@@ -1051,6 +1206,9 @@ final class PoliticsEngine
         $conf = (int) $chartOk + (int) $dashaOk + (int) $gocharOk;
 
         $lines = [];
+        $lines[] = 'राजनीतिक क्षमता-सूचकांक: ' . $capability['index'] . '/100 (' . $capability['index_band'] . ')'
+            . ($capability['strong_names'] !== [] ? ' — प्रबल: ' . implode(', ', array_slice($capability['strong_names'], 0, 4)) : '')
+            . ($capability['weak_names'] !== [] ? '; दुर्बल: ' . implode(', ', array_slice($capability['weak_names'], 0, 3)) : '') . '।';
         $lines[] = 'राजनीति-योग: ' . $identify['verdict'] . ' (' . $identify['met'] . '/' . $identify['total'] . ' नियम)।';
         if ($chartOk) {
             $lines[] = 'सम्भावित अधिकतम स्तर: ' . $level['label'] . ' — ' . $level['titles'] . ' (स्कोर ' . $level['score'] . '/' . $level['max'] . ')।';
