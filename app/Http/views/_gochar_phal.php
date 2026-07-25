@@ -28,6 +28,7 @@ $vv = $gp['vivaha_muhurat'] ?? null;    // 💍 Vivaha Muhurat (Phase 4)
 $mg = $gp['mangal_dosha'] ?? null;      // 💍 Mangal Dosha (Phase 4)
 $ya = $gp['yatra_muhurat'] ?? null;     // 🧳 Yatra Muhurat (Phase 5)
 $vz = $gp['vastu_muhurat'] ?? null;     // 🏗️ Vastu/Grihapravesh/Rajyabhishek (Phase 6)
+$sx = $gp['shatkarma'] ?? null;         // 📜 Abhichara/Shatkarma — study reference + self-test (Module B)
 /** Reusable renderer for a simple {grade,checks,bad,note} muhurat block. */
 $mcBlock = static function (array $d, string $title, string $accent) use ($h): void { ?>
     <div class="mc-verdict" style="border-left-color:<?= $accent ?>;background:linear-gradient(180deg,#fdfdfb,#f8f6f0)">
@@ -314,6 +315,63 @@ if ($hasAny):
             .mc-soon .e{font-size:1.6rem}.mc-soon b{color:#6b21a8}
             .mc-chitta{font-size:.76rem;color:#6b6156;background:#f8fafc;border:1px solid #e4dcce;
               border-radius:8px;padding:8px 11px;margin-top:8px}
+            /* ---- 📜 षट्कर्म (अभिचार) अध्ययन-सन्दर्भ ---- */
+            .sk-disc{display:flex;gap:8px;align-items:flex-start;background:#fff7ed;border:1px solid #fed7aa;
+              border-left:4px solid #b45309;border-radius:8px;padding:9px 11px;font-size:.76rem;line-height:1.5;color:#7c2d12;margin-bottom:10px}
+            .sk-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+            .sk-tab{border:1.5px solid #ddd6fe;background:#faf5ff;color:#6b21a8;border-radius:999px;
+              padding:5px 13px;font-size:.78rem;font-weight:700;cursor:pointer}
+            .sk-tab.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+            .sk-view.hidden{display:none}
+            .sk-card{border:1px solid #ece9f5;border-radius:11px;padding:11px 12px;margin-bottom:9px}
+            .sk-card.pos{background:#f0fdf4;border-color:#bbf7d0}
+            .sk-card.info{background:#f8fafc;border-color:#e2e8f0}
+            .sk-card.neg{background:#fef2f2;border-color:#fecaca}
+            .sk-ch{display:flex;align-items:center;gap:8px;font-size:.98rem;font-weight:800;margin-bottom:4px}
+            .sk-card.pos .sk-ch{color:#15803d}.sk-card.info .sk-ch{color:#475569}.sk-card.neg .sk-ch{color:#b91c1c}
+            .sk-en{font-size:.68rem;font-weight:600;color:#94a3b8;margin-left:auto}
+            .sk-nat{font-size:.8rem;line-height:1.55;color:#475569;margin-bottom:6px}
+            .sk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:2px 12px;margin-bottom:5px}
+            .sk-kv{font-size:.75rem;color:#475569}.sk-kv b{color:#334155}
+            .sk-chip{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 8px;border-radius:20px;background:#ede9fe;color:#6d28d9;margin:3px 3px 0 0}
+            .sk-use{font-size:.74rem;color:#065f46;background:#ecfdf5;border-radius:6px;padding:5px 8px;margin:5px 0 0}
+            .sk-rem{font-size:.74rem;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:5px 8px;margin-top:5px}
+            .sk-note{font-size:.7rem;color:#7c3aed;margin-top:5px}
+            /* quiz */
+            .sk-quiz{background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:13px}
+            .sk-qmeta{display:flex;justify-content:space-between;align-items:center;font-size:.74rem;color:#7c3aed;font-weight:700;margin-bottom:8px}
+            .sk-score{background:#7c3aed;color:#fff;border-radius:20px;padding:3px 10px;font-size:.72rem}
+            .sk-qtext{font-size:.92rem;font-weight:700;line-height:1.5;margin-bottom:11px;color:#1e293b}
+            .sk-ans{display:block;width:100%;text-align:right;padding:9px 12px;border:1.5px solid #ddd6fe;border-radius:9px;
+              background:#fff;font-size:.85rem;font-family:inherit;margin-bottom:7px;cursor:pointer;font-weight:600;color:#334155}
+            .sk-ans:disabled{cursor:default}
+            .sk-ans.correct{background:#f0fdf4;border-color:#22c55e;color:#15803d}
+            .sk-ans.wrong{background:#fef2f2;border-color:#ef4444;color:#b91c1c}
+            .sk-fb{margin-top:5px;border-radius:9px;padding:9px 11px;font-size:.8rem;line-height:1.5;display:none}
+            .sk-fb.show{display:block}
+            .sk-fb.ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+            .sk-fb.no{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+            .sk-fbrem{margin-top:6px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:5px 8px;color:#92400e;font-size:.74rem}
+            .sk-nav{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+            .sk-btn{border:1.5px solid #7c3aed;background:#7c3aed;color:#fff;border-radius:8px;padding:7px 16px;font-size:.8rem;font-weight:700;cursor:pointer}
+            .sk-btn.ghost{background:#fff;color:#7c3aed}
+            .sk-btn:disabled{opacity:.4;cursor:default}
+            .sk-result{text-align:center;padding:14px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px}
+            .sk-result .big{font-size:1.5rem;font-weight:800;color:#6b21a8}
+            /* verify-a-date */
+            .sk-pan{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:11px}
+            .sk-pr{display:flex;justify-content:space-between;font-size:.82rem;padding:3px 0;border-bottom:1px dashed #e2e8f0}
+            .sk-pr:last-child{border:0}.sk-pr .l{color:#64748b}.sk-pr .v{font-weight:700;color:#334155}
+            .sk-judge{display:flex;gap:7px;margin-bottom:10px}
+            .sk-jb{flex:1;padding:9px 0;border-radius:9px;font-size:.8rem;font-weight:700;text-align:center;border:1.5px solid;cursor:pointer;font-family:inherit}
+            .sk-jb[data-t="pos"]{background:#f0fdf4;border-color:#86efac;color:#15803d}
+            .sk-jb[data-t="info"]{background:#fffbeb;border-color:#fcd34d;color:#b45309}
+            .sk-jb[data-t="neg"]{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
+            .sk-jb.picked{box-shadow:0 0 0 3px currentColor;filter:saturate(1.4)}
+            .sk-reveal{background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:10px 12px;font-size:.82rem;line-height:1.55;display:none}
+            .sk-reveal.show{display:block}.sk-reveal b{color:#4338ca}
+            .sk-match{display:inline-block;margin-top:6px;font-weight:700;font-size:.74rem;padding:3px 10px;border-radius:20px}
+            .sk-match.y{background:#dcfce7;color:#166534}.sk-match.n{background:#fee2e2;color:#991b1b}
             </style>
             <div class="mc-picker">
                 <label for="mc-cat-select">🕉️ कार्य / श्रेणी चुनें</label>
@@ -326,6 +384,7 @@ if ($hasAny):
                     <option value="grihapravesh">🚪 गृहप्रवेश</option>
                     <option value="yatra">🧳 यात्रा</option>
                     <option value="rajyabhishek">👑 राज्याभिषेक / शपथ-ग्रहण</option>
+                    <option value="shatkarma">📜 अभिचार / षट्कर्म (शास्त्र-अध्ययन)</option>
                 </select>
             </div>
 
@@ -515,6 +574,80 @@ if ($hasAny):
                     🏛️ नेता की <b>राजनीतिक क्षमता व पद-योग</b> हेतु D1 भविष्यवाणी में
                     <b>राजनीति (Politics)</b> टैब देखें — वहाँ राजयोग, स्तर व पदोन्नति का पूर्ण विश्लेषण है। यह मुहूर्त उसी के साथ पढ़ें।
                 </div>
+            </div>
+            <?php endif; ?>
+
+            <?php // ---- 📜 अभिचार / षट्कर्म — अध्ययन-सन्दर्भ + अभ्यास + तिथि-जाँच (Module B) ----
+            if ($sx !== null && !empty($sx['ok'])): $tones = ['pos' => 'सौम्य', 'info' => 'मध्यम', 'neg' => 'उग्र']; ?>
+            <div class="mc-panel hidden" data-mc="shatkarma">
+                <div class="sk-disc">📜<span><b>शास्त्र-अध्ययन हेतु।</b> <?= $h($sx['disclaimer']) ?></span></div>
+                <div class="sk-tabs" id="sk-tabs">
+                    <button class="sk-tab active" data-sk="study">📖 अध्ययन-सन्दर्भ</button>
+                    <button class="sk-tab" data-sk="quiz">🎓 अभ्यास-परीक्षा</button>
+                    <button class="sk-tab" data-sk="verify">🔎 तिथि-जाँच</button>
+                </div>
+
+                <!-- 📖 अध्ययन-सन्दर्भ -->
+                <div class="sk-view" data-skview="study">
+                    <div style="font-size:.82rem;font-weight:700;color:#6b21a8;margin-bottom:7px">🕉️ षट्कर्म — ग्रंथोक्त काल-वर्गीकरण (छह कर्म)</div>
+                    <?php foreach ($sx['cards'] as $c): ?>
+                    <div class="sk-card <?= $h($c['tone']) ?>">
+                        <div class="sk-ch"><span><?= $c['emoji'] ?></span> <?= $h($c['name']) ?>
+                            <span class="mc-grade mc-<?= $h($c['tone']) ?>" style="font-size:.66rem"><?= $h($tones[$c['tone']] ?? '') ?>-वर्ग</span>
+                            <span class="sk-en"><?= $h($c['en']) ?></span></div>
+                        <div class="sk-nat"><?= $h($c['nature']) ?></div>
+                        <div class="sk-grid">
+                            <div class="sk-kv"><b>नक्षत्र-संज्ञा:</b> <?= $h(implode(' · ', $c['sanjna'])) ?></div>
+                            <div class="sk-kv"><b>ऋतु:</b> <?= $h($c['ritu']) ?></div>
+                            <div class="sk-kv"><b>तिथि:</b> <?= $h($c['tithi']) ?></div>
+                            <div class="sk-kv"><b>वार:</b> <?= $h($c['vaara']) ?></div>
+                            <div class="sk-kv"><b>दिशा:</b> <?= $h($c['disha']) ?></div>
+                            <div class="sk-kv"><b>तत्त्व:</b> <?= $h($c['tattva']) ?></div>
+                        </div>
+                        <div class="sk-kv" style="margin-bottom:2px"><b>सम्बद्ध नक्षत्र:</b> <?= $h($c['nak']) ?></div>
+                        <?php foreach ($c['sanjna'] as $sj): ?><span class="sk-chip"><?= $h($sj) ?></span><?php endforeach; ?>
+                        <div class="sk-use">🌱 <b>सद्-पक्ष / उपयोग:</b> <?= $h($c['use']) ?></div>
+                        <div class="sk-rem">🩹 <b>उपाय-पक्ष:</b> <?= $h($c['remedy']) ?></div>
+                        <div class="sk-note">📌 <?= $h($c['note']) ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- 🎓 अभ्यास-परीक्षा -->
+                <div class="sk-view hidden" data-skview="quiz">
+                    <div class="sk-quiz" id="sk-quiz"
+                         data-quiz='<?= $h(json_encode($sx['quiz'], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>'>
+                        <div class="sk-qmeta"><span id="sk-qn">📝 प्रश्न 1 / <?= count($sx['quiz']) ?></span>
+                            <span class="sk-score" id="sk-score">🏆 अंक 0/0</span></div>
+                        <div class="sk-qtext" id="sk-qtext"></div>
+                        <div id="sk-opts"></div>
+                        <div class="sk-fb" id="sk-fb"></div>
+                        <div class="sk-nav">
+                            <button class="sk-btn ghost" id="sk-prev" disabled>‹ पिछला</button>
+                            <button class="sk-btn" id="sk-next" disabled>अगला ›</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🔎 तिथि-जाँच -->
+                <div class="sk-view hidden" data-skview="verify">
+                    <div style="font-size:.78rem;color:#64748b;margin-bottom:6px">दी गई गोचर-स्थिति देखें, स्वयं निर्णय करें कि नक्षत्र किस कर्म-वर्ग का है, फिर इंजन-गणना से मिलाएँ।</div>
+                    <div class="sk-pan">
+                        <div class="sk-pr"><span class="l">⭐ गोचर-नक्षत्र</span><span class="v"><?= $h($sx['verify']['nak']) ?></span></div>
+                        <div class="sk-pr"><span class="l">🏷️ संज्ञा</span><span class="v"><?= $h($sx['verify']['sanjna']) ?></span></div>
+                    </div>
+                    <div style="font-size:.82rem;font-weight:700;color:#334155;margin-bottom:6px">🤔 यह नक्षत्र किस कर्म-वर्ग का है?</div>
+                    <div class="sk-judge" id="sk-judge" data-ans="<?= $h($sx['verify']['tone']) ?>">
+                        <button class="sk-jb" data-t="pos">🕊️ सौम्य</button>
+                        <button class="sk-jb" data-t="info">🌀 मध्यम</button>
+                        <button class="sk-jb" data-t="neg">🔥 उग्र</button>
+                    </div>
+                    <div class="sk-reveal" id="sk-reveal"
+                         data-nak="<?= $h($sx['verify']['nak']) ?>"
+                         data-label="<?= $h($sx['verify']['label']) ?>"
+                         data-karma="<?= $h($sx['verify']['karma']) ?>"></div>
+                </div>
+                <div class="mc-chitta">📚 अध्ययन → परीक्षा → तिथि-जाँच — तीनों से छात्र अपनी पढ़ाई ग्रंथ-गणना से मिलाकर सत्यापित कर सकते हैं।</div>
             </div>
             <?php endif; ?>
 

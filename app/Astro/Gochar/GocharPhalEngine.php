@@ -265,6 +265,17 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 📜 अभिचार / षट्कर्म — अध्ययन-सन्दर्भ (Study module) ---------
+        $shatkarma = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $moonLonK = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $shatkarma = \AutoBusiness\Astro\Muhurat\ShatkarmaStudyEngine::compute($moonLonK);
+            } catch (\Throwable $e) {
+                $shatkarma = null;
+            }
+        }
+
         return [
             'moon_sign' => $moonSign,
             'moon_ksheen' => $transitMoonKsheen,
@@ -281,6 +292,7 @@ final class GocharPhalEngine
             'mangal_dosha' => $mangalDosha,
             'yatra_muhurat' => $yatraMuhurat,
             'vastu_muhurat' => $vastuMuhurat,
+            'shatkarma' => $shatkarma,
         ];
     }
 

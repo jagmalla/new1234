@@ -3697,6 +3697,86 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
       }
     });
 
+    // 📜 अभिचार / षट्कर्म study module — sub-tabs, self-test quiz, verify-a-date
+    // (all delegated; the fragment is re-injected on each date change, and quiz
+    // state lives on the element so it resets cleanly with a fresh fragment).
+    function skRenderQuiz(qe) {
+      var data; try { data = JSON.parse(qe.getAttribute('data-quiz')); } catch (_) { return; }
+      if (!data || !data.length) { return; }
+      if (qe._i == null) { qe._i = 0; qe._answered = {}; qe._correct = 0; qe._done = 0; }
+      var i = qe._i, q = data[i], ans = qe._answered[i];
+      qe.querySelector('#sk-qn').textContent = '📝 प्रश्न ' + (i + 1) + ' / ' + data.length;
+      qe.querySelector('#sk-score').textContent = '🏆 अंक ' + qe._correct + '/' + qe._done;
+      qe.querySelector('#sk-qtext').textContent = q.q;
+      var opts = qe.querySelector('#sk-opts'); opts.innerHTML = '';
+      q.options.forEach(function (o, oi) {
+        var b = document.createElement('button');
+        b.className = 'sk-ans'; b.textContent = o; b.setAttribute('data-oi', oi);
+        if (ans != null) {
+          b.disabled = true;
+          if (oi === q.ans) { b.classList.add('correct'); }
+          else if (oi === ans) { b.classList.add('wrong'); }
+        }
+        opts.appendChild(b);
+      });
+      var fb = qe.querySelector('#sk-fb');
+      if (ans != null) {
+        var ok = ans === q.ans;
+        fb.className = 'sk-fb show ' + (ok ? 'ok' : 'no');
+        fb.innerHTML = (ok ? '✅ <b>सही!</b> ' : '❌ <b>पुनः देखें।</b> ') + q.explain
+          + '<div class="sk-fbrem">🩹 ' + q.remedy + '</div>';
+      } else { fb.className = 'sk-fb'; fb.innerHTML = ''; }
+      qe.querySelector('#sk-prev').disabled = i === 0;
+      qe.querySelector('#sk-next').disabled = i >= data.length - 1;
+    }
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest) { return; }
+      // sub-tab switch
+      var tab = e.target.closest('.sk-tab');
+      if (tab) {
+        var panel = tab.closest('[data-mc="shatkarma"]'); if (!panel) { return; }
+        var v = tab.getAttribute('data-sk');
+        panel.querySelectorAll('.sk-tab').forEach(function (t) { t.classList.toggle('active', t === tab); });
+        panel.querySelectorAll('.sk-view').forEach(function (w) { w.classList.toggle('hidden', w.getAttribute('data-skview') !== v); });
+        if (v === 'quiz') { var qe0 = panel.querySelector('#sk-quiz'); if (qe0) { skRenderQuiz(qe0); } }
+        return;
+      }
+      // quiz answer
+      var ab = e.target.closest('.sk-ans');
+      if (ab && !ab.disabled) {
+        var qe = ab.closest('#sk-quiz'); if (!qe) { return; }
+        var data; try { data = JSON.parse(qe.getAttribute('data-quiz')); } catch (_) { return; }
+        var i = qe._i, oi = parseInt(ab.getAttribute('data-oi'), 10);
+        if (qe._answered[i] == null) { qe._answered[i] = oi; qe._done++; if (oi === data[i].ans) { qe._correct++; } }
+        skRenderQuiz(qe);
+        return;
+      }
+      // quiz prev/next
+      var nx = e.target.closest('#sk-next'), pv = e.target.closest('#sk-prev');
+      if (nx || pv) {
+        var qe2 = (nx || pv).closest('#sk-quiz'); if (!qe2) { return; }
+        var d2; try { d2 = JSON.parse(qe2.getAttribute('data-quiz')); } catch (_) { return; }
+        if (nx && qe2._i < d2.length - 1) { qe2._i++; }
+        if (pv && qe2._i > 0) { qe2._i--; }
+        skRenderQuiz(qe2);
+        return;
+      }
+      // verify-a-date judge
+      var jb = e.target.closest('.sk-jb');
+      if (jb) {
+        var jr = jb.closest('#sk-judge'); if (!jr) { return; }
+        jr.querySelectorAll('.sk-jb').forEach(function (b) { b.classList.toggle('picked', b === jb); });
+        var correct = jr.getAttribute('data-ans'), pick = jb.getAttribute('data-t'), match = pick === correct;
+        var rev = jr.parentElement.querySelector('#sk-reveal');
+        rev.className = 'sk-reveal show';
+        rev.innerHTML = '🧮 <b>इंजन-गणना:</b> ' + rev.getAttribute('data-nak') + ' → '
+          + rev.getAttribute('data-label') + '-वर्ग (' + rev.getAttribute('data-karma') + ')।<br>'
+          + '<span class="sk-match ' + (match ? 'y' : 'n') + '">'
+          + (match ? '✅ आपका उत्तर सही — मेल हुआ!' : '❌ मेल नहीं — पुनः अध्ययन करें।') + '</span>';
+        return;
+      }
+    });
+
     document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
         if (chip.hasAttribute('data-videsh')) { window.ABVideshTopic(); return; }
