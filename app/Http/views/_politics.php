@@ -80,6 +80,22 @@ $bandInfo = [
         <div class="pol-why"><?= $h($po['key_planets']['verdict']) ?></div>
     </div>
 
+    <!-- INTEREST: is the person naturally drawn to politics? -->
+    <?php $iv = $po['interest'] ?? null; if ($iv !== null):
+        $ivBg = ['pos' => '#f0fdf4', 'info' => '#fffbeb', 'neg' => '#fef2f2'][$iv['tone']] ?? '#f8fafc';
+        $ivBd = ['pos' => '#16a34a', 'info' => '#d97706', 'neg' => '#dc2626'][$iv['tone']] ?? '#94a3b8'; ?>
+    <div class="pol-card" style="background:<?= $ivBg ?>;border-left:5px solid <?= $ivBd ?>">
+        <h3 style="color:<?= $ivBd ?>">❤️ रुचि / झुकाव — क्या व्यक्ति को राजनीति पसन्द है?
+            <span style="font-size:.72rem;color:#94a3b8">रुचि-अंक <?= (int) $iv['score'] ?>/<?= (int) $iv['max'] ?></span></h3>
+        <div style="font-size:.9rem;font-weight:600;color:#374151;line-height:1.5"><?= $h($iv['verdict']) ?></div>
+        <div class="pol-factors" style="margin-top:6px">
+            <?php foreach ($iv['rows'] as $rw): ?>
+                <div class="pol-fac"><?= $rw['met'] ? '✅' : '▫️' ?> <?= $h($rw['label']) ?></div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- CAREER CROSS-CHECK: does the career profile point to politics? -->
     <?php $cf = $po['career_fit'] ?? null; if ($cf !== null && !empty($cf['known'])):
         $cfBg = ['pos' => '#f0fdf4', 'info' => '#fffbeb', 'neg' => '#fef2f2'][$cf['tone']] ?? '#f8fafc';

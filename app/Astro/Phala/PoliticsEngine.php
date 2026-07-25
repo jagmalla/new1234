@@ -188,12 +188,14 @@ final class PoliticsEngine
         $success = self::successCheck($ctx, $bala, $navamsa, $dashamsha);
         $remedies = self::remedies($ctx, $planets);
         $careerFit = self::careerFit($career);
-        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability, $careerFit);
+        $interest = self::interest($ctx);
+        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability, $careerFit, $interest);
 
         return [
             'ok' => true,
             'lagna_hi' => self::signHi($asc),
             'career_fit' => $careerFit,
+            'interest' => $interest,
             'identify' => $identify,
             'key_planets' => $planets,
             'capability' => $capability,
@@ -1233,6 +1235,38 @@ final class PoliticsEngine
     // ---------------------------------------------------------- conclusion
 
     /**
+     * रुचि/झुकाव — क्या व्यक्ति स्वभावतः राजनीति की ओर आकर्षित है? (interest, not
+     * ability). Mind/desire markers: Rahu (power-craving) on lagna/Moon/10th,
+     * Sun (authority-desire), 5th-lord (inclination) tied to political houses,
+     * Moon (mind) drawn to Sun/Rahu/10th, lagna/lagnesh in the public houses.
+     */
+    private static function interest(array $ctx): array
+    {
+        $rows = []; $pts = 0; $max = 0;
+        $add = static function (string $label, bool $met, int $w) use (&$rows, &$pts, &$max): void {
+            $max += $w; if ($met) { $pts += $w; } $rows[] = ['label' => $label, 'met' => $met];
+        };
+        $h = $ctx['house'];
+        $rahuH = (int) ($h['Rahu'] ?? 0); $sunH = (int) ($h['Sun'] ?? 0); $moonH = (int) ($h['Moon'] ?? 0);
+        $add('राहु (सत्ता/प्रसिद्धि-लालसा) का लग्न/चन्द्र/10वें से संबंध',
+            in_array($rahuH, [1, 10, 11], true) || ($rahuH !== 0 && $rahuH === $moonH) || self::linked($ctx, 'Rahu', 10), 3);
+        $add('सूर्य (अधिकार-इच्छा) बली व लग्न/10वें से जुड़ा',
+            self::isStrong($ctx, 'Sun') && (in_array($sunH, [1, 10, 11], true) || self::linked($ctx, 'Sun', 1) || self::linked($ctx, 'Sun', 10)), 2);
+        $add('पंचमेश (रुचि-भाव) का 10/11 या सत्ता-ग्रह से संबंध',
+            self::connect($ctx, $ctx['L5'], $ctx['L10']) || self::connect($ctx, $ctx['L5'], $ctx['L11'])
+            || self::linked($ctx, $ctx['L5'], 10) || self::connect($ctx, $ctx['L5'], 'Sun') || self::connect($ctx, $ctx['L5'], 'Rahu'), 3);
+        $add('चन्द्र (मन) का सूर्य/राहु/10वें से संबंध',
+            in_array($moonH, [10, 11], true) || ($moonH !== 0 && ($moonH === $sunH || $moonH === $rahuH)) || self::linked($ctx, 'Moon', 10), 2);
+        $add('लग्न/लग्नेश का 10/11/6 (सार्वजनिक-भूमिका) से संबंध',
+            in_array((int) ($h[$ctx['L1']] ?? 0), [10, 11, 6], true) || self::connect($ctx, $ctx['L1'], $ctx['L10']) || self::connect($ctx, $ctx['L1'], $ctx['L11']), 2);
+
+        if ($pts >= 8) { $v = 'राजनीति/सार्वजनिक-जीवन में रुचि प्रबल — व्यक्ति स्वभावतः सत्ता/जन-भूमिका की ओर आकर्षित।'; $tone = 'pos'; $lvl = 'high'; }
+        elseif ($pts >= 4) { $v = 'राजनीति में मध्यम रुचि — परिस्थिति/संगति अनुसार झुकाव बन सकता है।'; $tone = 'info'; $lvl = 'medium'; }
+        else { $v = 'राजनीति में स्वाभाविक रुचि कम — मन का झुकाव प्रायः अन्य क्षेत्र में; राजनीति-योग हों भी तो भीतरी प्रेरणा कम।'; $tone = 'neg'; $lvl = 'low'; }
+        return ['score' => $pts, 'max' => $max, 'tone' => $tone, 'level' => $lvl, 'verdict' => $v, 'rows' => $rows];
+    }
+
+    /**
      * करियर-दिशा राजनीति का समर्थन करती है? — cross-check against the general
      * Career (नौकरी·कार्य·व्यवसाय) analysis. If the person's core career
      * significators point away from authority/government, politics is at best a
@@ -1273,7 +1307,7 @@ final class PoliticsEngine
             'verdict' => '⚠️ करियर-दिशा मुख्यतः ' . $topHi . ' की ओर है (सत्ता/सरकार-कारक ग्रह प्रमुख नहीं) — राजनीति यहाँ गौण सम्भावना है। राजनीति-योग हों भी तो व्यवहारिक झुकाव व स्थायी सफलता प्रायः अन्य क्षेत्र में; राजनीति चुनें तो असाधारण परिश्रम आवश्यक।'];
     }
 
-    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga, array $capability, array $careerFit = []): array
+    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga, array $capability, array $careerFit = [], array $interest = []): array
     {
         // trividha (three-source) confirmation: chart-yog, dasha, gochar
         $chartOk = $identify['is_politician'];
@@ -1282,6 +1316,9 @@ final class PoliticsEngine
         $conf = (int) $chartOk + (int) $dashaOk + (int) $gocharOk;
 
         $lines = [];
+        if (!empty($interest)) {
+            $lines[] = 'रुचि/झुकाव: ' . $interest['verdict'] . ' (' . $interest['score'] . '/' . $interest['max'] . ')';
+        }
         if (!empty($careerFit['known'])) {
             $lines[] = 'करियर-दिशा जाँच: ' . $careerFit['verdict'];
         }
