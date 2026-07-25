@@ -64,15 +64,17 @@ final class Auspiciousness
         [$bandWord, $col] = self::band($score);
         $word = $label !== '' ? $label : $bandWord;
         $wordEsc = htmlspecialchars($word, ENT_QUOTES, 'UTF-8');
-        $left = 'calc(' . $score . '% - 7px)';
-        return '<div style="margin:7px 0 3px">'
-            . '<div style="display:flex;justify-content:space-between;font-size:.72rem;font-weight:700;margin-bottom:3px">'
-            . '<span style="color:#6b7280">🎯 शुभता-मापक</span>'
-            . '<span style="color:' . $col . '">' . $wordEsc . ' · ' . $score . '%</span></div>'
-            . '<div style="position:relative;height:9px;border-radius:999px;'
+        $left = 'calc(' . $score . '% - 11px)';   // half the 22px marker
+        return '<div style="margin:8px 0 4px">'
+            . '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+            . '<span style="font-size:.74rem;font-weight:700;color:#6b7280">🎯 शुभता-मापक</span>'
+            . '<span style="font-size:.86rem;font-weight:800;color:' . $col . ';background:' . $col . '22;'
+            . 'border:1.5px solid ' . $col . '66;border-radius:999px;padding:2px 12px;white-space:nowrap">'
+            . $wordEsc . ' · ' . $score . '%</span></div>'
+            . '<div style="position:relative;height:11px;border-radius:999px;'
             . 'background:linear-gradient(90deg,#dc2626 0%,#f59e0b 42%,#84cc16 68%,#16a34a 100%)">'
-            . '<div style="position:absolute;top:-3px;left:' . $left . ';width:14px;height:14px;border-radius:50%;'
-            . 'background:#fff;border:3px solid ' . $col . ';box-shadow:0 1px 3px rgba(0,0,0,.35)"></div>'
+            . '<div style="position:absolute;top:-6px;left:' . $left . ';width:22px;height:22px;border-radius:50%;'
+            . 'background:#fff;border:5px solid ' . $col . ';box-shadow:0 2px 5px rgba(0,0,0,.4)"></div>'
             . '</div></div>';
     }
 }

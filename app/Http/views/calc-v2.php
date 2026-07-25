@@ -60,6 +60,38 @@ $grahaHi = [
 ];
 $pobTop = $in['place'] !== '' ? $in['place'] : ($in['latIn'] . ', ' . $in['lonIn']);
 $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
+
+/**
+ * 🪪 Native info bar — a slim professional strip shown at the TOP of each
+ * prediction section (D1 · Gochar · Varshaphal · Muhurat) so the basic birth
+ * context is always visible in one clean row instead of scattered above the
+ * predictions. $accent tints the section-title chip.
+ */
+$nativeBar = static function (string $title, string $accent = '#7c3aed') use ($in, $chart, $rashiHi, $pobTop, $h): void {
+    if ($chart === null) { return; }
+    $lag = (string) ($chart['ascendant']['sign'] ?? '');
+    $moon = (string) ($chart['planets']['Moon']['sign'] ?? '');
+    $nak = (string) ($chart['planets']['Moon']['nakshatra']['name'] ?? '');
+    $pada = (int) ($chart['planets']['Moon']['nakshatra']['pada'] ?? 0);
+    $item = static function (string $ic, string $label, string $val) use ($h): string {
+        if ($val === '') { return ''; }
+        return '<span class="nbar-item"><span class="nbar-ic">' . $ic . '</span>'
+            . '<span class="nbar-kv"><span class="nbar-l">' . $h($label) . '</span>'
+            . '<b class="nbar-v">' . $h($val) . '</b></span></span>';
+    };
+    ?>
+    <div class="nbar" style="--nbar-accent:<?= $accent ?>">
+        <span class="nbar-title"><?= $title /* trusted emoji+text */ ?></span>
+        <div class="nbar-items">
+            <?= $item('👤', 'नाम', $in['name'] !== '' ? $in['name'] : '—') ?>
+            <?= $item('📅', 'जन्म', trim($in['date'] . ' · ' . $in['time'])) ?>
+            <?= $item('📍', 'स्थान', $pobTop) ?>
+            <?= $item('↗️', 'लग्न', ($rashiHi[$lag] ?? $lag)) ?>
+            <?= $item('🌙', 'राशि', ($rashiHi[$moon] ?? $moon)) ?>
+            <?= $item('⭐', 'नक्षत्र', $nak . ($pada ? ' पाद ' . $pada : '')) ?>
+        </div>
+    </div>
+<?php };
 ?>
 <!doctype html>
 <html lang="en">
@@ -157,6 +189,26 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         /* ---- Overview tiles (colourful, larger; birth info included) ---- */
         /* All 8 tiles on ONE row on wide screens; graceful wrap below. */
+        /* 🪪 Native info bar — slim professional strip atop each prediction section. */
+        .nbar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+            background: linear-gradient(180deg, #ffffff, #f7f8fb);
+            border: 1px solid var(--line, #e5e7eb); border-left: 4px solid var(--nbar-accent, #7c3aed);
+            border-radius: 12px; padding: 9px 14px; box-shadow: 0 1px 2px rgba(16,24,40,.05); margin-bottom: 4px; }
+        .nbar-title { font-weight: 800; font-size: .92rem; color: var(--nbar-accent, #7c3aed);
+            white-space: nowrap; letter-spacing: .01em; }
+        .nbar-items { display: flex; align-items: center; gap: 8px 8px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+        .nbar-item { display: inline-flex; align-items: center; gap: 6px;
+            background: #fff; border: 1px solid #eceef2; border-radius: 999px; padding: 4px 11px; }
+        .nbar-ic { font-size: .9rem; line-height: 1; }
+        .nbar-kv { display: inline-flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+        .nbar-l { font-size: .62rem; font-weight: 700; color: #94a3b8; letter-spacing: .03em; text-transform: uppercase; }
+        .nbar-v { font-size: .82rem; color: #1f2937; font-weight: 700; white-space: nowrap;
+            max-width: 26ch; overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 699px) {
+            .nbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px 10px; }
+            .nbar-items { flex-wrap: nowrap; }
+            .nbar-title { position: sticky; left: 0; }
+        }
         .ov-tiles { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; }
         @media (max-width: 1200px) { .ov-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
         @media (max-width: 699px) { .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -1874,6 +1926,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         <!-- ============ ग्रह स्थिति (full-width section) ============ -->
         <div id="sec-grah" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+    <?php $nativeBar('📜 जन्म कुंडली / D1 Chart', '#1d4ed8'); ?>
     <!-- Native (birth) summary: shown in both views, below the toggle buttons. -->
     <?php
         $pob = $in['place'] !== '' ? $in['place'] : ($in['latIn'] . ', ' . $in['lonIn']);
@@ -2073,6 +2126,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         <!-- ============ गोचर (full-width section) ============ -->
         <div id="sec-gochar" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+        <?php $nativeBar('🌌 गोचर / Transit', '#0d9488'); ?>
         <!-- Gochar calculation details (defaults to now + IP location) -->
         <div id="card-gocharcalc" class="bg-white rounded-lg shadow p-4">
             <h2 class="font-semibold mb-3 text-gray-700">Gochar Calculation Details</h2>
@@ -2143,6 +2197,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         <!-- ============ मुहूर्त (Mahurat) — dedicated transit+muhurat page ======= -->
         <div id="sec-muhurat" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+            <?php $nativeBar('🕉️ मुहूर्त / Muhurat', '#b45309'); ?>
             <!-- Gochar calculation details (change the transit date/time/place;
                  the muhurat prediction below re-computes with it). -->
             <div class="bg-white rounded-lg shadow p-4">
@@ -2189,6 +2244,7 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
 
         <!-- ============ वर्ष कुंडली (full-width section) ============ -->
         <div id="sec-varsha" class="l2-section l2-full hidden space-y-4 md:space-y-6">
+            <?php $nativeBar('🎯 वर्षफल / Varshaphal', '#c026d3'); ?>
         <!-- Varshaphal year selection + summary details -->
         <div id="card-vpbox" class="bg-white rounded-lg shadow p-4">
             <h2 class="font-semibold mb-3 text-gray-700">Varshaphal
