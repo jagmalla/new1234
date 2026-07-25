@@ -181,7 +181,7 @@ final class PoliticsEngine
         $dasha = self::dashaSection($ctx, $moonLon, $birthJd, $nowJd, $tz, $yoga);
         $gochar = self::gochar($ctx, $engine, $nowJd);
         $varsha = self::varshaphal($vp, $ctx);
-        $level = self::level($ctx, $yoga, $navamsa, $dashamsha, $bala, $dasha);
+        $level = self::level($ctx, $yoga, $navamsa, $dashamsha, $bala, $dasha, $identify, $capability);
         $field = self::field($ctx);
         $promotion = self::promotion($ctx, $dasha, $gochar, $varsha);
         $success = self::successCheck($ctx, $bala, $navamsa, $dashamsha);
@@ -1046,7 +1046,7 @@ final class PoliticsEngine
 
     // ---------------------------------------------------------- §14 level
 
-    private static function level(array $ctx, array $yoga, array $navamsa, ?array $d10, array $bala, array $dasha): array
+    private static function level(array $ctx, array $yoga, array $navamsa, ?array $d10, array $bala, array $dasha, array $identify = [], array $capability = []): array
     {
         $L10 = $ctx['L10']; $L11 = $ctx['L11']; $L6 = $ctx['L6'];
         $f = [];
@@ -1070,33 +1070,65 @@ final class PoliticsEngine
         $add('नीचभंग राजयोग उपस्थित', $yoga['neechbhanga'] !== [], 2);
         $add('25-55 आयु में योगकारक दशा', ($dasha['has'] ?? false) && ($dasha['cur_active'] ?? false) && ($ctx['age'] !== null && $ctx['age'] >= 22 && $ctx['age'] <= 60), 2);
 
+        // ---- checklist subtotal (the 17 fixed yoga factors above) ----
         $score = 0; $max = 0;
         foreach ($f as $x) { $max += $x['pts']; if ($x['met']) { $score += $x['pts']; } }
 
-        // level band (§14.3)
-        if ($score < 10) {
-            $band = 'worker'; $label = 'कार्यकर्ता / पार्टी सदस्य';
-            $titles = 'पार्टी कार्यकर्ता, स्थानीय पदाधिकारी';
-        } elseif ($score <= 18) {
-            $band = 'local'; $label = 'स्थानीय स्तर';
-            $titles = 'वार्ड सदस्य, पंचायत सदस्य, सरपंच, पार्षद';
-        } elseif ($score <= 26) {
-            $band = 'district'; $label = 'जिला / नगर स्तर';
-            $titles = 'महापौर, जिला अध्यक्ष, नगर प्रमुख';
-        } elseif ($score <= 33) {
-            $band = 'state'; $label = 'राज्य स्तर';
-            $titles = 'विधायक (MLA), राज्य मंत्री';
-        } elseif ($score <= 40) {
-            $band = 'national'; $label = 'राष्ट्रीय स्तर';
-            $titles = 'सांसद (MP), केन्द्रीय मंत्री';
-        } else {
-            $band = 'supreme'; $label = 'सर्वोच्च स्तर की सम्भावना';
-            $titles = 'मुख्यमंत्री, राज्यपाल, प्रधानमंत्री/राष्ट्रपति (अत्यंत दुर्लभ — सावधानी से)';
-        }
+        // ---- high-level signal bonuses (§14.3 refinement) ----
+        // A person does NOT need every yoga to reach the top; what most strongly
+        // marks a HIGH-level politician is (a) how many of the 8 identification
+        // rules they pass, (b) the capability index, and (c) the strength/number
+        // of raj-yogas. These were previously ignored by the level score, which
+        // under-rated genuinely strong charts. Fold them in.
+        $rulesMet = (int) ($identify['met'] ?? 0);
+        $capIndex = (int) ($capability['index'] ?? 0);
+        $bigYogas = (int) ($yoga['raj_count'] ?? 0)
+            + count($yoga['mahapurusha'] ?? []) + count($yoga['viparita'] ?? [])
+            + count($yoga['neechbhanga'] ?? []) + ($yoga['gajakesari'] ? 1 : 0)
+            + ($yoga['dharma_karma'] ? 1 : 0) + ($yoga['chatussagara'] ? 1 : 0);
+        $bonusRules = max(0, $rulesMet - 4) * 3;                                   // 0..12 (rewards 5+ rules)
+        $bonusCap = $capIndex >= 70 ? 4 : ($capIndex >= 60 ? 2 : 0);              // 0..4 (only genuinely high)
+        $bonusRaj = min(6, $bigYogas);                                            // 0..6
+        $f[] = ['label' => 'राजनीति-योग नियम उत्तीर्ण (' . $rulesMet . '/8)', 'met' => $bonusRules > 0, 'pts' => $bonusRules];
+        $f[] = ['label' => 'राजनीतिक क्षमता-सूचकांक (' . $capIndex . '/100)', 'met' => $bonusCap > 0, 'pts' => $bonusCap];
+        $f[] = ['label' => 'राजयोग-समूह की प्रबलता', 'met' => $bonusRaj > 0, 'pts' => $bonusRaj];
+        $score += $bonusRules + $bonusCap + $bonusRaj;
+        $max += 12 + 4 + 6;
+
+        // ---- score → band (combined score, max ~68) ----
+        if ($score < 7) { $band = 'worker'; }
+        elseif ($score <= 13) { $band = 'local'; }
+        elseif ($score <= 19) { $band = 'district'; }
+        elseif ($score <= 24) { $band = 'state'; }
+        elseif ($score <= 37) { $band = 'national'; }
+        else { $band = 'supreme'; }
+
+        // ---- mild qualification floor: a chart that clearly qualifies as a
+        // politician should not be labelled at the very bottom. Kept mild so a
+        // thin checklist isn't over-inflated by rule-count alone. ----
+        $order = ['worker' => 0, 'local' => 1, 'district' => 2, 'state' => 3, 'national' => 4, 'supreme' => 5];
+        $rev = array_flip($order);
+        $bi = $order[$band];
+        if ($rulesMet >= 6) { $bi = max($bi, 3); }        // ≥6/8 rules → state floor
+        elseif ($rulesMet >= 5) { $bi = max($bi, 2); }    // 5/8 → district floor
+        // supreme possibility — exceptional, strongly-qualified charts only
+        if ($score >= 38 || ($rulesMet >= 7 && $capIndex >= 62 && $bonusRaj >= 4 && $score >= 32)) { $bi = 5; }
+        $band = $rev[$bi];
+
+        $labels = [
+            'worker' => ['कार्यकर्ता / पार्टी सदस्य', 'पार्टी कार्यकर्ता, स्थानीय पदाधिकारी'],
+            'local' => ['स्थानीय स्तर', 'वार्ड सदस्य, पंचायत सदस्य, सरपंच, पार्षद'],
+            'district' => ['जिला / नगर स्तर', 'महापौर, जिला अध्यक्ष, नगर प्रमुख'],
+            'state' => ['राज्य स्तर', 'विधायक (MLA), राज्य मंत्री'],
+            'national' => ['राष्ट्रीय स्तर', 'सांसद (MP), केन्द्रीय मंत्री'],
+            'supreme' => ['सर्वोच्च स्तर की सम्भावना', 'मुख्यमंत्री, राज्यपाल, प्रधानमंत्री/राष्ट्रपति (अत्यंत दुर्लभ — सावधानी से)'],
+        ];
+        [$label, $titles] = $labels[$band];
+
         return [
             'factors' => $f, 'score' => $score, 'max' => $max,
             'band' => $band, 'label' => $label, 'titles' => $titles,
-            'note' => 'यह अंक-आधारित स्तर केवल तुलना/मार्गदर्शन हेतु है (शास्त्र §14.3)। अवसर, परिश्रम व सामूहिक-कर्म की भी भूमिका है — अति-आशावादी निष्कर्ष न लें।',
+            'note' => 'स्तर = यौगिक-चेकलिस्ट + राजनीति-योग नियम-संख्या + क्षमता-सूचकांक + राजयोग-प्रबलता। यह तुलना/मार्गदर्शन हेतु है (शास्त्र §14.3); अवसर, परिश्रम व सामूहिक-कर्म भी निर्णायक — अति-आशावादी/निराशावादी निष्कर्ष न लें।',
         ];
     }
 
