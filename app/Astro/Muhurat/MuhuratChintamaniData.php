@@ -163,6 +163,13 @@ final class MuhuratChintamaniData
     // tithi-in-paksha 1..15; good_vaar/bad_vaar = weekday index 0..6.
 
     public const SANSKARA = [
+        'seemantonnayan' => [
+            'emoji' => '🤰', 'label' => 'सीमन्तोन्नयन', 'rule' => 'SN-002',
+            'nak' => [4, 6, 7, 12, 16, 18, 21], 'sanjna' => ['मृदु', 'चर', 'ध्रुव'],
+            'bad_tithi' => [4, 9, 14, 15], 'good_tithi' => [], 'good_vaar' => [1, 3, 4, 5], 'bad_vaar' => [0, 2, 6],
+            'note' => 'गर्भ के 4/6/8 (सम) मास में · पुंसवन के पश्चात् · चर/मृदु व पुंवाचक नक्षत्र।',
+            'prescription' => 'मृगशिरा/पुनर्वसु/पुष्य/हस्त/अनुराधा/मूल/श्रवण या मृदु/चर/ध्रुव नक्षत्र · रिक्ता छोड़ · सोम/बुध/गुरु/शुक्र वार।',
+        ],
         'namkaran' => [
             'emoji' => '🍼', 'label' => 'नामकरण / जातकर्म', 'rule' => 'SN-003',
             'nak' => [], 'sanjna' => ['मृदु', 'ध्रुव', 'क्षिप्र'],
@@ -363,4 +370,29 @@ final class MuhuratChintamaniData
     public const PRATISHTHA_BAD_TITHI = [4, 9, 14, 15];
     /** प्रतिष्ठा-विहित मास (उत्तरायण-अनुकूल; मलमास त्याज्य). */
     public const PRATISHTHA_GOOD_MAAS = ['माघ', 'फाल्गुन', 'वैशाख', 'ज्येष्ठ', 'आषाढ़'];
+
+    // ===== युद्ध · कृषि · वाणिज्य/ऋण · रोग-चिकित्सा (Phase 9) =====
+
+    /** ⚔️ युद्ध बल-नक्षत्र — उग्र/तीक्ष्ण/चर (जय हेतु बल). */
+    public const YUDDHA_BAL_NAK = [1, 5, 8, 9, 10, 15, 17, 18, 19, 22, 23, 24];
+    /** युद्ध बल-वार — मंगल·रवि·शनि (क्रूर/उग्र). */
+    public const YUDDHA_BAL_VAAR = [0, 2, 6];
+
+    /** 🌾 कृषि (बीज-वपन) उर्वर नक्षत्र. */
+    public const KRISHI_NAK = [3, 4, 6, 7, 12, 13, 14, 16, 20, 21, 22, 23, 25, 26];
+    /** कृषि शुभ वार — सोम·बुध·गुरु·शुक्र·शनि (त्याज्य: रवि·मंगल अग्नि). */
+    public const KRISHI_VAAR = [1, 3, 4, 5, 6];
+    public const KRISHI_BAD_TITHI = [4, 9, 14, 15];
+
+    /** 💰 वाणिज्य/व्यापार-आरम्भ नक्षत्र — क्षिप्र/चर/लघु. */
+    public const VANIJYA_NAK = [0, 4, 6, 7, 12, 13, 14, 20, 21, 22, 23, 26];
+    /** वाणिज्य शुभ वार — सोम·बुध(वाणिज्य-कारक)·गुरु·शुक्र. */
+    public const VANIJYA_VAAR = [1, 3, 4, 5];
+    public const VANIJYA_BAD_TITHI = [4, 9, 14, 15];
+
+    /** 💊 चिकित्सा/औषध-आरम्भ वैद्य-नक्षत्र (अश्विनी·शतभिषा श्रेष्ठ). */
+    public const CHIKITSA_NAK = [0, 4, 6, 7, 12, 13, 16, 23, 26];
+    /** चिकित्सा शुभ वार — रवि·बुध·गुरु·शुक्र. */
+    public const CHIKITSA_VAAR = [0, 3, 4, 5];
+    public const CHIKITSA_BAD_TITHI = [4, 9, 14, 15];
 }

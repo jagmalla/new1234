@@ -30,6 +30,7 @@ $ya = $gp['yatra_muhurat'] ?? null;     // 🧳 Yatra Muhurat (Phase 5)
 $vz = $gp['vastu_muhurat'] ?? null;     // 🏗️ Vastu/Grihapravesh/Rajyabhishek (Phase 6)
 $av7 = $gp['agni_vivaha'] ?? null;      // 🔥 Agnyadhana/Vadhupravesh/Dviragamana (Phase 7)
 $yp = $gp['yatra_pratishtha'] ?? null;  // 🧭 Yatra-vistara / 🛕 Pratishtha (Phase 8)
+$km = $gp['karya_muhurat'] ?? null;     // ⚔️🌾💰💊 Yuddha/Krishi/Vanijya/Chikitsa (Phase 9)
 $sx = $gp['shatkarma'] ?? null;         // 📜 Abhichara/Shatkarma — study reference + self-test (Module B)
 /** Reusable renderer for a simple {grade,checks,bad,note} muhurat block. */
 $mcBlock = static function (array $d, string $title, string $accent) use ($h): void { ?>
@@ -405,6 +406,10 @@ if ($hasAny):
                     <option value="dviragamana">🔄 द्विरागमन (गौना)</option>
                     <option value="yatravistara">🧭 यात्रा-विस्तार (शूल-परिहार · शकुन)</option>
                     <option value="pratishtha">🛕 प्रतिष्ठा (देव-मूर्ति स्थापन)</option>
+                    <option value="yuddha">⚔️ युद्ध / प्रतिस्पर्धा</option>
+                    <option value="krishi">🌾 कृषि (बीज-वपन)</option>
+                    <option value="vanijya">💰 वाणिज्य / ऋण</option>
+                    <option value="chikitsa">💊 रोग / चिकित्सा-आरम्भ</option>
                     <option value="shatkarma">📜 अभिचार / षट्कर्म (शास्त्र-अध्ययन)</option>
                 </select>
             </div>
@@ -645,6 +650,26 @@ if ($hasAny):
             <div class="mc-panel hidden" data-mc="pratishtha">
                 <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: चान्द्रमास <b><?= $h($yp['maasa']) ?></b> · <b><?= $yp['uttarayan'] ? 'उत्तरायण' : 'दक्षिणायन' ?></b> · नक्षत्र <b><?= $h($yp['nak']) ?></b> · तिथि <b><?= (int) $yp['tithi'] ?></b> · वार <b><?= $h($yp['vaar']) ?></b></div>
                 <?php $mcBlock($yp['pratishtha'], '🛕 प्रतिष्ठा — देव-मूर्ति स्थापन', '#b45309'); ?>
+            </div>
+            <?php endif; ?>
+
+            <?php // ---- ⚔️ युद्ध · 🌾 कृषि · 💰 वाणिज्य/ऋण · 💊 चिकित्सा (Phase 9) ----
+            if ($km !== null && !empty($km['ok'])):
+                $kmHead = function () use ($km, $h) { ?>
+                    <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: नक्षत्र <b><?= $h($km['nak']) ?></b> · तिथि <b><?= (int) $km['tithi'] ?></b> · पक्ष <b><?= $h($km['paksha']) ?></b> · वार <b><?= $h($km['vaar']) ?></b></div>
+                <?php }; ?>
+            <div class="mc-panel hidden" data-mc="yuddha">
+                <?php $kmHead(); $mcBlock($km['yuddha'], '⚔️ युद्ध / प्रतिस्पर्धा — बल-मुहूर्त', '#dc2626'); ?>
+                <div class="mc-chitta">🧭 कूच-दिशा का <b>दिशा-शूल</b> यात्रा-विस्तार श्रेणी में देखें; नायक की लग्न-बल व मंगल-बल भी आवश्यक।</div>
+            </div>
+            <div class="mc-panel hidden" data-mc="krishi">
+                <?php $kmHead(); $mcBlock($km['krishi'], '🌾 कृषि — बीज-वपन / रोपण', '#16a34a'); ?>
+            </div>
+            <div class="mc-panel hidden" data-mc="vanijya">
+                <?php $kmHead(); $mcBlock($km['vanijya'], '💰 वाणिज्य / ऋण', '#ca8a04'); ?>
+            </div>
+            <div class="mc-panel hidden" data-mc="chikitsa">
+                <?php $kmHead(); $mcBlock($km['chikitsa'], '💊 रोग / चिकित्सा-आरम्भ', '#0891b2'); ?>
             </div>
             <?php endif; ?>
 

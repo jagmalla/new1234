@@ -291,6 +291,19 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- ⚔️ युद्ध · कृषि · वाणिज्य · चिकित्सा (Phase 9) ---------
+        $karyaMuhurat = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdK = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonK2 = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonK2 = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $karyaMuhurat = \AutoBusiness\Astro\Muhurat\KaryaMuhuratEngine::computeAll($sunLonK2, $moonLonK2, (int) $wdK);
+            } catch (\Throwable $e) {
+                $karyaMuhurat = null;
+            }
+        }
+
         // -------- 📜 अभिचार / षट्कर्म — अध्ययन-सन्दर्भ (Study module) ---------
         $shatkarma = null;
         if ($weekday !== null || $transitJd !== null) {
@@ -320,6 +333,7 @@ final class GocharPhalEngine
             'vastu_muhurat' => $vastuMuhurat,
             'agni_vivaha' => $agniVivaha,
             'yatra_pratishtha' => $yatraPratishtha,
+            'karya_muhurat' => $karyaMuhurat,
             'shatkarma' => $shatkarma,
         ];
     }
