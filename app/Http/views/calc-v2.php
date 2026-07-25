@@ -1832,6 +1832,17 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
              form, shown beside the menu like the Gochar Calculation card ======= -->
         <div id="sec-profile" class="l2-section l2-full hidden space-y-4 md:space-y-6">
             <?php require __DIR__ . '/_birth_form.php'; ?>
+            <!-- आज का मुहूर्त — शुभता संकेत-पट्टी (profile) -->
+            <?php $pmu = $view['today_muhurat'] ?? null; if ($pmu !== null && !empty($pmu['ok'])):
+                $pmuScore = \AutoBusiness\Astro\Muhurat\Auspiciousness::score((string) $pmu['tone'], $pmu['dosha'] ?? []); ?>
+            <div class="bg-white rounded-lg shadow p-4">
+                <div class="font-semibold text-gray-700 mb-1">🎯 आज का मुहूर्त — पंचांग-शुद्धि</div>
+                <div class="text-sm" style="font-weight:600;color:#374151"><?= $h((string) $pmu['verdict']) ?></div>
+                <?= \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml($pmuScore, (string) $pmu['grade']) ?>
+                <div class="text-xs text-gray-500" style="margin-top:2px">वार <b><?= $h((string) ($pmu['panchang']['vaar'] ?? '')) ?></b> · नक्षत्र <b><?= $h((string) ($pmu['panchang']['nakshatra'] ?? '')) ?></b> · तिथि <b><?= $h((string) ($pmu['panchang']['tithi'] ?? '')) ?></b> · संज्ञा <b><?= $h((string) ($pmu['panchang']['sanjna'] ?? '')) ?></b></div>
+                <div class="text-xs text-gray-400" style="margin-top:3px">श्रेणी-वार (विवाह·गृहप्रवेश·यात्रा आदि) पूर्ण मुहूर्त हेतु <b>मुहूर्त</b> मेनू खोलें।</div>
+            </div>
+            <?php endif; ?>
             <!-- आगामी गोचर summary — today's transit, below the birth-details form. -->
             <div class="bg-white rounded-lg shadow p-4">
                 <?php $ug = $view['upcoming_gochar'] ?? null; require __DIR__ . '/_upcoming_gochar.php'; ?>
@@ -3775,7 +3786,57 @@ $phalaLang = (string) ($view['phala']['lang'] ?? 'hi');
           + (match ? '✅ आपका उत्तर सही — मेल हुआ!' : '❌ मेल नहीं — पुनः अध्ययन करें।') + '</span>';
         return;
       }
+      // 🔍 मुहूर्त तिथि-खोज — scan a date range for the chosen muhurat type
+      var go = e.target.closest('#ds-go');
+      if (go) {
+        var panel = go.closest('[data-mc="datesearch"]'); if (!panel) { return; }
+        var from = (panel.querySelector('#ds-from') || {}).value || '';
+        var to = (panel.querySelector('#ds-to') || {}).value || '';
+        var type = (panel.querySelector('#ds-type') || {}).value || 'general';
+        var res = panel.querySelector('#ds-results');
+        if (!from || !to) { res.innerHTML = '<div class="ds-none">कृपया दोनों तिथियाँ भरें (DD-MM-YYYY)।</div>'; return; }
+        var b = window.AB_BIRTH || {};
+        var q = new URLSearchParams({ from: from, to: to, type: type,
+          tz: (b.tz != null ? b.tz : (window.AB_TZ != null ? window.AB_TZ : '5:30')),
+          ayanamsa: b.ayanamsa || 'lahiri' });
+        go.disabled = true; go.textContent = 'खोज रहे…';
+        res.innerHTML = '<div style="color:#6b7280;font-size:.85rem;padding:8px">⏳ गणना हो रही है…</div>';
+        fetch('/calc/muhuratScan?' + q.toString(), { headers: { 'Accept': 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { go.disabled = false; go.textContent = '🔍 शुभ दिन खोजें'; renderDsResults(d, res); })
+          .catch(function () { go.disabled = false; go.textContent = '🔍 शुभ दिन खोजें'; res.innerHTML = '<div class="ds-none">त्रुटि — पुनः प्रयास करें।</div>'; });
+        return;
+      }
     });
+
+    function dsEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+    function renderDsResults(d, res) {
+      if (!d || !d.ok) { res.innerHTML = '<div class="ds-none">⚠️ ' + dsEsc((d && d.error) || 'तिथि-सीमा जाँचें।') + '</div>'; return; }
+      var tc = { pos: 'g', info: 'y', neg: 'r' };
+      var h = '<div class="ds-tally">'
+        + '<span class="ds-pill g">🟢 शुभ: ' + (d.count['शुभ'] || 0) + '</span>'
+        + '<span class="ds-pill y">🟡 मध्यम: ' + (d.count['मध्यम'] || 0) + '</span>'
+        + '<span class="ds-pill r">🔴 अशुभ: ' + (d.count['अशुभ'] || 0) + '</span>'
+        + '<span class="ds-pill n">' + d.scanned + ' दिन · ' + dsEsc(d.type_label) + '</span></div>';
+      if (d.capped) { h += '<div class="ds-note">⚠️ सीमा बड़ी — पहले ' + d.max_days + ' दिन जाँचे (कुल ' + d.total + ')। छोटी सीमा चुनें।</div>'; }
+      if (!d.best || !d.best.length) {
+        h += '<div class="ds-none">इस अवधि में कोई शुभ/मध्यम दिन नहीं मिला — दूसरी तिथि-सीमा आज़माएँ।</div>';
+      } else {
+        h += '<div style="font-weight:700;color:#6b21a8;margin:10px 0 6px">✅ शुभ / मध्यम दिन (' + d.best.length + ') — श्रेष्ठता-क्रम</div>';
+        d.best.forEach(function (x) {
+          var cl = tc[x.tone] || '';
+          h += '<div class="ds-day ' + cl + '"><div class="ds-dh">📅 ' + dsEsc(x.date) + ' <span class="ds-wd">' + dsEsc(x.weekday) + '</span> <span class="ds-gr ' + cl + '">' + dsEsc(x.grade) + '</span></div>' + (x.bar_html || '') + '<div class="ds-rs">' + dsEsc(x.reason) + '</div></div>';
+        });
+      }
+      h += '<details class="ds-more"><summary>📋 पूरी अवधि की तिथि-सूची (' + d.scanned + ')</summary>';
+      d.rows.forEach(function (x) {
+        var cl = tc[x.tone] || '';
+        h += '<div class="ds-day ' + cl + '" style="margin-top:6px"><div class="ds-dh">📅 ' + dsEsc(x.date) + ' <span class="ds-wd">' + dsEsc(x.weekday) + '</span> <span class="ds-gr ' + cl + '">' + dsEsc(x.grade) + ' · ' + x.score + '%</span></div><div class="ds-rs">' + dsEsc(x.reason) + '</div></div>';
+      });
+      h += '</details>';
+      h += '<div class="ds-note">📌 प्रत्येक दिन सूर्योदय-सन्निकट एक नमूने पर आधारित; शुभ दिन का सूक्ष्म लग्न-मुहूर्त पंचांग-समय से परिष्कृत करें।</div>';
+      res.innerHTML = h;
+    }
 
     document.querySelectorAll('#pred-topic-row .lk-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {

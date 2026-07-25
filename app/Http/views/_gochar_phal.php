@@ -32,11 +32,17 @@ $av7 = $gp['agni_vivaha'] ?? null;      // 🔥 Agnyadhana/Vadhupravesh/Dviragam
 $yp = $gp['yatra_pratishtha'] ?? null;  // 🧭 Yatra-vistara / 🛕 Pratishtha (Phase 8)
 $km = $gp['karya_muhurat'] ?? null;     // ⚔️🌾💰💊 Yuddha/Krishi/Vanijya/Chikitsa (Phase 9)
 $sx = $gp['shatkarma'] ?? null;         // 📜 Abhichara/Shatkarma — study reference + self-test (Module B)
+/** 🎯 शुभता संकेत-पट्टी — किसी भी {tone, bad[]} निर्णय के लिए। */
+$auspBar = static function (string $tone, array $doshas, string $grade): void {
+    $s = \AutoBusiness\Astro\Muhurat\Auspiciousness::score($tone, $doshas);
+    echo \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml($s, $grade);
+};
 /** Reusable renderer for a simple {grade,checks,bad,note} muhurat block. */
-$mcBlock = static function (array $d, string $title, string $accent) use ($h): void { ?>
+$mcBlock = static function (array $d, string $title, string $accent) use ($h, $auspBar): void { ?>
     <div class="mc-verdict" style="border-left-color:<?= $accent ?>;background:linear-gradient(180deg,#fdfdfb,#f8f6f0)">
         <h4><?= $title /* already-safe emoji+text */ ?> <span class="mc-grade mc-<?= $h($d['tone']) ?>"><?= $h($d['grade']) ?></span></h4>
         <div style="font-size:.9rem;font-weight:600"><?= $h($d['verdict']) ?></div>
+        <?php $auspBar($d['tone'], $d['bad'] ?? [], (string) $d['grade']); ?>
         <div class="mc-pgrid">
             <?php foreach ($d['checks'] as $c): ?><div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?></div><?php endforeach; ?>
         </div>
@@ -394,6 +400,7 @@ if ($hasAny):
                 <label for="mc-cat-select">🕉️ कार्य / श्रेणी चुनें</label>
                 <select id="mc-cat-select" class="mc-cat-select">
                     <option value="general">🗓️ सामान्य मुहूर्त (पंचांग-शुद्धि)</option>
+                    <option value="datesearch">🔍 तिथि-खोज (Date Search — शुभ दिन खोजें)</option>
                     <option value="personal">🙋 व्यक्तिगत मुहूर्त (आपकी कुण्डली से)</option>
                     <option value="vivaha">💍 विवाह मुहूर्त + गुण-मिलान</option>
                     <option value="sanskar">🧒 संस्कार (नामकरण·मुण्डन·उपनयन)</option>
@@ -421,6 +428,7 @@ if ($hasAny):
                     <h4>🗓️ सामान्य मुहूर्त — पंचांग-शुद्धि
                         <span class="mc-grade mc-<?= $h($gm['tone']) ?>"><?= $h($gm['grade']) ?></span></h4>
                     <div style="font-size:.9rem;font-weight:600"><?= $h($gm['verdict']) ?></div>
+                    <?php $auspBar($gm['tone'], $gm['dosha'] ?? [], (string) $gm['grade']); ?>
                     <div class="mc-pgrid">
                         <div class="mc-pi"><b>वार:</b> <?= $h($P['vaar']) ?></div>
                         <div class="mc-pi"><b>तिथि:</b> <?= $h($P['tithi']) ?> <span style="color:#854d0e">(<?= $h($P['tithi_grade']) ?>)</span></div>
@@ -446,6 +454,49 @@ if ($hasAny):
             </div>
             <?php endif; ?>
 
+            <?php // ---- 🔍 तिथि-खोज (Date Search — शुभ दिन खोजें, किसी भी प्रकार का) ---- ?>
+            <div class="mc-panel hidden" data-mc="datesearch">
+                <style>
+                .ds-form{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end;background:#faf5ff;border:1px solid #e9d5ff;border-radius:11px;padding:12px}
+                .ds-fld{display:flex;flex-direction:column;gap:3px}
+                .ds-fld label{font-size:.72rem;font-weight:700;color:#6b21a8}
+                .ds-fld input,.ds-fld select{border:1.5px solid #ddd6fe;border-radius:8px;padding:7px 10px;font-size:.85rem;font-family:inherit;background:#fff}
+                .ds-fld input{min-width:130px}.ds-fld select{max-width:220px}
+                .ds-btn{background:#7c3aed;color:#fff;border:0;border-radius:9px;padding:8px 18px;font-size:.86rem;font-weight:700;cursor:pointer}
+                .ds-btn:disabled{opacity:.5;cursor:default}
+                .ds-tally{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 4px}
+                .ds-pill{border-radius:999px;padding:3px 11px;font-size:.76rem;font-weight:700}
+                .ds-pill.g{background:#dcfce7;color:#166534}.ds-pill.y{background:#fef9c3;color:#854d0e}.ds-pill.r{background:#fee2e2;color:#991b1b}
+                .ds-pill.n{background:#eef2ff;color:#3730a3}
+                .ds-day{border:1px solid #eee;border-left:5px solid #9ca3af;border-radius:10px;padding:9px 12px;margin-bottom:8px;background:#fff}
+                .ds-day.g{border-left-color:#16a34a;background:linear-gradient(180deg,#f6fef9,#f0fdf4)}
+                .ds-day.y{border-left-color:#d97706;background:linear-gradient(180deg,#fffdf5,#fefce8)}
+                .ds-dh{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-weight:800;font-size:.94rem;color:#1f2937}
+                .ds-wd{font-size:.78rem;color:#6b7280;font-weight:600}
+                .ds-gr{font-size:.72rem;border-radius:999px;padding:2px 10px;font-weight:800}
+                .ds-gr.g{background:#dcfce7;color:#166534}.ds-gr.y{background:#fef9c3;color:#854d0e}.ds-gr.r{background:#fee2e2;color:#991b1b}
+                .ds-rs{font-size:.78rem;color:#6b7280;margin-top:1px}
+                .ds-none{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:11px;color:#991b1b;font-size:.84rem}
+                .ds-note{font-size:.74rem;color:#6b7280;margin-top:9px}
+                .ds-more summary{cursor:pointer;font-size:.8rem;font-weight:700;color:#6b21a8;margin-top:8px}
+                </style>
+                <div style="font-size:.82rem;color:#6b7280;margin-bottom:8px">📅 एक तिथि-सीमा व मुहूर्त-प्रकार चुनें — सिस्टम उस अवधि के प्रत्येक दिन की जाँच कर शुभता-मापक सहित शुभ दिन बताएगा।</div>
+                <div class="ds-form">
+                    <div class="ds-fld"><label for="ds-from">प्रारम्भ तिथि (DD-MM-YYYY)</label>
+                        <input id="ds-from" type="text" placeholder="01-12-2026" autocomplete="off"></div>
+                    <div class="ds-fld"><label for="ds-to">अन्तिम तिथि (DD-MM-YYYY)</label>
+                        <input id="ds-to" type="text" placeholder="31-03-2027" autocomplete="off"></div>
+                    <div class="ds-fld"><label for="ds-type">मुहूर्त-प्रकार</label>
+                        <select id="ds-type">
+                            <?php foreach (\AutoBusiness\Astro\Muhurat\MuhuratDateScanner::TYPES as $tk => $tl): ?>
+                                <option value="<?= $h($tk) ?>"><?= $h($tl) ?></option>
+                            <?php endforeach; ?>
+                        </select></div>
+                    <button id="ds-go" class="ds-btn" type="button">🔍 शुभ दिन खोजें</button>
+                </div>
+                <div id="ds-results" style="margin-top:6px"></div>
+            </div>
+
             <?php // ---- 🙋 व्यक्तिगत मुहूर्त (Phase 2) — from the D1 chart ----
             if ($pm !== null && !empty($pm['ok'])): ?>
             <div class="mc-panel hidden" data-mc="personal">
@@ -453,6 +504,7 @@ if ($hasAny):
                     <h4>🙋 व्यक्तिगत मुहूर्त — आपकी कुण्डली से
                         <span class="mc-grade mc-<?= $h($pm['tone']) ?>"><?= $h($pm['grade']) ?></span></h4>
                     <div style="font-size:.9rem;font-weight:600"><?= $h($pm['verdict']) ?></div>
+                    <?php $auspBar($pm['tone'], $pm['bad'] ?? [], (string) $pm['grade']); ?>
                     <div class="text-xs text-gray-500" style="margin:4px 0">जन्म-राशि: <b><?= $h($pm['janma_rashi']) ?></b> · जन्म-नक्षत्र: <b><?= $h($pm['janma_nak']) ?></b></div>
                     <div class="mc-pgrid">
                         <?php foreach ($pm['core'] as $c): ?>
@@ -496,6 +548,9 @@ if ($hasAny):
                         <h4><?= $rt['emoji'] ?> <?= $h($rt['label']) ?> <span style="font-size:.7rem;color:#a78bfa"><?= $h($rt['rule']) ?></span>
                             <span class="mc-grade mc-<?= $h($rt['tone']) ?>"><?= $h($rt['grade']) ?></span></h4>
                         <div style="font-size:.9rem;font-weight:600"><?= $h($rt['verdict']) ?></div>
+                        <?php $rtFail = 0; foreach ($rt['checks'] as $c) { if (empty($c['ok'])) { $rtFail++; } }
+                        echo \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml(
+                            \AutoBusiness\Astro\Muhurat\Auspiciousness::scoreByFails((string) $rt['tone'], $rtFail), (string) $rt['grade']); ?>
                         <div class="mc-pgrid">
                             <?php foreach ($rt['checks'] as $c): ?>
                                 <div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?> <?= $c['ok'] ? '✅' : '❌' ?></div>
@@ -517,6 +572,7 @@ if ($hasAny):
                     <h4>💍 विवाह मुहूर्त — तिथि-शुद्धि
                         <span class="mc-grade mc-<?= $h($vv['tone']) ?>"><?= $h($vv['grade']) ?></span></h4>
                     <div style="font-size:.9rem;font-weight:600"><?= $h($vv['verdict']) ?></div>
+                    <?php $auspBar($vv['tone'], $vv['bad'] ?? [], (string) $vv['grade']); ?>
                     <div class="mc-pgrid">
                         <?php foreach ($vv['checks'] as $c): ?>
                             <div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?> <?= $c['ok'] ? '✅' : '❌' ?></div>
@@ -572,6 +628,7 @@ if ($hasAny):
                     <div class="mc-verdict" style="border-left-color:#0d9488;background:linear-gradient(180deg,#f5fdfc,#ecfbf8)">
                         <h4>🧭 <?= $h($dd['dir']) ?> दिशा <span style="font-size:.72rem;color:#64748b">(स्वामी <?= $h($dd['swami']) ?><?= $dd['vahana'] ? ' · वाहन ' . $h($dd['vahana']) : '' ?>)</span>
                             <span class="mc-grade mc-<?= $h($dd['tone']) ?>"><?= $h($dd['grade']) ?></span></h4>
+                        <?php $auspBar($dd['tone'], $dd['issues'] ?? [], (string) $dd['grade']); ?>
                         <?php foreach ($dd['issues'] as $x): ?>
                             <div class="mc-line d"><b><?= $h($x['name']) ?></b> — <?= $h($x['why']) ?></div>
                         <?php endforeach; ?>

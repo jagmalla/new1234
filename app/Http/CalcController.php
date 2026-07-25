@@ -104,6 +104,16 @@ final class CalcController
             $upcomingGochar = $this->safe(static fn () => \AutoBusiness\Astro\Gochar\UpcomingGochar::compute(
                 $engine, $nowJd, $tz, (int) ($chart['planets']['Moon']['sign_index'] ?? 0)
             ), null);
+            // आज का सामान्य मुहूर्त (पंचांग-शुद्धि) — for the Today Consult + Profile
+            // signal bar. Computed from NOW's Sun/Moon (independent of the gochar
+            // date picker) so "आज" always means today.
+            $todayMuhurat = $this->safe(static function () use ($engine, $nowJd) {
+                $sun = $engine->planetSiderealLon('Sun', $nowJd);
+                $moon = $engine->planetSiderealLon('Moon', $nowJd);
+                $moonSign = (int) floor(fmod($moon + 360.0, 360.0) / 30.0) % 12;
+                $wd = ((int) floor($nowJd + 0.5) + 1) % 7;
+                return \AutoBusiness\Astro\Muhurat\GeneralMuhuratEngine::compute($sun, $moon, (int) $wd, $moonSign);
+            }, null);
 
             $vargas = $engine->vargaCharts($chart);
             // विदेश यात्रा व स्थायी निवास — computed foreign-settlement analysis
@@ -194,6 +204,7 @@ final class CalcController
             'chart' => $chart,
             'vp' => $vp,
             'gochar' => $gochar,
+            'today_muhurat' => $todayMuhurat ?? null,
             'vargas' => $vargas ?? null,
             'videsh' => $videsh ?? null,
             'santan' => $santan ?? null,
@@ -987,6 +998,38 @@ final class CalcController
         } catch (\Throwable $e) {
             http_response_code(400);
             echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 🔍 JSON endpoint — मुहूर्त तिथि-खोज: चुने प्रकार हेतु तिथि-सीमा में शुभ
+     * दिन खोजता है। पंचांग-आधारित (कुण्डली-निरपेक्ष)। AdminGuard-gated like show().
+     */
+    public function muhuratScanJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+        try {
+            $type = (string) ($_GET['type'] ?? 'general');
+            $tz = self::parseTz((string) ($_GET['tz'] ?? '5:30'));
+            $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
+            $from = self::parseDate((string) ($_GET['from'] ?? ''));
+            $to = self::parseDate((string) ($_GET['to'] ?? ''));
+            $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
+            $res = \AutoBusiness\Astro\Muhurat\MuhuratDateScanner::scan($engine, $type, $from, $to, $tz);
+            // पट्टी-HTML भी जोड़ें ताकि क्लाइंट सीधे दिखा सके।
+            if (!empty($res['ok'])) {
+                foreach (['rows', 'best'] as $k) {
+                    foreach ($res[$k] as &$row) {
+                        $row['bar_html'] = \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml((int) $row['score'], (string) $row['grade']);
+                    }
+                    unset($row);
+                }
+            }
+            echo json_encode($res, JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'तिथि-प्रारूप DD-MM-YYYY में दें।']);
         }
     }
 

@@ -34,6 +34,10 @@ try {
             (new CalcController())->gocharJson();
             break;
 
+        case 'GET calc/muhuratScan':
+            (new CalcController())->muhuratScanJson();
+            break;
+
         case 'GET calc/ping':
         case 'POST calc/ping':
             (new CalcController())->ping();

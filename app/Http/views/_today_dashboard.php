@@ -83,6 +83,21 @@ $tHead = 'font-size:.72rem;font-weight:700;color:#94a3b8;letter-spacing:.03em;ma
             <?php else: ?><div class="text-gray-400 italic text-sm">गोचर सारांश उपलब्ध नहीं</div><?php endif; ?>
         </div>
 
+        <!-- 2b. आज का मुहूर्त — शुभता संकेत-पट्टी -->
+        <?php $tmu = $view['today_muhurat'] ?? null; if ($tmu !== null && !empty($tmu['ok'])):
+            $tmuScore = \AutoBusiness\Astro\Muhurat\Auspiciousness::score((string) $tmu['tone'], $tmu['dosha'] ?? []); ?>
+        <div style="<?= $tileCss ?>">
+            <div style="<?= $tHead ?>">🎯 आज का मुहूर्त — पंचांग-शुद्धि</div>
+            <div class="text-sm" style="font-weight:600;color:#374151"><?= $h((string) $tmu['verdict']) ?></div>
+            <?= \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml($tmuScore, (string) $tmu['grade']) ?>
+            <div class="text-xs text-gray-500" style="margin-top:2px">वार <b><?= $h((string) ($tmu['panchang']['vaar'] ?? '')) ?></b> · नक्षत्र <b><?= $h((string) ($tmu['panchang']['nakshatra'] ?? '')) ?></b> · तिथि <b><?= $h((string) ($tmu['panchang']['tithi'] ?? '')) ?></b></div>
+            <?php $tmuTop = $tmu['shubh'][0] ?? ($tmu['dosha'][0] ?? null); if ($tmuTop !== null): ?>
+                <div class="text-xs" style="margin-top:3px;color:<?= empty($tmu['shubh']) ? '#b45309' : '#15803d' ?>"><?= empty($tmu['shubh']) ? '⚠️' : '✓' ?> <?= $h((string) $tmuTop['name']) ?></div>
+            <?php endif; ?>
+            <div class="text-xs text-gray-400" style="margin-top:3px">पूर्ण श्रेणी-वार मुहूर्त हेतु <b>मुहूर्त</b> मेनू देखें।</div>
+        </div>
+        <?php endif; ?>
+
         <!-- 3. वर्षफल — आज -->
         <div style="<?= $tileCss ?>">
             <div style="<?= $tHead ?>">🎯 वर्षफल — आज</div>
