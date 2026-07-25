@@ -114,7 +114,8 @@ final class PoliticsEngine
         float $tz = 0.0,
         ?\AutoBusiness\Astro\Calc\CalculationEngine $engine = null,
         ?array $birth = null,
-        ?array $vp = null
+        ?array $vp = null,
+        ?array $career = null
     ): array {
         if (empty($chart['planets']) || empty($chart['ascendant'])) {
             return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
@@ -186,11 +187,13 @@ final class PoliticsEngine
         $promotion = self::promotion($ctx, $dasha, $gochar, $varsha);
         $success = self::successCheck($ctx, $bala, $navamsa, $dashamsha);
         $remedies = self::remedies($ctx, $planets);
-        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability);
+        $careerFit = self::careerFit($career);
+        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability, $careerFit);
 
         return [
             'ok' => true,
             'lagna_hi' => self::signHi($asc),
+            'career_fit' => $careerFit,
             'identify' => $identify,
             'key_planets' => $planets,
             'capability' => $capability,
@@ -1229,7 +1232,48 @@ final class PoliticsEngine
 
     // ---------------------------------------------------------- conclusion
 
-    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga, array $capability): array
+    /**
+     * करियर-दिशा राजनीति का समर्थन करती है? — cross-check against the general
+     * Career (नौकरी·कार्य·व्यवसाय) analysis. If the person's core career
+     * significators point away from authority/government, politics is at best a
+     * secondary path — a strong politics-yoga alone then means little.
+     */
+    private static function careerFit(?array $career): array
+    {
+        $polSigs = ['Sun', 'Saturn', 'Rahu', 'Mars'];   // सत्ता/सरकार/जन/शक्ति कारक
+        if ($career === null || empty($career['ok'])) {
+            return ['known' => false, 'supports' => true, 'tone' => 'info', 'level' => 'unknown',
+                'top_hi' => '', 'fields' => '',
+                'verdict' => 'करियर-विश्लेषण अनुपलब्ध — राजनीति-योग स्वतंत्र रूप से देखे गए। पूर्ण निष्कर्ष हेतु "करियर" टैब भी देखें।'];
+        }
+        $prof = $career['profession'] ?? [];
+        $top = (array) ($prof['top'] ?? []);
+        $topHi = implode(', ', array_map(static fn ($p) => self::HI[$p] ?? $p, $top));
+        $fieldsArr = [];
+        foreach ((array) ($prof['fields'] ?? []) as $fd) { $fieldsArr[] = (string) ($fd['field'] ?? ''); }
+        $fields = implode(' · ', array_filter($fieldsArr));
+        $blob = $fields . ' ' . ($prof['pair'] ?? '') . ' ' . ($prof['sign_flavour'] ?? '') . ' ' . ($prof['house_field'] ?? '');
+        $kw = ['राजनीति', 'राजनेता', 'सिविल-सेवा', 'मंत्री', 'जनसेवा', 'नेतृत्व', 'सरकार', 'प्रशासन'];
+        $kwHit = false;
+        foreach ($kw as $k) { if (mb_strpos($blob, $k) !== false) { $kwHit = true; break; } }
+        $sig = array_values(array_intersect($top, $polSigs));
+
+        if ($sig !== [] && ($kwHit || count($sig) >= 2)) {
+            return ['known' => true, 'supports' => true, 'tone' => 'pos', 'level' => 'strong',
+                'top_hi' => $topHi, 'fields' => $fields,
+                'verdict' => '✅ करियर-दिशा राजनीति/सत्ता के अनुकूल — प्रमुख करियर-ग्रह (' . $topHi . ') सरकार/नेतृत्व/जन-क्षेत्र की ओर संकेत करते हैं; अतः राजनीति-योग सार्थक हैं।'];
+        }
+        if ($sig !== []) {
+            return ['known' => true, 'supports' => true, 'tone' => 'info', 'level' => 'moderate',
+                'top_hi' => $topHi, 'fields' => $fields,
+                'verdict' => '◑ करियर में राजनीति सहायक-दिशा है — मुख्य झुकाव (' . $topHi . ') के साथ राजनीति एक सम्भव मार्ग; प्रवेश पर परिश्रम व अवसर निर्णायक।'];
+        }
+        return ['known' => true, 'supports' => false, 'tone' => 'neg', 'level' => 'weak',
+            'top_hi' => $topHi, 'fields' => $fields,
+            'verdict' => '⚠️ करियर-दिशा मुख्यतः ' . $topHi . ' की ओर है (सत्ता/सरकार-कारक ग्रह प्रमुख नहीं) — राजनीति यहाँ गौण सम्भावना है। राजनीति-योग हों भी तो व्यवहारिक झुकाव व स्थायी सफलता प्रायः अन्य क्षेत्र में; राजनीति चुनें तो असाधारण परिश्रम आवश्यक।'];
+    }
+
+    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga, array $capability, array $careerFit = []): array
     {
         // trividha (three-source) confirmation: chart-yog, dasha, gochar
         $chartOk = $identify['is_politician'];
@@ -1238,6 +1282,9 @@ final class PoliticsEngine
         $conf = (int) $chartOk + (int) $dashaOk + (int) $gocharOk;
 
         $lines = [];
+        if (!empty($careerFit['known'])) {
+            $lines[] = 'करियर-दिशा जाँच: ' . $careerFit['verdict'];
+        }
         $lines[] = 'राजनीतिक क्षमता-सूचकांक: ' . $capability['index'] . '/100 (' . $capability['index_band'] . ')'
             . ($capability['strong_names'] !== [] ? ' — प्रबल: ' . implode(', ', array_slice($capability['strong_names'], 0, 4)) : '')
             . ($capability['weak_names'] !== [] ? '; दुर्बल: ' . implode(', ', array_slice($capability['weak_names'], 0, 3)) : '') . '।';

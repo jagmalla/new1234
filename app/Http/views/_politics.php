@@ -80,6 +80,22 @@ $bandInfo = [
         <div class="pol-why"><?= $h($po['key_planets']['verdict']) ?></div>
     </div>
 
+    <!-- CAREER CROSS-CHECK: does the career profile point to politics? -->
+    <?php $cf = $po['career_fit'] ?? null; if ($cf !== null && !empty($cf['known'])):
+        $cfBg = ['pos' => '#f0fdf4', 'info' => '#fffbeb', 'neg' => '#fef2f2'][$cf['tone']] ?? '#f8fafc';
+        $cfBd = ['pos' => '#16a34a', 'info' => '#d97706', 'neg' => '#dc2626'][$cf['tone']] ?? '#94a3b8'; ?>
+    <div class="pol-card" style="background:<?= $cfBg ?>;border-left:5px solid <?= $cfBd ?>">
+        <h3 style="color:<?= $cfBd ?>">🧭 करियर-दिशा जाँच — क्या करियर राजनीति सुझाता है?</h3>
+        <div style="font-size:.9rem;font-weight:600;color:#374151;line-height:1.5"><?= $h($cf['verdict']) ?></div>
+        <?php if ($cf['top_hi'] !== ''): ?>
+        <div style="font-size:.8rem;color:#64748b;margin-top:5px">प्रमुख करियर-ग्रह: <b><?= $h($cf['top_hi']) ?></b><?= $cf['fields'] !== '' ? ' · क्षेत्र: ' . $h($cf['fields']) : '' ?></div>
+        <?php endif; ?>
+        <?php if (empty($cf['supports'])): ?>
+        <div style="font-size:.78rem;color:#991b1b;margin-top:5px">📌 पूर्ण करियर-विश्लेषण हेतु <b>करियर — नौकरी · कार्य · व्यवसाय</b> टैब देखें। राजनीति-योग नीचे दिए हैं, पर करियर-दिशा उन्हें प्रबल समर्थन नहीं देती।</div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <!-- LEVEL METER: how far -->
     <div class="pol-card">
         <h3>📈 कितनी ऊँचाई तक? — सम्भावित स्तर</h3>

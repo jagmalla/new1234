@@ -164,7 +164,8 @@ final class CalcController
                 $politics = \AutoBusiness\Astro\Phala\PoliticsEngine::compute(
                     $chart, $vargas,
                     (float) ($chart['planets']['Moon']['sidereal_lon'] ?? 0.0),
-                    $jd, $nowJd, $tz, $engine, [$Y, $Mo, $D, $H, $Mi, $lat, $lon], $vp
+                    $jd, $nowJd, $tz, $engine, [$Y, $Mo, $D, $H, $Mi, $lat, $lon], $vp,
+                    $career   // cross-check: does the career profile point to politics?
                 );
             } catch (\Throwable $e) {
                 $politics = null;
