@@ -46,7 +46,7 @@ $mcBlock = static function (array $d, string $title, string $accent) use ($h, $a
         <div class="mc-pgrid">
             <?php foreach ($d['checks'] as $c): ?><div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?></div><?php endforeach; ?>
         </div>
-        <?php foreach ($d['bad'] as $x): ?><div class="mc-line d"><b><?= $h($x['name']) ?></b> — <?= $h($x['why']) ?></div><?php endforeach; ?>
+        <?php foreach ($d['bad'] as $x): ?><div class="mc-line d"><b><?= $h($x['name']) ?></b> — <?= $h($x['why']) ?></div><div class="mc-rem">🩹 <?= $h($x['rem'] ?? \AutoBusiness\Astro\Muhurat\MuhuratChintamaniData::remedyFor((string) $x['name'])) ?></div><?php endforeach; ?>
         <div class="mc-rem">📌 <?= $h($d['note']) ?></div>
     </div>
 <?php };
@@ -556,6 +556,9 @@ if ($hasAny):
                                 <div class="mc-pi"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?> <?= $c['ok'] ? '✅' : '❌' ?></div>
                             <?php endforeach; ?>
                         </div>
+                        <?php foreach ($rt['checks'] as $c): if (empty($c['ok'])): ?>
+                            <div class="mc-rem">🩹 <?= $h(\AutoBusiness\Astro\Muhurat\MuhuratChintamaniData::remedyFor((string) $c['label'])) ?></div>
+                        <?php endif; endforeach; ?>
                         <div class="mc-pi" style="margin-bottom:3px"><b>विहित:</b> <?= $h($rt['prescription']) ?></div>
                         <div class="mc-rem">📌 <?= $h($rt['note']) ?></div>
                     </div>
@@ -580,6 +583,7 @@ if ($hasAny):
                     </div>
                     <?php foreach ($vv['bad'] as $d): ?>
                         <div class="mc-line d"><b><?= $h($d['name']) ?></b> — <?= $h($d['why']) ?></div>
+                        <div class="mc-rem">🩹 <?= $h($d['rem'] ?? \AutoBusiness\Astro\Muhurat\MuhuratChintamaniData::remedyFor((string) $d['name'])) ?></div>
                     <?php endforeach; ?>
                     <div class="mc-rem">📌 <?= $h($vv['note']) ?></div>
                 </div>
@@ -631,6 +635,7 @@ if ($hasAny):
                         <?php $auspBar($dd['tone'], $dd['issues'] ?? [], (string) $dd['grade']); ?>
                         <?php foreach ($dd['issues'] as $x): ?>
                             <div class="mc-line d"><b><?= $h($x['name']) ?></b> — <?= $h($x['why']) ?></div>
+                            <div class="mc-rem">🩹 <?= $h($x['rem'] ?? \AutoBusiness\Astro\Muhurat\MuhuratChintamaniData::remedyFor((string) $x['name'])) ?></div>
                         <?php endforeach; ?>
                         <?php if (!empty($dd['ok_note'])): ?><div class="mc-line g"><?= $h($dd['ok_note']) ?></div><?php endif; ?>
                     </div>
