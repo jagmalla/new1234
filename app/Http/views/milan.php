@@ -700,6 +700,104 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
 
     <?php endif; ?>
 
+    <!-- ============ 💍 विवाह-मुहूर्त तिथि-खोजक (Marriage date finder) ============ -->
+    <style>
+      .mdf-card{background:#fff;border:1px solid #f3d6e6;border-radius:14px;padding:16px 18px;margin-top:18px}
+      .mdf-card h2{margin:0 0 4px;font-size:1.12rem;color:#be185d}
+      .mdf-sub{font-size:.82rem;color:#6b7280;margin-bottom:12px}
+      .mdf-form{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+      .mdf-fld{display:flex;flex-direction:column;gap:3px}
+      .mdf-fld label{font-size:.74rem;font-weight:700;color:#9d174d}
+      .mdf-fld input{border:1.5px solid #f0abcd;border-radius:8px;padding:8px 11px;font-size:.9rem;font-family:inherit;min-width:150px}
+      .mdf-btn{background:#db2777;color:#fff;border:0;border-radius:9px;padding:9px 20px;font-size:.9rem;font-weight:700;cursor:pointer}
+      .mdf-tally{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
+      .mdf-pill{border-radius:999px;padding:4px 13px;font-size:.8rem;font-weight:700}
+      .mdf-pill.g{background:#dcfce7;color:#166534}.mdf-pill.y{background:#fef9c3;color:#854d0e}.mdf-pill.r{background:#fee2e2;color:#991b1b}
+      .mdf-day{border:1px solid #e5e7eb;border-left:5px solid #9ca3af;border-radius:11px;padding:10px 13px;margin-bottom:9px;background:#fff}
+      .mdf-day.g{border-left-color:#16a34a;background:linear-gradient(180deg,#f6fef9,#f0fdf4)}
+      .mdf-day.y{border-left-color:#d97706;background:linear-gradient(180deg,#fffdf5,#fefce8)}
+      .mdf-dh{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-weight:800;font-size:.98rem;color:#1f2937}
+      .mdf-grade{font-size:.74rem;border-radius:999px;padding:2px 11px;font-weight:800}
+      .mdf-grade.g{background:#dcfce7;color:#166534}.mdf-grade.y{background:#fef9c3;color:#854d0e}
+      .mdf-wd{font-size:.8rem;color:#6b7280;font-weight:600}
+      .mdf-checks{display:flex;flex-wrap:wrap;gap:3px 12px;margin:5px 0 2px}
+      .mdf-ci{font-size:.8rem;color:#4b5563}.mdf-ci b{color:#374151}
+      .mdf-bad{font-size:.78rem;color:#b45309;margin-top:2px}
+      .mdf-none{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;color:#991b1b;font-size:.86rem}
+      .mdf-note{font-size:.76rem;color:#6b7280;margin-top:10px}
+      .mdf-more{margin-top:8px}.mdf-more summary{cursor:pointer;font-size:.82rem;font-weight:700;color:#be185d}
+      .mdf-tbl{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}
+      .mdf-tbl th,.mdf-tbl td{border:1px solid #eee;padding:4px 7px;text-align:right}
+      .mdf-tbl th{background:#fdf2f8;color:#9d174d}
+      .mdf-tbl tr.g td{background:#f0fdf4}.mdf-tbl tr.y td{background:#fefce8}.mdf-tbl tr.r td{background:#fef2f2}
+    </style>
+    <div class="mdf-card noprint">
+      <h2>💍 विवाह-मुहूर्त तिथि-खोजक</h2>
+      <div class="mdf-sub">गुण-मिलान के बाद एक तिथि-सीमा चुनें — सिस्टम उस अवधि के प्रत्येक दिन का विवाह-मुहूर्त (मास·नक्षत्र·तिथि·वार·गुरु-शुक्र अस्त·भद्रा) जाँचकर शुभ दिन बताएगा।</div>
+      <form class="mdf-form" method="get" action="">
+        <?php foreach (['boy', 'girl'] as $pp): $src = $pp === 'boy' ? $boyIn : $girlIn;
+          foreach (['name', 'date', 'time', 'lat', 'lon', 'tz', 'place'] as $ff): ?>
+          <input type="hidden" name="<?= $h($pp . '_' . $ff) ?>" value="<?= $h((string) ($src[$ff] ?? '')) ?>">
+        <?php endforeach; endforeach; ?>
+        <input type="hidden" name="ayanamsa" value="<?= $h($ayanamsa) ?>">
+        <input type="hidden" name="phala_lang" value="<?= $h($lang) ?>">
+        <div class="mdf-fld"><label for="mdf_from">प्रारम्भ तिथि (DD-MM-YYYY)</label>
+          <input id="mdf_from" name="mdf_from" type="text" placeholder="01-12-2026" value="<?= $h($mdfFrom ?? '') ?>" autocomplete="off"></div>
+        <div class="mdf-fld"><label for="mdf_to">अन्तिम तिथि (DD-MM-YYYY)</label>
+          <input id="mdf_to" name="mdf_to" type="text" placeholder="31-03-2027" value="<?= $h($mdfTo ?? '') ?>" autocomplete="off"></div>
+        <button class="mdf-btn" type="submit">🔍 शुभ विवाह-तिथि खोजें</button>
+      </form>
+
+      <?php $md = $marriageDates ?? null;
+      if ($md !== null):
+        if (empty($md['ok'])): ?>
+          <div class="mdf-none" style="margin-top:14px">⚠️ <?= $h($md['error'] ?? 'तिथि-सीमा जाँचें।') ?></div>
+        <?php else:
+          $toneCls = ['pos' => 'g', 'info' => 'y', 'neg' => 'r'];
+          $best = $md['best']; ?>
+          <div class="mdf-tally">
+            <span class="mdf-pill g">🟢 शुभ: <?= (int) ($md['count']['शुभ'] ?? 0) ?></span>
+            <span class="mdf-pill y">🟡 मध्यम: <?= (int) ($md['count']['मध्यम'] ?? 0) ?></span>
+            <span class="mdf-pill r">🔴 अशुभ: <?= (int) ($md['count']['अशुभ'] ?? 0) ?></span>
+            <span class="mdf-pill" style="background:#eef2ff;color:#3730a3"><?= (int) $md['scanned'] ?> दिन जाँचे</span>
+          </div>
+          <?php if (!empty($md['capped'])): ?>
+            <div class="mdf-note">⚠️ सीमा बड़ी है — पहले <?= (int) $md['max_days'] ?> दिन ही जाँचे गए (कुल <?= (int) $md['total'] ?>)। छोटी सीमा चुनें।</div>
+          <?php endif; ?>
+
+          <?php if ($best === []): ?>
+            <div class="mdf-none" style="margin-top:10px">इस अवधि में कोई शुभ/मध्यम विवाह-दिन नहीं मिला — दूसरी तिथि-सीमा आज़माएँ (गुरु/शुक्र अस्त या मास-शुद्धि बाधक हो सकते हैं)।</div>
+          <?php else: ?>
+            <div style="font-weight:700;color:#9d174d;margin:12px 0 6px">✅ शुभ / मध्यम विवाह-दिन (<?= count($best) ?>)</div>
+            <?php foreach ($best as $day): $cl = $toneCls[$day['tone']] ?? ''; ?>
+            <div class="mdf-day <?= $cl ?>">
+              <div class="mdf-dh">📅 <?= $h($day['date']) ?>
+                <span class="mdf-wd"><?= $h($day['weekday']) ?></span>
+                <span class="mdf-grade <?= $cl ?>"><?= $h($day['grade']) ?></span></div>
+              <div class="mdf-checks">
+                <?php foreach ($day['checks'] as $c): ?><span class="mdf-ci"><b><?= $h($c['label']) ?>:</b> <?= $h($c['value']) ?> <?= !empty($c['ok']) ? '✅' : '❌' ?></span><?php endforeach; ?>
+              </div>
+              <?php foreach ($day['bad'] as $b): ?><div class="mdf-bad">⚠️ <?= $h($b['name']) ?> — <?= $h($b['why']) ?></div><?php endforeach; ?>
+            </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+
+          <details class="mdf-more">
+            <summary>📋 पूरी अवधि की तिथि-सूची देखें (<?= (int) $md['scanned'] ?>)</summary>
+            <table class="mdf-tbl">
+              <tr><th>दिनांक</th><th>वार</th><th>नक्षत्र</th><th>तिथि</th><th>श्रेणी</th></tr>
+              <?php foreach ($md['rows'] as $day): $cl = $toneCls[$day['tone']] ?? '';
+                $nak = ''; $tit = '';
+                foreach ($day['checks'] as $c) { if ($c['label'] === 'नक्षत्र') { $nak = $c['value']; } if ($c['label'] === 'तिथि') { $tit = $c['value']; } } ?>
+              <tr class="<?= $cl ?>"><td><?= $h($day['date']) ?></td><td><?= $h($day['weekday']) ?></td><td><?= $h($nak) ?></td><td><?= $h($tit) ?></td><td><?= $h($day['grade']) ?></td></tr>
+              <?php endforeach; ?>
+            </table>
+          </details>
+          <div class="mdf-note">📌 प्रत्येक दिन सूर्योदय-सन्निकट एक नमूने पर आधारित है; शुभ दिन का सूक्ष्म लग्न-मुहूर्त पंचांग-समय से परिष्कृत करें। पूर्ण 36-गुण मिलान ऊपर देखें।</div>
+        <?php endif;
+      endif; ?>
+    </div>
+
     <?php endif; ?>
         </div><!-- /.content -->
     </div><!-- /.layout -->

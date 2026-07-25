@@ -64,6 +64,24 @@ final class MilanController
                 $boyIn['name'] !== '' ? $boyIn['name'] : 'वर',
                 $girlIn['name'] !== '' ? $girlIn['name'] : 'कन्या'
             );
+
+            // 💍 विवाह-मुहूर्त तिथि-खोजक — मिलान के पश्चात् चुनी गई तिथि-सीमा में
+            // शुभ विवाह-दिन निकालें (from → to). केवल दोनों तिथियाँ दिए जाने पर।
+            $mdfFromRaw = trim((string) ($_GET['mdf_from'] ?? ''));
+            $mdfToRaw = trim((string) ($_GET['mdf_to'] ?? ''));
+            if ($mdfFromRaw !== '' && $mdfToRaw !== '') {
+                try {
+                    $tz = CalcController::parseTz($boyIn['tz']);
+                    $marriageDates = \AutoBusiness\Astro\Muhurat\MarriageDateFinder::find(
+                        $engine,
+                        CalcController::parseDate($mdfFromRaw),
+                        CalcController::parseDate($mdfToRaw),
+                        $tz
+                    );
+                } catch (\Throwable $e) {
+                    $marriageDates = ['ok' => false, 'error' => 'तिथि-प्रारूप DD-MM-YYYY में दें।'];
+                }
+            }
         } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
@@ -78,6 +96,9 @@ final class MilanController
             'lkMilan' => $lkMilan ?? null,
             'boy' => $boyChart,   // ['chart'=>..,'d1'=>payload,'d9'=>payload,'planets'=>rows]
             'girl' => $girlChart,
+            'marriageDates' => $marriageDates ?? null,
+            'mdfFrom' => $mdfFromRaw ?? '',
+            'mdfTo' => $mdfToRaw ?? '',
         ];
         require dirname(__DIR__) . '/Http/views/milan.php';
     }
