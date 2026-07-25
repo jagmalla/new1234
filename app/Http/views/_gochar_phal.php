@@ -299,11 +299,28 @@ if ($hasAny):
         <!-- CATEGORY: मुहूर्त (Ch.8) -->
         <?php if ($mu !== null): ?>
         <div class="gochar-cat" data-cat="muhurat">
-            <div class="gph-section-title">मुहूर्त <span class="text-xs text-gray-400 font-normal">(राहु काल · दिशा शूल · तिथि · जन्म-नक्षत्र वारफल · अस्त · कष्ट-राशि)</span></div>
-            <div class="text-xs text-gray-500" style="margin:2px 0 6px">वार: <b><?= $h($mu['weekday_hi']) ?></b> · गोचर चन्द्र नक्षत्र: <b><?= $h($mu['nakshatra']['transit']['name']) ?></b> पाद <?= (int) $mu['nakshatra']['transit']['pada'] ?> · जन्म-नक्षत्र: <b><?= $h($mu['nakshatra']['janma']['name']) ?></b></div>
+            <!-- .mc-context is lifted by the Mahurat page JS into the full-width
+                 context bar above the chart+prediction, so the prediction column
+                 starts directly at the श्रेणी dropdown. -->
+            <div class="mc-context" data-mc-context>
+                <span class="mcx-title">🕉️ मुहूर्त</span>
+                <span class="mcx-scope">राहु काल · दिशा शूल · तिथि · जन्म-नक्षत्र वारफल · अस्त · कष्ट-राशि</span>
+                <span class="mcx-item">📅 वार: <b><?= $h($mu['weekday_hi']) ?></b></span>
+                <span class="mcx-item">🌙 गोचर चन्द्र नक्षत्र: <b><?= $h($mu['nakshatra']['transit']['name']) ?> पाद <?= (int) $mu['nakshatra']['transit']['pada'] ?></b></span>
+                <span class="mcx-item">⭐ जन्म-नक्षत्र: <b><?= $h($mu['nakshatra']['janma']['name']) ?></b></span>
+            </div>
 
             <!-- ============ मुहूर्त-चिन्तामणि — कार्य/श्रेणी चयन (Phase 1) ============ -->
             <style>
+            /* context bar (lifted above the chart+prediction on the Mahurat page) */
+            .mc-context{display:flex;align-items:center;gap:7px 12px;flex-wrap:wrap;margin:0 0 8px;
+              background:linear-gradient(180deg,#fffdf8,#fdf6ec);border:1px solid #e8dcc4;border-left:4px solid #b45309;
+              border-radius:11px;padding:8px 13px}
+            .mcx-title{font-weight:800;font-size:.92rem;color:#b45309;white-space:nowrap}
+            .mcx-scope{font-size:.68rem;color:#a1887f}
+            .mcx-item{font-size:.8rem;color:#57534e;background:#fff;border:1px solid #ecdfc9;border-radius:999px;padding:3px 11px;white-space:nowrap}
+            .mcx-item b{color:#7c5a1a;font-weight:700}
+            @media(max-width:699px){.mc-context{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.mcx-title{position:sticky;left:0}}
             .mc-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
             .mc-picker label{font-size:.74rem;font-weight:700;color:#6b21a8}
             .mc-cat-select{border:1px solid #e2c9f0;background:#faf5ff;border-radius:8px;padding:6px 11px;

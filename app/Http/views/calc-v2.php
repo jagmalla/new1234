@@ -2206,15 +2206,17 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
                 <div id="mah-inputs"></div>
             </div>
 
+            <!-- Full-width context bar (below the date card, above chart+prediction).
+                 The Mahurat prediction JS lifts the .mc-context strip here so the
+                 prediction column starts directly at the श्रेणी dropdown. -->
+            <div id="mah-context"></div>
+
             <!-- ROW 1: transit (gochar) chart + मुहूर्त prediction -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                 <div class="bg-white rounded-lg shadow p-2 flex flex-col">
                     <div id="mah-transit" class="w-full"></div>
                 </div>
                 <div class="bg-white rounded-lg shadow p-4 flex flex-col">
-                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 pb-2 border-b text-sm text-gray-700">
-                        <span class="font-semibold text-gray-800">मुहूर्त फल <span class="text-xs text-gray-400 font-normal">(राहु काल · दिशा शूल · तिथि · वारफल)</span></span>
-                    </div>
                     <div id="mah-phal" class="flex-1">
                         <div class="gochar-pred-soon">
                             <div class="gps-icon">🕒</div>
@@ -3517,6 +3519,11 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
           tmp.innerHTML = g.phal_html;
           var mu = tmp.querySelector('.gochar-cat[data-cat="muhurat"]');
           box.innerHTML = mu ? mu.innerHTML : '<div class="text-sm text-gray-500 p-2">इस तिथि हेतु मुहूर्त विवरण उपलब्ध नहीं।</div>';
+          // Lift the context strip into the full-width bar above the chart+prediction
+          // so the prediction column starts directly at the श्रेणी dropdown.
+          var ctxHost = document.getElementById('mah-context');
+          var ctx = box.querySelector('[data-mc-context]');
+          if (ctxHost) { ctxHost.innerHTML = ''; if (ctx) { ctxHost.appendChild(ctx); } }
           setTimeout(syncMahPhalHeight, 60);
         }
       });
