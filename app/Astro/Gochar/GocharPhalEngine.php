@@ -278,6 +278,19 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 🧭 यात्रा-विस्तार · 🛕 प्रतिष्ठा (Phase 8) ---------
+        $yatraPratishtha = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdP = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonP = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonP = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $yatraPratishtha = \AutoBusiness\Astro\Muhurat\YatraPratishthaEngine::compute($sunLonP, $moonLonP, (int) $wdP, $transits);
+            } catch (\Throwable $e) {
+                $yatraPratishtha = null;
+            }
+        }
+
         // -------- 📜 अभिचार / षट्कर्म — अध्ययन-सन्दर्भ (Study module) ---------
         $shatkarma = null;
         if ($weekday !== null || $transitJd !== null) {
@@ -306,6 +319,7 @@ final class GocharPhalEngine
             'yatra_muhurat' => $yatraMuhurat,
             'vastu_muhurat' => $vastuMuhurat,
             'agni_vivaha' => $agniVivaha,
+            'yatra_pratishtha' => $yatraPratishtha,
             'shatkarma' => $shatkarma,
         ];
     }

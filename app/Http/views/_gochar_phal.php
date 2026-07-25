@@ -29,6 +29,7 @@ $mg = $gp['mangal_dosha'] ?? null;      // 💍 Mangal Dosha (Phase 4)
 $ya = $gp['yatra_muhurat'] ?? null;     // 🧳 Yatra Muhurat (Phase 5)
 $vz = $gp['vastu_muhurat'] ?? null;     // 🏗️ Vastu/Grihapravesh/Rajyabhishek (Phase 6)
 $av7 = $gp['agni_vivaha'] ?? null;      // 🔥 Agnyadhana/Vadhupravesh/Dviragamana (Phase 7)
+$yp = $gp['yatra_pratishtha'] ?? null;  // 🧭 Yatra-vistara / 🛕 Pratishtha (Phase 8)
 $sx = $gp['shatkarma'] ?? null;         // 📜 Abhichara/Shatkarma — study reference + self-test (Module B)
 /** Reusable renderer for a simple {grade,checks,bad,note} muhurat block. */
 $mcBlock = static function (array $d, string $title, string $accent) use ($h): void { ?>
@@ -373,6 +374,20 @@ if ($hasAny):
             .sk-reveal.show{display:block}.sk-reveal b{color:#4338ca}
             .sk-match{display:inline-block;margin-top:6px;font-weight:700;font-size:.74rem;padding:3px 10px;border-radius:20px}
             .sk-match.y{background:#dcfce7;color:#166534}.sk-match.n{background:#fee2e2;color:#991b1b}
+            /* ---- 🧭 यात्रा-विस्तार ---- */
+            .yv-today{background:#ecfeff;border:1px solid #a5f3fc;border-left:4px solid #0d9488;border-radius:9px;padding:9px 11px;margin-bottom:10px;font-size:.84rem;line-height:1.5}
+            .yv-today b{color:#0f766e}
+            .yv-tbl{width:100%;border-collapse:collapse;font-size:.78rem;margin-bottom:6px}
+            .yv-tbl th,.yv-tbl td{border:1px solid #e4dcce;padding:5px 7px;text-align:right}
+            .yv-tbl th{background:#f0fdfa;color:#0f766e;font-weight:700}
+            .yv-tbl tr.now td{background:#ecfeff;font-weight:700}
+            .yv-sh{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+            .yv-col{border-radius:9px;padding:8px 10px}
+            .yv-col.g{background:#f0fdf4;border:1px solid #bbf7d0}.yv-col.b{background:#fef2f2;border:1px solid #fecaca}
+            .yv-col h5{font-size:.8rem;margin:0 0 5px}.yv-col.g h5{color:#15803d}.yv-col.b h5{color:#b91c1c}
+            .yv-tag{display:inline-block;font-size:.68rem;padding:1px 7px;border-radius:20px;margin:2px 2px 0 0}
+            .yv-col.g .yv-tag{background:#dcfce7;color:#166534}.yv-col.b .yv-tag{background:#fee2e2;color:#991b1b}
+            @media(max-width:420px){.yv-sh{grid-template-columns:1fr}}
             </style>
             <div class="mc-picker">
                 <label for="mc-cat-select">🕉️ कार्य / श्रेणी चुनें</label>
@@ -388,6 +403,8 @@ if ($hasAny):
                     <option value="agnyadhana">🔥 अग्न्याधान (यज्ञाग्नि-स्थापन)</option>
                     <option value="vadhupravesh">💑 वधूप्रवेश (वधू का गृह-प्रवेश)</option>
                     <option value="dviragamana">🔄 द्विरागमन (गौना)</option>
+                    <option value="yatravistara">🧭 यात्रा-विस्तार (शूल-परिहार · शकुन)</option>
+                    <option value="pratishtha">🛕 प्रतिष्ठा (देव-मूर्ति स्थापन)</option>
                     <option value="shatkarma">📜 अभिचार / षट्कर्म (शास्त्र-अध्ययन)</option>
                 </select>
             </div>
@@ -595,6 +612,39 @@ if ($hasAny):
             <div class="mc-panel hidden" data-mc="dviragamana">
                 <?php $av7Head(); $mcBlock($av7['dviragamana'], '🔄 द्विरागमन — गौना / द्वितीय-प्रयाण', '#0d9488'); ?>
                 <div class="mc-chitta">🧳 द्विरागमन एक प्रयाण भी है — <b>यात्रा</b> श्रेणी में दिशा-शूल भी देखें; विवाह से सम (युग्म) मास/वर्ष श्रेष्ठ।</div>
+            </div>
+            <?php endif; ?>
+
+            <?php // ---- 🧭 यात्रा-विस्तार · 🛕 प्रतिष्ठा (Phase 8) ----
+            if ($yp !== null && !empty($yp['ok'])): $YV = $yp['yatravistara']; ?>
+            <div class="mc-panel hidden" data-mc="yatravistara">
+                <div class="yv-today">🧭 आज <b><?= $h($YV['vaar']) ?></b> — वार-शूल दिशा <b><?= $h($YV['shool_dir']) ?></b>।
+                    <br>🩹 <b>परिहार:</b> <?= $h($YV['today_parihara']) ?>।
+                    <?php if ($YV['nak_shool_dir']): ?><br>⭐ आज नक्षत्र-शूल भी: <b><?= $h($YV['nak_shool_dir']) ?></b> — <?= $h($YV['nak_shool_parihara']) ?><?php endif; ?>
+                    <?php if ($YV['sarvadig']): ?><br>✅ आज <b><?= $h($YV['nak']) ?></b> सर्वदिग् नक्षत्र — समस्त दिशा-शूल शमित।<?php endif; ?>
+                </div>
+                <div style="font-size:.8rem;font-weight:700;color:#0f766e;margin-bottom:4px">📋 समस्त वार-शूल परिहार-सारणी</div>
+                <table class="yv-tbl">
+                    <tr><th>वार</th><th>शूल-दिशा</th><th>परिहार (यात्रा-पूर्व)</th></tr>
+                    <?php foreach ($YV['table'] as $r): ?>
+                    <tr class="<?= $r['today'] ? 'now' : '' ?>"><td><?= $h($r['vaar']) ?></td><td><?= $h($r['dir']) ?></td><td><?= $h($r['rem']) ?></td></tr>
+                    <?php endforeach; ?>
+                </table>
+                <div style="font-size:.8rem;font-weight:700;color:#0f766e;margin:8px 0 2px">🐾 प्रयाण-शकुन (प्रस्थान-काल)</div>
+                <div class="yv-sh">
+                    <div class="yv-col g"><h5>✅ शुभ शकुन</h5>
+                        <?php foreach ($YV['shubh_shakun'] as $s): ?><span class="yv-tag"><?= $h($s) ?></span><?php endforeach; ?>
+                    </div>
+                    <div class="yv-col b"><h5>❌ अशुभ शकुन</h5>
+                        <?php foreach ($YV['ashubh_shakun'] as $s): ?><span class="yv-tag"><?= $h($s) ?></span><?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="mc-rem" style="margin-left:0">🩹 <?= $h($YV['shakun_remedy']) ?></div>
+                <div class="mc-chitta">📍 <?= $h($YV['prasthana']) ?> · प्रति-दिशा पूर्ण शूल-निर्णय हेतु <b>यात्रा</b> श्रेणी देखें।</div>
+            </div>
+            <div class="mc-panel hidden" data-mc="pratishtha">
+                <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: चान्द्रमास <b><?= $h($yp['maasa']) ?></b> · <b><?= $yp['uttarayan'] ? 'उत्तरायण' : 'दक्षिणायन' ?></b> · नक्षत्र <b><?= $h($yp['nak']) ?></b> · तिथि <b><?= (int) $yp['tithi'] ?></b> · वार <b><?= $h($yp['vaar']) ?></b></div>
+                <?php $mcBlock($yp['pratishtha'], '🛕 प्रतिष्ठा — देव-मूर्ति स्थापन', '#b45309'); ?>
             </div>
             <?php endif; ?>
 
