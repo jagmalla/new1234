@@ -265,6 +265,19 @@ final class GocharPhalEngine
             }
         }
 
+        // -------- 🔥 अग्न्याधान · वधूप्रवेश · द्विरागमन (Phase 7) ---------
+        $agniVivaha = null;
+        if ($weekday !== null || $transitJd !== null) {
+            $wdA = $weekday ?? ((int) floor($transitJd + 0.5) + 1) % 7;
+            $sunLonA = (float) ($transits['Sun']['sidereal_lon'] ?? 0.0);
+            $moonLonA = (float) ($transits['Moon']['sidereal_lon'] ?? 0.0);
+            try {
+                $agniVivaha = \AutoBusiness\Astro\Muhurat\AgniVivahaMuhuratEngine::computeAll($sunLonA, $moonLonA, (int) $wdA, $transits);
+            } catch (\Throwable $e) {
+                $agniVivaha = null;
+            }
+        }
+
         // -------- 📜 अभिचार / षट्कर्म — अध्ययन-सन्दर्भ (Study module) ---------
         $shatkarma = null;
         if ($weekday !== null || $transitJd !== null) {
@@ -292,6 +305,7 @@ final class GocharPhalEngine
             'mangal_dosha' => $mangalDosha,
             'yatra_muhurat' => $yatraMuhurat,
             'vastu_muhurat' => $vastuMuhurat,
+            'agni_vivaha' => $agniVivaha,
             'shatkarma' => $shatkarma,
         ];
     }

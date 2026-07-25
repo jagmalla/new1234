@@ -28,6 +28,7 @@ $vv = $gp['vivaha_muhurat'] ?? null;    // 💍 Vivaha Muhurat (Phase 4)
 $mg = $gp['mangal_dosha'] ?? null;      // 💍 Mangal Dosha (Phase 4)
 $ya = $gp['yatra_muhurat'] ?? null;     // 🧳 Yatra Muhurat (Phase 5)
 $vz = $gp['vastu_muhurat'] ?? null;     // 🏗️ Vastu/Grihapravesh/Rajyabhishek (Phase 6)
+$av7 = $gp['agni_vivaha'] ?? null;      // 🔥 Agnyadhana/Vadhupravesh/Dviragamana (Phase 7)
 $sx = $gp['shatkarma'] ?? null;         // 📜 Abhichara/Shatkarma — study reference + self-test (Module B)
 /** Reusable renderer for a simple {grade,checks,bad,note} muhurat block. */
 $mcBlock = static function (array $d, string $title, string $accent) use ($h): void { ?>
@@ -384,6 +385,9 @@ if ($hasAny):
                     <option value="grihapravesh">🚪 गृहप्रवेश</option>
                     <option value="yatra">🧳 यात्रा</option>
                     <option value="rajyabhishek">👑 राज्याभिषेक / शपथ-ग्रहण</option>
+                    <option value="agnyadhana">🔥 अग्न्याधान (यज्ञाग्नि-स्थापन)</option>
+                    <option value="vadhupravesh">💑 वधूप्रवेश (वधू का गृह-प्रवेश)</option>
+                    <option value="dviragamana">🔄 द्विरागमन (गौना)</option>
                     <option value="shatkarma">📜 अभिचार / षट्कर्म (शास्त्र-अध्ययन)</option>
                 </select>
             </div>
@@ -574,6 +578,23 @@ if ($hasAny):
                     🏛️ नेता की <b>राजनीतिक क्षमता व पद-योग</b> हेतु D1 भविष्यवाणी में
                     <b>राजनीति (Politics)</b> टैब देखें — वहाँ राजयोग, स्तर व पदोन्नति का पूर्ण विश्लेषण है। यह मुहूर्त उसी के साथ पढ़ें।
                 </div>
+            </div>
+            <?php endif; ?>
+
+            <?php // ---- 🔥 अग्न्याधान · 💑 वधूप्रवेश · 🔄 द्विरागमन (Phase 7) ----
+            if ($av7 !== null && !empty($av7['ok'])):
+                $av7Head = function () use ($av7, $h) { ?>
+                    <div class="text-xs text-gray-500" style="margin:2px 0 6px">आज: चान्द्रमास <b><?= $h($av7['maasa']) ?></b> · ऋतु <b><?= $h($av7['ritu']) ?></b> · <b><?= $av7['uttarayan'] ? 'उत्तरायण' : 'दक्षिणायन' ?></b> · नक्षत्र <b><?= $h($av7['nak']) ?></b> · तिथि <b><?= (int) $av7['tithi'] ?></b> · वार <b><?= $h($av7['vaar']) ?></b></div>
+                <?php }; ?>
+            <div class="mc-panel hidden" data-mc="agnyadhana">
+                <?php $av7Head(); $mcBlock($av7['agnyadhana'], '🔥 अग्न्याधान — यज्ञाग्नि-स्थापन', '#ea580c'); ?>
+            </div>
+            <div class="mc-panel hidden" data-mc="vadhupravesh">
+                <?php $av7Head(); $mcBlock($av7['vadhupravesh'], '💑 वधूप्रवेश — वधू का प्रथम गृह-प्रवेश', '#db2777'); ?>
+            </div>
+            <div class="mc-panel hidden" data-mc="dviragamana">
+                <?php $av7Head(); $mcBlock($av7['dviragamana'], '🔄 द्विरागमन — गौना / द्वितीय-प्रयाण', '#0d9488'); ?>
+                <div class="mc-chitta">🧳 द्विरागमन एक प्रयाण भी है — <b>यात्रा</b> श्रेणी में दिशा-शूल भी देखें; विवाह से सम (युग्म) मास/वर्ष श्रेष्ठ।</div>
             </div>
             <?php endif; ?>
 
