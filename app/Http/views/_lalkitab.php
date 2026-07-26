@@ -174,6 +174,7 @@ $scorePill = static function (int $score): string {
         <option value="shrap">🧬 श्राप / पैतृक ऋण / Shrap</option>
         <option value="sadesati">🪐 साढ़े साती / ढैय्या / Sadde Satti</option>
         <option value="manglik">🔴 मंगलीक दोष / Manglik</option>
+        <option value="agecycle">🕰️ आयु-चक्र / Age Timeline (कब क्या होगा)</option>
         <option value="ayu">⏳ आयु योग / Longevity</option>
         <option value="health">🩺 रोग / संतान / Health</option>
         <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
@@ -756,6 +757,65 @@ $scorePill = static function (int $score): string {
               <?php foreach ($mg['parihar'] as $pr): ?><li><?= $h((string) $pr) ?></li><?php endforeach; ?>
             </ul>
           </div>
+        <?php endif; ?>
+      </div>
+
+      <!-- ===== AGE-CYCLE (Lal Kitab's own timing system) ===== -->
+      <div class="lk-view" data-lk="agecycle">
+        <?php $AC = $lk['age_cycle'] ?? null; ?>
+        <h3 class="lk-h">🕰️ लाल किताब आयु-चक्र — कब क्या होगा</h3>
+        <div class="lk-txt" style="margin-bottom:10px">वैदिक ज्योतिष में विंशोत्तरी दशा चलती है; <b>लाल किताब की अपनी काल-प्रणाली</b> है — जीवन की <b>4 अवस्थाएँ</b> (प्रत्येक 25 वर्ष, भाव-समूह से शासित) + प्रत्येक ग्रह के <b>प्रभाव-वर्ष / सावधानी-वर्ष</b> + <b>सुप्त-ग्रह जागृति</b>। इन्हीं से "कब क्या होगा" तय होता है।</div>
+        <?php if ($AC === null): ?>
+          <div class="lk-txt">आयु उपलब्ध न होने से चक्र सीमित है।</div>
+        <?php else: ?>
+
+        <!-- 4 अवस्थाएँ -->
+        <h3 class="lk-h" style="font-size:.9rem">🧭 जीवन-अवस्थाएँ (Avastha Chakra)</h3>
+        <?php foreach ($AC['stages'] as $st): ?>
+          <div class="lk-card <?= $st['active'] ? 'good' : '' ?>" style="<?= $st['active'] ? 'border-color:#f59e0b;background:#fffbeb' : '' ?>">
+            <div class="lk-card-h" style="font-size:.9rem"><?= $h((string) $st['name']) ?>
+              <span class="lk-pill" style="background:#eef2ff;color:#3730a3"><?= (int) $st['from'] ?>–<?= (int) $st['to'] ?> वर्ष</span>
+              <span class="lk-pill" style="background:#f1f5f9;color:#475569">भाव <?= $h(implode(', ', $st['houses'])) ?></span>
+              <?php if ($st['active']): ?><span class="lk-pill" style="background:#fde68a;color:#92400e">▶ वर्तमान अवस्था</span><?php endif; ?>
+            </div>
+            <div class="lk-txt"><?= $h((string) $st['theme']) ?></div>
+            <?php if (!empty($st['planets'])): ?>
+              <div class="lk-sub" style="margin-top:4px"><b>इस अवस्था में सक्रिय ग्रह:</b>
+                <?php foreach ($st['planets'] as $pp): ?>
+                  <span class="lk-pill" style="<?= $pp['verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($pp['verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $pp['hi']) ?> (<?= (int) $pp['house'] ?>वें · <?= $h((string) $pp['verdict']) ?>)</span>
+                <?php endforeach; ?>
+              </div>
+            <?php else: ?>
+              <div class="lk-sub" style="margin-top:4px;color:#94a3b8">इन भावों में कोई ग्रह नहीं — भाव-स्वामी व कारक से फल।</div>
+            <?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+
+        <!-- आगामी आयु-रेखा -->
+        <h3 class="lk-h" style="font-size:.9rem;margin-top:12px">📅 आगामी आयु-रेखा (<?= (int) $AC['age'] ?> → <?= (int) $AC['age'] + 25 ?> वर्ष) — कब क्या</h3>
+        <?php if (empty($AC['events'])): ?>
+          <div class="lk-txt" style="color:#94a3b8">इस अवधि में कोई विशेष ग्रह-चक्र वर्ष नहीं।</div>
+        <?php else: ?>
+          <?php foreach ($AC['events'] as $ev):
+            $evc = $ev['tone'] === 'pos' ? '#16a34a' : ($ev['tone'] === 'neg' ? '#dc2626' : '#3b82f6'); ?>
+            <div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed #eef0f3">
+              <span style="min-width:70px;font-size:.78rem;font-weight:700;color:#475569;background:#f8fafc;border:1px solid #eef0f3;border-radius:7px;padding:3px 8px;text-align:center">आयु <?= (int) $ev['age'] ?></span>
+              <span style="width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none;background:<?= $evc ?>"></span>
+              <span style="font-size:.83rem;color:#334155;line-height:1.45"><b style="color:<?= $evc ?>"><?= $h((string) $ev['kind']) ?>:</b> <?= $h((string) $ev['text']) ?></span>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+
+        <!-- ग्रह-चक्र संदर्भ -->
+        <details style="margin-top:12px">
+          <summary style="cursor:pointer;font-weight:700;color:#9a3412;font-size:.85rem">🪐 ग्रह-चक्र संदर्भ — प्रत्येक ग्रह के प्रभाव/सावधानी वर्ष</summary>
+          <table class="lk-cmp" style="margin-top:8px">
+            <tr><th>ग्रह</th><th>प्रभाव-वर्ष</th><th>सावधानी-वर्ष</th><th>जागृति व फल</th></tr>
+            <?php foreach ($AC['planet_years'] as $py): ?>
+              <tr><td><b><?= $h((string) $py['hi']) ?></b></td><td><?= $h((string) $py['prabhav']) ?></td><td style="color:#991b1b"><?= $h((string) $py['ashubh']) ?></td><td style="font-size:.76rem"><?= $h((string) $py['jagega']) ?><br><span style="color:#64748b"><?= $h((string) $py['effect']) ?></span></td></tr>
+            <?php endforeach; ?>
+          </table>
+        </details>
         <?php endif; ?>
       </div>
 

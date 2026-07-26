@@ -154,6 +154,7 @@ final class LalKitabEngine
             'grid'        => $grid,
             'planets'     => $planets,
             'general'     => self::generalOverview($planets),
+            'age_cycle'   => self::ageCycle($occupants, $planets, $age),
             'active'      => $activeNow,
             'priority'    => $priority,
             'yuti_dosha'  => $yutiDosha,
@@ -871,6 +872,98 @@ final class LalKitabEngine
      * @param array<int,list<string>> $occupants
      * @return list<array<string,mixed>>
      */
+    /**
+     * 🕰️ लाल किताब आयु-चक्र (Lal Kitab's own timing system — not Vimshottari).
+     * Combines: (a) अवस्था चक्र — the 4 life-stages of 25 yrs each, each ruled by a
+     * house-group whose planets then unfold; (b) ग्रह चक्र प्रभाव-वर्ष — each planet's
+     * strong / caution years; (c) सुप्त-ग्रह जागृति — when a dormant planet awakens.
+     * Produces the current stage + a forward age-timeline of "कब क्या होगा".
+     *
+     * @param array<int,list<string>> $occupants  house => planet-en list
+     * @param list<array<string,mixed>> $planets  planetReadings output
+     */
+    private static function ageCycle(array $occupants, array $planets, ?int $age): array
+    {
+        $gc = LalKitabData::section('grah_chakra');
+        $sg = LalKitabData::section('supt_grah');
+        $pByEn = [];
+        foreach ($planets as $pr) { $pByEn[$pr['planet']] = $pr; }
+        $effShort = static function (string $en) use ($pByEn): string {
+            $pr = $pByEn[$en] ?? null;
+            if ($pr === null) { return ''; }
+            return $pr['house_ord'] . ' भाव में ' . ($pr['verdict'] ?? 'मध्यम') . ' — '
+                . ($pr['verdict'] === 'अशुभ' ? 'इस ग्रह के कारक विषयों में बाधा/सतर्कता' : ($pr['verdict'] === 'शुभ' ? 'इस ग्रह के कारक विषयों में लाभ/उन्नति' : 'सामान्य फल'));
+        };
+
+        // ---- (a) 4 अवस्था stages ----
+        $stageDefs = [
+            ['name' => 'प्रथम अवस्था', 'from' => 1, 'to' => 25, 'houses' => [1, 2, 3], 'theme' => 'शरीर·धन·पराक्रम — बचपन से युवावस्था; नींव व शिक्षा-आरम्भ'],
+            ['name' => 'द्वितीय अवस्था', 'from' => 26, 'to' => 50, 'houses' => [4, 5, 6], 'theme' => 'सुख·संतान·संघर्ष — गृहस्थी, संतान व प्रतिस्पर्धा का काल'],
+            ['name' => 'तृतीय अवस्था', 'from' => 51, 'to' => 75, 'houses' => [7, 8, 9], 'theme' => 'दाम्पत्य·आयु·भाग्य — साझेदारी, स्वास्थ्य व भाग्य-धर्म'],
+            ['name' => 'चतुर्थ अवस्था', 'from' => 76, 'to' => 100, 'houses' => [10, 11, 12], 'theme' => 'कर्म·लाभ·व्यय — पद-प्रतिष्ठा की परिणति, लाभ व मोक्ष'],
+        ];
+        $stages = [];
+        foreach ($stageDefs as $st) {
+            $pls = [];
+            foreach ($st['houses'] as $hn) {
+                foreach (($occupants[$hn] ?? []) as $en) {
+                    $pr = $pByEn[$en] ?? null;
+                    $pls[] = ['hi' => LalKitabData::planetHi($en), 'house' => $hn, 'verdict' => $pr['verdict'] ?? 'मध्यम'];
+                }
+            }
+            $stages[] = [
+                'name' => $st['name'], 'from' => $st['from'], 'to' => $st['to'],
+                'houses' => $st['houses'], 'theme' => $st['theme'], 'planets' => $pls,
+                'active' => $age !== null && $age >= $st['from'] && $age <= $st['to'],
+            ];
+        }
+
+        // ---- (b)+(c) forward timeline of events (current age → +25) ----
+        $from = $age ?? 0; $to = $from + 25;
+        $events = [];
+        foreach (self::PLANETS as $en) {
+            $hi = LalKitabData::planetHi($en);
+            $eff = $effShort($en);
+            foreach (self::parseYears((string) ($gc[$en]['prabhav'] ?? '')) as $yr) {
+                if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'प्रभाव', 'tone' => 'pos', 'text' => $hi . ' का प्रभाव-वर्ष — ' . $eff]; }
+            }
+            foreach (self::parseYears((string) ($gc[$en]['ashubh'] ?? '')) as $yr) {
+                if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'सावधानी', 'tone' => 'neg', 'text' => $hi . ' का सावधानी-वर्ष — सतर्कता व उपाय रखें (' . $eff . ')']; }
+            }
+            $wakeYrs = self::parseYears((string) ($sg[$en]['aayu'] ?? ''));
+            if ($wakeYrs !== []) {
+                $wy = $wakeYrs[0];
+                if ($wy >= $from && $wy <= $to) { $events[] = ['age' => $wy, 'planet' => $hi, 'kind' => 'जागृति', 'tone' => 'info', 'text' => $hi . ' जागृत होगा — ' . ($sg[$en]['jagega'] ?? '') . ' पर फल सक्रिय']; }
+            }
+        }
+        usort($events, static fn ($a, $b) => $a['age'] <=> $b['age']);
+        $events = array_slice($events, 0, 24);
+
+        // per-planet year chart (reference)
+        $planetYears = [];
+        foreach (self::PLANETS as $en) {
+            $planetYears[] = [
+                'hi' => LalKitabData::planetHi($en),
+                'prabhav' => (string) ($gc[$en]['prabhav'] ?? ''),
+                'ashubh' => (string) ($gc[$en]['ashubh'] ?? ''),
+                'vishesh' => (string) ($gc[$en]['vishesh'] ?? ''),
+                'jagega' => trim((string) ($sg[$en]['aayu'] ?? '') . ' — ' . (string) ($sg[$en]['jagega'] ?? ''), ' —'),
+                'kram' => (string) ($gc[$en]['kram'] ?? ''),
+                'effect' => $effShort($en),
+            ];
+        }
+
+        return ['age' => $age, 'stages' => $stages, 'events' => $events, 'planet_years' => $planetYears];
+    }
+
+    /** Extract all integers (life-years) from a mixed Hindi string. */
+    private static function parseYears(string $s): array
+    {
+        if (trim($s) === '') { return []; }
+        preg_match_all('/\d+/', $s, $m);
+        return array_values(array_unique(array_map('intval', $m[0])));
+    }
+
     /**
      * 🔎 सामान्य परिचय — whole-chart overview: overall शुभ/अशुभ balance, a
      * plain-language summary, and the aggregated करें/न करें (weighted toward the
