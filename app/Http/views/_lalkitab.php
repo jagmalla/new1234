@@ -88,6 +88,8 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab .lk-txt{font-size:.85rem;color:#334155;line-height:1.6}
   #sec-lalkitab .lk-sub{font-size:.8rem;color:#475569;margin:3px 0}
   #sec-lalkitab .lk-sub b{color:#334155}
+  #sec-lalkitab .lk-dd{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  @media(max-width:560px){#sec-lalkitab .lk-dd{grid-template-columns:1fr}}
   #sec-lalkitab .lk-view{display:none}
   #sec-lalkitab .lk-view.active{display:block}
   #sec-lalkitab .lk-scroll{max-height:74vh;overflow-y:auto;padding-right:6px}
@@ -209,6 +211,39 @@ $scorePill = static function (int $score): string {
       <div class="lk-view active" data-lk="overview">
         <h3 class="lk-h">सामान्य परिचय (Lal Kitab Overview)</h3>
 
+        <!-- 📢 सम्पूर्ण-कुंडली सार + करें/न करें -->
+        <?php $G = $lk['general'] ?? null; if ($G !== null):
+            $gBg = $G['tone'] === 'neg' ? 'background:#fef2f2;border-color:#fecaca;color:#7f1d1d'
+                : ($G['tone'] === 'pos' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#14532d'
+                : 'background:#fffbeb;border-color:#fde68a;color:#713f12'); ?>
+        <div style="border:1px solid;border-radius:10px;padding:10px 13px;margin-bottom:11px;<?= $gBg ?>">
+          <div style="font-weight:800;font-size:.9rem;margin-bottom:3px">📢 सम्पूर्ण कुंडली — सामान्य फल</div>
+          <div style="font-size:.85rem;line-height:1.6"><?= $h((string) $G['summary']) ?></div>
+          <?php if (!empty($G['shubh']) || !empty($G['ashubh'])): ?>
+          <div style="font-size:.78rem;margin-top:5px">🟢 शुभ ग्रह: <b><?= $h(implode(', ', $G['shubh']) ?: '—') ?></b> &nbsp; 🔴 ध्यान योग्य: <b><?= $h(implode(', ', $G['ashubh']) ?: '—') ?></b></div>
+          <?php endif; ?>
+        </div>
+        <?php if (!empty($G['dos']) || !empty($G['donts'])): ?>
+        <div class="lk-dd" style="margin-bottom:11px">
+          <?php if (!empty($G['dos'])): ?>
+          <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:9px;padding:8px 11px">
+            <div style="font-weight:700;font-size:.82rem;color:#166534;margin-bottom:3px">✅ करें (सामान्य Do's)</div>
+            <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#14532d;line-height:1.5">
+              <?php foreach ($G['dos'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+            </ul>
+          </div>
+          <?php endif; ?>
+          <?php if (!empty($G['donts'])): ?>
+          <div style="border:1px solid #fecaca;background:#fef2f2;border-radius:9px;padding:8px 11px">
+            <div style="font-weight:700;font-size:.82rem;color:#991b1b;margin-bottom:3px">⛔ न करें (सामान्य Don'ts)</div>
+            <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#7f1d1d;line-height:1.5">
+              <?php foreach ($G['donts'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+            </ul>
+          </div>
+          <?php endif; ?>
+        </div>
+        <?php endif; endif; ?>
+
         <?php if (!empty($lk['priority'])): ?>
         <!-- priority summary — which remedies to start with (#2) -->
         <div class="lk-card" style="border-color:#f59e0b;background:#fffbeb">
@@ -322,6 +357,38 @@ $scorePill = static function (int $score): string {
                   <ul style="margin:5px 0 0;padding-left:18px;font-size:.83rem;line-height:1.55">
                     <?php foreach ($p['pred_effects'] as $pe): ?><li><?= $h((string) $pe) ?></li><?php endforeach; ?>
                   </ul>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
+
+            <!-- 📅 आयु / समय-प्रभाव — कब जागेगा, प्रभावशाली व सावधानी के वर्ष -->
+            <?php if (!empty($p['age_timing'])): ?>
+              <div style="border:1px solid #c7d2fe;background:#eef2ff;border-radius:9px;padding:8px 11px;margin-top:8px">
+                <div style="font-weight:700;font-size:.82rem;color:#3730a3;margin-bottom:3px">📅 आयु / समय-प्रभाव</div>
+                <div style="font-size:.82rem;line-height:1.6;color:#3730a3">
+                  <?php foreach ($p['age_timing'] as $atx): ?><div><?= $h((string) $atx) ?></div><?php endforeach; ?>
+                </div>
+              </div>
+            <?php endif; ?>
+
+            <!-- ✅ करें / ⛔ न करें — इस ग्रह हेतु आचरण-मार्गदर्शन -->
+            <?php if (!empty($p['dos']) || !empty($p['donts'])): ?>
+              <div class="lk-dd">
+                <?php if (!empty($p['dos'])): ?>
+                <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:9px;padding:7px 10px">
+                  <div style="font-weight:700;font-size:.8rem;color:#166534;margin-bottom:3px">✅ करें (Do's)</div>
+                  <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#14532d;line-height:1.5">
+                    <?php foreach ($p['dos'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+                  </ul>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($p['donts'])): ?>
+                <div style="border:1px solid #fecaca;background:#fef2f2;border-radius:9px;padding:7px 10px">
+                  <div style="font-weight:700;font-size:.8rem;color:#991b1b;margin-bottom:3px">⛔ न करें (Don'ts)</div>
+                  <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#7f1d1d;line-height:1.5">
+                    <?php foreach ($p['donts'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+                  </ul>
+                </div>
                 <?php endif; ?>
               </div>
             <?php endif; ?>
@@ -445,6 +512,28 @@ $scorePill = static function (int $score): string {
               </div>
             <?php endif; ?>
 
+            <!-- ✅ करें / ⛔ न करें — भाव हेतु (स्थित ग्रह + स्वामी) -->
+            <?php if (!empty($H['dos']) || !empty($H['donts'])): ?>
+              <div class="lk-dd">
+                <?php if (!empty($H['dos'])): ?>
+                <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:9px;padding:7px 10px">
+                  <div style="font-weight:700;font-size:.8rem;color:#166534;margin-bottom:3px">✅ करें (Do's)</div>
+                  <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#14532d;line-height:1.5">
+                    <?php foreach ($H['dos'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+                  </ul>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($H['donts'])): ?>
+                <div style="border:1px solid #fecaca;background:#fef2f2;border-radius:9px;padding:7px 10px">
+                  <div style="font-weight:700;font-size:.8rem;color:#991b1b;margin-bottom:3px">⛔ न करें (Don'ts)</div>
+                  <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#7f1d1d;line-height:1.5">
+                    <?php foreach ($H['donts'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+                  </ul>
+                </div>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
+
             <details style="margin-top:5px">
               <summary style="cursor:pointer;font-size:.76rem;color:#94a3b8">भाव-विषय (पूरी सूची)</summary>
               <div class="lk-txt" style="margin-top:3px"><?= $h((string) $H['vishay']) ?></div>
@@ -508,7 +597,27 @@ $scorePill = static function (int $score): string {
                 <span class="lk-meta" style="margin:0 0 0 6px"><?= $h((string) $D['pair_hi']) ?> — <?= $h((string) $D['house_ord']) ?> भाव में</span>
                 <?= $srcTag('युति दोष गणना') ?>
               </div>
-              <div class="lk-txt"><?= $h((string) $D['desc']) ?></div>
+              <div class="lk-txt"><b>📢 फल:</b> <?= $h((string) $D['desc']) ?></div>
+              <?php if (!empty($D['dos']) || !empty($D['donts'])): ?>
+              <div class="lk-dd">
+                <?php if (!empty($D['dos'])): ?>
+                <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:9px;padding:7px 10px">
+                  <div style="font-weight:700;font-size:.8rem;color:#166534;margin-bottom:3px">✅ करें (Do's)</div>
+                  <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#14532d;line-height:1.5">
+                    <?php foreach ($D['dos'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+                  </ul>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($D['donts'])): ?>
+                <div style="border:1px solid #fecaca;background:#fef2f2;border-radius:9px;padding:7px 10px">
+                  <div style="font-weight:700;font-size:.8rem;color:#991b1b;margin-bottom:3px">⛔ न करें (Don'ts)</div>
+                  <ul style="margin:0;padding-left:16px;font-size:.8rem;color:#7f1d1d;line-height:1.5">
+                    <?php foreach ($D['donts'] as $dx): ?><li><?= $h((string) $dx) ?></li><?php endforeach; ?>
+                  </ul>
+                </div>
+                <?php endif; ?>
+              </div>
+              <?php endif; ?>
               <?= $remBlock($D['remedies'], $D['name'] . ' — उपाय') ?>
             </div>
           <?php endforeach; ?>

@@ -31,6 +31,51 @@ final class LalKitabEngine
     /** Planets carried into the Lal Kitab chart (incl. shadow planets). */
     private const PLANETS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
 
+    /**
+     * Authentic Lal Kitab करें (do) / न करें (don't) per planet — the standard
+     * conduct-based guidance that strengthens the planet's शुभ फल and averts its
+     * अशुभ फल. Shown with every placement (§ do's-don'ts request).
+     * @var array<string,array{do:list<string>,dont:list<string>}>
+     */
+    private const DO_DONT = [
+        'Sun' => [
+            'do' => ['पिता, बड़ों व सरकारी अधिकारियों का सम्मान करें', 'प्रत्येक कार्य कुछ मीठा खाकर व जल पीकर आरम्भ करें', 'सूर्य को जल दें, घर का मुख्य द्वार साफ़ व खुला रखें', 'आँख/हड्डी की देखभाल करें, नित्य दिनचर्या रखें'],
+            'dont' => ['मुफ़्त/दान की वस्तुएँ न लें, तांबा दान में न लें', 'पिता/सरकार का अपमान न करें', 'मांस-मदिरा से दूर रहें', 'चारित्रिक शिथिलता न रखें'],
+        ],
+        'Moon' => [
+            'do' => ['माता व वृद्ध स्त्रियों की सेवा करें', 'चाँदी/जल/चावल पास रखें, जल-स्रोत साफ़ रखें', 'सत्य बोलें, मन शान्त रखें', 'रात्रि में सिरहाने जल भरकर रखें व प्रातः पौधे में डालें'],
+            'dont' => ['दूध/दही/चावल दान में न लें', 'जल-पात्र फोड़ें नहीं, जल व्यर्थ न बहाएँ', 'माता का अपमान न करें', 'घर अँधेरा/गन्दा न रखें'],
+        ],
+        'Mars' => [
+            'do' => ['भाइयों से मेल रखें, साहस-धैर्य से काम लें', 'मीठा बाँटें, रक्तदान/भूमि-सेवा करें', 'हनुमान-उपासना करें'],
+            'dont' => ['क्रोध व झगड़े से बचें, अस्त्र-शस्त्र से सावधानी', 'रक्त/अग्नि से जोखिम न लें', 'भाइयों से भूमि-विवाद न करें'],
+        ],
+        'Mercury' => [
+            'do' => ['बुआ/बहन/बेटी का सम्मान व सहायता करें', 'हरी वस्तु/पालक रखें, वाणी मधुर रखें', 'गाय को हरा चारा दें'],
+            'dont' => ['किसी की निंदा/चुगली न करें', 'हरी वस्तु का दान न लें', 'झूठ व धोखा न करें'],
+        ],
+        'Jupiter' => [
+            'do' => ['गुरु/बड़ों/ब्राह्मण का सम्मान करें, धर्म-कर्म करें', 'केसर/हल्दी का तिलक, पीली वस्तु रखें', 'मन्दिर व ज्ञान में दान करें'],
+            'dont' => ['धर्म/गुरु का अपमान न करें', 'सोना/पीली वस्तु का दान न लें', 'अहंकार व कुसंग से बचें'],
+        ],
+        'Venus' => [
+            'do' => ['पत्नी/स्त्री-वर्ग का सम्मान करें, स्वच्छता रखें', 'गाय की सेवा करें, सुगन्ध-सौन्दर्य बनाए रखें'],
+            'dont' => ['चारित्रिक शिथिलता व व्यसन से बचें', 'स्त्री का अपमान न करें', 'दिखावे में अति न करें'],
+        ],
+        'Saturn' => [
+            'do' => ['मज़दूर/गरीब/वृद्ध की सेवा करें, अनुशासन रखें', 'शनिवार तेल/उड़द/लोहा दान करें, न्यायपूर्ण रहें'],
+            'dont' => ['किसी का हक़ न मारें, आलस्य न करें', 'मदिरा-मांस व असत्य से बचें', 'बुज़ुर्गों/सेवकों का अपमान न करें'],
+        ],
+        'Rahu' => [
+            'do' => ['सिर ढककर रखें, स्वच्छता व सादगी रखें', 'ससुराल-पक्ष से मधुर सम्बन्ध, चींटी/कुत्ते को भोजन'],
+            'dont' => ['छल-कपट व अनैतिक लाभ से बचें', 'नीली/काली अशुद्ध वस्तु से सावधानी', 'बिजली/जुए/नशे से दूर रहें'],
+        ],
+        'Ketu' => [
+            'do' => ['कुत्ते/संतान की सेवा करें, आध्यात्मिक रहें', 'दो-रंगा कम्बल/कान छिदवाना लाभप्रद'],
+            'dont' => ['संतान/श्वान का अनादर न करें', 'अकारण संदेह व भटकाव से बचें', 'पैतृक-वस्तु न बेचें'],
+        ],
+    ];
+
     /** @var array<string,int> planet => LK house, for the note-clause parser's
      *  relative-house ("X के Nवें में") checks. Set by planetReadings(). */
     private static array $noteHouses = [];
@@ -108,6 +153,7 @@ final class LalKitabEngine
             'moon_hi'     => LalKitabData::signHi(Charts::SIGNS[$moonSign]),
             'grid'        => $grid,
             'planets'     => $planets,
+            'general'     => self::generalOverview($planets),
             'active'      => $activeNow,
             'priority'    => $priority,
             'yuti_dosha'  => $yutiDosha,
@@ -151,6 +197,8 @@ final class LalKitabEngine
         $sh  = LalKitabData::section('sheeghra');
         $pd  = LalKitabData::section('puja_daan');
         $bd  = LalKitabData::section('bhav_drishti');
+        $sg  = LalKitabData::section('supt_grah');    // awakening age + trigger
+        $gc  = LalKitabData::section('grah_chakra');  // effect years / caution years
 
         // lookups shared by the per-planet analysis
         $awake = [];   // planet-en => bool
@@ -304,11 +352,24 @@ final class LalKitabEngine
                 . ' — पर इस स्थिति का असर पड़ता है। ' . $effectVerb;
             $predEffects = array_map(static fn ($na) => (string) $na['text'], $notesApplied);
 
+            // 📅 आयु/समय-प्रभाव — when this planet wakes & its strong/caution years.
+            $ageBits = [];
+            if (trim((string) ($sg[$p]['aayu'] ?? '')) !== '') {
+                $ageBits[] = '⏳ जागृति: ' . $sg[$p]['aayu'] . (trim((string) ($sg[$p]['jagega'] ?? '')) !== '' ? ' (' . $sg[$p]['jagega'] . ')' : '');
+            }
+            if (trim((string) ($gc[$p]['prabhav'] ?? '')) !== '') { $ageBits[] = '📈 प्रभावशाली वर्ष: ' . $gc[$p]['prabhav']; }
+            if (trim((string) ($gc[$p]['ashubh'] ?? '')) !== '') { $ageBits[] = '⚠️ सावधानी वर्ष: ' . $gc[$p]['ashubh']; }
+            if (trim((string) ($gc[$p]['vishesh'] ?? '')) !== '') { $ageBits[] = '✨ विशेष: ' . $gc[$p]['vishesh']; }
+            $ageTiming = $ageBits;
+
             $out[] = [
                 'planet'    => $p,
                 'hi'        => LalKitabData::planetHi($p),
                 'house'     => $h,
                 'house_ord' => LalKitabData::houseOrdinalHi($h),
+                'dos'       => self::DO_DONT[$p]['do'] ?? [],
+                'donts'     => self::DO_DONT[$p]['dont'] ?? [],
+                'age_timing'=> $ageTiming,
                 'sign'      => $sIdx,
                 'sign_hi'   => LalKitabData::signHi(Charts::SIGNS[$sIdx]),
                 'retro'     => $retro,
@@ -483,9 +544,20 @@ final class LalKitabEngine
                 }
             }
 
+            // ✅/⛔ भाव हेतु आचरण — इसमें बैठे ग्रह + भाव-स्वामी के अनुसार।
+            $hDos = []; $hDonts = [];
+            foreach (array_values(array_unique(array_merge($occupants[$h], [$lord]))) as $rp) {
+                $dd = self::DO_DONT[$rp] ?? null;
+                if ($dd === null) { continue; }
+                if (!empty($dd['do'])) { $hDos[] = LalKitabData::planetHi($rp) . ': ' . $dd['do'][0]; }
+                if (!empty($dd['dont'])) { $hDonts[] = LalKitabData::planetHi($rp) . ': ' . $dd['dont'][0]; }
+            }
+
             $out[$h] = [
                 'house'      => $h,
                 'house_ord'  => LalKitabData::houseOrdinalHi($h),
+                'dos'        => $hDos,
+                'donts'      => $hDonts,
                 'rashi'      => $bv[(string) $h]['rashi'] ?? '',
                 'swami'      => $bv[(string) $h]['swami'] ?? '',
                 'vishay'     => $bv[(string) $h]['vishay'] ?? '',
@@ -799,6 +871,35 @@ final class LalKitabEngine
      * @param array<int,list<string>> $occupants
      * @return list<array<string,mixed>>
      */
+    /**
+     * 🔎 सामान्य परिचय — whole-chart overview: overall शुभ/अशुभ balance, a
+     * plain-language summary, and the aggregated करें/न करें (weighted toward the
+     * अशुभ planets that actually need attention).
+     * @param list<array<string,mixed>> $planets planetReadings output
+     */
+    private static function generalOverview(array $planets): array
+    {
+        $shubh = []; $ashubh = [];
+        foreach ($planets as $p) {
+            if (($p['verdict'] ?? '') === 'अशुभ') { $ashubh[] = (string) $p['hi']; }
+            elseif (($p['verdict'] ?? '') === 'शुभ') { $shubh[] = (string) $p['hi']; }
+        }
+        $src = $ashubh !== [] ? array_filter($planets, static fn ($p) => ($p['verdict'] ?? '') === 'अशुभ') : $planets;
+        $dos = []; $donts = [];
+        foreach ($src as $p) {
+            foreach (($p['dos'] ?? []) as $d) { $dos[] = $p['hi'] . ': ' . $d; }
+            foreach (($p['donts'] ?? []) as $d) { $donts[] = $p['hi'] . ': ' . $d; }
+        }
+        $dos = array_slice(array_values(array_unique($dos)), 0, 8);
+        $donts = array_slice(array_values(array_unique($donts)), 0, 8);
+        $tone = count($ashubh) > count($shubh) ? 'neg' : (count($shubh) > count($ashubh) ? 'pos' : 'mix');
+        $summary = 'इस कुंडली में ' . count($shubh) . ' ग्रह शुभ व ' . count($ashubh) . ' ग्रह अशुभ स्थिति में हैं। '
+            . ($ashubh !== []
+                ? 'विशेष ध्यान योग्य ग्रह: ' . implode(', ', $ashubh) . '। इनका आचरण-सुधार व उपाय ही सर्वाधिक लाभ देगा; नीचे करें/न करें व उपाय दिए हैं।'
+                : 'कुंडली प्रायः बलवान है — सामान्य सदाचार, दान व नित्य-कर्म पर्याप्त; किसी उग्र उपाय की आवश्यकता नहीं।');
+        return ['summary' => $summary, 'tone' => $tone, 'shubh' => $shubh, 'ashubh' => $ashubh, 'dos' => $dos, 'donts' => $donts];
+    }
+
     private static function yutiDoshaReadings(array $occupants): array
     {
         /** alphabetically-sorted pair key => [name, description] */
@@ -843,6 +944,13 @@ final class LalKitabEngine
                     foreach ($pair as $p) {
                         if (!empty($sh[$p])) { $rem[] = LalKitabData::planetHi($p) . ' शीघ्र उपाय: ' . $sh[$p]; }
                     }
+                    $yDos = []; $yDonts = [];
+                    foreach ($pair as $p) {
+                        $dd = self::DO_DONT[$p] ?? null;
+                        if ($dd === null) { continue; }
+                        if (!empty($dd['do'])) { $yDos[] = LalKitabData::planetHi($p) . ': ' . $dd['do'][0]; }
+                        if (!empty($dd['dont'])) { $yDonts[] = LalKitabData::planetHi($p) . ': ' . $dd['dont'][0]; }
+                    }
                     $out[] = [
                         'name'      => $name,
                         'desc'      => $desc,
@@ -851,6 +959,8 @@ final class LalKitabEngine
                         'house'     => $h,
                         'house_ord' => LalKitabData::houseOrdinalHi($h),
                         'remedies'  => array_values(array_filter($rem)),
+                        'dos'       => $yDos,
+                        'donts'     => $yDonts,
                     ];
                 }
             }
