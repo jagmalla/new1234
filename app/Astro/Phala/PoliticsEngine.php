@@ -182,14 +182,17 @@ final class PoliticsEngine
         $dasha = self::dashaSection($ctx, $moonLon, $birthJd, $nowJd, $tz, $yoga);
         $gochar = self::gochar($ctx, $engine, $nowJd);
         $varsha = self::varshaphal($vp, $ctx);
-        $level = self::level($ctx, $yoga, $navamsa, $dashamsha, $bala, $dasha, $identify, $capability);
-        $field = self::field($ctx);
-        $promotion = self::promotion($ctx, $dasha, $gochar, $varsha);
+        // Qualifying dimensions computed BEFORE the level so the level can be
+        // gated by them (a high ceiling needs interest + public-comfort +
+        // career-direction + success factors, not raj-yogas alone).
         $success = self::successCheck($ctx, $bala, $navamsa, $dashamsha);
-        $remedies = self::remedies($ctx, $planets);
         $careerFit = self::careerFit($career);
         $interest = self::interest($ctx);
         $publicDealing = self::publicDealing($ctx);
+        $level = self::level($ctx, $yoga, $navamsa, $dashamsha, $bala, $dasha, $identify, $capability, $careerFit, $interest, $publicDealing, $success);
+        $field = self::field($ctx);
+        $promotion = self::promotion($ctx, $dasha, $gochar, $varsha);
+        $remedies = self::remedies($ctx, $planets);
         $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability, $careerFit, $interest, $publicDealing);
 
         return [
@@ -1053,7 +1056,7 @@ final class PoliticsEngine
 
     // ---------------------------------------------------------- §14 level
 
-    private static function level(array $ctx, array $yoga, array $navamsa, ?array $d10, array $bala, array $dasha, array $identify = [], array $capability = []): array
+    private static function level(array $ctx, array $yoga, array $navamsa, ?array $d10, array $bala, array $dasha, array $identify = [], array $capability = [], array $careerFit = [], array $interest = [], array $publicDealing = [], array $success = []): array
     {
         $L10 = $ctx['L10']; $L11 = $ctx['L11']; $L6 = $ctx['L6'];
         $f = [];
@@ -1102,24 +1105,57 @@ final class PoliticsEngine
         $score += $bonusRules + $bonusCap + $bonusRaj;
         $max += 12 + 4 + 6;
 
-        // ---- score → band (combined score, max ~68) ----
-        if ($score < 7) { $band = 'worker'; }
-        elseif ($score <= 13) { $band = 'local'; }
-        elseif ($score <= 19) { $band = 'district'; }
-        elseif ($score <= 24) { $band = 'state'; }
-        elseif ($score <= 37) { $band = 'national'; }
+        // ---- qualifying-dimension inputs (interest · public-dealing · career ·
+        // success). A high political ceiling is impossible without these, so they
+        // both ADD points AND CAP the reachable level. ----
+        $iLvl = (string) ($interest['level'] ?? 'medium');       // high/medium/low
+        $pLvl = (string) ($publicDealing['level'] ?? 'medium');  // high/medium/low
+        $cLvl = (string) ($careerFit['level'] ?? 'moderate');    // strong/moderate/weak/unknown
+        $sMet = (int) ($success['met'] ?? 0);                    // 0..6
+        $bonusInterest = $iLvl === 'high' ? 3 : ($iLvl === 'medium' ? 1 : 0);
+        $bonusPublic = $pLvl === 'high' ? 3 : ($pLvl === 'medium' ? 1 : 0);
+        $bonusCareer = $cLvl === 'strong' ? 3 : ($cLvl === 'moderate' ? 1 : 0);
+        $bonusSuccess = max(0, $sMet - 2) * 1;                   // 0..4
+        $f[] = ['label' => '❤️ राजनीति में रुचि', 'met' => $bonusInterest > 0, 'pts' => $bonusInterest];
+        $f[] = ['label' => '🤝 जन-व्यवहार सहजता', 'met' => $bonusPublic > 0, 'pts' => $bonusPublic];
+        $f[] = ['label' => '🧭 करियर-दिशा राजनीति-अनुकूल', 'met' => $bonusCareer > 0, 'pts' => $bonusCareer];
+        $f[] = ['label' => '🎯 सफलता-कारक (10/11/नवांश/D-10)', 'met' => $bonusSuccess > 0, 'pts' => $bonusSuccess];
+        $score += $bonusInterest + $bonusPublic + $bonusCareer + $bonusSuccess;
+        $max += 3 + 3 + 3 + 4;   // new max ~81
+
+        // ---- score → band (scaled to the real achievable range; even strong
+        // political charts top out ~44-48/81). Top tiers deliberately hard:
+        // MLA/MP level is uncommon; CM/PM/President is ~1-in-millions. ----
+        if ($score < 18) { $band = 'worker'; }
+        elseif ($score <= 26) { $band = 'local'; }
+        elseif ($score <= 34) { $band = 'district'; }
+        elseif ($score <= 41) { $band = 'state'; }
+        elseif ($score <= 50) { $band = 'national'; }
         else { $band = 'supreme'; }
 
-        // ---- mild qualification floor: a chart that clearly qualifies as a
-        // politician should not be labelled at the very bottom. Kept mild so a
-        // thin checklist isn't over-inflated by rule-count alone. ----
         $order = ['worker' => 0, 'local' => 1, 'district' => 2, 'state' => 3, 'national' => 4, 'supreme' => 5];
         $rev = array_flip($order);
         $bi = $order[$band];
-        if ($rulesMet >= 6) { $bi = max($bi, 3); }        // ≥6/8 rules → state floor
-        elseif ($rulesMet >= 5) { $bi = max($bi, 2); }    // 5/8 → district floor
-        // supreme possibility — exceptional, strongly-qualified charts only
-        if ($score >= 38 || ($rulesMet >= 7 && $capIndex >= 62 && $bonusRaj >= 4 && $score >= 32)) { $bi = 5; }
+
+        // ---- hard gates: a weak qualifying dimension CAPS the reachable level.
+        // Politics is impossible without interest, public-comfort & a supporting
+        // career direction — raj-yogas alone cannot lift past these. ----
+        if ($cLvl === 'weak') { $bi = min($bi, 2); }            // career elsewhere → ≤ district
+        elseif ($cLvl === 'moderate') { $bi = min($bi, 4); }    // → ≤ national
+        if ($pLvl === 'low') { $bi = min($bi, 1); }             // uncomfortable with public → ≤ local
+        elseif ($pLvl === 'medium') { $bi = min($bi, 4); }      // → ≤ national
+        if ($iLvl === 'low') { $bi = min($bi, 2); }             // no interest → ≤ district
+        elseif ($iLvl === 'medium') { $bi = min($bi, 4); }      // → ≤ national
+        if ($sMet < 2) { $bi = min($bi, 3); }                   // weak success-factors → ≤ state
+        if ($capIndex < 55) { $bi = min($bi, 3); }              // low capability → ≤ state
+
+        // ---- सर्वोच्च (CM/PM/President): extremely rare — demands a near-total
+        // confluence across EVERY dimension. Otherwise cap one tier below. ----
+        $supremeConfluence = $score >= 51
+            && $cLvl === 'strong' && $pLvl === 'high' && $iLvl === 'high'
+            && $sMet >= 5 && $capIndex >= 70 && $rulesMet >= 7 && $bonusRaj >= 5;
+        if ($bi === 5 && !$supremeConfluence) { $bi = 4; }      // demote unearned supreme → national
+
         $band = $rev[$bi];
 
         $labels = [
@@ -1135,7 +1171,7 @@ final class PoliticsEngine
         return [
             'factors' => $f, 'score' => $score, 'max' => $max,
             'band' => $band, 'label' => $label, 'titles' => $titles,
-            'note' => 'यह सम्भावित उच्चतम स्तर (potential ceiling) है — पहुँची हुई/पहुँच-योग्य ऊँचाई, न कि किसी एक चुनाव में जीत की गारंटी। स्तर = यौगिक-चेकलिस्ट + राजनीति-योग नियम-संख्या + क्षमता-सूचकांक + राजयोग-प्रबलता (शास्त्र §14.3)। ⚠️ किसी विशेष चुनाव में जय/पराजय दशा-गोचर के ठीक-समय व अवसर पर निर्भर है — इसे जन्म-कुण्डली से निश्चित रूप से नहीं कहा जा सकता; प्रबल कुण्डली वाले भी हार सकते हैं व साधारण कुण्डली वाले समय-अनुकूल जीत सकते हैं। अति-आशावादी/निराशावादी निष्कर्ष न लें।',
+            'note' => 'यह सम्भावित उच्चतम स्तर (potential ceiling) है — पहुँची हुई/पहुँच-योग्य ऊँचाई, न कि किसी एक चुनाव में जीत की गारंटी। स्तर = यौगिक-चेकलिस्ट + राजनीति-योग + क्षमता + राजयोग-प्रबलता, तथा रुचि · जन-व्यवहार · करियर-दिशा · सफलता-कारक — इनमें से कोई दुर्बल हो तो ऊँचाई वहीं सीमित (gate) हो जाती है। सर्वोच्च स्तर (मुख्यमंत्री/प्रधानमंत्री/राष्ट्रपति) अत्यंत दुर्लभ — केवल तब जब हर आयाम प्रबल हो (~दस-लाख में एक) (शास्त्र §14.3)। ⚠️ किसी विशेष चुनाव में जय/पराजय दशा-गोचर के ठीक-समय व अवसर पर निर्भर है — इसे जन्म-कुण्डली से निश्चित रूप से नहीं कहा जा सकता; प्रबल कुण्डली वाले भी हार सकते हैं व साधारण कुण्डली वाले समय-अनुकूल जीत सकते हैं। अति-आशावादी/निराशावादी निष्कर्ष न लें।',
         ];
     }
 
