@@ -51,6 +51,10 @@ try {
             (new CalcController())->varshaphalJson();
             break;
 
+        case 'GET calc/lalkitabVarsh':
+            (new CalcController())->lalkitabVarshJson();
+            break;
+
         case 'GET calc/dashaPhala':
             (new CalcController())->dashaPhalaJson();
             break;

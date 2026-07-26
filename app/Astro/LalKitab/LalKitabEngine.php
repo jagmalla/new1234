@@ -1511,6 +1511,217 @@ final class LalKitabEngine
     }
 
     /**
+     * लाल किताब वर्ष कुंडली (annual chart) for a chosen age-year.
+     *
+     * The वर्ष कुंडली ज्ञान चक्र (varsh_gyan) gives, per age-year, a 12-house
+     * permutation: which जन्म-भाव (natal house) content activates in each house
+     * of THAT year's chart. We rotate the natal Lal Kitab placements through the
+     * permutation and re-run the SAME Lal Kitab reading pipeline (planet / house
+     * / yoga / remedy / करें-न करें) on the rotated placements — so the annual
+     * chart is read with Lal Kitab rules, predictions and remedies, NOT the
+     * birth chart. Also returns इस वर्ष का सार + a कब-क्या-होगा timeline for the
+     * selected year.
+     *
+     * @param array<string,mixed> $chart D1 chart from CalculationEngine
+     * @param int $age target age-year (1..96)
+     * @return array<string,mixed>
+     */
+    public static function varshReading(array $chart, int $age): array
+    {
+        if (empty($chart['planets']) || empty($chart['ascendant'])) {
+            return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
+        }
+        if ($age < 1)  { $age = 1; }
+        if ($age > 96) { $age = 96; }
+
+        // ---- natal Lal Kitab placements (planet => natal house) ----
+        $janamHouse = [];
+        foreach (self::PLANETS as $p) {
+            if (!isset($chart['planets'][$p])) { continue; }
+            $h = (int) ($chart['planets'][$p]['house'] ?? 0);
+            if ($h >= 1 && $h <= 12) { $janamHouse[$p] = $h; }
+        }
+
+        // ---- वर्ष चक्र permutation for this age ----
+        $tbl = LalKitabData::section('varsh_gyan');
+        $row = $tbl[(string) $age] ?? null;
+        if (!is_array($row) || count($row) < 12) {
+            $row = [];
+            for ($i = 1; $i <= 12; $i++) { $row[] = (string) $i; }
+        }
+        // varsh house (i+1) carries natal house row[i]; invert to place planets.
+        $varshHouseOf = [];   // natal-house-number => varsh house
+        for ($i = 0; $i < 12; $i++) {
+            $jhn = (int) $row[$i];
+            if ($jhn >= 1 && $jhn <= 12) { $varshHouseOf[$jhn] = $i + 1; }
+        }
+
+        // ---- rotate placements into the varsh chart ----
+        $vHouse = [];
+        $vOccupants = array_fill(1, 12, []);
+        foreach ($janamHouse as $p => $jh) {
+            $vh = $varshHouseOf[$jh] ?? $jh;
+            $vHouse[$p] = $vh;
+            $vOccupants[$vh][] = $p;
+        }
+
+        // ---- fixed-Aries varsh grid + north-chart payload ----
+        $abbr = ['Sun' => 'Su', 'Moon' => 'Mo', 'Mars' => 'Ma', 'Mercury' => 'Me',
+            'Jupiter' => 'Ju', 'Venus' => 'Ve', 'Saturn' => 'Sa', 'Rahu' => 'Ra', 'Ketu' => 'Ke'];
+        $grid = [];
+        $north = ['asc_sign' => 0, 'planets' => []];
+        for ($h = 1; $h <= 12; $h++) {
+            $sIdx = LalKitabData::HOUSE_SIGN[$h];
+            $lord = LalKitabData::HOUSE_LORD[$h];
+            $grid[$h] = [
+                'house'      => $h,
+                'sign'       => $sIdx,
+                'sign_hi'    => LalKitabData::signHi(Charts::SIGNS[$sIdx]),
+                'lord'       => $lord,
+                'lord_hi'    => LalKitabData::planetHi($lord),
+                'planets'    => $vOccupants[$h],
+                'planets_hi' => array_map([LalKitabData::class, 'planetHi'], $vOccupants[$h]),
+                'from_janam' => (int) $row[$h - 1],   // natal house this varsh-house carries
+            ];
+        }
+        foreach ($vHouse as $p => $vh) {
+            $north['planets'][] = ['abbr' => $abbr[$p] ?? $p, 'sign' => $vh - 1, 'deg' => 0,
+                'retro' => !empty($chart['planets'][$p]['retro'])];
+        }
+
+        // ---- run the Lal Kitab reading pipeline on the ROTATED placements ----
+        $supt      = self::suptReadings($vHouse);
+        $yutiDosha = self::yutiDoshaReadings($vOccupants);
+        $planets   = self::planetReadings($chart, $vHouse, $vOccupants, $supt, $yutiDosha);
+        self::scorePlanets($planets, $supt, $yutiDosha, [], $age);
+        $houses    = self::houseReadings($vHouse, $vOccupants, $planets);
+        $general   = self::generalOverview($planets);
+        $yoga      = self::yogaReadings($vHouse);
+        $remedy    = self::remedyReadings($vHouse, $vOccupants);
+        $saar      = self::varshSaar($planets, $houses, $age);
+
+        return [
+            'ok'         => true,
+            'age'        => $age,
+            'row'        => $row,
+            'grid'       => $grid,
+            'north'      => $north,
+            'planets'    => $planets,
+            'houses'     => $houses,
+            'general'    => $general,
+            'yoga'       => $yoga,
+            'yuti_dosha' => $yutiDosha,
+            'remedy'     => $remedy,
+            'saar'       => $saar,
+        ];
+    }
+
+    /**
+     * इस वर्ष का सार — the plain-language annual summary + कब-क्या-होगा events for
+     * the selected age, built from the rotated planet/house verdicts plus the
+     * ग्रह-चक्र (prabhav/ashubh/vishesh) & सुप्त-ग्रह (awakening) year tables.
+     *
+     * @param list<array<string,mixed>> $planets rotated planetReadings output
+     * @param array<int,array<string,mixed>> $houses rotated houseReadings output
+     * @return array<string,mixed>
+     */
+    private static function varshSaar(array $planets, array $houses, int $age): array
+    {
+        $gc = LalKitabData::section('grah_chakra');
+        $sg = LalKitabData::section('supt_grah');
+
+        // planets शुभ / अशुभ this year
+        $shubhP = []; $ashubhP = [];
+        foreach ($planets as $p) {
+            if (($p['verdict'] ?? '') === 'शुभ')  { $shubhP[]  = $p['hi']; }
+            elseif (($p['verdict'] ?? '') === 'अशुभ') { $ashubhP[] = $p['hi']; }
+        }
+
+        // house life-areas that shine / need care this year
+        $goodAreas = []; $cautionAreas = [];
+        foreach ($houses as $h => $hr) {
+            $topic = LalKitabData::HOUSE_TOPIC[$h] ?? '';
+            if ($topic === '') { continue; }
+            if (($hr['verdict'] ?? '') === 'शुभ' && $hr['planets'] !== []) {
+                $goodAreas[] = ['ord' => $hr['house_ord'], 'topic' => $topic];
+            } elseif (($hr['verdict'] ?? '') === 'अशुभ') {
+                $cautionAreas[] = ['ord' => $hr['house_ord'], 'topic' => $topic];
+            }
+        }
+        $goodAreas    = array_slice($goodAreas, 0, 5);
+        $cautionAreas = array_slice($cautionAreas, 0, 5);
+
+        // कब क्या होगा — events that fall exactly on this age-year
+        $events = [];
+        foreach (self::PLANETS as $en) {
+            $hi = LalKitabData::planetHi($en);
+            if (in_array($age, self::parseYears((string) ($gc[$en]['prabhav'] ?? '')), true)) {
+                $events[] = ['tone' => 'pos', 'text' => '📈 ' . $hi . ' का प्रभावशाली वर्ष — इसके कारक विषयों में लाभ व उन्नति के योग।'];
+            }
+            if (in_array($age, self::parseYears((string) ($gc[$en]['ashubh'] ?? '')), true)) {
+                $events[] = ['tone' => 'neg', 'text' => '⚠️ ' . $hi . ' का सावधानी वर्ष — इसके कारक विषयों में सतर्कता व उपाय रखें।'];
+            }
+            if (trim((string) ($gc[$en]['vishesh'] ?? '')) !== ''
+                && in_array($age, self::parseYears((string) ($gc[$en]['vishesh'] ?? '')), true)) {
+                $events[] = ['tone' => 'info', 'text' => '✨ ' . $hi . ' — ' . trim((string) $gc[$en]['vishesh'])];
+            }
+            if (in_array($age, self::parseYears((string) ($sg[$en]['aayu'] ?? '')), true)) {
+                $events[] = ['tone' => 'info', 'text' => '⏳ ' . $hi . ' जागृत होगा — ' . trim((string) ($sg[$en]['jagega'] ?? '')) . ' पर इसका फल सक्रिय।'];
+            }
+        }
+
+        // aggregate करें / न करें / उपाय — priority to the अशुभ planets
+        $srcP = array_values(array_filter($planets, static fn ($p) => ($p['verdict'] ?? '') === 'अशुभ'));
+        if ($srcP === []) { $srcP = $planets; }
+        $dos = []; $donts = []; $rem = [];
+        foreach ($srcP as $p) {
+            foreach (($p['dos'] ?? []) as $d)   { $dos[]   = $p['hi'] . ': ' . $d; }
+            foreach (($p['donts'] ?? []) as $d) { $donts[] = $p['hi'] . ': ' . $d; }
+            if (!empty($p['need_remedy'])) {
+                foreach (array_slice($p['remedies'] ?? [], 0, 2) as $r) {
+                    $rem[] = $p['hi'] . ' (' . $p['house_ord'] . ' भाव): ' . $r;
+                }
+            }
+        }
+        $dos   = array_slice(array_values(array_unique($dos)), 0, 8);
+        $donts = array_slice(array_values(array_unique($donts)), 0, 8);
+        $rem   = array_slice(array_values(array_unique($rem)), 0, 8);
+
+        $tone = count($ashubhP) > count($shubhP) ? 'neg' : (count($shubhP) > count($ashubhP) ? 'pos' : 'mix');
+        $headline = 'इस वर्ष (आयु ' . $age . ') की लाल किताब वर्ष-कुंडली में ' . count($shubhP)
+            . ' ग्रह शुभ व ' . count($ashubhP) . ' ग्रह अशुभ स्थिति में हैं। '
+            . ($goodAreas !== [] ? 'अनुकूल: ' . implode('; ', array_map(static fn ($a) => $a['topic'], $goodAreas)) . '। ' : '')
+            . ($cautionAreas !== [] ? 'सावधानी: ' . implode('; ', array_map(static fn ($a) => $a['topic'], $cautionAreas)) . '।' : '');
+
+        // upcoming mini-timeline (this age → +5)
+        $timeline = [];
+        for ($a = $age; $a <= $age + 5 && $a <= 100; $a++) {
+            $bits = [];
+            foreach (self::PLANETS as $en) {
+                $hi = LalKitabData::planetHi($en);
+                if (in_array($a, self::parseYears((string) ($gc[$en]['prabhav'] ?? '')), true)) { $bits[] = ['tone' => 'pos', 't' => $hi . ' प्रभाव']; }
+                if (in_array($a, self::parseYears((string) ($gc[$en]['ashubh'] ?? '')), true))  { $bits[] = ['tone' => 'neg', 't' => $hi . ' सावधानी']; }
+                if (in_array($a, self::parseYears((string) ($sg[$en]['aayu'] ?? '')), true))     { $bits[] = ['tone' => 'info', 't' => $hi . ' जागृति']; }
+            }
+            if ($bits !== []) { $timeline[] = ['age' => $a, 'bits' => $bits]; }
+        }
+
+        return [
+            'headline' => $headline,
+            'tone'     => $tone,
+            'shubh'    => $shubhP,
+            'ashubh'   => $ashubhP,
+            'good'     => $goodAreas,
+            'caution'  => $cautionAreas,
+            'events'   => $events,
+            'dos'      => $dos,
+            'donts'    => $donts,
+            'remedies' => $rem,
+            'timeline' => $timeline,
+        ];
+    }
+
+    /**
      * उपाय के नियम, वर्जित उपाय व दान-निषेध — the do/don't reference for remedies.
      *
      * @return array<string,mixed>

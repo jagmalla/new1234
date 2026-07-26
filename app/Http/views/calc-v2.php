@@ -2602,6 +2602,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/gochar.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/varshaphal.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/lalvarsh.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/saved_charts.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/translate.js')) ?>"></script>
 <script>
@@ -3964,6 +3965,9 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         if (m) { window.ABChart.renderNorth(m, window.AB_VARGAS.D1, { showDeg: true, fit: true }); d1MiniDone = true; }
       }
       if (key === 'calendar') { buildLkCalendar(); }
+      // Lal Kitab वर्ष कुंडली — wire the age selector + lazily fetch the annual
+      // chart/prediction the first time the view is opened.
+      if (key === 'varsh' && window.ABLalVarsh) { window.ABLalVarsh.init(); window.ABLalVarsh.ensureFirst(); }
       applyLkFilters();
     }
 

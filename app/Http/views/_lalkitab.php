@@ -888,24 +888,40 @@ $scorePill = static function (int $score): string {
         <?php endforeach; ?>
       </div>
 
-      <!-- ===== VARSH GYAN (annual) ===== -->
+      <!-- ===== VARSH KUNDALI (annual chart + prediction) ===== -->
       <div class="lk-view" data-lk="varsh">
-        <?php $vg = $lk['varsh_gyan']; ?>
-        <h3 class="lk-h">वर्ष कुंडली ज्ञान चक्र (Annual)</h3>
-        <div class="lk-txt" style="margin-bottom:9px">इस चक्र से किसी भी आयु-वर्ष में हर भाव में सक्रिय होने वाला भाव-अंक ज्ञात होता है — जिससे उस वर्ष का फल पढ़ा जाता है।</div>
-        <?php if (!empty($vg['has'])): ?>
-          <div class="lk-card good">
-            <div class="lk-card-h">आपकी वर्तमान आयु — <?= (int) $vg['age'] ?> वर्ष</div>
-            <div class="lk-txt" style="line-height:2">
-              <?php for ($i = 0; $i < 12; $i++): ?>
-                <span style="display:inline-block;min-width:82px"><b><?= $i + 1 ?>वाँ भाव</b>: <?= $h((string) ($vg['row'][$i] ?? '')) ?></span>
-              <?php endfor; ?>
-            </div>
-            <div class="lk-sub" style="margin-top:6px;color:#64748b">अर्थ: इस आयु-वर्ष में जिस भाव में जो अंक है, उस भाव का फल उस अंक-वाले भाव से जुड़ता है।</div>
-          </div>
-        <?php else: ?>
-          <div class="lk-card"><div class="lk-txt">आयु ज्ञात न होने से वर्ष-विशेष पंक्ति उपलब्ध नहीं।</div></div>
-        <?php endif; ?>
+        <?php $lkAge = (int) ($lk['age'] ?? 0); ?>
+        <h3 class="lk-h">📅 वर्ष कुंडली (Lal Kitab Varsh Kundali)</h3>
+        <div class="lk-txt" style="margin-bottom:9px">
+          यह जन्म-कुंडली नहीं — <b>चुने हुए वर्ष की लाल-किताब वर्ष-कुंडली</b> है। वर्ष कुंडली ज्ञान चक्र के अनुसार
+          हर आयु-वर्ष में जन्म-भावों का फल भिन्न भावों में सक्रिय होता है; नीचे उसी घूर्णित कुंडली पर लाल-किताब
+          नियम, भविष्यवाणी, उपाय व करें/न करें दिए गए हैं। आयु बदलकर किसी भी वर्ष की वर्ष-कुंडली देखें।
+        </div>
+
+        <!-- age / year selector (mirrors the Vedic Varshaphal picker) -->
+        <div class="lkv-picker" style="display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin-bottom:10px">
+          <label style="display:flex;flex-direction:column;gap:3px;font-size:.8rem;color:#475569">
+            <span>आयु / Age (वर्ष)</span>
+            <span style="display:flex;align-items:center;gap:4px">
+              <button type="button" id="lkv-prev" class="lkv-step" aria-label="पिछला वर्ष" style="width:32px;height:32px;border:1px solid #cbd5e1;border-radius:7px;background:#f8fafc;font-size:1.1rem;font-weight:700;cursor:pointer">−</button>
+              <input type="number" id="lkv-age" min="1" max="96" value="<?= $lkAge > 0 ? $lkAge : 1 ?>" style="width:74px;border:1px solid #cbd5e1;border-radius:7px;padding:6px 8px;text-align:center;font-weight:700">
+              <button type="button" id="lkv-next" class="lkv-step" aria-label="अगला वर्ष" style="width:32px;height:32px;border:1px solid #cbd5e1;border-radius:7px;background:#f8fafc;font-size:1.1rem;font-weight:700;cursor:pointer">+</button>
+            </span>
+          </label>
+          <button type="button" id="lkv-show" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">वर्ष कुंडली देखें</button>
+          <span id="lkv-yearlab" style="font-size:.82rem;color:#0f766e;font-weight:600"></span>
+          <span id="lkv-status" style="font-size:.78rem;color:#64748b"></span>
+        </div>
+
+        <!-- annual chart (drawn client-side from the JSON north payload) -->
+        <div class="lk-card" style="padding:8px">
+          <div class="lk-card-h" style="font-size:.85rem">वर्ष कुंडली (Aries-fixed) — आयु <span id="lkv-agelab"><?= $lkAge > 0 ? $lkAge : 1 ?></span> वर्ष</div>
+          <div id="lkv-chart" style="max-width:360px;margin:0 auto"></div>
+          <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">इस वर्ष प्रत्येक भाव में जन्म-कुंडली का जो भाव-फल सक्रिय है, ग्रह उसी अनुसार यहाँ स्थापित हैं।</div>
+        </div>
+
+        <!-- server-rendered prediction/remedy/do-dont fragment -->
+        <div id="lkv-body"></div>
       </div>
 
       <!-- ===== COMPARE: D1 vs Lal Kitab (#8) ===== -->
@@ -1411,5 +1427,6 @@ $ssAct = $act['sadesati'] ?? null;
 <script>
   window.AB_LALKITAB = <?= json_encode($lkNorth, JSON_UNESCAPED_UNICODE) ?>;
   window.AB_LK_CAL   = <?= json_encode($lkCal, JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_LK_AGE   = <?= json_encode((int) ($lk['age'] ?? 0)) ?>;
 </script>
 <?php endif; ?>

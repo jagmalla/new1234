@@ -1115,6 +1115,64 @@ final class CalcController
     }
 
     /**
+     * लाल किताब वर्ष कुंडली (Lal Kitab annual chart) JSON endpoint. Rebuilds the
+     * natal chart from the birth params, rotates the Lal Kitab placements through
+     * the वर्ष चक्र permutation for the requested age, and returns the annual
+     * chart payload plus a fully rendered prediction/remedy/करें-न-करें fragment
+     * (server-rendered with the same partial the page uses) — mirroring the Vedic
+     * Varshaphal year-selector so a year/age change updates the whole reading.
+     */
+    public function lalkitabVarshJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+
+        try {
+            $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
+            $lat = self::parseAngle((string) ($_GET['blat'] ?? '0'));
+            $lon = self::parseAngle((string) ($_GET['blon'] ?? '0'));
+            $tz = self::parseTz((string) ($_GET['btz'] ?? '0'));
+            [$bY, $bMo, $bD] = array_map('intval', explode('-', (string) ($_GET['bdate'] ?? date('Y-m-d'))));
+            [$bH, $bMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['btime'] ?? '12:00')), 2, '0'));
+            $age = (int) ($_GET['age'] ?? 0);
+            if ($age < 1)  { $age = 1; }
+            if ($age > 96) { $age = 96; }
+
+            $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
+            $natalJd = JulianDay::fromGregorian($bY, $bMo, $bD, $bH, $bMi, 0.0, $tz);
+            $natal = $engine->computeChart($natalJd, $lat, $lon);
+
+            $v = \AutoBusiness\Astro\LalKitab\LalKitabEngine::varshReading($natal, $age);
+            if (empty($v['ok'])) {
+                http_response_code(400);
+                echo json_encode(['error' => (string) ($v['error'] ?? 'वर्ष कुंडली गणना विफल')], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+
+            // The calendar year this age-year begins in (native's birth-year + age).
+            $forYear = $bY + $age;
+
+            $views = dirname(__DIR__) . '/Http/views/';
+            $html = (static function () use ($views, $v): string {
+                ob_start();
+                require $views . '_lalkitab_varsh.php';   // expects $v
+                return (string) ob_get_clean();
+            })();
+
+            echo json_encode([
+                'ok'    => true,
+                'age'   => $age,
+                'year'  => $forYear,
+                'north' => $v['north'],
+                'html'  => $html,
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(400);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Parse a date entered as DD-MM-YYYY (preferred) or YYYY-MM-DD into
      * [year, month, day]. Separators -, / or . are accepted.
      *
