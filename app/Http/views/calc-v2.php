@@ -4716,42 +4716,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
 <div id="ab-toast" class="ab-toast hidden" role="status" aria-live="polite"></div>
 
-<!-- Start-up notice (phone / tablet only) — the "under testing" banner is hidden
-     on small screens, so it is shown once per browser session as a popup here. -->
-<div id="ab-startup-modal" class="ab-modal-overlay hidden" aria-hidden="true">
-    <div class="ab-modal" role="dialog" aria-modal="true" aria-labelledby="ab-startup-title">
-        <div class="ab-modal-head" id="ab-startup-title">⚠️ Notice
-            <button type="button" class="ab-modal-x" data-close aria-label="Close">✕</button></div>
-        <div class="ab-modal-body">
-            <p style="margin:0 0 8px;font-weight:700;color:#b45309">System is Under Testing — Not Finalized Yet.</p>
-            <p class="ab-modal-note" style="color:#334155;background:#fff7ed;border-color:#fed7aa">Feedback: <a href="mailto:analysisofkarma@gmail.com" style="color:#b45309;font-weight:700">analysisofkarma@gmail.com</a></p>
-        </div>
-        <div class="ab-modal-foot"><button type="button" class="ab-btn" data-close>OK</button></div>
-    </div>
-</div>
-<script>
-// Show the "under testing" notice ONCE per browser session, on phone/tablet only
-// (where the top-bar banner is hidden). sessionStorage keeps it from re-appearing
-// while the client keeps working / navigates / reloads within the same tab, but
-// it shows again when the tab or window is closed and the site is opened fresh.
-(function () {
-    var modal = document.getElementById('ab-startup-modal');
-    if (!modal) { return; }
-    function close() { modal.classList.add('hidden'); document.body.style.overflow = ''; }
-    modal.addEventListener('click', function (e) {
-        if (e.target === modal || (e.target.closest && e.target.closest('[data-close]'))) { close(); }
-    });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.classList.contains('hidden')) { close(); } });
-    try {
-        var small = window.matchMedia('(max-width: 1099px)').matches;
-        var seen = sessionStorage.getItem('ab_startup_notice_seen');
-        if (small && !seen) {
-            sessionStorage.setItem('ab_startup_notice_seen', '1');   // set immediately → once per session
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-    } catch (e) { /* storage blocked → just don't show */ }
-})();
-</script>
+<!-- Start-up "under testing" notice popup removed at client's request. -->
+
 </body>
 </html>
