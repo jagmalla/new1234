@@ -189,13 +189,15 @@ final class PoliticsEngine
         $remedies = self::remedies($ctx, $planets);
         $careerFit = self::careerFit($career);
         $interest = self::interest($ctx);
-        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability, $careerFit, $interest);
+        $publicDealing = self::publicDealing($ctx);
+        $conclusion = self::conclusion($identify, $level, $success, $promotion, $dasha, $gochar, $yoga, $capability, $careerFit, $interest, $publicDealing);
 
         return [
             'ok' => true,
             'lagna_hi' => self::signHi($asc),
             'career_fit' => $careerFit,
             'interest' => $interest,
+            'public_dealing' => $publicDealing,
             'identify' => $identify,
             'key_planets' => $planets,
             'capability' => $capability,
@@ -1235,6 +1237,42 @@ final class PoliticsEngine
     // ---------------------------------------------------------- conclusion
 
     /**
+     * जन-व्यवहार / सामाजिक-सहजता — क्या व्यक्ति भीड़/अपरिचितों से घुलने-मिलने में
+     * सहज है? (public dealing comfort). Politics is impossible without it. Markers:
+     * 7th house/lord (facing others/public), Moon (the masses; a weak/afflicted or
+     * dusthana Moon = shy/withdrawn), Mercury (talking to strangers), Venus (social
+     * charm), Rahu/Saturn tied to Moon/10/11 (crowds/movements), and confidence
+     * (strong lagnesh, free of Ketu-on-lagna/Moon solitude).
+     */
+    private static function publicDealing(array $ctx): array
+    {
+        $rows = []; $pts = 0; $max = 0;
+        $add = static function (string $label, bool $met, int $w) use (&$rows, &$pts, &$max): void {
+            $max += $w; if ($met) { $pts += $w; } $rows[] = ['label' => $label, 'met' => $met];
+        };
+        $hh = $ctx['house'];
+        $moonH = (int) ($hh['Moon'] ?? 0); $ketuH = (int) ($hh['Ketu'] ?? -1);
+        $reserved = ($ketuH === 1) || ($moonH !== 0 && $ketuH === $moonH) || in_array($moonH, [8, 12], true);
+
+        $add('7वाँ भाव / सप्तमेश बली — जन व अन्य से व्यवहार में सहजता', self::isStrong($ctx, $ctx['L7']), 3);
+        $add('चन्द्र (जन-मन) बली व शुभ-स्थ — भीड़/जनता से जुड़ाव',
+            self::isStrong($ctx, 'Moon') && !in_array($moonH, [6, 8, 12], true), 3);
+        $add('बुध (संवाद) बली — अपरिचितों से बातचीत में सहज', self::isStrong($ctx, 'Mercury'), 2);
+        $add('शुक्र (सामाजिक-माधुर्य) बली या लग्न/चन्द्र से संबंधित',
+            self::isStrong($ctx, 'Venus') || self::connect($ctx, 'Venus', $ctx['L1']) || self::connect($ctx, 'Venus', 'Moon'), 2);
+        $add('राहु/शनि का चन्द्र/10/11 से संबंध — जन-समूह/आंदोलन',
+            self::connect($ctx, 'Rahu', 'Moon') || self::linked($ctx, 'Rahu', 10) || self::linked($ctx, 'Rahu', 11)
+            || self::connect($ctx, 'Saturn', 'Moon') || self::linked($ctx, 'Saturn', 11), 2);
+        $add('आत्मविश्वास — लग्नेश बली व एकांत/अन्तर्मुख-योग रहित', self::isStrong($ctx, $ctx['L1']) && !$reserved, 2);
+
+        $note = $reserved ? 'नोट: केतु-लग्न/चन्द्र या 8/12 चन्द्र — कुछ अन्तर्मुखता; बड़ी भीड़/अपरिचितों में आरम्भ में असहजता सम्भव, अभ्यास से सुधरती है।' : '';
+        if ($pts >= 9) { $v = '✅ जन-व्यवहार में सहज — अपरिचितों व भीड़ से घुलने-मिलने में स्वाभाविक सहजता; राजनीति/सार्वजनिक-जीवन हेतु अनुकूल।'; $tone = 'pos'; $lvl = 'high'; }
+        elseif ($pts >= 5) { $v = '◑ जन-व्यवहार सामान्य — सार्वजनिक-मंच पर सहज हो सकते हैं, पर अभ्यास/तैयारी आवश्यक।'; $tone = 'info'; $lvl = 'medium'; }
+        else { $v = '⚠️ जन-व्यवहार में असहजता — अन्तर्मुखी/एकांत-प्रिय स्वभाव; बड़ी भीड़ व अपरिचितों से निरन्तर निपटना कठिन — राजनीति हेतु यह बड़ी चुनौती।'; $tone = 'neg'; $lvl = 'low'; }
+        return ['score' => $pts, 'max' => $max, 'tone' => $tone, 'level' => $lvl, 'verdict' => $v, 'note' => $note, 'rows' => $rows];
+    }
+
+    /**
      * रुचि/झुकाव — क्या व्यक्ति स्वभावतः राजनीति की ओर आकर्षित है? (interest, not
      * ability). Mind/desire markers: Rahu (power-craving) on lagna/Moon/10th,
      * Sun (authority-desire), 5th-lord (inclination) tied to political houses,
@@ -1307,7 +1345,7 @@ final class PoliticsEngine
             'verdict' => '⚠️ करियर-दिशा मुख्यतः ' . $topHi . ' की ओर है (सत्ता/सरकार-कारक ग्रह प्रमुख नहीं) — राजनीति यहाँ गौण सम्भावना है। राजनीति-योग हों भी तो व्यवहारिक झुकाव व स्थायी सफलता प्रायः अन्य क्षेत्र में; राजनीति चुनें तो असाधारण परिश्रम आवश्यक।'];
     }
 
-    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga, array $capability, array $careerFit = [], array $interest = []): array
+    private static function conclusion(array $identify, array $level, array $success, array $promotion, array $dasha, array $gochar, array $yoga, array $capability, array $careerFit = [], array $interest = [], array $publicDealing = []): array
     {
         // trividha (three-source) confirmation: chart-yog, dasha, gochar
         $chartOk = $identify['is_politician'];
@@ -1318,6 +1356,9 @@ final class PoliticsEngine
         $lines = [];
         if (!empty($interest)) {
             $lines[] = 'रुचि/झुकाव: ' . $interest['verdict'] . ' (' . $interest['score'] . '/' . $interest['max'] . ')';
+        }
+        if (!empty($publicDealing)) {
+            $lines[] = 'जन-व्यवहार/सामाजिक-सहजता: ' . $publicDealing['verdict'] . ' (' . $publicDealing['score'] . '/' . $publicDealing['max'] . ')';
         }
         if (!empty($careerFit['known'])) {
             $lines[] = 'करियर-दिशा जाँच: ' . $careerFit['verdict'];

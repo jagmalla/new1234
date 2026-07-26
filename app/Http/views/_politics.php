@@ -96,6 +96,23 @@ $bandInfo = [
     </div>
     <?php endif; ?>
 
+    <!-- PUBLIC DEALING: comfortable with crowds / strangers? -->
+    <?php $pd = $po['public_dealing'] ?? null; if ($pd !== null):
+        $pdBg = ['pos' => '#f0fdf4', 'info' => '#fffbeb', 'neg' => '#fef2f2'][$pd['tone']] ?? '#f8fafc';
+        $pdBd = ['pos' => '#16a34a', 'info' => '#d97706', 'neg' => '#dc2626'][$pd['tone']] ?? '#94a3b8'; ?>
+    <div class="pol-card" style="background:<?= $pdBg ?>;border-left:5px solid <?= $pdBd ?>">
+        <h3 style="color:<?= $pdBd ?>">🤝 जन-व्यवहार — भीड़/अपरिचितों से सहज है?
+            <span style="font-size:.72rem;color:#94a3b8">सहजता-अंक <?= (int) $pd['score'] ?>/<?= (int) $pd['max'] ?></span></h3>
+        <div style="font-size:.9rem;font-weight:600;color:#374151;line-height:1.5"><?= $h($pd['verdict']) ?></div>
+        <div class="pol-factors" style="margin-top:6px">
+            <?php foreach ($pd['rows'] as $rw): ?>
+                <div class="pol-fac"><?= $rw['met'] ? '✅' : '▫️' ?> <?= $h($rw['label']) ?></div>
+            <?php endforeach; ?>
+        </div>
+        <?php if (!empty($pd['note'])): ?><div style="font-size:.78rem;color:#92400e;margin-top:5px"><?= $h($pd['note']) ?></div><?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <!-- CAREER CROSS-CHECK: does the career profile point to politics? -->
     <?php $cf = $po['career_fit'] ?? null; if ($cf !== null && !empty($cf['known'])):
         $cfBg = ['pos' => '#f0fdf4', 'info' => '#fffbeb', 'neg' => '#fef2f2'][$cf['tone']] ?? '#f8fafc';
