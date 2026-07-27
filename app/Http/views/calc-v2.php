@@ -1257,6 +1257,12 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="lalkitab"><span class="l2-ic">📕</span>Laal Kitab</button>
+                <div class="l2-sub">
+                    <button type="button" data-sec="lalkitab" data-lk="overview">🔎 सामान्य फल / Overview</button>
+                    <button type="button" data-sec="lalkitab" data-lk="varsh">📅 वर्ष कुंडली / Varsh Kundali</button>
+                    <button type="button" data-sec="lalkitab" data-lk="agecycle">🕰️ आयु-दशा टाइमलाइन / Age Timeline</button>
+                    <button type="button" data-sec="lalkitab" data-lk="remedy">🛠 उपाय / Remedy</button>
+                </div>
             </div>
             <div class="l2-mi">
                 <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link"><span class="l2-ic">💑</span>Kundali Milan</a>
@@ -4251,6 +4257,15 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
       showSection(sec, btn.hasAttribute('data-focus'));
       if (btn.hasAttribute('data-tab')) { activateBalTab(btn.getAttribute('data-tab')); }
+      // Lal Kitab sub-menu items switch the reading view (Varsh Kundali / Age
+      // Timeline / …). showSection('lalkitab') has already built the section and
+      // attached the #lk-select change listener, so dispatching change here runs
+      // showLkView (which also lazy-loads the Varsh chart when needed).
+      var lkView = btn.getAttribute('data-lk');
+      if (lkView) {
+        var lkSel = document.getElementById('lk-select');
+        if (lkSel) { lkSel.value = lkView; lkSel.dispatchEvent(new Event('change')); }
+      }
       if (tgt) {
         var el = document.getElementById(tgt);
         if (el) { setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); }
