@@ -3971,6 +3971,11 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         if (m) { window.ABChart.renderNorth(m, window.AB_VARGAS.D1, { showDeg: true, fit: true }); d1MiniDone = true; }
       }
       if (key === 'calendar') { buildLkCalendar(); }
+      // Varsh Kundali is a full-width tool (like Vedic Varshaphal): let the
+      // section span the whole width and hide the fixed teva column (the janam
+      // chart is re-shown inside the view for reference).
+      var secLk = document.getElementById('sec-lalkitab');
+      if (secLk) { secLk.classList.toggle('lk-wide', key === 'varsh'); }
       // Lal Kitab वर्ष कुंडली — wire the age selector + lazily fetch the annual
       // chart/prediction the first time the view is opened.
       if (key === 'varsh' && window.ABLalVarsh) { window.ABLalVarsh.init(); window.ABLalVarsh.ensureFirst(); }

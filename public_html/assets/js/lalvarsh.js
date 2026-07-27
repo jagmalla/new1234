@@ -52,6 +52,11 @@
           ABChart.renderNorth(chart, v.north, { showDeg: false, big: true });
         }
         if (body) { body.innerHTML = v.html || ''; }
+        // Reference: the fixed-Aries Lal Kitab janam (teva) chart, shown below.
+        var janam = sel('#lkv-janam');
+        if (janam && global.ABChart && global.AB_LALKITAB && global.AB_LALKITAB.planets) {
+          ABChart.renderNorth(janam, global.AB_LALKITAB, { showDeg: false, big: true });
+        }
       })
       .catch(function (e) { if (status) { status.textContent = 'अनुरोध विफल: ' + e; } });
   }

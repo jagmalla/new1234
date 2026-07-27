@@ -114,6 +114,14 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab .lk-anlz-row{display:flex;gap:8px;align-items:flex-start;padding:2px 0;flex-wrap:wrap}
   #sec-lalkitab .lk-anlz-k{flex:none;min-width:76px;font-weight:700;color:#64748b;font-size:.74rem;padding-top:1px}
   #sec-lalkitab .lk-anlz-final{border-top:1px dashed #cbd5e1;margin-top:3px;padding-top:5px}
+  /* Full-width mode for the Varsh Kundali tool — span the whole section like the
+     Vedic Varshaphal page instead of the narrow right prediction column. */
+  #sec-lalkitab.lk-wide .lk-sec-grid{grid-template-columns:1fr}
+  #sec-lalkitab.lk-wide #lk-teva-col{display:none}
+  /* Varsh inner layout: annual chart (left) + prediction (right), like Varshaphal. */
+  #sec-lalkitab .lkv-main{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:6px}
+  @media(min-width:980px){#sec-lalkitab.lk-wide .lkv-main{grid-template-columns:minmax(300px,360px) minmax(0,1fr)}}
+  #sec-lalkitab .lkv-main>#lkv-body{min-width:0}
 </style>
 
 <?php if (!$ok): ?>
@@ -122,10 +130,10 @@ $scorePill = static function (int $score): string {
     पहले जन्म विवरण भरकर <b>Calculate</b> करें।
   </div>
 <?php else: ?>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lk-sec-grid">
 
   <!-- LEFT: Lal Kitab (fixed-Aries) chart -->
-  <div class="bg-white rounded-lg shadow p-3 flex flex-col">
+  <div id="lk-teva-col" class="bg-white rounded-lg shadow p-3 flex flex-col">
     <div class="flex items-center justify-between mb-2 pb-2 border-b">
       <span class="font-semibold text-gray-800">लाल किताब कुंडली
         <span class="text-xs text-gray-400 font-normal">(स्थिर मेष लग्न — Lal Kitab Teva)</span></span>
@@ -958,15 +966,24 @@ $scorePill = static function (int $score): string {
         <div id="lkv-summary" style="margin-bottom:6px"></div>
         <div id="lkv-bar" style="margin-bottom:10px"></div>
 
-        <!-- annual chart (drawn client-side from the JSON north payload) -->
-        <div class="lk-card" style="padding:8px">
-          <div class="lk-card-h" style="font-size:.85rem">वर्ष कुंडली (Aries-fixed) — आयु <span id="lkv-agelab"><?= $lkAge > 0 ? $lkAge : 1 ?></span> वर्ष</div>
-          <div id="lkv-chart" style="max-width:360px;margin:0 auto"></div>
-          <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">इस वर्ष प्रत्येक भाव में जन्म-कुंडली का जो भाव-फल सक्रिय है, ग्रह उसी अनुसार यहाँ स्थापित हैं।</div>
+        <!-- main row: LEFT = annual (varsh) chart · RIGHT = prediction
+             (like the Vedic Varshaphal chart | prediction layout) -->
+        <div class="lkv-main">
+          <div class="lk-card" style="padding:8px;align-self:start">
+            <div class="lk-card-h" style="font-size:.85rem">वर्ष कुंडली (Aries-fixed) — आयु <span id="lkv-agelab"><?= $lkAge > 0 ? $lkAge : 1 ?></span> वर्ष</div>
+            <div id="lkv-chart" style="max-width:340px;margin:0 auto"></div>
+            <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">इस वर्ष प्रत्येक भाव में जन्म-कुंडली का जो भाव-फल सक्रिय है, ग्रह उसी अनुसार यहाँ स्थापित हैं।</div>
+          </div>
+          <!-- server-rendered prediction/remedy/do-dont fragment -->
+          <div id="lkv-body"></div>
         </div>
 
-        <!-- server-rendered prediction/remedy/do-dont fragment -->
-        <div id="lkv-body"></div>
+        <!-- next row: the Lal Kitab (janam) teva chart — for reference, below -->
+        <div class="lk-card" style="padding:8px;margin-top:12px">
+          <div class="lk-card-h" style="font-size:.85rem">📕 लाल किताब जन्म कुंडली (Teva) — संदर्भ हेतु</div>
+          <div id="lkv-janam" style="max-width:340px;margin:0 auto"></div>
+          <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">जन्म की स्थिर-मेष लाल किताब कुंडली — वर्ष-कुंडली से तुलना के लिए।</div>
+        </div>
       </div>
 
       <!-- ===== COMPARE: D1 vs Lal Kitab (#8) ===== -->
