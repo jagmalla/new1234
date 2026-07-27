@@ -1152,6 +1152,25 @@ final class CalcController
             // The calendar year this age-year begins in (native's birth-year + age).
             $forYear = $bY + $age;
 
+            // Top summary row (basic info chips) + red→green शुभता signal bar —
+            // same signal-bar component used across gochar / muhurat / varshaphal.
+            $band = \AutoBusiness\Astro\Muhurat\Auspiciousness::band((int) $v['score']);
+            $chip = static function (string $lab, string $val, string $col): string {
+                return '<div style="border-left:4px solid ' . $col . ';background:#f8fafc;border-radius:6px;padding:5px 10px;min-width:96px">'
+                    . '<div style="font-size:.68rem;color:#64748b;font-weight:600">' . $lab . '</div>'
+                    . '<div style="font-size:.9rem;font-weight:800;color:' . $col . '">' . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . '</div></div>';
+            };
+            $summaryHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px">'
+                . $chip('आयु / Age', $age . ' वर्ष', '#7c3aed')
+                . $chip('वर्ष / Year', '≈ ' . $forYear . ' ई.', '#0f766e')
+                . $chip('लग्न / Lagna', (string) $v['lagna_hi'], '#2563eb')
+                . $chip('चन्द्र राशि', (string) $v['moon_hi'], '#0891b2')
+                . $chip('शुभ ग्रह', (string) $v['shubh_cnt'], '#16a34a')
+                . $chip('अशुभ ग्रह', (string) $v['ashubh_cnt'], '#dc2626')
+                . $chip('वर्ष-स्थिति', $band[0], $band[1])
+                . '</div>';
+            $barHtml = \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml((int) $v['score'], 'वर्ष शुभता — ' . $band[0]);
+
             $views = dirname(__DIR__) . '/Http/views/';
             $html = (static function () use ($views, $v): string {
                 ob_start();
@@ -1160,11 +1179,14 @@ final class CalcController
             })();
 
             echo json_encode([
-                'ok'    => true,
-                'age'   => $age,
-                'year'  => $forYear,
-                'north' => $v['north'],
-                'html'  => $html,
+                'ok'      => true,
+                'age'     => $age,
+                'year'    => $forYear,
+                'score'   => $v['score'],
+                'north'   => $v['north'],
+                'summary_html' => $summaryHtml,
+                'bar_html'     => $barHtml,
+                'html'    => $html,
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(400);

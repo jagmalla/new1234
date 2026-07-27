@@ -895,45 +895,93 @@ final class LalKitabEngine
                 . ($pr['verdict'] === 'अशुभ' ? 'इस ग्रह के कारक विषयों में बाधा/सतर्कता' : ($pr['verdict'] === 'शुभ' ? 'इस ग्रह के कारक विषयों में लाभ/उन्नति' : 'सामान्य फल'));
         };
 
-        // ---- (a) 4 अवस्था stages ----
+        // ---- (a) 4 अवस्था stages = "महादशा" level; each stage's active planets
+        //     are split into age sub-periods = "अन्तर्दशा" level (Vimshottari-style).
         $stageDefs = [
             ['name' => 'प्रथम अवस्था', 'from' => 1, 'to' => 25, 'houses' => [1, 2, 3], 'theme' => 'शरीर·धन·पराक्रम — बचपन से युवावस्था; नींव व शिक्षा-आरम्भ'],
             ['name' => 'द्वितीय अवस्था', 'from' => 26, 'to' => 50, 'houses' => [4, 5, 6], 'theme' => 'सुख·संतान·संघर्ष — गृहस्थी, संतान व प्रतिस्पर्धा का काल'],
             ['name' => 'तृतीय अवस्था', 'from' => 51, 'to' => 75, 'houses' => [7, 8, 9], 'theme' => 'दाम्पत्य·आयु·भाग्य — साझेदारी, स्वास्थ्य व भाग्य-धर्म'],
             ['name' => 'चतुर्थ अवस्था', 'from' => 76, 'to' => 100, 'houses' => [10, 11, 12], 'theme' => 'कर्म·लाभ·व्यय — पद-प्रतिष्ठा की परिणति, लाभ व मोक्ष'],
         ];
+        $toneOf = static fn (string $v): string => $v === 'शुभ' ? 'pos' : ($v === 'अशुभ' ? 'neg' : 'mix');
         $stages = [];
         foreach ($stageDefs as $st) {
-            $pls = [];
+            // active planets of this stage, in house order (1→2→3 …)
+            $actEn = [];
             foreach ($st['houses'] as $hn) {
-                foreach (($occupants[$hn] ?? []) as $en) {
-                    $pr = $pByEn[$en] ?? null;
-                    $pls[] = ['hi' => LalKitabData::planetHi($en), 'house' => $hn, 'verdict' => $pr['verdict'] ?? 'मध्यम'];
+                foreach (($occupants[$hn] ?? []) as $en) { $actEn[] = ['en' => $en, 'house' => $hn]; }
+            }
+            $pls = [];
+            foreach ($actEn as $ae) {
+                $pr = $pByEn[$ae['en']] ?? null;
+                $pls[] = ['hi' => LalKitabData::planetHi($ae['en']), 'house' => $ae['house'], 'verdict' => $pr['verdict'] ?? 'मध्यम'];
+            }
+
+            // split the stage span into equal sub-periods, one per active planet
+            // (the "antardasha" chain). Each sub-period carries the planet's own
+            // Lal Kitab verdict, plain-language prediction, do/dont & remedy.
+            $span = $st['to'] - $st['from'] + 1;
+            $n = count($actEn);
+            $periods = [];
+            if ($n > 0) {
+                $each = $span / $n;
+                for ($i = 0; $i < $n; $i++) {
+                    $en = $actEn[$i]['en'];
+                    $pr = $pByEn[$en] ?? [];
+                    $pFrom = (int) floor($st['from'] + $i * $each);
+                    $pTo = (int) ($i === $n - 1 ? $st['to'] : floor($st['from'] + ($i + 1) * $each) - 1);
+                    if ($pTo < $pFrom) { $pTo = $pFrom; }
+                    $verdict = (string) ($pr['verdict'] ?? 'मध्यम');
+                    $rem = [];
+                    if (!empty($pr['need_remedy'])) { $rem = array_slice($pr['remedies'] ?? [], 0, 2); }
+                    $periods[] = [
+                        'hi'       => LalKitabData::planetHi($en),
+                        'house'    => $actEn[$i]['house'],
+                        'house_ord'=> $pr['house_ord'] ?? '',
+                        'from'     => $pFrom,
+                        'to'       => $pTo,
+                        'verdict'  => $verdict,
+                        'tone'     => $toneOf($verdict),
+                        'asleep'   => !empty($pr['asleep']),
+                        'pred'     => (string) ($pr['pred_head'] ?? $effShort($en)),
+                        'do'       => ($pr['dos'] ?? [])[0] ?? '',
+                        'dont'     => ($pr['donts'] ?? [])[0] ?? '',
+                        'remedies' => array_values($rem),
+                        'active'   => $age !== null && $age >= $pFrom && $age <= $pTo,
+                    ];
                 }
             }
+
             $stages[] = [
                 'name' => $st['name'], 'from' => $st['from'], 'to' => $st['to'],
                 'houses' => $st['houses'], 'theme' => $st['theme'], 'planets' => $pls,
+                'periods' => $periods,
                 'active' => $age !== null && $age >= $st['from'] && $age <= $st['to'],
             ];
         }
 
-        // ---- (b)+(c) forward timeline of events (current age → +25) ----
+        // ---- (b)+(c) forward timeline of events (current age → +25), each
+        //     सावधानी/अशुभ event carrying its planet's top remedy ----
         $from = $age ?? 0; $to = $from + 25;
+        $topRemedy = static function (string $en) use ($pByEn): array {
+            $pr = $pByEn[$en] ?? null;
+            if ($pr === null || empty($pr['remedies'])) { return []; }
+            return array_slice($pr['remedies'], 0, 2);
+        };
         $events = [];
         foreach (self::PLANETS as $en) {
             $hi = LalKitabData::planetHi($en);
             $eff = $effShort($en);
             foreach (self::parseYears((string) ($gc[$en]['prabhav'] ?? '')) as $yr) {
-                if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'प्रभाव', 'tone' => 'pos', 'text' => $hi . ' का प्रभाव-वर्ष — ' . $eff]; }
+                if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'प्रभाव', 'tone' => 'pos', 'text' => $hi . ' का प्रभाव-वर्ष — ' . $eff, 'remedy' => []]; }
             }
             foreach (self::parseYears((string) ($gc[$en]['ashubh'] ?? '')) as $yr) {
-                if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'सावधानी', 'tone' => 'neg', 'text' => $hi . ' का सावधानी-वर्ष — सतर्कता व उपाय रखें (' . $eff . ')']; }
+                if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'सावधानी', 'tone' => 'neg', 'text' => $hi . ' का सावधानी-वर्ष — सतर्कता व उपाय रखें (' . $eff . ')', 'remedy' => $topRemedy($en)]; }
             }
             $wakeYrs = self::parseYears((string) ($sg[$en]['aayu'] ?? ''));
             if ($wakeYrs !== []) {
                 $wy = $wakeYrs[0];
-                if ($wy >= $from && $wy <= $to) { $events[] = ['age' => $wy, 'planet' => $hi, 'kind' => 'जागृति', 'tone' => 'info', 'text' => $hi . ' जागृत होगा — ' . ($sg[$en]['jagega'] ?? '') . ' पर फल सक्रिय']; }
+                if ($wy >= $from && $wy <= $to) { $events[] = ['age' => $wy, 'planet' => $hi, 'kind' => 'जागृति', 'tone' => 'info', 'text' => $hi . ' जागृत होगा — ' . ($sg[$en]['jagega'] ?? '') . ' पर फल सक्रिय', 'remedy' => []]; }
             }
         }
         usort($events, static fn ($a, $b) => $a['age'] <=> $b['age']);
@@ -1600,6 +1648,15 @@ final class LalKitabEngine
         $remedy    = self::remedyReadings($vHouse, $vOccupants);
         $saar      = self::varshSaar($planets, $houses, $age);
 
+        // ---- 0–100 शुभता-अंक for the year (drives the red→green signal bar) ----
+        $sh = count($saar['shubh']); $as = count($saar['ashubh']);
+        $asleep = 0; foreach ($planets as $p) { if (!empty($p['asleep'])) { $asleep++; } }
+        $score = 50 + ($sh - $as) * 9 - $asleep * 2;
+        $score = max(6, min(97, $score));
+
+        $lagnaSign = (int) ($chart['ascendant']['sign_index'] ?? 0);
+        $moonSign  = (int) ($chart['planets']['Moon']['sign_index'] ?? 0);
+
         return [
             'ok'         => true,
             'age'        => $age,
@@ -1613,6 +1670,11 @@ final class LalKitabEngine
             'yuti_dosha' => $yutiDosha,
             'remedy'     => $remedy,
             'saar'       => $saar,
+            'score'      => $score,
+            'lagna_hi'   => LalKitabData::signHi(Charts::SIGNS[$lagnaSign]),
+            'moon_hi'    => LalKitabData::signHi(Charts::SIGNS[$moonSign]),
+            'shubh_cnt'  => $sh,
+            'ashubh_cnt' => $as,
         ];
     }
 

@@ -46,6 +46,8 @@
         curAge = v.age;
         var yl = sel('#lkv-yearlab'); if (yl) { yl.textContent = 'वर्ष ≈ ' + v.year + ' ई.'; }
         if (agelab) { agelab.textContent = v.age; }
+        var sum = sel('#lkv-summary'); if (sum) { sum.innerHTML = v.summary_html || ''; }
+        var bar = sel('#lkv-bar'); if (bar) { bar.innerHTML = v.bar_html || ''; }
         if (chart && global.ABChart && v.north) {
           ABChart.renderNorth(chart, v.north, { showDeg: false, big: true });
         }
