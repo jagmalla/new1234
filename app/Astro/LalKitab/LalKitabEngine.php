@@ -358,7 +358,9 @@ final class LalKitabEngine
             if (trim((string) ($sg[$p]['aayu'] ?? '')) !== '') {
                 $ageBits[] = '⏳ जागृति: ' . $sg[$p]['aayu'] . (trim((string) ($sg[$p]['jagega'] ?? '')) !== '' ? ' (' . $sg[$p]['jagega'] . ')' : '');
             }
-            if (trim((string) ($gc[$p]['prabhav'] ?? '')) !== '') { $ageBits[] = '📈 प्रभावशाली वर्ष: ' . $gc[$p]['prabhav']; }
+            foreach (LalKitabDasha::template() as $dt) {
+                if ($dt['planet'] === $p) { $ageBits[] = '🕰️ दशा-खंड: हर 35-वर्षीय चक्र में आयु ' . $dt['from'] . '–' . $dt['to'] . ' (' . $dt['years'] . ' वर्ष)'; break; }
+            }
             if (trim((string) ($gc[$p]['ashubh'] ?? '')) !== '') { $ageBits[] = '⚠️ सावधानी वर्ष: ' . $gc[$p]['ashubh']; }
             if (trim((string) ($gc[$p]['vishesh'] ?? '')) !== '') { $ageBits[] = '✨ विशेष: ' . $gc[$p]['vishesh']; }
             $ageTiming = $ageBits;
@@ -896,72 +898,99 @@ final class LalKitabEngine
         };
 
         // ---- (a) 4 अवस्था stages = "महादशा" level; each stage's active planets
-        //     are split into age sub-periods = "अन्तर्दशा" level (Vimshottari-style).
-        $stageDefs = [
-            ['name' => 'प्रथम अवस्था', 'from' => 1, 'to' => 25, 'houses' => [1, 2, 3], 'theme' => 'शरीर·धन·पराक्रम — बचपन से युवावस्था; नींव व शिक्षा-आरम्भ'],
-            ['name' => 'द्वितीय अवस्था', 'from' => 26, 'to' => 50, 'houses' => [4, 5, 6], 'theme' => 'सुख·संतान·संघर्ष — गृहस्थी, संतान व प्रतिस्पर्धा का काल'],
-            ['name' => 'तृतीय अवस्था', 'from' => 51, 'to' => 75, 'houses' => [7, 8, 9], 'theme' => 'दाम्पत्य·आयु·भाग्य — साझेदारी, स्वास्थ्य व भाग्य-धर्म'],
-            ['name' => 'चतुर्थ अवस्था', 'from' => 76, 'to' => 100, 'houses' => [10, 11, 12], 'theme' => 'कर्म·लाभ·व्यय — पद-प्रतिष्ठा की परिणति, लाभ व मोक्ष'],
-        ];
+        //     are the chart's four "time-zones" (see below) — NOT the dasha.
         $toneOf = static fn (string $v): string => $v === 'शुभ' ? 'pos' : ($v === 'अशुभ' ? 'neg' : 'mix');
-        $stages = [];
-        foreach ($stageDefs as $st) {
-            // active planets of this stage, in house order (1→2→3 …)
-            $actEn = [];
-            foreach ($st['houses'] as $hn) {
-                foreach (($occupants[$hn] ?? []) as $en) { $actEn[] = ['en' => $en, 'house' => $hn]; }
-            }
-            $pls = [];
-            foreach ($actEn as $ae) {
-                $pr = $pByEn[$ae['en']] ?? null;
-                $pls[] = ['hi' => LalKitabData::planetHi($ae['en']), 'house' => $ae['house'], 'verdict' => $pr['verdict'] ?? 'मध्यम'];
-            }
 
-            // split the stage span into equal sub-periods, one per active planet
-            // (the "antardasha" chain). Each sub-period carries the planet's own
-            // Lal Kitab verdict, plain-language prediction, do/dont & remedy.
-            $span = $st['to'] - $st['from'] + 1;
-            $n = count($actEn);
-            $periods = [];
-            if ($n > 0) {
-                $each = $span / $n;
-                for ($i = 0; $i < $n; $i++) {
-                    $en = $actEn[$i]['en'];
-                    $pr = $pByEn[$en] ?? [];
-                    $pFrom = (int) floor($st['from'] + $i * $each);
-                    $pTo = (int) ($i === $n - 1 ? $st['to'] : floor($st['from'] + ($i + 1) * $each) - 1);
-                    if ($pTo < $pFrom) { $pTo = $pFrom; }
-                    $verdict = (string) ($pr['verdict'] ?? 'मध्यम');
-                    $rem = [];
-                    if (!empty($pr['need_remedy'])) { $rem = array_slice($pr['remedies'] ?? [], 0, 2); }
-                    $periods[] = [
-                        'hi'       => LalKitabData::planetHi($en),
-                        'house'    => $actEn[$i]['house'],
-                        'house_ord'=> $pr['house_ord'] ?? '',
-                        'from'     => $pFrom,
-                        'to'       => $pTo,
-                        'verdict'  => $verdict,
-                        'tone'     => $toneOf($verdict),
-                        'asleep'   => !empty($pr['asleep']),
-                        'pred'     => (string) ($pr['pred_head'] ?? $effShort($en)),
-                        'do'       => ($pr['dos'] ?? [])[0] ?? '',
-                        'dont'     => ($pr['donts'] ?? [])[0] ?? '',
-                        'remedies' => array_values($rem),
-                        'active'   => $age !== null && $age >= $pFrom && $age <= $pTo,
-                    ];
+        // ══ मुख्य दशा — the 35-year Lal Kitab cycle (शनि→राहु→केतु→गुरु→सूर्य→
+        //    चन्द्र→शुक्र→मंगल→बुध). Fixed and universal, starts at birth, repeats
+        //    every 35 years. See LalKitabDasha for why grah_chakra's प्रभाव-वर्ष
+        //    are NOT used for timing (the sheet's copy of this cycle is corrupt).
+        $dashaRow = static function (array $d) use ($pByEn, $toneOf, $effShort): array {
+            $en = $d['planet'];
+            $pr = $pByEn[$en] ?? [];
+            $verdict = (string) ($pr['verdict'] ?? 'मध्यम');
+            $rem = !empty($pr['need_remedy']) ? array_slice($pr['remedies'] ?? [], 0, 2) : [];
+            return [
+                'hi'        => $d['hi'],
+                'planet'    => $en,
+                'from'      => $d['from'],
+                'to'        => $d['to'],
+                'years'     => $d['years'],
+                'cycle'     => $d['cycle'] ?? null,
+                'active'    => !empty($d['active']),
+                'placed'    => isset($pr['house']) ? (int) $pr['house'] : null,
+                'house_ord' => $pr['house_ord'] ?? '',
+                'verdict'   => $verdict,
+                'tone'      => $toneOf($verdict),
+                'asleep'    => !empty($pr['asleep']),
+                'pred'      => (string) ($pr['pred_head'] ?? $effShort($en)),
+                'do'        => ($pr['dos'] ?? [])[0] ?? '',
+                'dont'      => ($pr['donts'] ?? [])[0] ?? '',
+                'remedies'  => array_values($rem),
+            ];
+        };
+        $dashaNow = null;
+        $dashaCycle = [];
+        $dashaAhead = [];
+        if ($age !== null) {
+            $cur = LalKitabDasha::at($age);
+            $dashaNow = $dashaRow($cur + ['active' => true]);
+            $dashaNow['elapsed'] = $cur['elapsed'];
+            $dashaNow['remaining'] = $cur['remaining'];
+            foreach (LalKitabDasha::currentCycle($age) as $c) {
+                $c['cycle'] = $cur['cycle'];
+                $dashaCycle[] = $dashaRow($c);
+            }
+            foreach (LalKitabDasha::timeline($age, $age + 30, $age) as $t) {
+                $dashaAhead[] = $dashaRow($t);
+            }
+        }
+
+        // ══ अवस्था — the chart's four TIME-ZONES (कुण्डली की घड़ियाँ). Each quarter
+        //    of life switches on one house-group; the quarter holding the most
+        //    planets is the native's "peak time" (centre of gravity), and a
+        //    quarter whose three houses are all empty runs on autopilot.
+        $stageDefs = [
+            ['name' => 'प्रथम अवस्था', 'from' => 1, 'to' => 25, 'houses' => [1, 2, 3], 'label' => 'बुनियाद (Foundation)', 'theme' => 'शरीर (1) · परिवार-संस्कार (2) · शुरुआती प्रयास (3) — बचपन व पढ़ाई का काल'],
+            ['name' => 'द्वितीय अवस्था', 'from' => 26, 'to' => 50, 'houses' => [4, 5, 6], 'label' => 'विस्तार व संघर्ष (Expansion & Struggle)', 'theme' => 'घर-गृहस्थी (4) · विद्या-संतान (5) · नौकरी-प्रतिस्पर्धा (6) — सर्वाधिक कर्म का काल'],
+            ['name' => 'तृतीय अवस्था', 'from' => 51, 'to' => 75, 'houses' => [7, 8, 9], 'label' => 'ठहराव व परिपक्वता (Maturity)', 'theme' => 'साझेदारी (7) · आयु-रहस्य (8) · भाग्य-धर्म (9) — भागदौड़ घटती है, संचित भाग्य काम आता है'],
+            ['name' => 'चतुर्थ अवस्था', 'from' => 76, 'to' => 100, 'houses' => [10, 11, 12], 'label' => 'परिणाम व मोक्ष (Conclusion)', 'theme' => 'अंतिम कर्म (10) · आखिरी इच्छाएँ (11) · मोक्ष-त्याग (12)'],
+        ];
+        $stages = [];
+        $maxCount = 0;
+        foreach ($stageDefs as $st) {
+            $pls = [];
+            foreach ($st['houses'] as $hn) {
+                foreach (($occupants[$hn] ?? []) as $en) {
+                    $pr = $pByEn[$en] ?? null;
+                    $pls[] = ['hi' => LalKitabData::planetHi($en), 'house' => $hn, 'verdict' => $pr['verdict'] ?? 'मध्यम'];
                 }
             }
-
+            $maxCount = max($maxCount, count($pls));
             $stages[] = [
                 'name' => $st['name'], 'from' => $st['from'], 'to' => $st['to'],
-                'houses' => $st['houses'], 'theme' => $st['theme'], 'planets' => $pls,
-                'periods' => $periods,
+                'houses' => $st['houses'], 'label' => $st['label'], 'theme' => $st['theme'],
+                'planets' => $pls, 'count' => count($pls),
+                'empty' => $pls === [],
                 'active' => $age !== null && $age >= $st['from'] && $age <= $st['to'],
             ];
         }
+        // centre of gravity — the quarter carrying the most planets is the peak.
+        $peak = null;
+        foreach ($stages as $i => $st) {
+            $isPeak = $maxCount > 0 && $st['count'] === $maxCount;
+            $stages[$i]['peak'] = $isPeak;
+            $stages[$i]['note'] = $st['empty']
+                ? 'तीनों भाव खाली — ये 25 वर्ष बिना बड़े झटके/बदलाव के, रूटीन (autopilot) में शांति से बीतेंगे।'
+                : ($isPeak ? 'कुण्डली का सर्वाधिक भार यहीं — जीवन की सबसे बड़ी घटनाएँ इसी 25-वर्षीय खंड में घटेंगी (peak time)।' : '');
+            if ($isPeak && $peak === null) { $peak = $stages[$i]['name'] . ' (' . $st['from'] . '–' . $st['to'] . ')'; }
+        }
 
-        // ---- (b)+(c) forward timeline of events (current age → +25), each
-        //     सावधानी/अशुभ event carrying its planet's top remedy ----
+        // ---- forward timeline of events (current age → +25) ----
+        //  NOTE: grah_chakra's "प्रभाव" column is deliberately NOT used here. It is
+        //  a corrupted copy of the 35-year dasha cycle (शनि rotated to the end,
+        //  राहु cut 6→4 years); the दशा above is the authoritative timing. Only the
+        //  अशुभ (caution) years and the सुप्त-ग्रह awakening ages are read here.
         $from = $age ?? 0; $to = $from + 25;
         $topRemedy = static function (string $en) use ($pByEn): array {
             $pr = $pByEn[$en] ?? null;
@@ -972,9 +1001,6 @@ final class LalKitabEngine
         foreach (self::PLANETS as $en) {
             $hi = LalKitabData::planetHi($en);
             $eff = $effShort($en);
-            foreach (self::parseYears((string) ($gc[$en]['prabhav'] ?? '')) as $yr) {
-                if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'प्रभाव', 'tone' => 'pos', 'text' => $hi . ' का प्रभाव-वर्ष — ' . $eff, 'remedy' => []]; }
-            }
             foreach (self::parseYears((string) ($gc[$en]['ashubh'] ?? '')) as $yr) {
                 if ($yr >= $from && $yr <= $to) { $events[] = ['age' => $yr, 'planet' => $hi, 'kind' => 'सावधानी', 'tone' => 'neg', 'text' => $hi . ' का सावधानी-वर्ष — सतर्कता व उपाय रखें (' . $eff . ')', 'remedy' => $topRemedy($en)]; }
             }
@@ -987,21 +1013,49 @@ final class LalKitabEngine
         usort($events, static fn ($a, $b) => $a['age'] <=> $b['age']);
         $events = array_slice($events, 0, 24);
 
-        // per-planet year chart (reference)
+        // per-planet reference chart. "prabhav" is intentionally omitted — that
+        // column is the corrupted dasha copy; the दशा table above replaces it.
         $planetYears = [];
         foreach (self::PLANETS as $en) {
+            $d = null;
+            foreach (LalKitabDasha::template() as $t) {
+                if ($t['planet'] === $en) { $d = $t; break; }
+            }
             $planetYears[] = [
                 'hi' => LalKitabData::planetHi($en),
-                'prabhav' => (string) ($gc[$en]['prabhav'] ?? ''),
+                'dasha' => $d !== null ? ($d['from'] . '–' . $d['to'] . ' (' . $d['years'] . ' वर्ष)') : '',
                 'ashubh' => (string) ($gc[$en]['ashubh'] ?? ''),
                 'vishesh' => (string) ($gc[$en]['vishesh'] ?? ''),
                 'jagega' => trim((string) ($sg[$en]['aayu'] ?? '') . ' — ' . (string) ($sg[$en]['jagega'] ?? ''), ' —'),
-                'kram' => (string) ($gc[$en]['kram'] ?? ''),
                 'effect' => $effShort($en),
             ];
         }
 
-        return ['age' => $age, 'stages' => $stages, 'events' => $events, 'planet_years' => $planetYears];
+        return [
+            'age' => $age,
+            'dasha_now' => $dashaNow,       // currently running 35-yr-cycle period
+            'dasha_cycle' => $dashaCycle,   // the whole 35-year wheel the native is in
+            'dasha_ahead' => $dashaAhead,   // upcoming periods (this age → +30 yrs)
+            'cycle_len' => LalKitabDasha::CYCLE,
+            'stages' => $stages,            // 4 avastha time-zones (+ peak / empty)
+            'peak' => $peak,
+            'events' => $events,
+            'planet_years' => $planetYears,
+        ];
+    }
+
+    /**
+     * "आयु X–Y (N वर्ष)" — a planet's slot inside the 35-year Lal Kitab cycle.
+     * Used wherever the corrupt grah_chakra "प्रभाव" column used to be read.
+     */
+    private static function dashaSpanHi(string $planetEn): string
+    {
+        foreach (LalKitabDasha::template() as $t) {
+            if ($t['planet'] === $planetEn) {
+                return 'आयु ' . $t['from'] . '–' . $t['to'] . ' (' . $t['years'] . ' वर्ष, हर चक्र में)';
+            }
+        }
+        return '';
     }
 
     /** Extract all integers (life-years) from a mixed Hindi string. */
@@ -1222,9 +1276,9 @@ final class LalKitabEngine
         $gc = LalKitabData::section('grah_chakra');
         $yearEff = $yearBad = [];
         if ($age !== null) {
+            $ruling = LalKitabDasha::at($age)['planet'];
             foreach ($gc as $p => $row) {
-                if (!empty($row['prabhav']) && preg_match_all('/\d+/', (string) $row['prabhav'], $m)
-                    && in_array((string) $age, $m[0], true)) {
+                if ($p === $ruling) {
                     $yearEff[] = LalKitabData::planetHi($p);
                 }
                 if (!empty($row['ashubh']) && preg_match_all('/\d+/', (string) $row['ashubh'], $m)
@@ -1503,7 +1557,7 @@ final class LalKitabEngine
             if (isset($gc[$p])) {
                 $chakra[] = [
                     'hi'      => LalKitabData::planetHi($p),
-                    'prabhav' => $gc[$p]['prabhav'] ?? '',
+                    'prabhav' => self::dashaSpanHi($p),
                     'vishesh' => $gc[$p]['vishesh'] ?? '',
                     'ashubh'  => $gc[$p]['ashubh'] ?? '',
                     'kram'    => $gc[$p]['kram'] ?? '',
@@ -1717,8 +1771,8 @@ final class LalKitabEngine
         $events = [];
         foreach (self::PLANETS as $en) {
             $hi = LalKitabData::planetHi($en);
-            if (in_array($age, self::parseYears((string) ($gc[$en]['prabhav'] ?? '')), true)) {
-                $events[] = ['tone' => 'pos', 'text' => '📈 ' . $hi . ' का प्रभावशाली वर्ष — इसके कारक विषयों में लाभ व उन्नति के योग।'];
+            if (LalKitabDasha::at($age)['planet'] === $en) {
+                $events[] = ['tone' => 'pos', 'text' => '🕰️ इस वर्ष ' . $hi . ' की दशा चल रही है — इसके कारक विषय ही वर्ष का मुख्य स्वर तय करेंगे।'];
             }
             if (in_array($age, self::parseYears((string) ($gc[$en]['ashubh'] ?? '')), true)) {
                 $events[] = ['tone' => 'neg', 'text' => '⚠️ ' . $hi . ' का सावधानी वर्ष — इसके कारक विषयों में सतर्कता व उपाय रखें।'];
@@ -1761,7 +1815,7 @@ final class LalKitabEngine
             $bits = [];
             foreach (self::PLANETS as $en) {
                 $hi = LalKitabData::planetHi($en);
-                if (in_array($a, self::parseYears((string) ($gc[$en]['prabhav'] ?? '')), true)) { $bits[] = ['tone' => 'pos', 't' => $hi . ' प्रभाव']; }
+                if (LalKitabDasha::at($a)['planet'] === $en) { $bits[] = ['tone' => 'pos', 't' => $hi . ' दशा']; }
                 if (in_array($a, self::parseYears((string) ($gc[$en]['ashubh'] ?? '')), true))  { $bits[] = ['tone' => 'neg', 't' => $hi . ' सावधानी']; }
                 if (in_array($a, self::parseYears((string) ($sg[$en]['aayu'] ?? '')), true))     { $bits[] = ['tone' => 'info', 't' => $hi . ' जागृति']; }
             }
