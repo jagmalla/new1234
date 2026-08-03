@@ -1063,13 +1063,9 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
     ABCitySearch.init({
       input: '#b-place', results: '#b-place-results',
       lat: '#b-lat', lon: '#b-lon', tz: '#b-tz',
-      // Compute the place's timezone offset on the entered birth date.
-      getDate: function () {
-        var d = (document.querySelector('[name="date"]') || {}).value;
-        var t = (document.querySelector('[name="time"]') || {}).value || '12:00';
-        var dt = d ? new Date(d + 'T' + (t.length === 5 ? t : '12:00') + ':00') : new Date();
-        return isNaN(dt) ? new Date() : dt;
-      }
+      // Resolve the place's timezone offset for the entered birth date (DST-aware);
+      // re-resolves automatically if the date/time is edited after picking a city.
+      dateInput: '[name="date"]', timeInput: '[name="time"]'
     });
   }
 
