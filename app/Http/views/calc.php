@@ -103,7 +103,8 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <label class="flex flex-col gap-1"><span class="text-gray-500">Longitude</span>
                 <input id="b-lon" name="lon" value="<?= $h($in['lonIn']) ?>" class="border rounded px-2 py-1"></label>
             <label class="flex flex-col gap-1"><span class="text-gray-500">Timezone (east +)</span>
-                <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
+                <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1">
+                <input id="b-tzid" name="tzid" type="hidden" value="<?= $h($in['tzid'] ?? '') ?>"></label>
             <div class="flex items-end">
                 <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold w-full">Calculate</button>
             </div>
@@ -411,19 +412,45 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
 <script src="/assets/js/varshaphal.js"></script>
 <script>
 (function () {
-  // Birth-form city search -> fills lat/lon/tz (worldwide, Open-Meteo).
+  // Parse the birth-date field (DD-MM-YYYY, or YYYY-MM-DD) + time into a Date so
+  // the timezone offset is derived for the actual birth date, not "today".
+  function birthDate() {
+    var d = (document.querySelector('[name="date"]') || {}).value || '';
+    var t = (document.querySelector('[name="time"]') || {}).value || '12:00';
+    var parts = d.split(/[-\/.]/).map(function (n) { return parseInt(n, 10); });
+    var y, mo, day;
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      if (parts[0] > 31) { y = parts[0]; mo = parts[1]; day = parts[2]; }   // YYYY-MM-DD
+      else { day = parts[0]; mo = parts[1]; y = parts[2]; }                 // DD-MM-YYYY
+    }
+    var tp = t.split(':');
+    var hh = parseInt(tp[0], 10), mm = parseInt(tp[1], 10);
+    if (y == null || isNaN(hh)) { hh = 12; }
+    if (isNaN(mm)) { mm = 0; }
+    var dt = (y != null) ? new Date(y, mo - 1, day, hh, mm) : new Date();
+    return isNaN(dt) ? new Date() : dt;
+  }
+
+  // Birth-form city search -> fills lat/lon/tz + hidden IANA zone id (Open-Meteo).
   if (window.ABCitySearch) {
-    ABCitySearch.init({
+    var birthCity = ABCitySearch.init({
       input: '#b-place', results: '#b-place-results',
-      lat: '#b-lat', lon: '#b-lon', tz: '#b-tz',
+      lat: '#b-lat', lon: '#b-lon', tz: '#b-tz', tzid: '#b-tzid',
       // Compute the place's timezone offset on the entered birth date.
-      getDate: function () {
-        var d = (document.querySelector('[name="date"]') || {}).value;
-        var t = (document.querySelector('[name="time"]') || {}).value || '12:00';
-        var dt = d ? new Date(d + 'T' + (t.length === 5 ? t : '12:00') + ':00') : new Date();
-        return isNaN(dt) ? new Date() : dt;
-      }
+      getDate: birthDate
     });
+    // Re-derive the offset when the birth date/time changes after a city is
+    // picked, so DST/rule differences are applied for the new date.
+    ['[name="date"]', '[name="time"]'].forEach(function (s) {
+      var el = document.querySelector(s);
+      if (el && birthCity) el.addEventListener('change', birthCity.recompute);
+    });
+    // A manual timezone edit should win over a previously picked city, so drop
+    // the stored zone id (the server then trusts the typed offset).
+    var tzInput = document.querySelector('#b-tz'), tzidInput = document.querySelector('#b-tzid');
+    if (tzInput && tzidInput) {
+      tzInput.addEventListener('input', function () { tzidInput.value = ''; });
+    }
   }
 
   var charts = document.getElementById('charts-view');

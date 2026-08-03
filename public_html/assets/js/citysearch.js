@@ -23,11 +23,39 @@
     return function () { clearTimeout(t); t = setTimeout(fn, ms); };
   }
 
-  // UTC offset (hours, east +) for an IANA timezone at a given date — accounts
-  // for that date's DST rules as the browser knows them.
+  // Enacted timezone rules not yet shipped in the browser's tz database. Mirrors
+  // the server-side TimeZoneResolver so the displayed offset matches the chart.
+  // Each entry: fixed offset (hours east) for dates on/after `from`.
+  var TZ_OVERRIDES = {
+    // British Columbia: permanent Daylight Saving Time (UTC-7) — no fall-back to
+    // UTC-8 in winter — from the 2026 spring-forward date.
+    'America/Vancouver': [{ from: '2026-03-08', offset: -7 }]
+  };
+
+  function ymd(date) {
+    return date.getFullYear() + '-' +
+      ('0' + (date.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + date.getDate()).slice(-2);
+  }
+
+  function overrideOffset(tz, date) {
+    var rules = TZ_OVERRIDES[tz];
+    if (!rules) return null;
+    var d = ymd(date);
+    for (var i = 0; i < rules.length; i++) {
+      if (d >= rules[i].from) return rules[i].offset;
+    }
+    return null;
+  }
+
+  // UTC offset (hours, east +) for an IANA timezone on a given date — accounts
+  // for that date's DST rules (and any enacted override) so the offset is right
+  // for the specific date, not just "now".
   function ianaOffset(tz, date) {
     try {
       date = date || new Date();
+      var ov = overrideOffset(tz, date);
+      if (ov != null) return ov;
       var utc = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
       var loc = new Date(date.toLocaleString('en-US', { timeZone: tz }));
       return Math.round((loc - utc) / 60000) / 60; // hours, to the minute
@@ -41,17 +69,31 @@
   function init(opts) {
     var input = sel(opts.input), results = sel(opts.results);
     if (!input || !results) return null;
-    var latEl = sel(opts.lat), lonEl = sel(opts.lon), tzEl = sel(opts.tz);
+    var latEl = sel(opts.lat), lonEl = sel(opts.lon), tzEl = sel(opts.tz), tzidEl = sel(opts.tzid);
     var getDate = opts.getDate || function () { return new Date(); };
+    // Remember the selected IANA zone so the offset can be re-derived whenever the
+    // date changes (DST/rule differences make the offset date-dependent).
+    var lastZone = (tzidEl && tzidEl.value) || null;
 
     function hide() { results.style.display = 'none'; results.innerHTML = ''; }
+
+    // Re-derive the numeric offset from the remembered zone for the current date.
+    function recompute() {
+      if (!lastZone || !tzEl) return;
+      var off = ianaOffset(lastZone, getDate());
+      if (off != null) tzEl.value = off;
+    }
 
     function fill(r) {
       if (latEl) latEl.value = (+r.latitude).toFixed(4);
       if (lonEl) lonEl.value = (+r.longitude).toFixed(4);
-      if (tzEl && r.timezone) {
-        var off = ianaOffset(r.timezone, getDate());
-        if (off != null) tzEl.value = off;
+      if (r.timezone) {
+        lastZone = r.timezone;
+        if (tzidEl) tzidEl.value = r.timezone;
+        if (tzEl) {
+          var off = ianaOffset(r.timezone, getDate());
+          if (off != null) tzEl.value = off;
+        }
       }
       input.value = labelOf(r);
       if (opts.onSelect) opts.onSelect(r);
@@ -82,7 +124,14 @@
     input.addEventListener('focus', function () { if (results.innerHTML) results.style.display = 'block'; });
     input.addEventListener('blur', function () { setTimeout(hide, 200); });
 
-    return { fill: fill, setLabel: function (s) { input.value = s; }, ianaOffset: ianaOffset };
+    return {
+      fill: fill,
+      setLabel: function (s) { input.value = s; },
+      ianaOffset: ianaOffset,
+      recompute: recompute,
+      // The IANA zone id backing the current offset (empty when none selected).
+      zone: function () { return lastZone || ''; }
+    };
   }
 
   global.ABCitySearch = { init: init, ianaOffset: ianaOffset, labelOf: labelOf };

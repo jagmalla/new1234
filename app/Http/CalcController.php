@@ -7,6 +7,7 @@ use AutoBusiness\Astro\Calc\CalculationEngine;
 use AutoBusiness\Astro\Calc\Varshaphal;
 use AutoBusiness\Astro\Ephemeris\EphemerisFactory;
 use AutoBusiness\Astro\Time\JulianDay;
+use AutoBusiness\Astro\Time\TimeZoneResolver;
 use AutoBusiness\Core\AdminGuard;
 
 /**
@@ -30,6 +31,10 @@ final class CalcController
         $latIn = (string) ($_GET['lat'] ?? "30N48'00");
         $lonIn = (string) ($_GET['lon'] ?? "75E10'00");
         $tzIn = (string) ($_GET['tz'] ?? '5:30');
+        // IANA zone id (e.g. "America/Vancouver") filled by the place search. When
+        // present it makes the offset date-aware (DST + historical rule changes);
+        // the numeric tz above is the manual fallback.
+        $tzid = (string) ($_GET['tzid'] ?? '');
         $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
         $name = (string) ($_GET['name'] ?? '');
         $gender = (string) ($_GET['gender'] ?? '');
@@ -45,18 +50,27 @@ final class CalcController
         try {
             $lat = self::parseAngle($latIn);
             $lon = self::parseAngle($lonIn);
-            $tz = self::parseTz($tzIn);
+            $tzNum = self::parseTz($tzIn);
             [$Y, $Mo, $D] = self::parseDate($date);   // accepts DD-MM-YYYY or YYYY-MM-DD
             [$H, $Mi] = array_map('intval', array_pad(explode(':', $time), 2, '0'));
+            // Offset for the *birth* date (honours DST + regional rule changes).
+            $tz = self::resolveTz($tzid, $tzNum, $Y, $Mo, $D, $H, $Mi);
 
             $jd = JulianDay::fromGregorian($Y, $Mo, $D, $H, $Mi, 0.0, $tz);
             $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
             $chart = $engine->computeChart($jd, $lat, $lon);
 
             // Live dasha chain (running Maha/Antar/Pratyantar + next Antar) at now.
+            // The current-instant offset may differ from birth (DST season / rule
+            // change), so resolve it for today's date rather than reusing $tz.
+            $tzNow = self::resolveTz(
+                $tzid, $tzNum,
+                (int) date('Y'), (int) date('m'), (int) date('d'),
+                (int) date('H'), (int) date('i')
+            );
             $nowJd = JulianDay::fromGregorian(
                 (int) date('Y'), (int) date('m'), (int) date('d'),
-                (int) date('H'), (int) date('i'), 0.0, $tz
+                (int) date('H'), (int) date('i'), 0.0, $tzNow
             );
             $dashaNow = \AutoBusiness\Astro\Calc\VimshottariDasha::runningChain(
                 (float) $chart['planets']['Moon']['sidereal_lon'], $jd, $nowJd
@@ -65,7 +79,9 @@ final class CalcController
 
             [$gy, $gm, $gd] = array_map('intval', explode('-', $gocharIn));
             [$gH, $gMi] = array_map('intval', array_pad(explode(':', $gocharTimeIn), 2, '0'));
-            $jdG = JulianDay::fromGregorian($gy, $gm, $gd, $gH, $gMi, 0.0, $tz);
+            // Transit offset resolved for the gochar date (default: today).
+            $tzG = self::resolveTz($tzid, $tzNum, $gy, $gm, $gd, $gH, $gMi);
+            $jdG = JulianDay::fromGregorian($gy, $gm, $gd, $gH, $gMi, 0.0, $tzG);
             $gochar = $engine->gochar($chart, $jdG, $lat, $lon);
 
             $vargas = $engine->vargaCharts($chart);
@@ -75,7 +91,7 @@ final class CalcController
             $birthJs = [
                 'date' => sprintf('%04d-%02d-%02d', $Y, $Mo, $D), // ISO for JS endpoints
                 'time' => $time,
-                'lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'ayanamsa' => $ayanamsa,
+                'lat' => $lat, 'lon' => $lon, 'tz' => $tz, 'tzid' => $tzid, 'ayanamsa' => $ayanamsa,
             ];
         } catch (\Throwable $e) {
             $error = $e->getMessage();
@@ -83,7 +99,7 @@ final class CalcController
 
         // Expose for the view.
         $view = [
-            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'ayanamsa', 'name', 'gender', 'forYear', 'gocharIn', 'gocharTimeIn'),
+            'in' => compact('date', 'time', 'latIn', 'lonIn', 'tzIn', 'tzid', 'ayanamsa', 'name', 'gender', 'forYear', 'gocharIn', 'gocharTimeIn'),
             'error' => $error,
             'chart' => $chart,
             'vp' => $vp,
@@ -107,19 +123,29 @@ final class CalcController
         header('Content-Type: application/json');
 
         try {
-            $tz = self::parseTz((string) ($_GET['tz'] ?? '0'));
             $lat = self::parseAngle((string) ($_GET['lat'] ?? '0'));
             $lon = self::parseAngle((string) ($_GET['lon'] ?? '0'));
             [$gy, $gm, $gd] = array_map('intval', explode('-', (string) ($_GET['date'] ?? date('Y-m-d'))));
             [$gH, $gMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['time'] ?? '00:00')), 2, '0'));
+            // Transit offset, date-aware when a zone id is supplied.
+            $tz = self::resolveTz(
+                (string) ($_GET['tzid'] ?? ''),
+                self::parseTz((string) ($_GET['tz'] ?? '0')),
+                $gy, $gm, $gd, $gH, $gMi
+            );
 
             // Birth params (to rebuild the natal chart for house-from references).
             $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
             $bLat = self::parseAngle((string) ($_GET['blat'] ?? (string) $lat));
             $bLon = self::parseAngle((string) ($_GET['blon'] ?? (string) $lon));
-            $bTz = self::parseTz((string) ($_GET['btz'] ?? (string) $tz));
             [$bY, $bMo, $bD] = array_map('intval', explode('-', (string) ($_GET['bdate'] ?? date('Y-m-d'))));
             [$bH, $bMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['btime'] ?? '12:00')), 2, '0'));
+            // Birth offset resolved for the birth date (honours DST / rule changes).
+            $bTz = self::resolveTz(
+                (string) ($_GET['btzid'] ?? ''),
+                self::parseTz((string) ($_GET['btz'] ?? (string) $tz)),
+                $bY, $bMo, $bD, $bH, $bMi
+            );
 
             $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
             $natalJd = JulianDay::fromGregorian($bY, $bMo, $bD, $bH, $bMi, 0.0, $bTz);
@@ -150,15 +176,21 @@ final class CalcController
             $ayanamsa = (string) ($_GET['ayanamsa'] ?? 'lahiri');
             $lat = self::parseAngle((string) ($_GET['blat'] ?? '0'));
             $lon = self::parseAngle((string) ($_GET['blon'] ?? '0'));
-            $tz = self::parseTz((string) ($_GET['btz'] ?? '0'));
             [$bY, $bMo, $bD] = array_map('intval', explode('-', (string) ($_GET['bdate'] ?? date('Y-m-d'))));
             [$bH, $bMi] = array_map('intval', array_pad(explode(':', (string) ($_GET['btime'] ?? '12:00')), 2, '0'));
             $forYear = (int) ($_GET['year'] ?? (int) date('Y'));
+            $btzid = (string) ($_GET['btzid'] ?? '');
+            $btzNum = self::parseTz((string) ($_GET['btz'] ?? '0'));
+            // Natal chart uses the birth-date offset; Varsha Pravesh happens on the
+            // birthday in $forYear, so its offset is resolved for that date (DST in
+            // the return year can differ from the birth year).
+            $bTz = self::resolveTz($btzid, $btzNum, $bY, $bMo, $bD, $bH, $bMi);
+            $vTz = self::resolveTz($btzid, $btzNum, $forYear, $bMo, $bD, $bH, $bMi);
 
             $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
-            $natalJd = JulianDay::fromGregorian($bY, $bMo, $bD, $bH, $bMi, 0.0, $tz);
+            $natalJd = JulianDay::fromGregorian($bY, $bMo, $bD, $bH, $bMi, 0.0, $bTz);
             $natal = $engine->computeChart($natalJd, $lat, $lon);
-            $vp = Varshaphal::compute($engine, $natal, $bY, $bMo, $bD, $bH, $bMi, $tz, $lat, $lon, $forYear);
+            $vp = Varshaphal::compute($engine, $natal, $bY, $bMo, $bD, $bH, $bMi, $vTz, $lat, $lon, $forYear);
 
             // Muntha sign index = natal Lagna sign advanced one sign per year.
             $natalAscSign = (int) $natal['ascendant']['sign_index'];
@@ -171,7 +203,7 @@ final class CalcController
                 'muntha' => $vp['muntha'],
                 'muntha_sign_index' => $munthaSignIndex,
                 // Varsha Pravesh (solar-return) start date, DD-MM-YYYY at birth tz.
-                'varsha_start' => JulianDay::toDmy((float) $vp['solar_return_jd'], $tz),
+                'varsha_start' => JulianDay::toDmy((float) $vp['solar_return_jd'], $vTz),
                 'chart' => $engine->northPayload($vp['varsha_chart']),
                 'ascendant_formatted' => $vp['varsha_chart']['ascendant']['formatted'],
                 'mudda_dasha' => $vp['mudda_dasha'],
@@ -226,6 +258,32 @@ final class CalcController
             return abs($val);
         }
         return $val;
+    }
+
+    /**
+     * Resolve the UTC offset (hours east) for a place on a specific date.
+     *
+     * When an IANA zone id is supplied (e.g. "America/Vancouver") the offset is
+     * computed for that exact date so Daylight Saving Time — and regional rule
+     * changes over the years — are honoured. Falls back to the manually entered
+     * numeric offset when no zone id is given or the zone is unknown.
+     */
+    private static function resolveTz(
+        string $zoneId,
+        float $fallback,
+        int $y,
+        int $mo,
+        int $d,
+        int $h = 12,
+        int $mi = 0
+    ): float {
+        if ($zoneId !== '') {
+            $offset = TimeZoneResolver::offsetHours($zoneId, $y, $mo, $d, $h, $mi);
+            if ($offset !== null) {
+                return $offset;
+            }
+        }
+        return $fallback;
     }
 
     /** Decimal hours or H:M[:S] (east positive) -> decimal hours. */

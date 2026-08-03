@@ -74,13 +74,19 @@
     inRoot.appendChild(form);
 
     // Worldwide city search fills lat/lon/tz (tz offset at the gochar date).
+    var transitCity = null;
+    function gocharDate() {
+      var dt = new Date(fDate.value + 'T' + (fTime.value || '12:00') + ':00');
+      return isNaN(dt) ? new Date() : dt;
+    }
     if (global.ABCitySearch) {
-      global.ABCitySearch.init({
+      transitCity = global.ABCitySearch.init({
         input: fPlace, results: fResults, lat: fLat, lon: fLon, tz: fTz,
-        getDate: function () {
-          var dt = new Date(fDate.value + 'T' + (fTime.value || '12:00') + ':00');
-          return isNaN(dt) ? new Date() : dt;
-        }
+        getDate: gocharDate
+      });
+      // Re-derive the transit offset when the gochar date/time changes.
+      [fDate, fTime].forEach(function (el) {
+        el.addEventListener('change', function () { if (transitCity) transitCity.recompute(); });
       });
     }
 
@@ -101,9 +107,11 @@
       var q = new URLSearchParams({
         date: fDate.value, time: fTime.value,
         lat: fLat.value, lon: fLon.value, tz: fTz.value,
+        tzid: (transitCity && transitCity.zone()) || '',
         bdate: birth.date || '', btime: birth.time || '',
         blat: birth.lat != null ? birth.lat : '', blon: birth.lon != null ? birth.lon : '',
-        btz: birth.tz != null ? birth.tz : '', ayanamsa: birth.ayanamsa || 'lahiri'
+        btz: birth.tz != null ? birth.tz : '', btzid: birth.tzid || '',
+        ayanamsa: birth.ayanamsa || 'lahiri'
       });
       fetch('/calc/gochar?' + q.toString(), { headers: { 'Accept': 'application/json' } })
         .then(function (r) { return r.json(); })

@@ -65,7 +65,8 @@
         year: fYear.value,
         bdate: birth.date || '', btime: birth.time || '',
         blat: birth.lat != null ? birth.lat : '', blon: birth.lon != null ? birth.lon : '',
-        btz: birth.tz != null ? birth.tz : '', ayanamsa: birth.ayanamsa || 'lahiri'
+        btz: birth.tz != null ? birth.tz : '', btzid: birth.tzid || '',
+        ayanamsa: birth.ayanamsa || 'lahiri'
       });
       fetch('/calc/varshaphal?' + q.toString(), { headers: { 'Accept': 'application/json' } })
         .then(function (r) { return r.json(); })
