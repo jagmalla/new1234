@@ -419,6 +419,36 @@ $scorePill = static function (int $score): string {
               </div>
             <?php endif; ?>
 
+            <!-- 📖 भाव-अनुसार नेक/मंदी फल (फरमान 13) -->
+            <?php $BP = $p['bhav_phal'] ?? null; if ($BP !== null):
+                $showNek = ($BP['show'] ?? 'both') !== 'mandi';
+                $showMandi = ($BP['show'] ?? 'both') !== 'nek'; ?>
+              <div style="border:1px solid #ddd6fe;background:#faf5ff;border-radius:9px;padding:8px 11px;margin-top:8px">
+                <div style="font-weight:700;font-size:.84rem;color:#6b21a8;margin-bottom:4px">📖 इस भाव में फल <?= $srcTag('फरमान 13') ?></div>
+                <?php if ($showNek): ?>
+                  <div style="font-size:.83rem;line-height:1.6"><b style="color:#166534">🟢 नेक:</b> <?= $h((string) ($BP['nek'] ?? '')) ?><?php if (!empty($BP['nek_vistar'])): ?> — <?= $h((string) $BP['nek_vistar']) ?><?php endif; ?></div>
+                <?php endif; ?>
+                <?php if ($showMandi): ?>
+                  <div style="font-size:.83rem;line-height:1.6;margin-top:3px"><b style="color:#991b1b">🔴 मंदी:</b> <?= $h((string) ($BP['mandi'] ?? '')) ?><?php if (!empty($BP['mandi_vistar'])): ?> — <?= $h((string) $BP['mandi_vistar']) ?><?php endif; ?></div>
+                <?php endif; ?>
+                <?php if (!empty($BP['upay'])): ?><?= $remBlock($BP['upay'], 'इस भाव हेतु उपाय') ?><?php endif; ?>
+                <?php if (!empty($BP['note'])): ?><div class="lk-note" style="margin-top:4px"><?= $h((string) $BP['note']) ?></div><?php endif; ?>
+              </div>
+            <?php endif; ?>
+
+            <?php if (!empty($p['helps']) || !empty($p['special_niyam'])): ?>
+              <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:9px;padding:8px 11px;margin-top:8px">
+                <?php if (!empty($p['helps'])): ?>
+                  <div style="font-size:.83rem;line-height:1.6"><b style="color:#92400e">🤝 बल देता है:</b> यह भाव बृहस्पति को <b><?= $h(implode(', ', $p['helps'])) ?></b> को बल देने योग्य बनाता है।</div>
+                <?php endif; ?>
+                <?php if (!empty($p['special_niyam'])): ?>
+                  <ul style="margin:4px 0 0;padding-left:18px;font-size:.8rem;line-height:1.5;color:#713f12">
+                    <?php foreach ($p['special_niyam'] as $nx): ?><li><?= $h((string) $nx) ?></li><?php endforeach; ?>
+                  </ul>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
+
             <!-- 📅 आयु / समय-प्रभाव — कब जागेगा, प्रभावशाली व सावधानी के वर्ष -->
             <?php if (!empty($p['age_timing'])): ?>
               <div style="border:1px solid #c7d2fe;background:#eef2ff;border-radius:9px;padding:8px 11px;margin-top:8px">

@@ -214,6 +214,7 @@ final class LalKitabEngine
         $pd  = LalKitabData::section('puja_daan');
         $sg  = LalKitabData::section('supt_grah');    // awakening age + trigger
         $gc  = LalKitabData::section('grah_chakra');  // effect years / caution years
+        $gbp = LalKitabData::section('grah_bhav_phal'); // per-planet × house nek/mandi phal
 
         // lookups shared by the per-planet analysis
         $doshaOf = [];   // planet-en => list of dosha names it participates in
@@ -329,6 +330,13 @@ final class LalKitabEngine
 
             $verdict = $v > 0 ? 'शुभ' : ($v < 0 ? 'अशुभ' : 'मध्यम');
             if ($isAsleep && $verdict === 'शुभ') { $verdict = 'मध्यम'; }
+            // फरमान 13 — अकेला बृहस्पति दृष्टि/टक्कर से कितना ही मंदा क्यों न हो,
+            // कभी अशुभ फल नहीं देता। (साथ शत्रु हों तो मंदा हो सकता है — तब बुध जैसा
+            // असर; पर अकेले की सूरत में फल कभी अशुभ नहीं।)
+            if ($p === 'Jupiter' && $alone && $verdict === 'अशुभ') {
+                $verdict = 'मध्यम';
+                $vWhy[] = 'अकेला बृहस्पति — गुरु का रक्षक स्वभाव, दृष्टि/टक्कर से भी अशुभ नहीं';
+            }
             $isAshubh = $verdict === 'अशुभ';
             $isShubh = $verdict === 'शुभ';
 
@@ -431,6 +439,19 @@ final class LalKitabEngine
                 'daan'      => $pd[$p]['daan'] ?? '',
                 'remedies'  => array_values($remedies),
                 'samanya'   => array_values($su[$p] ?? []),
+                // फरमान 13 — भाव-अनुसार नेक/मंदी फल (जिस भाव में ग्रह है); कौन-सा
+                // पक्ष खुले, यह verdict तय करता है — शुभ→नेक, अशुभ→मंदी, मध्यम→दोनों।
+                'bhav_phal' => (static function () use ($gbp, $p, $h, $isShubh, $isAshubh) {
+                    $bp = $gbp[$p][(string) $h] ?? null;
+                    if (!is_array($bp)) { return null; }
+                    $bp['show'] = $isShubh ? 'nek' : ($isAshubh ? 'mandi' : 'both');
+                    return $bp;
+                })(),
+                // बृहस्पति किन ग्रहों को बल देता है, व उसके स्थायी नियम (फरमान 13)।
+                'helps' => $p === 'Jupiter'
+                    ? array_map([LalKitabData::class, 'planetHi'], LalKitabData::JUPITER_HELPS[$h] ?? [])
+                    : [],
+                'special_niyam' => $p === 'Jupiter' ? LalKitabData::JUPITER_NIYAM : [],
             ];
         }
         return $out;
