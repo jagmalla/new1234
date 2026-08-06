@@ -236,4 +236,142 @@ final class LalKitabTeva
         $eight = $occupants[8] ?? [];
         return in_array('Mars', $eight, true) && in_array('Saturn', $eight, true);
     }
+
+    /**
+     * फरमान 14 — टेवे की किस्में. Classify the WHOLE teva (not a single planet).
+     * Each detected kind carries its code; the engine attaches phal/upay from
+     * LalKitabData::TEVA_KISM. More than one kind can hold at once.
+     *
+     * @param array<string,int> $house      planet-key => house
+     * @param array<int,list<string>> $occupants
+     * @return list<array{code:string,by:string}>
+     */
+    public static function classifyTeva(array $house, array $occupants): array
+    {
+        $hi = static fn (string $p): string => LalKitabData::planetHi($p);
+        $kinds = [];
+
+        // अंधा — परस्पर शत्रु ग्रह भाव 10 में एक साथ।
+        $pair = self::enemyPairIn($occupants[10] ?? []);
+        if ($pair !== null) {
+            $kinds[] = ['code' => 'ANDHA',
+                'by' => 'भाव 10 में शत्रु-युति (' . $hi($pair[0]) . ' + ' . $hi($pair[1]) . ')'];
+        }
+
+        // आधा-अंधा (नुहराता) — शनि सप्तम + सूर्य चतुर्थ।
+        if (($house['Saturn'] ?? 0) === 7 && ($house['Sun'] ?? 0) === 4) {
+            $kinds[] = ['code' => 'ADHA_ANDHA', 'by' => 'शनि सप्तम + सूर्य चतुर्थ'];
+        }
+
+        // बालिग — बुध षष्ठ + सूर्य 1/5/11।
+        if (($house['Mercury'] ?? 0) === 6 && in_array($house['Sun'] ?? 0, [1, 5, 11], true)) {
+            $kinds[] = ['code' => 'BALIG', 'by' => 'बुध षष्ठ + सूर्य ' . ($house['Sun']) . 'वें'];
+        }
+
+        // नाबालिग — केन्द्र (खाली मुट्ठी) खाली, या बुध किसी पापी के साथ।
+        $kendraEmpty = true;
+        foreach (LalKitabData::KENDRA as $k) {
+            if (!empty($occupants[$k])) { $kendraEmpty = false; break; }
+        }
+        $budhPapi = null;
+        $mh = $house['Mercury'] ?? 0;
+        if ($mh) {
+            foreach (['Rahu', 'Ketu'] as $pp) {
+                if (($house[$pp] ?? -1) === $mh) { $budhPapi = $pp; break; }
+            }
+        }
+        if ($kendraEmpty || $budhPapi !== null) {
+            $kinds[] = ['code' => 'NABALIG',
+                'by' => $kendraEmpty
+                    ? 'केन्द्र (1·4·7·10) खाली — खाली मुट्ठी'
+                    : 'बुध + ' . $hi($budhPapi) . ' युति (पापी)'];
+        }
+
+        // धर्मी — शनि-गुरु युति, या चन्द्र 10/4 में। (व्याख्या-सापेक्ष)
+        $satJup = isset($house['Saturn'], $house['Jupiter']) && $house['Saturn'] === $house['Jupiter'];
+        $moonKendra = in_array($house['Moon'] ?? 0, [10, 4], true);
+        if ($satJup || $moonKendra) {
+            $kinds[] = ['code' => 'DHARMI',
+                'by' => $satJup ? 'शनि-गुरु युति (भाव ' . $house['Saturn'] . ')' : 'चन्द्र ' . ($house['Moon']) . 'वें'];
+        }
+
+        // गुरु-शुक्र मुश्तरका।
+        if (isset($house['Jupiter'], $house['Venus']) && $house['Jupiter'] === $house['Venus']) {
+            $kinds[] = ['code' => 'GURU_SHUKRA', 'by' => 'गुरु-शुक्र युति (भाव ' . $house['Jupiter'] . ')'];
+        }
+
+        return $kinds;
+    }
+
+    /** First mutually-enemy pair among planets sharing a house (फरमान 14 list). */
+    private static function enemyPairIn(array $planets): ?array
+    {
+        $planets = array_values($planets);
+        $n = count($planets);
+        for ($i = 0; $i < $n; $i++) {
+            for ($j = $i + 1; $j < $n; $j++) {
+                $a = $planets[$i];
+                $b = $planets[$j];
+                $ae = in_array($b, LalKitabData::TEVA_SHATRU_YUGAL[$a] ?? [], true);
+                $be = in_array($a, LalKitabData::TEVA_SHATRU_YUGAL[$b] ?? [], true);
+                if ($ae || $be) { return [$a, $b]; }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * स्थायी मैत्री — relation of $b as seen from $a, read from the owner's
+     * `maitri` bank table (मित्र / शत्रु / सम). Used by the बुनियाद foundation
+     * principle (फरमान 15). Falls back to सम when unknown.
+     */
+    public static function relation(string $a, string $b): string
+    {
+        if ($a === $b) { return 'स्व'; }
+        $m = LalKitabData::bank()['maitri'][$a] ?? null;
+        if (!is_array($m)) { return 'सम'; }
+        $bHi = LalKitabData::planetHi($b);
+        foreach (['mitra' => 'मित्र', 'shatru' => 'शत्रु', 'sam' => 'सम'] as $k => $label) {
+            $names = (string) ($m[$k] ?? '');
+            if ($names !== '' && mb_strpos($names, $bHi) !== false) { return $label; }
+        }
+        return 'सम';
+    }
+
+    /**
+     * बुनियाद-असूल (फरमान 15) — every house is a building: नींव = its मालिक
+     * (HOUSE_LORD), इमारत = the planet(s) whose पक्का घर it is (KARAK_BHAV),
+     * राज = the planet(s) actually sitting there. Their mutual friendship shifts
+     * the fruit (friends strengthen, enemies spoil).
+     *
+     * @return array{neenv:string,neenv_hi:string,imarat:list<array{p:string,hi:string,rel:string}>,raj:list<array{p:string,hi:string,rel_neenv:string,rel_imarat:string}>}
+     */
+    public static function foundation(int $house, array $occupants): array
+    {
+        $lord = LalKitabData::HOUSE_LORD[$house];
+        $pakka = [];
+        foreach (LalKitabData::KARAK_BHAV as $pl => $hs) {
+            if (in_array($house, $hs, true)) { $pakka[] = $pl; }
+        }
+        $imarat = [];
+        foreach ($pakka as $pk) {
+            $imarat[] = ['p' => $pk, 'hi' => LalKitabData::planetHi($pk), 'rel' => self::relation($lord, $pk)];
+        }
+        $raj = [];
+        foreach ($occupants[$house] ?? [] as $op) {
+            $relIm = $pakka === [] ? '' : self::relation($pakka[0], $op);
+            $raj[] = [
+                'p' => $op,
+                'hi' => LalKitabData::planetHi($op),
+                'rel_neenv'  => self::relation($lord, $op),
+                'rel_imarat' => $relIm,
+            ];
+        }
+        return [
+            'neenv'    => $lord,
+            'neenv_hi' => LalKitabData::planetHi($lord),
+            'imarat'   => $imarat,
+            'raj'      => $raj,
+        ];
+    }
 }

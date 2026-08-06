@@ -163,6 +163,7 @@ final class LalKitabEngine
             'moon_hi'     => LalKitabData::signHi(Charts::SIGNS[$moonSign]),
             'grid'        => $grid,
             'planets'     => $planets,
+            'teva_kisam'  => self::tevaKisamReadings($house, $occupants),
             'general'     => self::generalOverview($planets),
             'age_cycle'   => self::ageCycle($occupants, $planets, $age),
             'active'      => $activeNow,
@@ -598,9 +599,37 @@ final class LalKitabEngine
                 'maas'       => $bm[(string) $h] ?? '',
                 'need_remedy' => $needRemedy,
                 'remedies'   => $remedies,
+                // बुनियाद-असूल (फरमान 15): नींव=मालिक · इमारत=पक्का-घर · राज=आगंतुक
+                'buniyad'    => LalKitabTeva::foundation($h, $occupants),
             ];
         }
         return $out;
+    }
+
+    /**
+     * फरमान 14 — टेवे की किस्में. Overall classification of the whole teva with
+     * phal/upay pulled from the (owner-editable) LalKitabData::TEVA_KISM bank.
+     *
+     * @param array<string,int> $house
+     * @param array<int,list<string>> $occupants
+     * @return array{kinds:list<array<string,mixed>>,ling_niyam:string}
+     */
+    private static function tevaKisamReadings(array $house, array $occupants): array
+    {
+        $kinds = [];
+        foreach (LalKitabTeva::classifyTeva($house, $occupants) as $k) {
+            $meta = LalKitabData::TEVA_KISM[$k['code']] ?? null;
+            if ($meta === null) { continue; }
+            $kinds[] = [
+                'code'  => $k['code'],
+                'naam'  => $meta['naam'],
+                'by'    => $k['by'],
+                'phal'  => $meta['phal'],
+                'upay'  => $meta['upay'],
+                'darja' => $meta['darja'],
+            ];
+        }
+        return ['kinds' => $kinds, 'ling_niyam' => LalKitabData::TEVA_LING_NIYAM];
     }
 
     /**

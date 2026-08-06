@@ -260,6 +260,31 @@ $scorePill = static function (int $score): string {
         </div>
         <?php endif; endif; ?>
 
+        <?php $TK = $lk['teva_kisam'] ?? null; if ($TK !== null): ?>
+        <!-- फरमान 14 — टेवे की किस्म (पूरे टेवे का वर्गीकरण) -->
+        <div class="lk-card" style="border-color:#6366f1;background:#eef2ff">
+          <div class="lk-card-h">📜 टेवे की किस्म — पूरे टेवे का स्वभाव <?= $srcTag('फरमान 14') ?></div>
+          <?php if (!empty($TK['kinds'])): ?>
+            <?php foreach ($TK['kinds'] as $tk): ?>
+              <div style="margin:8px 0;padding:8px 11px;border:1px solid #c7d2fe;border-radius:9px;background:#fff">
+                <div class="lk-sub" style="font-size:.88rem">
+                  <b><?= $h((string) $tk['naam']) ?></b>
+                  <?php if (($tk['darja'] ?? '') !== 'final'): ?><span class="lk-pill" style="background:#fef3c7;color:#92400e">अनुमानित</span><?php endif; ?>
+                  <span class="lk-meta" style="margin-left:5px"><?= $h((string) $tk['by']) ?></span>
+                </div>
+                <div class="lk-txt" style="margin-top:3px"><?= $h((string) $tk['phal']) ?></div>
+                <?php if (!empty($tk['upay'])): ?><?= $remBlock($tk['upay'], $tk['naam'] . ' — उपाय') ?><?php endif; ?>
+              </div>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <div class="lk-txt">इस टेवे में कोई विशेष किस्म (अंधा / बालिग / नाबालिग / धर्मी आदि) का योग नहीं बना — सामान्य टेवा।</div>
+          <?php endif; ?>
+          <?php if (!empty($TK['ling_niyam'])): ?>
+          <div class="lk-note" style="margin-top:7px">👫 <b>मर्द/औरत का टेवा:</b> <?= $h((string) $TK['ling_niyam']) ?></div>
+          <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
         <?php if (!empty($lk['priority'])): ?>
         <!-- priority summary — which remedies to start with (#2) -->
         <div class="lk-card" style="border-color:#f59e0b;background:#fffbeb">
@@ -504,6 +529,18 @@ $scorePill = static function (int $score): string {
                 <?php if ($H['lord_house']): ?>— <?= $h(\AutoBusiness\Astro\LalKitab\LalKitabData::houseOrdinalHi((int) $H['lord_house'])) ?> भाव में<?php endif; ?>
                 <?php if (!empty($H['lord_verdict'])): ?><span class="lk-pill" style="<?= $H['lord_verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($H['lord_verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $H['lord_verdict']) ?></span><?php endif; ?>
               </div>
+              <?php $BF = $H['buniyad'] ?? null; if ($BF !== null):
+                  $relPill = static function (string $r) use ($h): string {
+                      $c = $r === 'मित्र' ? 'background:#dcfce7;color:#166534' : ($r === 'शत्रु' ? 'background:#fee2e2;color:#991b1b' : 'background:#e2e8f0;color:#334155');
+                      return '<span class="lk-pill" style="' . $c . '">' . $h($r) . '</span>';
+                  }; ?>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">🏛 बुनियाद-असूल</span>
+                <span title="भाव के मालिक की तासीर">नींव: <b><?= $h((string) $BF['neenv_hi']) ?></b></span> &nbsp;·&nbsp;
+                <span title="जिस ग्रह का यह पक्का घर है">इमारत: <?php if (!empty($BF['imarat'])): foreach ($BF['imarat'] as $im): ?><b><?= $h((string) $im['hi']) ?></b> <?= $relPill((string) $im['rel']) ?> <?php endforeach; else: ?><span style="color:#94a3b8">—</span><?php endif; ?></span> &nbsp;·&nbsp;
+                <span title="ग्रह-चाल से यहाँ बैठा/आया ग्रह">राज: <?php if (!empty($BF['raj'])): foreach ($BF['raj'] as $rj): ?><b><?= $h((string) $rj['hi']) ?></b> <span class="lk-meta">(नींव-<?= $h((string) $rj['rel_neenv']) ?><?= $rj['rel_imarat'] !== '' ? ', इमारत-' . $h((string) $rj['rel_imarat']) : '' ?>)</span> <?php endforeach; else: ?><span style="color:#94a3b8">खाली</span><?php endif; ?></span>
+                <div class="lk-note" style="margin-top:2px">नींव व इमारत मित्र हों तो शुभ फल बढ़ता है, शत्रु हों तो बिगड़ता है; यहाँ बैठा ग्रह भी अपनी मित्रता-शत्रुता से फल बदलता है।</div>
+              </div>
+              <?php endif; ?>
               <div class="lk-anlz-row"><span class="lk-anlz-k"><?= !empty($H['awake']) ? '⚡' : '😴' ?> सुप्त / जागृत</span>
                 <?php if (!empty($H['awake'])): ?>
                   <b style="color:#166534">⚡ जागृत</b> — <?= $h((string) $H['awake_by']) ?>
