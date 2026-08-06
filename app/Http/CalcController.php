@@ -318,8 +318,11 @@ final class CalcController
             // categorised predictions & remedies (planet, house, karak, yoga,
             // parental-debt/shraap, sade-sati, manglik). Wrapped so an edge-case
             // never blanks the page; text is baked/owner-editable in LalKitabData.
-            'lalkitab' => $this->safe(
-                static function () use ($chart, $date, &$dashaNow, &$sadeSati) {
+            // While the system is under testing the real reason for any failure
+            // is surfaced (class-not-found from a partial upload, a data edge,
+            // etc.) so it can be diagnosed from the page itself.
+            'lalkitab' => (function () use ($chart, $date, $sadeSati) {
+                try {
                     if ($chart === null) {
                         return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
                     }
@@ -343,9 +346,16 @@ final class CalcController
                         ] : null,
                     ];
                     return \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart, $age, $lkActive);
-                },
-                ['ok' => false, 'error' => 'लाल किताब गणना विफल']
-            ),
+                } catch (\Throwable $e) {
+                    error_log('Lal Kitab compute failed: ' . $e->getMessage()
+                        . ' @ ' . $e->getFile() . ':' . $e->getLine());
+                    $reason = (new \ReflectionClass($e))->getShortName() . ': ' . $e->getMessage();
+                    return [
+                        'ok'    => false,
+                        'error' => 'लाल किताब गणना विफल (' . $reason . ')',
+                    ];
+                }
+            })(),
         ];
         // Layout redesign: the v2 shell is now the default. Legacy page still
         // reachable at ?layout=old for side-by-side comparison.
