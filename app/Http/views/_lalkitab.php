@@ -107,6 +107,7 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab .lk-search-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}
   #sec-lalkitab #lk-q{flex:1;min-width:130px;border:1px solid #cbd5e1;border-radius:8px;padding:5px 10px;font-size:.8rem}
   #sec-lalkitab .lk-reason{font-size:.74rem;color:#92400e;background:#fffbeb;border:1px dashed #fcd34d;border-radius:6px;padding:3px 8px;margin-top:5px}
+  #sec-lalkitab .lk-note{font-size:.82rem;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 11px;line-height:1.7}
   #sec-lalkitab .lk-cmp{width:100%;border-collapse:collapse;font-size:.8rem}
   #sec-lalkitab .lk-cmp th{background:#f8fafc;text-align:left;padding:5px 7px;border-bottom:1px solid #e5e7eb}
   #sec-lalkitab .lk-cmp td{padding:5px 7px;border-bottom:1px solid #f1f5f9;vertical-align:top}
@@ -151,15 +152,13 @@ $scorePill = static function (int $score): string {
   <div class="bg-white rounded-lg shadow p-4 flex flex-col">
 
     <?php $act = $lk['active'] ?? []; ?>
-    <?php if (!empty($act['maha']) || !empty($act['antar']) || !empty($act['sadesati']) || !empty($act['year_eff']) || !empty($act['year_bad'])): ?>
-    <!-- 🔥 what is live right now: dasha lords, sade-sati, this-year planets (#1) -->
+    <?php if (!empty($act['dasha']) || !empty($act['sadesati']) || !empty($act['year_eff']) || !empty($act['year_bad'])): ?>
+    <!-- 🔥 what is live right now: 35-year Lal Kitab dasha, sade-sati, this-year planets -->
     <div class="lk-active">
       <b>🔥 अभी सक्रिय:</b>
-      <?php if (!empty($act['maha'])): ?>
-        महादशा — <b><?= $h((string) $act['maha']['hi']) ?></b> (<?= $h((string) $act['maha']['house_ord']) ?> भाव)<?= $pill((string) $act['maha']['verdict'], 'v') ?>
-      <?php endif; ?>
-      <?php if (!empty($act['antar'])): ?>
-        · अंतर्दशा — <b><?= $h((string) $act['antar']['hi']) ?></b> (<?= $h((string) $act['antar']['house_ord']) ?> भाव)<?= $pill((string) $act['antar']['verdict'], 'v') ?>
+      <?php if (!empty($act['dasha'])): ?>
+        लाल किताब दशा (35-साला चक्र) — <b><?= $h((string) $act['dasha']['hi']) ?></b>
+        (<?= $h((string) $act['dasha']['house_ord']) ?> भाव · आयु <?= (int) ($act['dasha']['from'] ?? 0) ?>–<?= (int) ($act['dasha']['to'] ?? 0) ?>)<?= $pill((string) $act['dasha']['verdict'], 'v') ?>
       <?php endif; ?>
       <?php if (!empty($act['sadesati'])): ?>
         · <b><?= $h((string) $act['sadesati']['label']) ?> चल रही है</b><?= $act['sadesati']['phase'] ? ' (चरण ' . (int) $act['sadesati']['phase'] . ')' : '' ?>
@@ -183,7 +182,7 @@ $scorePill = static function (int $score): string {
           <option value="planet">🪐 ग्रह फल / Planet Prediction</option>
           <option value="house">🏠 भाव (Bhav) फल / House Prediction</option>
           <option value="karak">🎯 कारक / Karak</option>
-          <option value="yoga">✨ योग / Yog</option>
+          <option value="yoga">✨ योग · मसनूई · टक्करें · बुनियाद / Yog &amp; Collisions</option>
           <option value="shrap">🧬 श्राप / पैतृक ऋण / Shrap</option>
           <option value="sadesati">🪐 साढ़े साती / ढैय्या / Sadde Satti</option>
           <option value="manglik">🔴 मंगलीक दोष / Manglik</option>
@@ -193,8 +192,8 @@ $scorePill = static function (int $score): string {
         </optgroup>
         <optgroup label="🔗 विश्लेषण / Analysis">
           <option value="inter">🔗 ग्रह अंतर्संबंध / Planet Inter-effects</option>
-          <option value="supt">😴 सुप्त / जागृत ग्रह / Supt &amp; Jagrit</option>
-          <option value="drishti">👁 भाव दृष्टि / House Aspects</option>
+          <option value="supt">😴 सोया / अपंग ग्रह / Soya &amp; Impaired</option>
+          <option value="drishti">👁 दृष्टि व टक्कर (एकतरफ़ा) / Aspects &amp; Takkar</option>
           <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
         </optgroup>
         <optgroup label="🛠 उपाय व संदर्भ / Remedies &amp; Reference">
@@ -308,12 +307,14 @@ $scorePill = static function (int $score): string {
           <div class="lk-card <?= $cls ?>" data-bad="<?= $p['is_ashubh'] ? '1' : '0' ?>">
             <div class="lk-card-h">
               <?= $h((string) $p['hi']) ?> — <?= $h((string) $p['house_ord']) ?> भाव में (<?= $h((string) $p['sign_hi']) ?>)
-              <?= $pill((string) $p['status'], 'status') ?><?= $pill((string) $p['verdict'], 'verdict') ?><?php
-                if (!empty($p['pukka'])): ?><span class="lk-pill" style="background:#ede9fe;color:#5b21b6">पक्का घर</span><?php endif;
-                if (!empty($act['maha']) && $act['maha']['hi'] === $p['hi']): ?><span class="lk-pill" style="background:#dc2626;color:#fff">🔥 महादशा</span><?php endif;
-                if (!empty($act['antar']) && $act['antar']['hi'] === $p['hi']): ?><span class="lk-pill" style="background:#f97316;color:#fff">🔥 अंतर्दशा</span><?php endif;
+              <?= $pill((string) $p['status'] . (($p['status_tier'] ?? '') === 'गौण' ? ' गौण' : ''), 'status') ?><?= $pill((string) $p['verdict'], 'verdict') ?><?php
+                if (!empty($p['uch_bhang'])): ?><span class="lk-pill" style="background:#fef3c7;color:#92400e">उच्च पर भंग</span><?php endif;
+                if (!empty($p['pukka'])): ?><span class="lk-pill" style="background:#ede9fe;color:#5b21b6">पक्का घर (तीव्र)</span><?php endif;
+                if (!empty($p['kachcha'])): ?><span class="lk-pill" style="background:#f1f5f9;color:#475569">कच्चा घर (मंद)</span><?php endif;
+                if (!empty($p['impair'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 <?= $h((string) $p['impair']) ?></span><?php endif;
+                if (!empty($act['dasha']) && $act['dasha']['hi'] === $p['hi']): ?><span class="lk-pill" style="background:#dc2626;color:#fff">🔥 दशा चल रही</span><?php endif;
               ?><?= $scorePill((int) ($p['score'] ?? 0)) ?>
-              <?= $srcTag('शुभ-अशुभ भाव चक्र') ?>
+              <?= $srcTag('भाव-आधारित (टेवा)') ?>
             </div>
             <?php if (!empty($p['reasons']) && ($p['score'] ?? 0) > 0): ?>
               <div class="lk-reason">प्राथमिकता-कारण: <?= $h(implode(' · ', $p['reasons'])) ?></div>
@@ -352,8 +353,12 @@ $scorePill = static function (int $score): string {
                 <?php endforeach; ?>
               </div>
               <?php endif; ?>
-              <div class="lk-anlz-row"><span class="lk-anlz-k"><?= !empty($p['asleep']) ? '😴' : '⚡' ?> सुप्त / जागृत</span>
-                <?= !empty($p['asleep']) ? '<b style="color:#991b1b">😴 सुप्त — जगाने वाला ग्रह कुंडली में नहीं; फल दबा रहेगा</b>' : '<b style="color:#166534">⚡ जागृत — फल सक्रिय</b>' ?>
+              <div class="lk-anlz-row"><span class="lk-anlz-k"><?= !empty($p['impair']) ? '😴' : '⚡' ?> अवस्था</span>
+                <?php if (!empty($p['impair'])): ?>
+                  <b style="color:#991b1b">😴 <?= $h((string) $p['impair']) ?></b> — यह जिस भाव को देखता है वह खाली है; कारकत्व दबा रहेगा
+                <?php else: ?>
+                  <b style="color:#166534">⚡ जागृत — फल सक्रिय</b>
+                <?php endif; ?>
               </div>
               <?php if (!empty($p['masnui'])): ?>
               <div class="lk-anlz-row"><span class="lk-anlz-k">🔀 मसनूई</span>
@@ -721,6 +726,48 @@ $scorePill = static function (int $score): string {
             <div class="lk-txt"><?= $h((string) $Y['phal']) ?></div>
           </div>
         <?php endforeach; ?>
+
+        <?php if (!empty($lk['mukabla'])): $MK = $lk['mukabla']; ?>
+          <h3 class="lk-h" style="margin-top:14px">मुकाबले के ग्रह — सांझी गद्दी की दुश्मनी</h3>
+          <div class="lk-card bad" data-app="1">
+            <div class="lk-card-h">⚔ भाव 8 — मंगल व शनि की स्थायी टक्कर <?= $srcTag('कालपुरुष नियम') ?></div>
+            <div class="lk-txt"><b>📢 फल:</b> <?= $h((string) $MK['phal']) ?></div>
+            <?= $remBlock($MK['upay'] ?? [], 'मुकाबला — उपाय') ?>
+          </div>
+        <?php endif; ?>
+
+        <?php if (!empty($lk['collisions'])): ?>
+          <h3 class="lk-h" style="margin-top:14px">तीन टक्करें — विश्वासघात · साझी चोट · अचानक चोट</h3>
+          <div class="lk-note" style="margin-bottom:9px">
+            लाल किताब में भाव आपस में <b>धोखा</b> देते या <b>अचानक चोट</b> मारते हैं। चोट तभी लगती है जब
+            दोनों सिरों पर ग्रह मौजूद हों — खाली घर न किसी को मारता है, न किसी से मार खाता है।
+          </div>
+          <?php
+            $colGroup = [];
+            foreach ($lk['collisions'] as $C) { $colGroup[$C['house']][] = $C; }
+          ?>
+          <?php foreach ($colGroup as $ch => $items): ?>
+            <div class="lk-card bad" data-app="1">
+              <div class="lk-card-h">⚠ <?= $h((string) $items[0]['house_ord']) ?> भाव (<?= $h(implode(', ', $items[0]['target_hi'])) ?>) पर</div>
+              <?php foreach ($items as $C): ?>
+                <div class="lk-sub"><b><?= $h((string) $C['kind']) ?>:</b> <?= $h(implode(' · ', $C['from_hi'])) ?> से</div>
+                <div class="lk-txt" style="margin:2px 0 6px"><?= $h((string) $C['phal']) ?></div>
+                <?= $remBlock($C['upay'] ?? [], $C['kind'] . ' — उपाय') ?>
+              <?php endforeach; ?>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+
+        <?php if (!empty($lk['buniyad'])): ?>
+          <h3 class="lk-h" style="margin-top:14px">बुनियाद (जड़) — जड़ ख़राब तो शाखा का फल सड़े</h3>
+          <?php foreach ($lk['buniyad'] as $B): ?>
+            <div class="lk-card bad" data-app="1">
+              <div class="lk-card-h">🌱 <?= $h((string) $B['house_ord']) ?> भाव की जड़ — <?= $h((string) $B['root_ord']) ?> भाव में <?= $h(implode(', ', $B['root_hi'])) ?></div>
+              <div class="lk-txt"><b>📢 फल:</b> <?= $h((string) $B['phal']) ?></div>
+              <?= $remBlock($B['upay'] ?? [], 'बुनियाद — उपाय') ?>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
 
       <!-- ===== SHRAP / PAITRIK RIN ===== -->
@@ -963,18 +1010,22 @@ $scorePill = static function (int $score): string {
           $ayOn = array_values(array_filter($ay['yoga'], static fn ($x) => !empty($x['applies'])));
           $ayOff = array_values(array_filter($ay['yoga'], static fn ($x) => empty($x['applies']))); ?>
         <h3 class="lk-h">आयु योग (Longevity) — इस कुंडली में लागू</h3>
-        <div class="lk-txt" style="margin-bottom:9px">लाल किताब में आयु का विचार ग्रहों की युति से होता है। नीचे इस कुंडली की <b>वास्तविक युतियों</b> से बनने वाले आयु-योग दिए हैं।</div>
+        <div class="lk-note" style="margin-bottom:9px">लाल किताब में आयु का विचार ग्रहों की युति से होता है। इसे यहाँ <b>पाँच वर्गों</b> में दिखाया जाता है
+          — बालारिष्ट · अल्प · मध्यम · दीर्घ · पूर्ण। (किसी भी अंक या "मृत्यु" के रूप में नहीं — यह केवल एक
+          योग है, जिसका उपाय साथ में दिया गया है।)</div>
         <?php if ($ayOn === []): ?>
           <div class="lk-card"><div class="lk-txt">इस कुंडली में कोई विशेष आयु-योग नहीं बनता (कोई ग्रह-युति नहीं)।</div></div>
-        <?php else: foreach ($ayOn as $y): ?>
-          <div class="lk-card good">
-            <div class="lk-card-h" style="font-size:.9rem"><?= $h((string) $y['ayu']) ?> वर्ष <?= $pill('लागू', 'a') ?></div>
+        <?php else: foreach ($ayOn as $y): $isBala = mb_strpos((string) $y['band'], 'बालारिष्ट') !== false; ?>
+          <div class="lk-card <?= $isBala ? 'bad' : '' ?>" data-app="1">
+            <div class="lk-card-h" style="font-size:.9rem"><?= $h((string) $y['band']) ?> <?= $pill('लागू', 'a') ?></div>
             <div class="lk-sub"><?= $h((string) $y['yog']) ?><?php if (trim((string) $y['why']) !== ''): ?> <span style="color:#166534">(<?= $h((string) $y['why']) ?>)</span><?php endif; ?></div>
+            <?php if (trim((string) $y['band_note']) !== ''): ?><div class="lk-reason"><?= $h((string) $y['band_note']) ?></div><?php endif; ?>
+            <?php if ($isBala): ?><div class="lk-sub" style="color:#991b1b">⚠️ सावधानी व उपाय आवश्यक — घबराने की बात नहीं, समाधान उपलब्ध है।</div><?php endif; ?>
           </div>
         <?php endforeach; endif; ?>
         <?php if ($ayOff !== []): ?>
           <details style="margin-top:6px"><summary style="cursor:pointer;font-size:.8rem;color:#94a3b8">अन्य आयु-योग नियम — इस कुंडली में लागू नहीं (<?= count($ayOff) ?>)</summary>
-            <?php foreach ($ayOff as $y): ?><div style="font-size:.78rem;color:#94a3b8;margin:2px 0"><?= $h((string) $y['ayu']) ?> वर्ष — <?= $h((string) $y['yog']) ?></div><?php endforeach; ?>
+            <?php foreach ($ayOff as $y): ?><div style="font-size:.78rem;color:#94a3b8;margin:2px 0"><?= $h((string) $y['band'] ?: '—') ?> — <?= $h((string) $y['yog']) ?></div><?php endforeach; ?>
           </details>
         <?php endif; ?>
         <div class="lk-card">
@@ -1151,69 +1202,75 @@ $scorePill = static function (int $score): string {
         <?php endforeach; endif; ?>
       </div>
 
-      <!-- ===== SUPT + special weak states ===== -->
+      <!-- ===== SUPT (soya / impaired) + special weak states ===== -->
       <div class="lk-view" data-lk="supt">
-        <?php $sp = $lk['special'] ?? ['combust' => [], 'ratandh' => false, 'neech' => []]; ?>
-        <h3 class="lk-h">विशेष निष्फल/दुर्बल अवस्थाएँ</h3>
-        <div class="lk-txt" style="margin-bottom:9px">जिन अवस्थाओं में ग्रह अपना फल ठीक से नहीं दे पाता — अस्त (सूर्य के अति निकट), रतांध योग, नीच व सुप्त। ये गणना-सिद्ध हैं।</div>
-
-        <?php if (!empty($sp['combust'])): ?>
-          <div class="lk-card bad">
-            <div class="lk-card-h">🔥 अस्त ग्रह (Combust — जला हुआ)</div>
-            <div class="lk-txt">सूर्य के अति निकट होने से इनका फल दुर्बल/निष्फल हो जाता है:</div>
-            <?php foreach ($sp['combust'] as $c): ?>
-              <div class="lk-sub"><b><?= $h((string) $c['hi']) ?></b> — सूर्य से केवल <?= $h((string) $c['deg']) ?>° दूर (<?= $h((string) $c['house_ord']) ?> भाव) — <span style="color:#991b1b">अस्त</span></div>
-            <?php endforeach; ?>
-          </div>
-        <?php endif; ?>
+        <?php $sp = $lk['special'] ?? ['ratandh' => false, 'neech' => []]; ?>
+        <h3 class="lk-h">सोया / अपंग ग्रह व विशेष अवस्थाएँ</h3>
+        <div class="lk-note" style="margin-bottom:9px">
+          लाल किताब में ग्रह तब "<b>सोया</b>" होता है जब वह जिस भाव को (एकतरफ़ा दृष्टि से) देखता है वह
+          पूरी तरह खाली हो। इससे गहरी अवस्थाएँ — गूंगा · बहरा · लंगड़ा · अंधा · मृत — एक-दूसरे पर चढ़ती हैं।
+          <span style="color:#92400e">(सोया आपकी दी परिभाषा है; बाकी अवस्थाएँ अनुमानित नियम पर हैं।)</span>
+        </div>
 
         <?php if (!empty($sp['ratandh'])): ?>
-          <div class="lk-card bad">
-            <div class="lk-card-h">🌑 रतांध ग्रह योग</div>
-            <div class="lk-txt">सूर्य चौथे व शनि सातवें भाव में — रतांध (रात्रि-अंध) ग्रह योग बनता है; ग्रह अपना पूर्ण फल नहीं देख पाते।</div>
+          <div class="lk-card bad" data-app="1">
+            <div class="lk-card-h">🌑 रतौंध कुंडली</div>
+            <div class="lk-txt"><b>📢 फल:</b> <?= $h((string) ($sp['ratandh_phal'] ?? '')) ?></div>
+            <?= $remBlock($sp['ratandh_upay'] ?? [], 'रतौंध — उपाय') ?>
           </div>
         <?php endif; ?>
 
         <?php if (!empty($sp['neech'])): ?>
           <div class="lk-card bad">
-            <div class="lk-card-h">⬇ नीच ग्रह</div>
-            <div class="lk-txt">नीच राशि में होने से इनका फल दुर्बल — उपाय "ग्रह फल" में देखें:</div>
+            <div class="lk-card-h">⬇ नीच ग्रह (भाव से)</div>
+            <div class="lk-txt">भाव-आधारित नीच — फल दुर्बल; उपाय "ग्रह फल" में देखें:</div>
             <?php foreach ($sp['neech'] as $n): ?>
-              <div class="lk-sub"><b><?= $h((string) $n['hi']) ?></b> — <?= $h((string) $n['house_ord']) ?> भाव में (नीच)</div>
+              <div class="lk-sub"><b><?= $h((string) $n['hi']) ?></b> — <?= $h((string) $n['house_ord']) ?> भाव में (नीच<?= ($n['tier'] ?? '') === 'गौण' ? ', गौण' : '' ?>)</div>
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
 
-        <?php if (empty($sp['combust']) && empty($sp['ratandh']) && empty($sp['neech'])): ?>
-          <div class="lk-card good"><div class="lk-txt">✅ कोई ग्रह अस्त/रतांध/नीच नहीं — इस दृष्टि से सभी ग्रह फल देने में सक्षम।</div></div>
+        <h3 class="lk-h" style="margin-top:14px">सोया / अपंग ग्रह</h3>
+        <?php if (empty($lk['supt'])): ?>
+          <div class="lk-card good"><div class="lk-txt">✅ कोई ग्रह सोया/अपंग नहीं — सभी ग्रह अपना फल दे रहे हैं।</div></div>
         <?php endif; ?>
-
-        <h3 class="lk-h" style="margin-top:14px">सुप्त / जागृत ग्रह</h3>
-        <div class="lk-txt" style="margin-bottom:9px">लाल किताब में हर भाव में बैठा ग्रह तब तक "सुप्त" (सोया) रहता है जब तक उस भाव का <b>जगाने वाला ग्रह</b> कुंडली में उपस्थित न हो।</div>
         <?php foreach ($lk['supt'] as $s): ?>
-          <div class="lk-card <?= $s['awake'] ? 'good' : 'bad' ?>">
+          <div class="lk-card bad" data-app="1">
             <div class="lk-card-h">
               <?= $h((string) $s['hi']) ?> — <?= $h((string) $s['house_ord']) ?> भाव में
-              <?php if ($s['awake']): ?><span class="lk-pill" style="background:#dcfce7;color:#166534">⚡ जागृत</span><?php else: ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php endif; ?>
+              <span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 <?= $h((string) $s['state']) ?></span>
+              <?php if (($s['darja'] ?? '') !== 'final'): ?><span class="lk-pill" style="background:#fef3c7;color:#92400e">अनुमानित</span><?php endif; ?>
             </div>
-            <div class="lk-sub"><b>जगाने वाला ग्रह:</b> <?= $h((string) $s['waker']) ?><?= $s['awake'] ? ' — कुंडली में उपस्थित (सक्रिय)' : ' — कुंडली में अनुपस्थित (सुप्त रहेगा)' ?></div>
-            <?php if (trim((string) $s['jagega']) !== ''): ?><div class="lk-sub"><b>कब जागेगा:</b> <?= $h((string) $s['jagega']) ?><?= trim((string) $s['aayu']) !== '' ? ' (' . $h((string) $s['aayu']) . ')' : '' ?></div><?php endif; ?>
-            <?php if (trim((string) $s['ashubh']) !== ''): ?><div class="lk-sub" style="color:#991b1b"><b>अशुभ वर्ष:</b> <?= $h((string) $s['ashubh']) ?></div><?php endif; ?>
+            <div class="lk-txt"><b>📢 फल:</b> <?= $h((string) $s['phal']) ?></div>
+            <?php if (!empty($s['empty_aspected'])): ?>
+              <div class="lk-reason">यह जिन खाली भावों को देखता है:
+                <?php foreach ($s['empty_aspected'] as $ea): ?>
+                  <?= $h((string) $ea['ord']) ?> भाव<?= trim((string) $ea['chaabi']) !== '' ? ' (चाबी: ' . $h((string) $ea['chaabi']) . ')' : '' ?><?= $ea === end($s['empty_aspected']) ? '' : ' · ' ?>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+            <?php if (trim((string) $s['jagega']) !== ''): ?><div class="lk-sub"><b>अपने-आप कब जागेगा:</b> <?= $h((string) $s['aayu']) ?> — <?= $h((string) $s['jagega']) ?></div><?php endif; ?>
+            <?= $remBlock($s['upay'] ?? [], $s['state'] . ' — उपाय') ?>
           </div>
         <?php endforeach; ?>
       </div>
 
-      <!-- ===== DRISHTI (house aspects) ===== -->
+      <!-- ===== DRISHTI (one-way house aspects) ===== -->
       <div class="lk-view" data-lk="drishti">
-        <h3 class="lk-h">भाव दृष्टि (House Aspects)</h3>
-        <div class="lk-txt" style="margin-bottom:9px">लाल किताब की भाव-दृष्टि के अनुसार जिन भावों में ग्रह बैठे हैं वे किन भावों को देखते हैं (दृष्टि), किनसे सहायता पाते हैं, और किनसे टकराव है — तथा उन भावों में कौन-से ग्रह हैं।</div>
+        <h3 class="lk-h">भाव दृष्टि व टक्कर (एकतरफ़ा)</h3>
+        <div class="lk-note" style="margin-bottom:9px">
+          लाल किताब की दृष्टि <b>एकतरफ़ा व आगे की ओर</b> होती है (वैदिक जैसी नहीं): भाव 1→7 · 2→6 · 3→9,11 ·
+          4→10 · 5→9 · 6→12। भाव 7–12 आगे किसी को नहीं देखते। एकमात्र अपवाद भाव 8 की <b>उल्टी टक्कर</b> 8→2।
+          साथ ही हर ग्रह अपने से <b>आठवें</b> भाव के ग्रह को टक्कर मारकर खराब करता है।
+        </div>
         <?php foreach ($lk['drishti'] as $d):
-            $fmtH = static function (array $hs) use ($h) { return $hs ? $h(implode(', ', $hs)) . ' भाव' : '—'; }; ?>
+            $fmtH = static function (array $hs) use ($h) { return $hs ? $h(implode(', ', array_map('strval',$hs))) . ' भाव' : '—'; }; ?>
           <div class="lk-card">
             <div class="lk-card-h"><?= $h((string) $d['house_ord']) ?> भाव — <?= $h(implode(', ', $d['planets_hi'])) ?></div>
-            <div class="lk-sub"><b>👁 दृष्टि (देखता है):</b> <?= $fmtH($d['drishti']) ?><?= $d['drishti_p'] ? ' → ' . $h(implode(', ', $d['drishti_p'])) : '' ?></div>
-            <div class="lk-sub" style="color:#166534"><b>🤝 सहायक भाव:</b> <?= $fmtH($d['sahayak']) ?><?= $d['sahayak_p'] ? ' → ' . $h(implode(', ', $d['sahayak_p'])) : '' ?></div>
-            <div class="lk-sub" style="color:#991b1b"><b>⚔ टकराव:</b> <?= $fmtH($d['takrav']) ?><?= $d['takrav_p'] ? ' → ' . $h(implode(', ', $d['takrav_p'])) : '' ?></div>
+            <div class="lk-sub"><b>👁 दृष्टि (देखता है):</b>
+              <?php if (!empty($d['drishti'])): $bits=[]; foreach($d['drishti_pct'] as $th=>$pc){$bits[]=$th.' भाव ('.$pc.'%)';} echo $h(implode(' · ',$bits)); ?><?= $d['drishti_p'] ? ' → ' . $h(implode(', ', $d['drishti_p'])) : '' ?><?php else: ?>—<?php endif; ?>
+            </div>
+            <div class="lk-sub" style="color:#991b1b"><b>⚔ टक्कर (आठवें को मारता है):</b> <?= $fmtH($d['takkar']) ?><?= !empty($d['takkar_p']) ? ' → ' . $h(implode(', ', $d['takkar_p'])) . ' — यह ग्रह खराब होगा' : ' (वहाँ कोई ग्रह नहीं)' ?></div>
           </div>
         <?php endforeach; ?>
       </div>
@@ -1224,6 +1281,8 @@ $scorePill = static function (int $score): string {
         <h3 class="lk-h">उपाय — श्रेणी-अनुसार योजना (सरल पहले)</h3>
         <?php
           $rpTiers = [
+            'sthiti'  => ['🎯 स्थिति-आधारित उपाय (सबसे ज़रूरी)', 'टक्कर · बुनियाद · रतौंध · सोया — नाम लेकर', '#991b1b', '#fef2f2', '#fecaca'],
+            'masnui'  => ['🔀 मसनूई ग्रह के उपाय', 'दो मूल ग्रहों को एडजस्ट करके — मसनूई का सीधा उपाय कभी नहीं', '#5b21b6', '#f5f3ff', '#ddd6fe'],
             'quick'   => ['⚡ तुरंत / सरल उपाय', 'आज से शुरू करें — निःशुल्क व शीघ्र फल', '#166534', '#f0fdf4', '#bbf7d0'],
             'main'    => ['🎯 मुख्य उपाय (नियमित)', '40–43 दिन निरंतर — भावगत टोटके', '#854d0e', '#fffbeb', '#fde68a'],
             'worship' => ['🛕 पूजा / उपासना व दान', 'श्रद्धा-अनुसार', '#1e40af', '#eff6ff', '#bfdbfe'],
@@ -1236,7 +1295,7 @@ $scorePill = static function (int $score): string {
             <div class="lk-card" style="border-color:<?= $meta[4] ?>;background:<?= $meta[3] ?>">
               <div class="lk-card-h" style="color:<?= $meta[2] ?>"><?= $meta[0] ?> <span style="font-weight:400;font-size:.74rem;color:#64748b">— <?= $meta[1] ?></span></div>
               <ul class="lk-rem-list" style="color:<?= $meta[2] ?>">
-                <?php foreach ($rp[$tk] as $it): ?><li><b><?= $h((string) $it['hi']) ?>:</b> <?= $h((string) $it['text']) ?></li><?php endforeach; ?>
+                <?php foreach ($rp[$tk] as $it): ?><li><b><?= $h((string) $it['hi']) ?>:</b> <?= $h((string) $it['text']) ?><?php if (($it['darja'] ?? '') === 'lambit'): ?> <span class="lk-pill" style="background:#dbeafe;color:#1e40af">अंतरिम</span><?php elseif (($it['darja'] ?? '') === 'anumanit'): ?> <span class="lk-pill" style="background:#fef3c7;color:#92400e">अनुमानित</span><?php endif; ?></li><?php endforeach; ?>
               </ul>
             </div>
           <?php endforeach; ?>
@@ -1457,11 +1516,10 @@ $ssAct = $act['sadesati'] ?? null;
   <div class="lkr-title">लाल किताब रिपोर्ट (Lal Kitab Report)</div>
   <div class="lkr-sub"><?= $h($birthLine) ?> · लग्न: <?= $h((string) $lk['lagna_hi']) ?> · चन्द्र राशि: <?= $h((string) $lk['moon_hi']) ?><?= $lk['age'] !== null ? ' · वर्तमान आयु: ' . (int) $lk['age'] . ' वर्ष' : '' ?></div>
 
-  <?php if (!empty($act['maha']) || !empty($act['antar']) || $ssAct): ?>
+  <?php if (!empty($act['dasha']) || $ssAct): ?>
   <div class="lkr-box lkr-hot">
     <b>🔥 अभी सक्रिय:</b>
-    <?= !empty($act['maha']) ? 'महादशा — ' . $h((string) $act['maha']['hi']) . ' (' . $h((string) $act['maha']['house_ord']) . ' भाव, ' . $h((string) $act['maha']['verdict']) . ')' : '' ?>
-    <?= !empty($act['antar']) ? ' · अंतर्दशा — ' . $h((string) $act['antar']['hi']) . ' (' . $h((string) $act['antar']['house_ord']) . ' भाव)' : '' ?>
+    <?= !empty($act['dasha']) ? 'लाल किताब दशा (35-साला) — ' . $h((string) $act['dasha']['hi']) . ' (' . $h((string) $act['dasha']['house_ord']) . ' भाव · आयु ' . (int) ($act['dasha']['from'] ?? 0) . '–' . (int) ($act['dasha']['to'] ?? 0) . ')' : '' ?>
     <?= $ssAct ? ' · ' . $h((string) $ssAct['label']) . ' चल रही है' : '' ?>
     <?= !empty($act['year_bad']) ? ' · इस आयु-वर्ष में अशुभ: ' . $h(implode(', ', $act['year_bad'])) : '' ?>
   </div>

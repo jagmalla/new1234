@@ -76,20 +76,37 @@ final class LalKitabData
      * ("सूर्य मेष में हो और सामने सातवें भाव (तुला) में …").
      *
      * नीच is the seventh house from उच्च, which holds for all nine planets.
-     *
-     * These are used by the मसनूई module. The per-planet cards still classify
-     * from the real rashi via {@see EXALT} / {@see DEBIL}; switching them over is
-     * a separate change the owner has not yet authorised.
+     * Confirmed against Farman 4 of the source book (house 1: Sun उच्च, Saturn
+     * नीच, Mars घर-ग्रह; house 6: Mercury & Rahu उच्च; house 7: Saturn उच्च,
+     * Sun नीच, Venus घर-ग्रह — all match).
      */
     public const UCH_BHAV = [
         'Sun' => [1], 'Moon' => [2], 'Mars' => [10], 'Mercury' => [6], 'Jupiter' => [4],
         'Venus' => [12], 'Saturn' => [7], 'Rahu' => [3, 6], 'Ketu' => [9, 12],
     ];
 
-    /** Debilitation house(s) — always the seventh from the exaltation house. */
+    /** Debilitation house(s) — primary tier (the seventh from exaltation). */
     public const NEECH_BHAV = [
         'Sun' => [7], 'Moon' => [8], 'Mars' => [4], 'Mercury' => [12], 'Jupiter' => [10],
         'Venus' => [6], 'Saturn' => [1], 'Rahu' => [9, 12], 'Ketu' => [3, 6],
+    ];
+
+    /**
+     * Secondary (गौण) debilitation houses — the owner's "मुख्यतः" note marks a
+     * milder second tier for the shadow planets; these carry half weight.
+     */
+    public const NEECH_BHAV_SECONDARY = [
+        'Rahu' => [8, 11], 'Ketu' => [8],
+    ];
+
+    /**
+     * उच्च-भंग — a planet counted उच्च here still gives no auspicious result.
+     * Rahu in the 6th and Ketu in the 12th mirror each other, so this reads as
+     * deliberate, not an error (their भंग rules both say "शुभ फल नहीं")।
+     * @var array<string,list<int>>
+     */
+    public const UCH_BHANG = [
+        'Rahu' => [6], 'Ketu' => [12],
     ];
 
     /** Own-sign house(s) — the house whose fixed rashi this planet rules. */
@@ -123,15 +140,172 @@ final class LalKitabData
      * ahead of them. The sole exception is the 8th, whose "टक्कर की दृष्टि" looks
      * back at the 2nd.
      *
-     * Supplied by the owner and treated as authoritative over the bank's
-     * `bhav_drishti` sheet, which is a plain "every house sees the 6th ahead"
-     * rule that contradicts these at houses 2, 3 and 5. Currently read by the
-     * मसनूई module only.
+     * Supplied by the owner, confirmed against Farman 4 (1→7, 2→6, 5→9, 8→2
+     * reverse), and treated as authoritative over the bank's `bhav_drishti`
+     * sheet, which is a plain "every house sees the 6th ahead" rule that
+     * contradicts these at houses 2, 3 and 5.
      */
     public const DRISHTI = [
         1 => [7 => 100], 2 => [6 => 25], 3 => [9 => 50, 11 => 50], 4 => [10 => 100],
         5 => [9 => 50], 6 => [12 => 25], 7 => [], 8 => [2 => 100],
         9 => [], 10 => [], 11 => [], 12 => [],
+    ];
+
+    /**
+     * टक्कर — a planet strikes whatever sits in the eighth house from it, and
+     * spoils only that planet, never the sixth. One-way, except the 8th's
+     * "उल्टी टक्कर" which is the DRISHTI 8→2 above. house => struck house.
+     */
+    public const TAKKAR = [
+        1 => 8, 2 => 9, 3 => 10, 4 => 11, 5 => 12, 6 => 1,
+        7 => 2, 8 => 3, 9 => 4, 10 => 5, 11 => 6, 12 => 7,
+    ];
+
+    /**
+     * बुनियाद (जड़) — house => root house whose affliction rots this house's
+     * fruit. From Farman 4: the 2nd's root is the 5th, the 9th's root is the
+     * 2nd, the 8th's root is the 5th by way of the 2nd. Remedy always treats the
+     * root planet, never the branch. Only the confirmed pairs; not a trine loop.
+     * @var array<int,int>
+     */
+    public const BUNIYAD = [
+        2 => 5, 9 => 2, 8 => 2, 5 => 9,
+    ];
+
+    /**
+     * तीन टक्करें — incoming maps: house => list of houses that strike it.
+     * Fire only when both the target house and the attacking house are occupied.
+     *
+     * विश्वासघात (धोखा): the 4th and 10th betray each house.
+     * साझी चोट: neighbours (2nd & 12th); the four kendras also share with the
+     *   other kendras.
+     * अचानक चोट (अंधी): each kendra is struck by a trine group; the eight non-
+     *   kendra houses are struck only by kendras.
+     */
+    public const VISHWASGHAT = [
+        1 => [4, 10], 2 => [5, 11], 3 => [6, 12], 4 => [7, 1], 5 => [8, 2], 6 => [9, 3],
+        7 => [10, 4], 8 => [11, 5], 9 => [12, 6], 10 => [1, 7], 11 => [2, 8], 12 => [3, 9],
+    ];
+    public const SAJHI_CHOT = [
+        1 => [2, 12, 4, 10], 2 => [3, 1], 3 => [4, 2], 4 => [5, 3, 7, 1], 5 => [6, 4], 6 => [7, 5],
+        7 => [8, 6, 10, 4], 8 => [9, 7], 9 => [10, 8], 10 => [11, 9, 1, 7], 11 => [12, 10], 12 => [1, 11],
+    ];
+    public const ACHANAK_CHOT = [
+        1 => [3, 7, 11], 2 => [4], 3 => [1], 4 => [2, 6, 10], 5 => [7], 6 => [4],
+        7 => [1, 5, 9], 8 => [10], 9 => [7], 10 => [4, 8, 12], 11 => [1], 12 => [10],
+    ];
+
+    /**
+     * उच्च-भंग की शर्तें — an exalted planet gives no उच्च benefit when one of
+     * these "other planet(s) in house N" conditions holds. Taken from the bank's
+     * uch_neech_niyam bhang column, which is entirely house-stated, and structured
+     * here so it is computable. planet => list of {planets, house}.
+     * @var array<string,list<array{planets:list<string>,house:int}>>
+     */
+    public const BHANG_COND = [
+        'Sun'     => [['planets' => ['Venus', 'Rahu', 'Ketu', 'Saturn'], 'house' => 7]],
+        'Moon'    => [['planets' => ['Mercury', 'Venus'], 'house' => 6],
+                     ['planets' => ['Mercury', 'Venus'], 'house' => 12]],
+        'Mars'    => [['planets' => ['Mercury', 'Ketu'], 'house' => 2]],
+        'Mercury' => [['planets' => ['Moon'], 'house' => 12]],
+        'Jupiter' => [['planets' => ['Venus', 'Mercury'], 'house' => 10]],
+        'Venus'   => [['planets' => ['Sun', 'Rahu', 'Moon'], 'house' => 2]],
+        'Saturn'  => [['planets' => ['Sun', 'Mars'], 'house' => 1]],
+        'Rahu'    => [['planets' => ['Venus', 'Sun', 'Mars'], 'house' => 12]],
+        'Ketu'    => [['planets' => ['Moon', 'Mars'], 'house' => 2]],
+    ];
+
+    /**
+     * स्थिति-उपाय बैंक — every negative situation the engine can detect, keyed by
+     * a stable code so the text can be updated without touching engine code.
+     *   phal   — plain-language effect
+     *   upay   — list of remedies
+     *   darja  — 'final' (owner/source), 'anumanit' (my reading of the rules),
+     *            'lambit' (interim text until the owner supplies the real one)
+     * @var array<string,array{phal:string,upay:list<string>,darja:string}>
+     */
+    public const SITUATION = [
+        'RATANDH' => [
+            'phal' => 'रतौंध कुंडली — भाव 4 में सूर्य व भाव 7 में शनि। सूर्यास्त के बाद बुद्धि, समझ व भाग्य साथ नहीं देते; रात के फ़ैसले भारी नुकसान देते हैं। दिन में जातक राजा रहता है।',
+            'upay' => [
+                'सबसे बड़ा उपाय परहेज़ है — बड़े फ़ैसले, दस्तख़त, बड़ा लेन-देन व नया काम सूर्यास्त के बाद कभी न करें; दिन के उजाले में निपटाएँ।',
+                'सूर्य को बल दें — तांबे के बर्तन में गंगाजल या शुद्ध जल घर में रखें; रात को दूध पीने से सख़्त परहेज़ (दिन में ठीक)।',
+                'शनि का ज़हर काटें — काली लकड़ी की बांसुरी में चीनी भरकर सुनसान जगह ज़मीन में दबाएँ; रात को काले या गहरे नीले कपड़े न पहनें।',
+            ],
+            'darja' => 'final',
+        ],
+        'SOYA' => [
+            'phal' => 'सोया ग्रह — यह जिस भाव को देखता है वह पूरी तरह खाली है, इसलिए इसका कारकत्व फल नहीं दे रहा। अपनी जागृति आयु आने पर यह अपने-आप जाग जाएगा।',
+            'upay' => ['जागृति आयु से पहले — जिस भाव को यह देखता है, उसकी "चाबी" जिस ग्रह के पास है उसे सक्रिय करें (सोया-चाबी तालिका)।'],
+            'darja' => 'anumanit',
+        ],
+        'GUNGA' => [
+            'phal' => 'गूंगा ग्रह — बोल तो सकता है पर सुनने वाला कोई नहीं (देखे जाने वाला भाव व दोनों पड़ोसी भाव खाली)। कारकत्व लगभग निष्फल।',
+            'upay' => ['जिस भाव को यह देखता है, उसमें इसी ग्रह की स्थापना-वस्तु रखें — आवाज़ को जगह मिलेगी।'],
+            'darja' => 'anumanit',
+        ],
+        'BEHRA' => [
+            'phal' => 'बहरा ग्रह — कोई भरा हुआ भाव इसे नहीं देखता, इसलिए सलाह व मदद नहीं पहुँचती; उपाय का असर बहुत धीमा।',
+            'upay' => ['जो भाव इसे देखता है (पर खाली है) उसके कारक ग्रह की सेवा करें — कान खुलेंगे।'],
+            'darja' => 'anumanit',
+        ],
+        'LANGDA' => [
+            'phal' => 'लंगड़ा ग्रह — कच्चे घर में व कमज़ोर स्थिति में। फल मिलता तो है पर बहुत देर से — यह चाल की समस्या है, संपर्क की नहीं।',
+            'upay' => ['इसी ग्रह की स्थापना-वस्तु से बल दें।'],
+            'darja' => 'anumanit',
+        ],
+        'ANDHA' => [
+            'phal' => 'अंधा ग्रह — गूंगा भी और बहरा भी; किसी से कोई संपर्क नहीं। फल अप्रत्याशित या उल्टा।',
+            'upay' => ['गूंगा व बहरा दोनों के उपाय एक साथ करें।'],
+            'darja' => 'anumanit',
+        ],
+        'MRIT' => [
+            'phal' => 'मृत ग्रह — अंधा व अकेला (कोई साथी ग्रह नहीं)। पूर्ण एकांत; कारकत्व अनुपस्थित मानें। सबसे दुर्लभ व कठोर श्रेणी।',
+            'upay' => ['सर्वोच्च प्राथमिकता — स्थापना-वस्तु + कारक भाव की सेवा + उस ग्रह का दान, तीनों एक साथ।'],
+            'darja' => 'anumanit',
+        ],
+        'VISHWASGHAT' => [
+            'phal' => 'विश्वासघात — इस भाव के ग्रह को 4थे व 10वें भाव का ग्रह पीछे से धोखा देता है। जिस पर सबसे ज़्यादा भरोसा (साझेदार, रिश्तेदार, नौकर) वही धोखा देगा।',
+            'upay' => ['बचाव — जिस ग्रह पर चोट पड़ रही है उसकी वस्तुएँ धारण करके उसे बल दें; या दोनों के बीच किसी मित्र ग्रह की वस्तुएँ स्थापित करें (हमलावर का सीधा उपाय कभी नहीं)।'],
+            'darja' => 'final',
+        ],
+        'SAJHI_CHOT' => [
+            'phal' => 'साझी चोट — दो भाव एक ही नींव से जुड़े हैं; एक पर चोट लगे तो दूसरे में भी दरार आती है। नुकसान बिना सीधे कारण के दूसरे हिस्से को चपेट में ले लेता है।',
+            'upay' => ['नींव मज़बूत करें — दोनों भावों के कारकों की एक साथ सेवा करें।'],
+            'darja' => 'final',
+        ],
+        'ACHANAK_CHOT' => [
+            'phal' => 'अचानक चोट (अंधी टक्कर) — घात लगाकर वार; बचाव का मौका नहीं। अचानक दुर्घटना, अचानक बीमारी या रातों-रात नुकसान।',
+            'upay' => ['चाबी वाले भाव से टालें — जिस घर पर आशंका है, उसकी चाबी जिस ग्रह के पास है उसे सक्रिय कराएँ (हमलावर का सीधा उपाय कभी नहीं)।'],
+            'darja' => 'final',
+        ],
+        'BUNIYAD' => [
+            'phal' => 'बुनियाद (जड़) बिगड़ी — जड़ वाले भाव में पापी/नीच ग्रह है, इसलिए शाखा वाले भाव के उच्च ग्रह का फल भी सड़ रहा है।',
+            'upay' => ['उपाय हमेशा जड़ वाले भाव के ग्रह का करें — शाखा वाले ग्रह को बिल्कुल न छेड़ें; जड़ ठीक होते ही शाखा का फल अपने-आप सुधरेगा।'],
+            'darja' => 'final',
+        ],
+        'MUKABLA' => [
+            'phal' => 'सांझी गद्दी की पक्की दुश्मनी — भाव 8 में मंगल व शनि (आग व लोहा) की स्थायी टक्कर। अचानक दुर्घटना, रक्त-सर्जरी, या रातों-रात सब खत्म कर देने वाला झूठा आरोप/मुकदमा।',
+            'upay' => ['यहाँ "एक को हटाओ" नहीं चलेगा (दोनों घर के मालिक हैं)। बिचौलिया चन्द्रमा — चाँदी का चौकोर टुकड़ा जेब में रखें, या दूध से स्नान करें/पिएँ (तत्व, मैत्री से बड़ा — नामित अपवाद)।'],
+            'darja' => 'final',
+        ],
+        'VARSH_ASHUBH' => [
+            'phal' => 'वर्षफल का वर्ष अशुभ — इस वर्ष की कुंडली में ग्रह ऐसे भावों में गए कि वर्ष का निष्कर्ष अशुभ बना।',
+            'upay' => ['अंतरिम — इस वर्ष जो ग्रह अशुभ भाव में गए, उन्हीं के ग्रह-वार उपाय जन्मदिन से पूरे वर्ष चलाएँ; प्राथमिकता सबसे बुरे भाव वाले ग्रह को। (पूरा वर्ष-विशेष उपाय-पाठ आना बाकी।)'],
+            'darja' => 'lambit',
+        ],
+    ];
+
+    /**
+     * आयु-योग के 5 वर्ग — the number is never shown; the band is. From the owner.
+     * @var list<array{band:string,from:int,to:int,note:string}>
+     */
+    public const AYU_BAND = [
+        ['band' => 'बालारिष्ट / अति-अल्प आयु', 'from' => 0, 'to' => 12, 'note' => 'प्राण-कष्ट की आशंका — उपाय आवश्यक'],
+        ['band' => 'अल्प आयु', 'from' => 12, 'to' => 32, 'note' => 'प्रारंभिक स्वास्थ्य संघर्ष'],
+        ['band' => 'मध्यम आयु', 'from' => 32, 'to' => 64, 'note' => ''],
+        ['band' => 'दीर्घ आयु', 'from' => 64, 'to' => 80, 'note' => 'लंबी उम्र'],
+        ['band' => 'पूर्ण आयु', 'from' => 80, 'to' => 120, 'note' => 'परिपूर्ण आयु'],
     ];
 
     /** Short life-area label of each house (1..12) — for plain-language फल. */

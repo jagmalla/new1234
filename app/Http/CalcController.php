@@ -332,11 +332,11 @@ final class CalcController
                             $age--;
                         }
                     } catch (\Throwable $e) { /* age optional */ }
-                    // Activation context: running Maha/Antar lords + the current
-                    // Sade-Sati/Dhaiya state — drives the 🔥 strip + priority score.
+                    // Activation context for the Lal Kitab side is its OWN 35-year
+                    // cycle (computed inside the engine from age), NOT Vimshottari —
+                    // that stays on the Vedic side. Only the Sade-Sati/Dhaiya state
+                    // is passed through, since the bank carries its own remedies.
                     $lkActive = [
-                        'maha'  => $dashaNow['maha']['lord'] ?? null,
-                        'antar' => $dashaNow['antar']['lord'] ?? null,
                         'sadesati' => (is_array($sadeSati) && !empty($sadeSati['active'])) ? [
                             'kind'  => (string) ($sadeSati['kind'] ?? ''),
                             'phase' => $sadeSati['phase'] ?? null,

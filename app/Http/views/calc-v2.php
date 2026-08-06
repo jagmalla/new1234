@@ -1259,8 +1259,11 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
                 <button type="button" data-sec="lalkitab"><span class="l2-ic">📕</span>Laal Kitab</button>
                 <div class="l2-sub">
                     <button type="button" data-sec="lalkitab" data-lk="overview">🔎 सामान्य फल / Overview</button>
+                    <button type="button" data-sec="lalkitab" data-lk="planet">🪐 ग्रह फल / Planet</button>
+                    <button type="button" data-sec="lalkitab" data-lk="yoga">✨ योग · मसनूई · टक्करें</button>
+                    <button type="button" data-sec="lalkitab" data-lk="supt">😴 सोया / अपंग ग्रह</button>
                     <button type="button" data-sec="lalkitab" data-lk="varsh">📅 वर्ष कुंडली / Varsh Kundali</button>
-                    <button type="button" data-sec="lalkitab" data-lk="agecycle">🕰️ आयु-दशा टाइमलाइन / Age Timeline</button>
+                    <button type="button" data-sec="lalkitab" data-lk="agecycle">🕰️ आयु-दशा (35-साला) / Timeline</button>
                     <button type="button" data-sec="lalkitab" data-lk="remedy">🛠 उपाय / Remedy</button>
                 </div>
             </div>
