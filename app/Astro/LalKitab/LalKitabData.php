@@ -68,6 +68,72 @@ final class LalKitabData
         'Jupiter' => [9], 'Venus' => [7], 'Saturn' => [10], 'Rahu' => [12], 'Ketu' => [6],
     ];
 
+    /**
+     * House-based dignity — the Lal Kitab teva is fixed (house 1 is always मेष),
+     * so a planet's उच्च / नीच / स्वगृही standing is read from the *house* it sits
+     * in, never from its real transiting rashi. Confirmed by the owner, and
+     * corroborated by the bank's own भंग rules, which are all stated in houses
+     * ("सूर्य मेष में हो और सामने सातवें भाव (तुला) में …").
+     *
+     * नीच is the seventh house from उच्च, which holds for all nine planets.
+     *
+     * These are used by the मसनूई module. The per-planet cards still classify
+     * from the real rashi via {@see EXALT} / {@see DEBIL}; switching them over is
+     * a separate change the owner has not yet authorised.
+     */
+    public const UCH_BHAV = [
+        'Sun' => [1], 'Moon' => [2], 'Mars' => [10], 'Mercury' => [6], 'Jupiter' => [4],
+        'Venus' => [12], 'Saturn' => [7], 'Rahu' => [3, 6], 'Ketu' => [9, 12],
+    ];
+
+    /** Debilitation house(s) — always the seventh from the exaltation house. */
+    public const NEECH_BHAV = [
+        'Sun' => [7], 'Moon' => [8], 'Mars' => [4], 'Mercury' => [12], 'Jupiter' => [10],
+        'Venus' => [6], 'Saturn' => [1], 'Rahu' => [9, 12], 'Ketu' => [3, 6],
+    ];
+
+    /** Own-sign house(s) — the house whose fixed rashi this planet rules. */
+    public const SWA_BHAV = [
+        'Sun' => [5], 'Moon' => [4], 'Mars' => [1, 8], 'Mercury' => [3, 6], 'Jupiter' => [9, 12],
+        'Venus' => [2, 7], 'Saturn' => [10, 11], 'Rahu' => [12], 'Ketu' => [6],
+    ];
+
+    /**
+     * पक्का घर — a house's कारक planet, which is that planet's pukka ghar; the two
+     * are one table rather than two. Sitting here means the result arrives at full
+     * force and stability — for a benefic *and* for a malefic alike, so this is a
+     * measure of intensity, not of auspiciousness.
+     */
+    public const KARAK_BHAV = [
+        'Sun' => [1], 'Moon' => [4], 'Mars' => [3, 8], 'Mercury' => [6, 7],
+        'Jupiter' => [2, 5, 9, 11, 12], 'Venus' => [7], 'Saturn' => [8, 10],
+        'Rahu' => [12], 'Ketu' => [6],
+    ];
+
+    /** कच्चा घर — supplied by the owner as an independent list, not derivable. */
+    public const KACHCHA_BHAV = [
+        'Sun' => [4, 7], 'Moon' => [7, 12], 'Mars' => [4], 'Mercury' => [9, 12],
+        'Jupiter' => [8, 12], 'Venus' => [1, 9], 'Saturn' => [4, 12],
+        'Rahu' => [1, 4, 8], 'Ketu' => [4, 10],
+    ];
+
+    /**
+     * भाव-दृष्टि — house => [seen house => strength %]. Lal Kitab aspects run one
+     * way and forwards only, which is why houses 7–12 cast none: nothing is left
+     * ahead of them. The sole exception is the 8th, whose "टक्कर की दृष्टि" looks
+     * back at the 2nd.
+     *
+     * Supplied by the owner and treated as authoritative over the bank's
+     * `bhav_drishti` sheet, which is a plain "every house sees the 6th ahead"
+     * rule that contradicts these at houses 2, 3 and 5. Currently read by the
+     * मसनूई module only.
+     */
+    public const DRISHTI = [
+        1 => [7 => 100], 2 => [6 => 25], 3 => [9 => 50, 11 => 50], 4 => [10 => 100],
+        5 => [9 => 50], 6 => [12 => 25], 7 => [], 8 => [2 => 100],
+        9 => [], 10 => [], 11 => [], 12 => [],
+    ];
+
     /** Short life-area label of each house (1..12) — for plain-language फल. */
     public const HOUSE_TOPIC = [
         1 => 'शरीर, स्वास्थ्य व मान-सम्मान',

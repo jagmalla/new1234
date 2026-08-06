@@ -138,7 +138,11 @@ final class LalKitabEngine
         $supt      = self::suptReadings($house);
         $yutiDosha = self::yutiDoshaReadings($occupants);
         $planets   = self::planetReadings($chart, $house, $occupants, $supt, $yutiDosha);
-        self::scorePlanets($planets, $supt, $yutiDosha, $active, $age);
+        // मसनूई sits on top of the per-planet analysis: it needs each source
+        // planet's own verdict to decide which of the two to send away.
+        $masnui    = self::masnuiReadings($house, $occupants, $planets, $age);
+        self::markMasnuiSources($planets, $masnui);
+        self::scorePlanets($planets, $supt, $yutiDosha, $active, $age, $masnui);
         $priority  = self::priorityReadings($planets);
         $activeNow = self::activeReadings($house, $planets, $active, $age);
         $yoga      = self::yogaReadings($house);
@@ -158,6 +162,7 @@ final class LalKitabEngine
             'active'      => $activeNow,
             'priority'    => $priority,
             'yuti_dosha'  => $yutiDosha,
+            'masnui'      => $masnui,
             'houses'      => self::houseReadings($house, $occupants, $planets),
             'karak'       => self::karakReadings($house, $planets),
             'yoga'        => $yoga,
@@ -166,7 +171,7 @@ final class LalKitabEngine
             'sadesati'    => self::sadeSatiReadings($moonSign, $active),
             'manglik'     => self::manglikReadings($chart, $lagnaSign, $house),
             'remedy'      => self::remedyReadings($house, $occupants),
-            'remedy_plan' => self::remedyPlan($planets),
+            'remedy_plan' => self::remedyPlan($planets, $masnui),
             'ayu'         => self::ayuReadings($house, $occupants, $chart),
             'health'      => self::healthReadings($planets),
             'bhavan'      => LalKitabData::section('bhavan'),
@@ -1095,6 +1100,244 @@ final class LalKitabEngine
         return ['summary' => $summary, 'tone' => $tone, 'shubh' => $shubh, 'ashubh' => $ashubh, 'dos' => $dos, 'donts' => $donts];
     }
 
+    /**
+     * मसनूई (कृत्रिम) ग्रह — two planets sharing a house behave as a third, and
+     * the teva is read for that third planet in that house.
+     *
+     * The manufactured planet is a dominant layer over the two sources, not a
+     * replacement, so both originals keep their own cards; this reading is what
+     * gets read *first* for that house. Four things are worked out per formation:
+     * the phal of the manufactured planet there, its house-based dignity, whether
+     * the real planet of the same kind is elsewhere in the chart (a clash of
+     * equals decided by दृष्टि strength), and when in the 35-year cycle it bites.
+     *
+     * Remedies never touch the manufactured planet — that is a hard Lal Kitab
+     * restriction. A benefic formation is reinforced by combining the two
+     * sources' articles; a malefic one is broken by separating them, or by
+     * seating a third planet friendly to both between them.
+     *
+     * @param array<string,int> $house
+     * @param array<int,list<string>> $occupants
+     * @param list<array<string,mixed>> $planets
+     * @return list<array<string,mixed>>
+     */
+    private static function masnuiReadings(array $house, array $occupants, array $planets, ?int $age): array
+    {
+        $forms = LalKitabMasnui::detect($occupants);
+        if ($forms === []) {
+            return [];
+        }
+        $gp  = LalKitabData::section('graha_parichay');
+        $sab = LalKitabData::section('shubh_ashubh_bhav');
+        $gv  = LalKitabData::section('grah_vastu');
+        $stv = LalKitabData::section('sthapana_vastu');
+        $sh  = LalKitabData::section('sheeghra');
+
+        $verdictOf = [];
+        foreach ($planets as $p) {
+            $verdictOf[$p['planet']] = (string) ($p['verdict'] ?? '');
+        }
+        $firstItem = static function (string $p) use ($gv): string {
+            $bits = preg_split('/[,;]/u', (string) ($gv[$p] ?? '')) ?: [];
+            $take = [];
+            foreach ($bits as $b) {
+                $b = trim($b);
+                if ($b !== '') { $take[] = $b; }
+                if (count($take) === 3) { break; }
+            }
+            return implode(', ', $take);
+        };
+
+        $out = [];
+        foreach ($forms as $f) {
+            $h    = (int) $f['house'];
+            $a    = $f['pair'][0];
+            $b    = $f['pair'][1];
+            $mk   = (string) $f['makes'];      // what is manufactured
+            $rd   = (string) $f['read'];       // whose phal is actually read
+            $aHi  = LalKitabData::planetHi($a);
+            $bHi  = LalKitabData::planetHi($b);
+            $mkHi = LalKitabData::planetHi($mk);
+
+            // ---- 1) dignity of the manufactured planet in this house ----
+            $dig = LalKitabMasnui::dignity($rd, $h);
+            $score = (int) $dig['weight'];
+            $why = [];
+            foreach ($dig['why'] as $w) { $why[] = $w; }
+
+            // the pair's own inherent standing, before the house is considered
+            $inh = $f['inherent'];
+            if ($inh === 'उच्च') { $score += 2; $why[] = 'यह जोड़ी स्वयं उच्च का मसनूई ग्रह बनाती है'; }
+            elseif ($inh === 'नीच') { $score -= 2; $why[] = 'यह जोड़ी स्वयं नीच का मसनूई ग्रह बनाती है'; }
+            elseif ($inh === 'बद') { $score -= 3; $why[] = 'यह जोड़ी "बद" मसनूई ग्रह बनाती है — फलादेश नीच राहु जैसा'; }
+
+            // the manufactured planet's own shubh / ashubh house lists
+            $shubhL  = self::parseHouses((string) ($sab[$rd]['shubh'] ?? ''));
+            $ashubhL = self::parseHouses((string) ($sab[$rd]['ashubh'] ?? ''));
+            if (in_array($h, $shubhL, true)) { $score++; $why[] = $h . 'वाँ भाव ' . LalKitabData::planetHi($rd) . ' हेतु शुभ'; }
+            elseif (in_array($h, $ashubhL, true)) { $score--; $why[] = $h . 'वाँ भाव ' . LalKitabData::planetHi($rd) . ' हेतु अशुभ'; }
+
+            // पक्का घर is intensity — it doubles whichever way the result already leans
+            if (!empty($dig['pakka']) && $score !== 0) { $score += $score > 0 ? 1 : -1; }
+            if (!empty($dig['kachcha']) && $score !== 0) { $score += $score > 0 ? -1 : 1; }
+
+            $verdict = $score > 0 ? 'शुभ' : ($score < 0 ? 'अशुभ' : 'मध्यम');
+
+            // ---- 2) plain-language phal ----
+            $areas = [];
+            $areaHouses = self::parseHouses((string) ($gp[$rd]['karak_bhav'] ?? ''));
+            if (!in_array($h, $areaHouses, true)) { $areaHouses[] = $h; }
+            sort($areaHouses);
+            foreach ($areaHouses as $ah) {
+                if (isset(LalKitabData::HOUSE_TOPIC[$ah])) { $areas[] = LalKitabData::HOUSE_TOPIC[$ah]; }
+            }
+            $label = $mkHi . ($inh !== null ? ' (' . $inh . ')' : '');
+            if (!empty($f['flavour'])) { $label .= ' — ' . LalKitabData::planetHi((string) $f['flavour']) . '-स्वभाव'; }
+            $head = $aHi . ' व ' . $bHi . ' एक साथ ' . LalKitabData::houseOrdinalHi($h) . ' भाव में हैं ⇒ यहाँ '
+                . 'मसनूई ' . $label . ' बनता है। इसलिए इस भाव का मुख्य फल ' . $aHi . ' या ' . $bHi
+                . ' का नहीं, बल्कि ' . LalKitabData::houseOrdinalHi($h) . ' भाव में बैठे '
+                . LalKitabData::planetHi($rd) . ' का पढ़ा जाएगा'
+                . ($dig['status'] !== 'सामान्य' ? ' — और यहाँ वह ' . $dig['status'] . ' का है।' : '।');
+            $effect = $verdict === 'शुभ'
+                ? 'इन क्षेत्रों में शानदार व मज़बूत फल मिलेगा — ' . implode('; ', array_unique($areas)) . '।'
+                : ($verdict === 'अशुभ'
+                    ? 'इन क्षेत्रों में मन्दा फल मिलेगा — ' . implode('; ', array_unique($areas)) . '। उपाय आवश्यक।'
+                    : 'इन क्षेत्रों में मिश्रित फल रहेगा — ' . implode('; ', array_unique($areas)) . '।');
+
+            // ---- 3) real vs manufactured clash ----
+            $clash = LalKitabMasnui::clash($rd, $h, $house);
+            $clashTxt = '';
+            if ($clash !== null) {
+                $clashTxt = 'असली ' . LalKitabData::planetHi($rd) . ' भी कुंडली में है — '
+                    . LalKitabData::houseOrdinalHi((int) $clash['real_house']) . ' भाव में। '
+                    . 'दो समान ताकतें आमने-सामने आती हैं ("दो ' . LalKitabData::planetHi($rd) . ' की लड़ाई"), '
+                    . 'जिससे फलादेश में मिलावट आती है। ';
+                if (!$clash['linked']) {
+                    $clashTxt .= 'दोनों के बीच कोई दृष्टि-संबंध नहीं, इसलिए दोनों अपने-अपने भाव में अलग-अलग फल देंगे।';
+                } elseif ($clash['stronger'] === 'masnui') {
+                    $clashTxt .= 'मसनूई वाला भाव असली वाले को ' . $clash['from_masnui'] . '% दृष्टि से देखता है ⇒ '
+                        . 'मसनूई का पक्ष भारी रहेगा।';
+                } elseif ($clash['stronger'] === 'real') {
+                    $clashTxt .= 'असली ' . LalKitabData::planetHi($rd) . ' मसनूई वाले भाव को ' . $clash['from_real']
+                        . '% दृष्टि से देखता है ⇒ असली का पक्ष भारी रहेगा।';
+                } else {
+                    $clashTxt .= 'दोनों की दृष्टि बराबर है ⇒ फल आधा-आधा बँटेगा।';
+                }
+            }
+
+            // ---- 4) when it bites — the two sources' stretches of the 35-year cycle ----
+            $windows = [];
+            foreach ([$a, $b] as $src) {
+                foreach (LalKitabDasha::template() as $dt) {
+                    if ($dt['planet'] === $src) {
+                        $windows[] = ['hi' => LalKitabData::planetHi($src), 'from' => $dt['from'], 'to' => $dt['to']];
+                        break;
+                    }
+                }
+            }
+            $activeNow = false;
+            if ($age !== null) {
+                $running = (string) (LalKitabDasha::at($age)['planet'] ?? '');
+                $activeNow = $running === $a || $running === $b;
+            }
+
+            // ---- 5) remedies — never on the manufactured planet ----
+            $mode = $verdict === 'अशुभ' ? 'तोड़ें' : ($verdict === 'शुभ' ? 'मज़बूत करें' : 'सँभालें');
+            $rem = [];
+            $split = null;
+            $cats = [];
+            if ($verdict === 'शुभ') {
+                $rem[] = '✅ यह मसनूई ' . $mkHi . ' शुभ है — इसे कायम रखें। ' . $aHi . ' व ' . $bHi
+                    . ' दोनों की वस्तुएँ एक साथ मिलाकर धारण करें या घर में रखें।';
+                if (!empty($stv[$a])) { $rem[] = $aHi . ' — ' . $stv[$a]; }
+                if (!empty($stv[$b])) { $rem[] = $bHi . ' — ' . $stv[$b]; }
+            } else {
+                $split = LalKitabMasnui::splitPlan($a, $b, $verdictOf);
+                $rHi = LalKitabData::planetHi($split['remove']);
+                $kHi = LalKitabData::planetHi($split['keep']);
+                $rem[] = '① ज़हर तोड़ें — दोनों ग्रहों का संपर्क अलग करें, ताकि मसनूई ' . $mkHi
+                    . ' का वजूद ही खत्म हो जाए। (' . $split['why'] . '।)';
+                $rem[] = '⬇ ' . $rHi . ' की वस्तु घर से बाहर करें या बहते पानी में बहाएँ'
+                    . (!empty($sh[$split['remove']]) ? ' — ' . $sh[$split['remove']] : '')
+                    . ($firstItem($split['remove']) !== '' ? ' (वस्तुएँ: ' . $firstItem($split['remove']) . ')' : '');
+                $rem[] = '⬆ ' . $kHi . ' की वस्तु शरीर पर धारण करें या घर में स्थापित करें'
+                    . (!empty($stv[$split['keep']]) ? ' — ' . $stv[$split['keep']] : '');
+                $cats = LalKitabMasnui::catalysts($a, $b);
+                if ($cats !== []) {
+                    $c0 = $cats[0]['planet'];
+                    $cHi = LalKitabData::planetHi($c0);
+                    $rem[] = '② यदि अलग करना संभव न हो — बिचौलिया लाएँ। ' . $cHi
+                        . ' दोनों से मेल रखता है' . ($cats[0]['both'] ? ' (दोनों का मित्र)' : '')
+                        . '; उसकी वस्तुएँ इस भाव में स्थापित करें'
+                        . (!empty($stv[$c0]) ? ' — ' . $stv[$c0] : '')
+                        . ($firstItem($c0) !== '' ? ' (वस्तुएँ: ' . $firstItem($c0) . ')' : '') . '।';
+                }
+            }
+            $rem[] = '⛔ ' . $mkHi . ' की वस्तुओं का दान या उपाय कभी न करें — यह ग्रह मसनूई है, असली नहीं। '
+                . 'उपाय केवल ' . $aHi . ' व ' . $bHi . ' की वस्तुओं को एडजस्ट करके ही होगा।';
+
+            $out[] = [
+                'house'      => $h,
+                'house_ord'  => LalKitabData::houseOrdinalHi($h),
+                'planets'    => [$a, $b],
+                'pair_hi'    => $aHi . ' + ' . $bHi,
+                'makes'      => $mk,
+                'makes_hi'   => $mkHi,
+                'label'      => $label,
+                'read_as'    => $rd,
+                'read_as_hi' => LalKitabData::planetHi($rd),
+                'inherent'   => $inh,
+                'flavour_hi' => !empty($f['flavour']) ? LalKitabData::planetHi((string) $f['flavour']) : '',
+                'note'       => (string) $f['note'],
+                'status'     => $dig['status'],
+                'pakka'      => (bool) $dig['pakka'],
+                'kachcha'    => (bool) $dig['kachcha'],
+                'verdict'    => $verdict,
+                'score'      => $score,
+                'why'        => $why,
+                'head'       => $head,
+                'effect'     => $effect,
+                'clash'      => $clashTxt,
+                'windows'    => $windows,
+                'active_now' => $activeNow,
+                'mode'       => $mode,
+                'remedies'   => $rem,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Tell each source planet that it is busy forming a मसनूई planet, so its own
+     * card can point the reader at the dominant layer instead of being read alone.
+     *
+     * @param list<array<string,mixed>> $planets   modified in place
+     * @param list<array<string,mixed>> $masnui
+     */
+    private static function markMasnuiSources(array &$planets, array $masnui): void
+    {
+        if ($masnui === []) {
+            return;
+        }
+        $by = [];
+        foreach ($masnui as $m) {
+            foreach ($m['planets'] as $p) {
+                $by[$p][] = [
+                    'label'   => (string) $m['label'],
+                    'house'   => (int) $m['house'],
+                    'verdict' => (string) $m['verdict'],
+                    'with'    => (string) LalKitabData::planetHi(
+                        $m['planets'][0] === $p ? $m['planets'][1] : $m['planets'][0]
+                    ),
+                ];
+            }
+        }
+        foreach ($planets as &$pl) {
+            $pl['masnui'] = $by[$pl['planet']] ?? [];
+        }
+        unset($pl);
+    }
+
     private static function yutiDoshaReadings(array $occupants): array
     {
         /** alphabetically-sorted pair key => [name, description] */
@@ -1178,8 +1421,17 @@ final class LalKitabEngine
      * @param list<array<string,mixed>> $yutiDosha
      * @param array<string,mixed> $active
      */
-    private static function scorePlanets(array &$planets, array $supt, array $yutiDosha, array $active, ?int $age): void
+    private static function scorePlanets(array &$planets, array $supt, array $yutiDosha, array $active, ?int $age, array $masnui = []): void
     {
+        // A harmful मसनूई formation is remedied through its two source planets —
+        // never through the manufactured one — so the urgency lands on the pair.
+        $masnuiBad = [];
+        foreach ($masnui as $m) {
+            if (($m['verdict'] ?? '') !== 'अशुभ') { continue; }
+            foreach ($m['planets'] as $mp) {
+                $masnuiBad[$mp] = 'मसनूई ' . $m['label'] . ' (' . $m['house_ord'] . ' भाव) अशुभ';
+            }
+        }
         // lookups
         $asleep = [];
         foreach ($supt as $s) {
@@ -1213,6 +1465,7 @@ final class LalKitabEngine
                 $score += 2;
                 $reasons[] = 'इस आयु-वर्ष में अशुभ वर्ष (+2)';
             }
+            if (isset($masnuiBad[$p])) { $score += 2; $reasons[] = $masnuiBad[$p] . ' (+2)'; }
             if (isset($asleep[$pl['hi']])) { $score += 1; $reasons[] = 'सुप्त ग्रह (+1)'; }
             if ($pl['status'] === 'उच्च') { $score -= 1; $reasons[] = 'उच्च राशि (−1)'; }
             if (!empty($pl['pukka'])) { $score -= 1; $reasons[] = 'पक्का घर (−1)'; }
@@ -1419,14 +1672,24 @@ final class LalKitabEngine
      * @param list<array<string,mixed>> $planets
      * @return array<string,list<array{hi:string,text:string}>>
      */
-    private static function remedyPlan(array $planets): array
+    private static function remedyPlan(array $planets, array $masnui = []): array
     {
         $sh  = LalKitabData::section('sheeghra');
         $bg  = LalKitabData::section('bhavgat_upay');
         $pd  = LalKitabData::section('puja_daan');
         $stv = LalKitabData::section('sthapana_vastu');
 
-        $tiers = ['quick' => [], 'main' => [], 'worship' => [], 'big' => []];
+        $tiers = ['quick' => [], 'main' => [], 'worship' => [], 'big' => [], 'masnui' => []];
+        // मसनूई formations are remedied as a unit, through the two source planets.
+        foreach ($masnui as $m) {
+            if (($m['verdict'] ?? '') === 'शुभ') { continue; }
+            foreach ($m['remedies'] as $t) {
+                $tiers['masnui'][] = [
+                    'hi'   => 'मसनूई ' . $m['label'] . ' — ' . $m['house_ord'] . ' भाव (' . $m['pair_hi'] . ')',
+                    'text' => (string) $t,
+                ];
+            }
+        }
         foreach ($planets as $pe) {
             if (empty($pe['is_ashubh']) && ($pe['status'] ?? '') !== 'नीच') { continue; }
             $p = $pe['planet'];

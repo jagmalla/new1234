@@ -355,6 +355,17 @@ $scorePill = static function (int $score): string {
               <div class="lk-anlz-row"><span class="lk-anlz-k"><?= !empty($p['asleep']) ? '😴' : '⚡' ?> सुप्त / जागृत</span>
                 <?= !empty($p['asleep']) ? '<b style="color:#991b1b">😴 सुप्त — जगाने वाला ग्रह कुंडली में नहीं; फल दबा रहेगा</b>' : '<b style="color:#166534">⚡ जागृत — फल सक्रिय</b>' ?>
               </div>
+              <?php if (!empty($p['masnui'])): ?>
+              <div class="lk-anlz-row"><span class="lk-anlz-k">🔀 मसनूई</span>
+                <span>
+                  <?php foreach ($p['masnui'] as $ms): ?>
+                    <?= $h((string) $ms['with']) ?> के साथ मिलकर <b>मसनूई <?= $h((string) $ms['label']) ?></b>
+                    बना रहा है (<?= (int) $ms['house'] ?>वाँ भाव, <?= $h((string) $ms['verdict']) ?>) —
+                    इस भाव का मुख्य फल वहीं पढ़ें।<br>
+                  <?php endforeach; ?>
+                </span>
+              </div>
+              <?php endif; ?>
               <?php if (!empty($p['verdict_why'])): ?>
               <div class="lk-anlz-row lk-anlz-final"><span class="lk-anlz-k">⚖ निष्कर्ष</span>
                 <b><?= $h((string) $p['verdict']) ?></b> — <?= $h(implode(' · ', $p['verdict_why'])) ?>
@@ -606,6 +617,53 @@ $scorePill = static function (int $score): string {
 
       <!-- ===== YOGA ===== -->
       <div class="lk-view" data-lk="yoga">
+        <?php if (!empty($lk['masnui'])): ?>
+          <h3 class="lk-h">मसनूई (कृत्रिम) ग्रह</h3>
+          <div class="lk-anlz" style="margin-bottom:9px;line-height:1.7">
+            दो ग्रह एक ही भाव में बैठें तो वे मिलकर <b>तीसरे ग्रह</b> जैसा काम करते हैं — और उस भाव का
+            मुख्य फल उसी तीसरे ग्रह का पढ़ा जाता है। मूल दोनों ग्रह मिटते नहीं; मसनूई ग्रह उनके ऊपर
+            एक <b>हावी अतिरिक्त परत</b> बन जाता है। इसीलिए उपाय कभी मसनूई ग्रह का नहीं, हमेशा उन
+            <b>दो मूल ग्रहों</b> का किया जाता है।
+          </div>
+          <?php foreach ($lk['masnui'] as $M): ?>
+            <?php
+              $cls = $M['verdict'] === 'अशुभ' ? 'bad' : ($M['verdict'] === 'शुभ' ? 'good' : '');
+              $ico = $M['verdict'] === 'अशुभ' ? '⚠' : ($M['verdict'] === 'शुभ' ? '✨' : '◐');
+            ?>
+            <div class="lk-card <?= $cls ?>" data-app="1">
+              <div class="lk-card-h"><?= $ico ?> मसनूई <?= $h((string) $M['label']) ?>
+                <span class="lk-meta" style="margin:0 0 0 6px">
+                  <?= $h((string) $M['pair_hi']) ?> — <?= $h((string) $M['house_ord']) ?> भाव में
+                </span>
+                <?php if ($M['status'] !== 'सामान्य'): ?>
+                  <span class="lk-pill" style="<?= $M['status'] === 'नीच' ? 'background:#dc2626;color:#fff' : 'background:#16a34a;color:#fff' ?>"><?= $h((string) $M['status']) ?></span>
+                <?php endif; ?>
+                <?php if (!empty($M['pakka'])): ?><span class="lk-pill" style="background:#7c3aed;color:#fff">पक्का घर</span><?php endif; ?>
+                <?php if (!empty($M['kachcha'])): ?><span class="lk-pill" style="background:#94a3b8;color:#fff">कच्चा घर</span><?php endif; ?>
+                <?php if (!empty($M['active_now'])): ?><span class="lk-pill" style="background:#f59e0b;color:#fff">अभी सक्रिय</span><?php endif; ?>
+                <?= $srcTag('मसनूई गणना') ?>
+              </div>
+              <div class="lk-txt"><b>🔀 बनता क्या है:</b> <?= $h((string) $M['head']) ?></div>
+              <div class="lk-txt"><b>📢 फल:</b> <?= $h((string) $M['effect']) ?></div>
+              <?php if (!empty($M['why'])): ?>
+                <div class="lk-reason">क्यों — <?= $h(implode(' · ', $M['why'])) ?></div>
+              <?php endif; ?>
+              <?php if (trim((string) $M['clash']) !== ''): ?>
+                <div class="lk-txt"><b>⚔ असली बनाम मसनूई:</b> <?= $h((string) $M['clash']) ?></div>
+              <?php endif; ?>
+              <?php if (!empty($M['windows'])): ?>
+                <div class="lk-reason">🕰️ सबसे तेज़ असर — 35-साला चक्र में इन खंडों पर:
+                  <?php foreach ($M['windows'] as $wi => $W): ?>
+                    <?= $h((string) $W['hi']) ?> (आयु <?= (int) $W['from'] === (int) $W['to'] ? (int) $W['from'] : (int) $W['from'] . '–' . (int) $W['to'] ?>)<?= $wi === count($M['windows']) - 1 ? '' : ' · ' ?>
+                  <?php endforeach; ?>
+                  — और फिर हर 35 वर्ष पर दोहराव
+                </div>
+              <?php endif; ?>
+              <?= $remBlock($M['remedies'], 'मसनूई ' . $M['makes_hi'] . ' — ' . $M['mode']) ?>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+
         <?php if (!empty($lk['yuti_dosha'])): ?>
           <h3 class="lk-h">विशेष युति / ग्रहण दोष</h3>
           <?php foreach ($lk['yuti_dosha'] as $D): ?>
@@ -1420,6 +1478,18 @@ $ssAct = $act['sadesati'] ?? null;
         <?php if ($pp['sheeghra'] !== ''): ?><li>⚡ शीघ्र उपाय: <?= $h((string) $pp['sheeghra']) ?></li><?php endif; ?>
       </ul>
       <?php if ($pp['var'] !== ''): ?><div class="lkr-why">प्रारंभ वार: <?= $h((string) $pp['var']) ?> · अवधि: 40–43 दिन निरंतर</div><?php endif; ?>
+    </div>
+  <?php endforeach; ?>
+  <?php endif; ?>
+
+  <?php if (!empty($lk['masnui'])): ?>
+  <div class="lkr-h">🔀 मसनूई (कृत्रिम) ग्रह</div>
+  <?php foreach ($lk['masnui'] as $M): ?>
+    <div class="lkr-box <?= $M['verdict'] === 'अशुभ' ? 'lkr-bad' : '' ?>">
+      <b>मसनूई <?= $h((string) $M['label']) ?></b> — <?= $h((string) $M['pair_hi']) ?>,
+      <?= $h((string) $M['house_ord']) ?> भाव · <?= $h((string) $M['verdict']) ?><br>
+      <?= $h((string) $M['effect']) ?>
+      <ul class="lkr-ul"><?php foreach ($M['remedies'] as $r): ?><li><?= $h((string) $r) ?></li><?php endforeach; ?></ul>
     </div>
   <?php endforeach; ?>
   <?php endif; ?>
