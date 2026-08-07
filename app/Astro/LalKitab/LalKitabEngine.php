@@ -448,11 +448,10 @@ final class LalKitabEngine
                     $bp['show'] = $isShubh ? 'nek' : ($isAshubh ? 'mandi' : 'both');
                     return $bp;
                 })(),
-                // बृहस्पति किन ग्रहों को बल देता है, व उसके स्थायी नियम (फरमान 13)।
-                'helps' => $p === 'Jupiter'
-                    ? array_map([LalKitabData::class, 'planetHi'], LalKitabData::JUPITER_HELPS[$h] ?? [])
-                    : [],
-                'special_niyam' => $p === 'Jupiter' ? LalKitabData::JUPITER_NIYAM : [],
+                // यह ग्रह किन ग्रहों को बल देता है, व उसके स्थायी नियम।
+                'helps' => array_map([LalKitabData::class, 'planetHi'],
+                    LalKitabData::HELPS_BY_HOUSE[$p][$h] ?? []),
+                'special_niyam' => LalKitabData::PLANET_NIYAM[$p] ?? [],
             ];
         }
         return $out;

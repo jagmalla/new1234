@@ -434,8 +434,8 @@ $scorePill = static function (int $score): string {
 
             <!-- 📖 भाव-अनुसार नेक/मंदी फल (फरमान 13) -->
             <?php $BP = $p['bhav_phal'] ?? null; if ($BP !== null):
-                $showNek = ($BP['show'] ?? 'both') !== 'mandi';
-                $showMandi = ($BP['show'] ?? 'both') !== 'nek'; ?>
+                $showNek = ($BP['show'] ?? 'both') !== 'mandi' && trim((string) ($BP['nek'] ?? '')) !== '';
+                $showMandi = ($BP['show'] ?? 'both') !== 'nek' && trim((string) ($BP['mandi'] ?? '')) !== ''; ?>
               <div style="border:1px solid #ddd6fe;background:#faf5ff;border-radius:9px;padding:8px 11px;margin-top:8px">
                 <div style="font-weight:700;font-size:.84rem;color:#6b21a8;margin-bottom:4px">📖 इस भाव में फल <?= $srcTag('फरमान 13') ?></div>
                 <?php if ($showNek): ?>
@@ -452,7 +452,7 @@ $scorePill = static function (int $score): string {
             <?php if (!empty($p['helps']) || !empty($p['special_niyam'])): ?>
               <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:9px;padding:8px 11px;margin-top:8px">
                 <?php if (!empty($p['helps'])): ?>
-                  <div style="font-size:.83rem;line-height:1.6"><b style="color:#92400e">🤝 बल देता है:</b> यह भाव बृहस्पति को <b><?= $h(implode(', ', $p['helps'])) ?></b> को बल देने योग्य बनाता है।</div>
+                  <div style="font-size:.83rem;line-height:1.6"><b style="color:#92400e">🤝 बल देता है:</b> यह भाव <?= $h((string) $p['hi']) ?> को <b><?= $h(implode(', ', $p['helps'])) ?></b> को बल देने योग्य बनाता है।</div>
                 <?php endif; ?>
                 <?php if (!empty($p['special_niyam'])): ?>
                   <ul style="margin:4px 0 0;padding-left:18px;font-size:.8rem;line-height:1.5;color:#713f12">
