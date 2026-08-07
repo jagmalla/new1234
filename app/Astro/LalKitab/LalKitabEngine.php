@@ -164,6 +164,7 @@ final class LalKitabEngine
             'grid'        => $grid,
             'planets'     => $planets,
             'teva_kisam'  => self::tevaKisamReadings($house, $occupants),
+            'karak_rishtedar' => LalKitabData::section('karak_rishtedar'),
             'general'     => self::generalOverview($planets),
             'age_cycle'   => self::ageCycle($occupants, $planets, $age),
             'active'      => $activeNow,

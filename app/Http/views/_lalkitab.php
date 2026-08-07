@@ -285,6 +285,19 @@ $scorePill = static function (int $score): string {
         </div>
         <?php endif; ?>
 
+        <?php $KR = $lk['karak_rishtedar'] ?? null; if (!empty($KR['map'])): ?>
+        <!-- ग्रह → रिश्तेदार कारक (फल में "मुतलका शनि/राहु" आदि का अर्थ) -->
+        <div class="lk-card" style="border-color:#0d9488;background:#f0fdfa">
+          <div class="lk-card-h">👪 ग्रह → रिश्तेदार कारक <?= $srcTag('फरमान 13') ?></div>
+          <div class="lk-note" style="margin-bottom:5px"><?= $h((string) ($KR['title'] ?? '')) ?></div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            <?php foreach ($KR['map'] as $pk => $rel): ?>
+              <span class="lk-pill" style="background:#ccfbf1;color:#115e59"><b><?= $h(\AutoBusiness\Astro\LalKitab\LalKitabData::planetHi((string) $pk)) ?></b> = <?= $h((string) $rel) ?></span>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+
         <?php if (!empty($lk['priority'])): ?>
         <!-- priority summary — which remedies to start with (#2) -->
         <div class="lk-card" style="border-color:#f59e0b;background:#fffbeb">
