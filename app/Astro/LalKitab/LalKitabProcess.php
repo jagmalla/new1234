@@ -85,9 +85,9 @@ final class LalKitabProcess
         $planets = is_array($lk['planets'] ?? null) ? $lk['planets'] : [];
         $houses  = is_array($lk['houses'] ?? null) ? $lk['houses'] : [];
 
-        $conflicts   = self::conflicts($planets, $lk);
         $temperament = self::temperament($planets, $houses, $lk);
-        $rin         = self::rinFindings($lk, $planets);
+        $rin         = self::rinFindings($lk, $planets, $houses);
+        $conflicts   = self::conflicts($planets, $houses, $rin, $lk);
         $core        = self::corePoints($planets, $temperament, $rin, $lk);
         // उपाय निचोड़ की कठिनाइयों से चलता है, अपनी अलग सूची से नहीं — वरना रिपोर्ट
         // एक बात को मुख्य कहती है और उपाय किसी और का देती है।
@@ -99,7 +99,10 @@ final class LalKitabProcess
             'settings'    => self::SETTINGS,
             'temperament' => $temperament,
             'core_points' => $core,
-            'conflicts'   => $conflicts,
+            'conflicts'   => $conflicts['resolved'],
+            'unresolved'  => $conflicts['unresolved'],
+            'density'     => $conflicts['density'],
+            'data_warn'   => $conflicts['data_warn'],
             'rin'         => $rin,
             'upaay'       => $upaay,
             'client'      => $client,
@@ -179,47 +182,140 @@ final class LalKitabProcess
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * विरोध इकट्ठे करना। ज़्यादातर "विरोध" असल में विरोध होते ही नहीं — एक ग्रह
-     * धन में नेक और सेहत में बद हो सकता है, यह दो अलग क्षेत्रों की दो सच्ची
-     * बातें हैं। जो बचते हैं वे दर्ज होते हैं, औसत नहीं किए जाते; हारने वाला
-     * दावा मिटता नहीं, qualifier बनकर रहता है।
+     * भार-क्रम — कौन-सा दावा भारी है।
+     *
+     * लाल किताब ऐसी कोई तालिका नहीं छापती; अलग-अलग सिद्धांत ज़रूर देती है
+     * (संगत दृष्टि से भारी · असली शरीर परछाईं से भारी · समय कुछ पैदा नहीं करता)।
+     * यह पूरा क्रम उन्हीं सिद्धांतों से जोड़कर बनाया गया है — प्रमाणित तालिका
+     * नहीं, काम चलाने का ढाँचा। दो जगह सबसे ज़्यादा बहस की गुंजाइश है:
+     * विश्वासघात को टक्कर से ऊपर रखना, और उच्च/नीच को शत्रु/मित्र-घर से ऊपर।
+     */
+    private const BHAR_KRAM = [
+        'स्थिति'      => 1,   // ग्रह जहाँ सचमुच बैठा है — तथ्य, व्याख्या नहीं
+        'पक्का घर'    => 2,   // अपने घर का अधिकार हालात से नहीं छिनता
+        'उच्च/नीच'    => 3,
+        'शत्रु/मित्र घर' => 4,
+        'युति'        => 5,   // एक ही कमरे में — मामले पर हाथ
+        'विश्वासघात'  => 6,   // सटीक, दिशात्मक, और जहाँ पड़े वहाँ गहरा
+        'टक्कर'       => 7,   // खुला झगड़ा — दिखता है, सँभाला जा सकता है
+        'दृष्टि'       => 8,   // दूर से असर
+        'मसनूई'       => 9,   // परछाईं — महसूस होती है, ठोस नहीं
+        'दशा/वर्षफल'  => 10,  // सिर्फ़ समय — पैदा या ख़त्म नहीं करता
+        'साढ़ेसाती'    => 11,  // घोषित अपवाद, नियम से सबसे नीचे
+    ];
+
+    /**
+     * चरण 7 — विरोधाभास का हल।
+     *
+     * औसत निकालना ही वह चूक है जिसे रोकने के लिए यह चरण मौजूद है। दो उलटी बातें
+     * मिलाकर "मध्यम" बना देना कुछ नहीं कहता, किसी की मदद नहीं करता, और कुंडली की
+     * सबसे मज़बूत जानकारी चुपचाप फेंक देता है।
+     *
+     * पर पहले यह पूछना ज़रूरी है कि विरोध सचमुच है भी या नहीं — ज़्यादातर मामलों
+     * में नहीं होता, और हर ऐसा मामला जो यहाँ सुलझ जाता है वह उस जानकारी को बचा
+     * लेता है जिसे भार-क्रम फेंक देता।
      *
      * @param list<array<string,mixed>> $planets
-     * @return list<array<string,string>>
+     * @param list<array<string,mixed>> $houses
+     * @param array<string,mixed> $rin
+     * @return array<string,mixed>
      */
-    private static function conflicts(array $planets, array $lk): array
+    private static function conflicts(array $planets, array $houses, array $rin, array $lk): array
     {
-        $out = [];
+        $raw = [];
+
         foreach ($planets as $p) {
+            $hi = (string) $p['hi'];
+            // बैठक का विरोध — उच्च पर कच्चे घर में, नीच पर अपने घर में
             if (trim((string) ($p['seat_conflict'] ?? '')) !== '') {
-                $out[] = [
-                    'subject' => (string) $p['hi'],
-                    'kind'    => 'बैठक का विरोध',
-                    'detail'  => (string) $p['seat_conflict'],
-                    'resolve' => 'भार-क्रम — बैठक का तथ्य क़ायम, दूसरा तथ्य शर्त बनकर रहता है',
-                ];
+                $raw[] = ['subject' => $hi, 'kind' => 'बैठक का विरोध',
+                    'detail' => (string) $p['seat_conflict'],
+                    'a_type' => !empty($p['pukka']) ? 'पक्का घर' : 'उच्च/नीच',
+                    'b_type' => 'शत्रु/मित्र घर',
+                    'a_claim' => 'ग्रह की अपनी ताक़त', 'b_claim' => 'बैठक की हालत',
+                    'domain_a' => '', 'domain_b' => ''];
             }
-            // जागा ग्रह पर सोया भाव — दोनों बातें सच हैं, औसत मना
+            // जागा ग्रह पर सोया भाव — दोनों बातें सच हैं
             if (($p['verdict'] ?? '') !== 'निष्क्रिय' && !empty($p['asleep'])) {
-                $out[] = [
-                    'subject' => (string) $p['hi'],
-                    'kind'    => 'ग्रह जागा, भाव सोया',
-                    'detail'  => 'ग्रह काम करने को तैयार है पर भाव अभी ग्रहण नहीं कर रहा',
-                    'resolve' => 'अनिर्णीत — फल देर से खुलेगा, ज्योतिषी की राय उपयोगी',
-                ];
+                $raw[] = ['subject' => $hi, 'kind' => 'ग्रह जागा, भाव सोया',
+                    'detail' => 'ग्रह काम करने को तैयार है पर भाव अभी ग्रहण नहीं कर रहा',
+                    'a_type' => 'स्थिति', 'b_type' => 'स्थिति',
+                    'a_claim' => 'ग्रह फल देने को तैयार', 'b_claim' => 'भाव अभी बंद',
+                    'domain_a' => '', 'domain_b' => ''];
             }
         }
         // मसनूई बनाम असली — परछाईं कभी शरीर से भारी नहीं
         foreach ((array) ($lk['masnui'] ?? []) as $m) {
             if (($m['verdict'] ?? '') === 'शुभ') { continue; }
-            $out[] = [
-                'subject' => 'मसनूई ' . (string) ($m['label'] ?? ''),
-                'kind'    => 'परछाईं बनाम असली ग्रह',
-                'detail'  => (string) ($m['house_ord'] ?? '') . ' भाव में मसनूई फल',
-                'resolve' => 'गेट — असली ग्रह का दावा भारी; मसनूई फल महसूस तो होगा पर हल्का',
-            ];
+            $raw[] = ['subject' => 'मसनूई ' . (string) ($m['label'] ?? ''),
+                'kind' => 'परछाईं बनाम असली ग्रह',
+                'detail' => (string) ($m['house_ord'] ?? '') . ' भाव में मसनूई फल',
+                'a_type' => 'मसनूई', 'b_type' => 'स्थिति',
+                'a_claim' => 'मसनूई का फल', 'b_claim' => 'उसी भाव के असली ग्रह का फल',
+                'domain_a' => '', 'domain_b' => ''];
         }
-        return $out;
+        // ऋण का संकेत बनाम भाव का फल — दो अलग रास्तों से आई बातें
+        foreach ((array) ($rin['reportable'] ?? []) as $r) {
+            foreach ((array) ($r['clash_houses'] ?? []) as $ch) {
+                $raw[] = ['subject' => (string) $r['rin'], 'kind' => 'ऋण बनाम भाव-फल',
+                    'detail' => $ch['ord'] . ' भाव का फल शुभ है, पर ऋण वहीं चोट बताता है',
+                    'a_type' => 'स्थिति', 'b_type' => 'दृष्टि',
+                    'a_claim' => 'भाव-फल शुभ', 'b_claim' => 'ऋण की चोट',
+                    'domain_a' => '', 'domain_b' => ''];
+            }
+        }
+
+        $resolved = $unresolved = [];
+        foreach ($raw as $c) {
+            // 7.2 — क्षेत्र-विभाजन। एक ग्रह धन में नेक और सेहत में बद हो सकता है;
+            // यह विरोध नहीं, दो अलग क्षेत्रों की दो सच्ची बातें हैं।
+            if ($c['domain_a'] !== '' && $c['domain_b'] !== '' && $c['domain_a'] !== $c['domain_b']) {
+                $c['resolution'] = 'अलग-अलग क्षेत्र';
+                $c['resolve'] = 'यह विरोध नहीं — दोनों बातें अपने-अपने क्षेत्र में सच हैं।';
+                $resolved[] = $c;
+                continue;
+            }
+            // 7.4 — गेट। ये भार-क्रम में शामिल नहीं होते; पहले छानते हैं और
+            // इनके ऊपर कुछ नहीं जाता।
+            if ($c['kind'] === 'परछाईं बनाम असली ग्रह') {
+                $c['resolution'] = 'गेट — असली ग्रह भारी';
+                $c['resolve'] = 'मसनूई फल महसूस होगा पर हल्का; उसी भाव के असली ग्रह का दावा ऊपर रहेगा।';
+                $resolved[] = $c;
+                continue;
+            }
+            // 7.5 — भार-क्रम
+            $ra = self::BHAR_KRAM[$c['a_type']] ?? 99;
+            $rb = self::BHAR_KRAM[$c['b_type']] ?? 99;
+            if ($ra !== $rb) {
+                $win = $ra < $rb ? 'a' : 'b';
+                $c['resolution'] = 'भार-क्रम';
+                // हारने वाला दावा मिटता नहीं — शर्त बनकर रहता है। मिटा देने से
+                // रिपोर्ट ज़रूरत से ज़्यादा साफ़ हो जाती है और ज़िंदगी से मेल नहीं खाती।
+                $c['resolve'] = ($win === 'a' ? $c['a_claim'] : $c['b_claim']) . ' भारी है; '
+                    . ($win === 'a' ? $c['b_claim'] : $c['a_claim']) . ' शर्त बनकर रहता है — '
+                    . 'यानी फल मिलेगा, पर पूरा नहीं।';
+                $resolved[] = $c;
+                continue;
+            }
+            // 7.7 — जो तय न हो सके। यह विफलता नहीं, ईमानदार नतीजा है: असली
+            // कुंडलियों में सचमुच ऐसे खिंचाव होते हैं, और यहाँ फ़ैसला गढ़ लेना
+            // ज़्यादा उपयोगी नहीं — कम उपयोगी है, क्योंकि वह भरोसा नक़ली होता है।
+            $c['resolution'] = 'अनिर्णीत';
+            $c['resolve'] = 'यह दोनों तरफ़ खिंचता है — कौन-सा पक्ष खुलेगा, यह कुंडली अकेले तय नहीं करती। '
+                . 'यहाँ ज्योतिषी की राय काम आएगी।';
+            $unresolved[] = $c;
+        }
+
+        // 7.8 — विरोध की गिनती एक सस्ता गुणवत्ता-संकेत है। हर तरफ़ से टकराव
+        // फेंकती कुंडली प्रायः असामान्य ज़िंदगी नहीं, बिगड़ी हुई तालिका का लक्षण
+        // होती है — इसीलिए यह आँकड़ा रखा जाता है।
+        $total = max(1, count($planets) + count($houses));
+        return [
+            'resolved'   => $resolved,
+            'unresolved' => $unresolved,
+            'density'    => round(count($unresolved) / $total, 3),
+            'data_warn'  => (count($unresolved) / $total) > 0.25,
+        ];
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -238,17 +334,47 @@ final class LalKitabProcess
      * @param list<array<string,mixed>> $planets
      * @return array<string,mixed>
      */
-    private static function rinFindings(array $lk, array $planets): array
+    private static function rinFindings(array $lk, array $planets, array $houses = []): array
     {
         $vMap = [];
         foreach ($planets as $p) { $vMap[(string) $p['hi']] = $p; }
+        $hMap = [];
+        foreach ($houses as $hh) { $hMap[(int) $hh['house']] = $hh; }
 
         $entries = [];
         foreach ((array) ($lk['shrap'] ?? []) as $r) {
             if (empty($r['present'])) { continue; }
             $matched = (array) ($r['matched'] ?? []);
-            // पुष्टि — कितनी दिशाओं से एक ही बात निकल रही है
-            $confidence = count($matched) >= 2 ? 'पक्का' : (count($matched) === 1 ? 'संभावित' : 'कमज़ोर संकेत');
+
+            // ---- ऋण और श्राप एक चीज़ नहीं हैं ----
+            // ऋण वंश पर चढ़ा हुआ क़र्ज़ है — उसे **चुकाया** जाता है, देकर।
+            // श्राप मिली हुई चोट है — उसे **शांत** किया जाता है। चुकाने का उपाय
+            // श्राप पर लगाने से कुछ नहीं होता, और आदमी नतीजा निकालता है कि पूरी
+            // विद्या बेकार है। चरण 9 सबसे ऊपर इसी शाखा पर बँटता है।
+            $rinName = (string) ($r['rin'] ?? '');
+            $kind = mb_strpos($rinName, 'श्राप') !== false ? 'श्राप' : 'ऋण';
+
+            // ---- चोट कहाँ पड़ती है, और क्या भाव-फल भी वही कह रहा है ----
+            // दो अलग रास्तों से एक ही नतीजा असली प्रमाण है; दो रास्तों से उलटे
+            // नतीजे वह चीज़ है जिस पर परदा नहीं डालना।
+            $hitHouses = [];
+            foreach ($matched as $mtxt) {
+                if (preg_match('/(\d+)/', (string) $mtxt, $mh)) { $hitHouses[] = (int) $mh[1]; }
+            }
+            $corrob = []; $clash = [];
+            foreach (array_unique($hitHouses) as $hn) {
+                $hv = (string) ($hMap[$hn]['verdict'] ?? '');
+                if (in_array($hv, ['अशुभ', 'अस्थिर', 'सुप्त'], true)) {
+                    $corrob[] = ['house' => $hn, 'ord' => (string) ($hMap[$hn]['house_ord'] ?? $hn), 'verdict' => $hv];
+                } elseif ($hv === 'शुभ') {
+                    $clash[] = ['house' => $hn, 'ord' => (string) ($hMap[$hn]['house_ord'] ?? $hn), 'verdict' => $hv];
+                }
+            }
+
+            // पुष्टि — कितनी दिशाओं से एक ही बात निकल रही है। ऋण का ज़्यादा निदान
+            // इस विद्या की सबसे आम चूक है, इसलिए दो-तरफ़ा पुष्टि पर ही "पक्का"।
+            $signals = count($matched) + count($corrob);
+            $confidence = $signals >= 3 ? 'पक्का' : ($signals === 2 ? 'संभावित' : 'कमज़ोर संकेत');
 
             // हालत — जिन ग्रहों से यह चलता है वे क्या कर रहे हैं
             $carriers = [];
@@ -274,25 +400,42 @@ final class LalKitabProcess
                     if (($pp['verdict'] ?? '') === 'शुभ') { $protector = $hi; break; }
                 }
             }
+            // तीव्रता — चरण 9 को कई ऋणों में क्रम लगाना है, उसी के लिए
+            $sev = count($corrob) >= 2 ? 'तीव्र' : (count($corrob) === 1 ? 'मध्यम' : 'हल्का');
+            if ($status === 'सुप्त') { $sev = 'हल्का'; }
+
             $entries[] = [
-                'rin'        => (string) ($r['rin'] ?? ''),
-                'kind'       => mb_strpos((string) ($r['rin'] ?? ''), 'श्राप') !== false ? 'श्राप' : 'ऋण',
+                'rin'        => $rinName,
+                'kind'       => $kind,
                 'confidence' => $confidence,
                 'status'     => $status,
+                'severity'   => $sev,
                 'protector'  => $protector,
                 'matched'    => $matched,
+                'corroborated' => $corrob,          // भाव-फल भी यही कह रहा है
+                'clash_houses' => $clash,           // भाव-फल उलटा कह रहा है → चरण 7
+                'direction'  => $kind === 'ऋण' ? 'चुकाना' : 'शांत करना',
                 'upay'       => (string) ($r['upay'] ?? ''),
                 'phal'       => (string) ($r['ashubh_phal'] ?? ''),
-                // पीढ़ी वाली बात हमेशा शर्त के साथ — "होगा" नहीं, "अगर उपाय न किया जाए तो"
-                'line_hi'    => 'कुंडली में ' . (string) ($r['rin'] ?? '') . ' का संकेत है। '
-                    . 'लाल किताब कहती है कि इसे चुकाया जा सकता है — समय पर उपाय करने से यह आगे नहीं बढ़ता।',
+                // पीढ़ी वाली बात हमेशा शर्त के साथ। "आपके बच्चों को कष्ट होगा" उस
+                // बात को तय बता देना है जिसे किताब खुद बदलने योग्य कहती है — और
+                // यही वह चीज़ है जो उपाय बदलता है। किसी पुरखे का नाम भी नहीं।
+                'line_hi'    => 'कुंडली में ' . $rinName . ' का संकेत है। लाल किताब कहती है कि इसे '
+                    . ($kind === 'ऋण' ? 'चुकाया' : 'शांत किया') . ' जा सकता है — '
+                    . 'समय पर उपाय करने से यह आगे नहीं बढ़ता।'
+                    . ($status === 'दबा हुआ' && $protector !== ''
+                        ? ' अभी यह दबा हुआ है — ' . $protector . ' इसे रोके हुए है, इसलिए आपको इसका असर महसूस नहीं होता।'
+                        : ''),
             ];
         }
-        // क्रम — पक्का पहले, चालू पहले
+        // क्रम — पक्का पहले, चालू पहले, तीव्र पहले। आदमी सचमुच एक या दो ही उठा
+        // सकता है; बाक़ी रुके रहते हैं और पहला पूरा होने पर उनकी बारी आती है।
         usort($entries, static function (array $a, array $b): int {
             $cw = ['पक्का' => 0, 'संभावित' => 1, 'कमज़ोर संकेत' => 2];
             $sw = ['चालू' => 0, 'दबा हुआ' => 1, 'सुप्त' => 2];
-            return [$cw[$a['confidence']], $sw[$a['status']]] <=> [$cw[$b['confidence']], $sw[$b['status']]];
+            $vw = ['तीव्र' => 0, 'मध्यम' => 1, 'हल्का' => 2];
+            return [$cw[$a['confidence']], $sw[$a['status']], $vw[$a['severity']]]
+                <=> [$cw[$b['confidence']], $sw[$b['status']], $vw[$b['severity']]];
         });
         // कमज़ोर संकेत ग्राहक को ऋण कहकर नहीं बताए जाते
         $reportable = array_values(array_filter($entries, static fn ($e) => $e['confidence'] !== 'कमज़ोर संकेत'));
@@ -404,10 +547,13 @@ final class LalKitabProcess
         if (($rin['primary'] ?? null) !== null) {
             $r = $rin['primary'];
             $points[] = [
-                'type' => 'ऋण', 'rank' => 5,
-                'title' => $r['rin'] . ' (' . $r['confidence'] . ' · ' . $r['status'] . ')',
+                'type' => 'ऋण', 'rank' => 5, 'planet' => (string) $r['rin'],
+                'title' => $r['rin'] . ' (' . $r['confidence'] . ' · ' . $r['status']
+                    . ' · तीव्रता ' . $r['severity'] . ')',
                 'text'  => $r['line_hi'],
-                'source' => 'ऋण-जाँच: ' . implode(', ', $r['matched']),
+                'source' => 'ऋण-जाँच: ' . implode(', ', $r['matched'])
+                    . ($r['corroborated'] !== []
+                        ? ' — भाव-फल से भी पुष्ट (' . implode(', ', array_column($r['corroborated'], 'ord')) . ')' : ''),
                 'remedy_needed' => true,
             ];
         }
@@ -489,7 +635,18 @@ final class LalKitabProcess
                 (string) (($p['remedies'][0] ?? '')),
                 (string) (($p['samanya'][0] ?? '')),
             ], static fn ($t) => trim($t) !== ''));
-            if ($upay === []) { continue; }
+
+            // ---- हालात के गेट ----
+            // ये बारीक अक्षर नहीं हैं। कई उपाय माता-पिता के जीवित होने या न होने
+            // पर अपना असर उलट देते हैं, और ग़लत हालत में दिया गया उपाय वही कर
+            // सकता है जिससे बचाना था। जहाँ हालत अज्ञात हो, वह उपाय रोक दिया
+            // जाता है — अंदाज़ा नहीं लगाया जाता।
+            [$upay, $gateNotes] = self::nativeGate($upay, $native);
+            if ($upay === []) {
+                $cands[] = ['excluded' => true, 'planet' => $hi, 'target' => $target,
+                    'reason' => 'इस ग्रह के उपाय पारिवारिक हालत पर निर्भर हैं — वह जानकारी अभी नहीं है'];
+                continue;
+            }
 
             $cands[] = [
                 'excluded'   => false,
@@ -502,6 +659,7 @@ final class LalKitabProcess
                 'weight'     => $rank[$k] ?? 1,
                 'branch'     => 'साधारण',
                 'upay'       => $upay,
+                'gate_notes' => $gateNotes,
                 // हर उपाय के साथ उसका अंत भी बताया जाता है। जिस उपाय का अंत न
                 // बताया जाए, आदमी उसे डरते हुए और अनिश्चित काल तक करता रहता है।
                 'kind'       => $dir === 'जगाना' ? 'निश्चित अवधि' : 'लगातार',
@@ -512,6 +670,34 @@ final class LalKitabProcess
                 'repeat'     => $dir === 'जगाना' ? 'बिना सलाह दोबारा नहीं' : 'हाँ',
             ];
         }
+        // ---- ऋण / श्राप की अपनी शाखा ----
+        // चुकाने का उपाय श्राप पर बेअसर है, और शांत करने का उपाय ऋण को खड़ा
+        // छोड़ देता है। इसीलिए चरण 5 ने दोनों को अलग-अलग पहचाना था।
+        // कमज़ोर संकेत यहाँ ऋण की तरह बरता ही नहीं जाता — उसे साधारण ग्रह-दोष
+        // मानकर ऊपर वाला उपाय काफ़ी है। कमज़ोर संकेत पर भारी चुकाने का कार्यक्रम
+        // थोप देना उस आदमी पर बोझ है जिसका शायद कोई ऋण है ही नहीं।
+        $primaryRin = $rin['primary'] ?? null;
+        if (is_array($primaryRin) && trim((string) $primaryRin['upay']) !== '') {
+            $cands[] = [
+                'excluded'   => false,
+                'planet'     => (string) $primaryRin['rin'],
+                'house'      => '',
+                'target'     => (string) $primaryRin['rin'],
+                'target_note'=> $primaryRin['kind'] === 'ऋण'
+                    ? 'यह ऋण है — इसका उपाय चुकाना है, यानी देकर लौटाना।'
+                    : 'यह श्राप है — इसका उपाय शांत करना है, चुकाना नहीं।',
+                'direction'  => (string) $primaryRin['direction'],
+                'kshamata'   => 'प्रबल',
+                'weight'     => 4,   // ऋण पुष्ट हो तो सबसे पहले
+                'branch'     => (string) $primaryRin['kind'],
+                'upay'       => [(string) $primaryRin['upay']],
+                'kind'       => 'निश्चित अवधि',
+                'duration'   => 'जब तक उपाय की विधि कहे',
+                'stop_when'  => 'विधि पूरी होने पर — बिना सलाह बढ़ाएँ नहीं',
+                'repeat'     => 'बिना सलाह दोबारा नहीं',
+            ];
+        }
+
         $issuedPool = array_values(array_filter($cands, static fn ($c) => !$c['excluded']));
         // क्रम — पहले वे ग्रह जिन्हें निचोड़ ने मुख्य कहा (उसी क्रम में), फिर बाक़ी
         // क्षमता से: जो ज़ोर से बोल रहा है वह पहले, चाहे शब्दों में कोई और बात
@@ -558,6 +744,49 @@ final class LalKitabProcess
                   . 'वैवाहिक स्थिति आदि) — क्योंकि कई उपाय इन हालात पर उलट जाते हैं। तब तक नीचे दिए '
                   . 'उपाय सामान्य व सुरक्षित हैं।',
         ];
+    }
+
+    /**
+     * हालात के गेट — हर उपाय जारी होने से पहले जातक की परिस्थिति पर जाँचा जाता है।
+     *
+     * जिन उपायों में पिता/माता या पत्नी से जुड़ा काम है, वे उस रिश्ते के होने या
+     * न होने पर अलग-अलग असर देते हैं। जहाँ हालत अज्ञात है वहाँ उपाय **रोका**
+     * जाता है — "लगभग वैसा ही" कोई दूसरा उपाय रख देना ग़लत है; सही रास्ता यह
+     * पूछना है, अंदाज़ा लगाना नहीं।
+     *
+     * @param list<string> $upay
+     * @param array<string,mixed> $native
+     * @return array{0:list<string>,1:list<string>}
+     */
+    private static function nativeGate(array $upay, array $native): array
+    {
+        $father = (string) ($native['father_living'] ?? '');
+        $mother = (string) ($native['mother_living'] ?? '');
+        $marry  = (string) ($native['marital_status'] ?? '');
+        $kept = $notes = [];
+        foreach ($upay as $t) {
+            $needsFather = mb_strpos($t, 'पिता') !== false || mb_strpos($t, 'बुज़ुर्ग') !== false;
+            $needsMother = mb_strpos($t, 'माता') !== false || mb_strpos($t, 'माँ') !== false;
+            $needsWife   = mb_strpos($t, 'पत्नी') !== false || mb_strpos($t, 'स्त्री') !== false;
+            if ($needsFather && $father === '') {
+                $notes[] = 'पिता से जुड़ा एक उपाय रोका गया — पहले बताएँ कि पिता जीवित हैं या नहीं।';
+                continue;
+            }
+            if ($needsMother && $mother === '') {
+                $notes[] = 'माता से जुड़ा एक उपाय रोका गया — पहले बताएँ कि माता जीवित हैं या नहीं।';
+                continue;
+            }
+            if ($needsWife && $marry === '') {
+                $notes[] = 'पत्नी/स्त्री से जुड़ा एक उपाय रोका गया — वैवाहिक स्थिति बताएँ।';
+                continue;
+            }
+            if ($needsWife && $marry === 'अविवाहित') {
+                $notes[] = 'पत्नी से जुड़ा उपाय आपकी स्थिति में लागू नहीं — हटा दिया गया।';
+                continue;
+            }
+            $kept[] = $t;
+        }
+        return [$kept, array_values(array_unique($notes))];
     }
 
     /** @param array<string,mixed> $native */

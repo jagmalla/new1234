@@ -235,11 +235,12 @@ $scorePill = static function (int $score): string {
     <div class="lk-scroll">
 
       <!-- ===== OVERVIEW ===== -->
-      <!-- ══════════ 📋 निचोड़ — ग्राहक का पन्ना (चरण 8-10) ══════════
+      <?php /* ══════ 📋 निचोड़ — ग्राहक का पन्ना (चरण 8-10) ══════
            बाक़ी सब अनुभाग ज्योतिषी के लिए हैं; यह एक पन्ना उस आदमी के लिए है
            जिसकी कुंडली है। क्रम तय है और बदला नहीं जाता: पहले मिज़ाज, फिर
-           मज़बूती, फिर ध्यान देने की बातें (हर एक अपने उपाय के साथ), फिर अभी
-           का समय अंत-तिथि सहित, फिर उपाय, फिर करें/न-करें, फिर सीमा। -->
+           ताक़त, फिर सावधानियाँ (हर एक अपने उपाय के साथ), फिर अभी का समय
+           अंत-तिथि सहित, फिर उपाय, फिर करें/न-करें, फिर सीमा।
+           (PHP टिप्पणी — यह ब्राउज़र तक नहीं जाती।) */ ?>
       <div class="lk-view active" data-lk="nichod">
         <?php $PR = $lk['process'] ?? null; if (!is_array($PR) || empty($PR['ok'])): ?>
           <h3 class="lk-h">📋 निचोड़</h3>
@@ -353,9 +354,41 @@ $scorePill = static function (int $score): string {
             <div style="margin-bottom:5px">🕊 <?= $h((string) $C['boundary']) ?></div>
             <div>🩺 <?= $h((string) $C['medical']) ?></div>
           </div>
+          <?php /* ज्योतिषी के लिए — विरोध कैसे सुलझे, और क्या तय नहीं हो सका।
+                   ग्राहक को इसकी ज़रूरत नहीं; पर जो इस रिपोर्ट की ज़िम्मेदारी
+                   लेता है उसे दिखना चाहिए कि इंजन किस आधार पर पहुँचा। */ ?>
+          <?php if (!empty($PR['conflicts']) || !empty($PR['unresolved'])): ?>
+          <details style="margin-top:10px;border:1px solid #e2e8f0;border-radius:9px;padding:7px 11px">
+            <summary style="font-weight:700;font-size:.83rem;cursor:pointer;color:#334155">
+              ⚖ विरोधाभास कैसे सुलझे (ज्योतिषी हेतु) —
+              <?= count((array) $PR['conflicts']) ?> सुलझे<?= !empty($PR['unresolved']) ? ' · ' . count((array) $PR['unresolved']) . ' अनिर्णीत' : '' ?>
+            </summary>
+            <?php foreach ((array) $PR['conflicts'] as $cf): ?>
+              <div style="font-size:.8rem;line-height:1.55;margin-top:5px;color:#334155">
+                <b><?= $h((string) $cf['subject']) ?></b> — <?= $h((string) $cf['kind']) ?>
+                <span style="color:#64748b">(<?= $h((string) $cf['resolution']) ?>)</span><br>
+                <span style="color:#475569"><?= $h((string) $cf['resolve']) ?></span>
+              </div>
+            <?php endforeach; ?>
+            <?php foreach ((array) $PR['unresolved'] as $cf): ?>
+              <div style="font-size:.8rem;line-height:1.55;margin-top:5px;color:#7c2d12">
+                <b><?= $h((string) $cf['subject']) ?></b> — <?= $h((string) $cf['kind']) ?> · <b>अनिर्णीत</b><br>
+                <?= $h((string) $cf['resolve']) ?>
+              </div>
+            <?php endforeach; ?>
+            <?php if (!empty($PR['data_warn'])): ?>
+              <div style="font-size:.78rem;color:#b91c1c;margin-top:6px">
+                ⚠️ अनिर्णीत विरोध बहुत ज़्यादा (<?= $h((string) $PR['density']) ?>) — यह प्रायः असामान्य कुंडली नहीं,
+                किसी तालिका में गड़बड़ी का संकेत होता है। संदर्भ-डेटा एक बार जाँच लें।
+              </div>
+            <?php endif; ?>
+          </details>
+          <?php endif; ?>
+
           <div style="font-size:.72rem;color:#94a3b8;margin-top:7px">
             नियम-सेटिंग: सोई दृष्टि = <?= $h((string) $PR['settings']['soya_drishti']) ?> ·
-            बैठक-क्रम = <?= $h((string) $PR['settings']['seat_precedence']) ?>
+            बैठक-क्रम = <?= $h((string) $PR['settings']['seat_precedence']) ?> ·
+            विरोध-घनत्व = <?= $h((string) $PR['density']) ?>
           </div>
         <?php endif; ?>
       </div>
@@ -993,6 +1026,40 @@ $scorePill = static function (int $score): string {
           $rinAbsent  = array_values(array_filter($lk['shrap'], static fn ($x) => empty($x['present'])));
         ?>
         <h3 class="lk-h">श्राप / पैतृक ऋण — इस कुंडली में जाँचे हुए</h3>
+        <?php /* हर अड़चन ऋण नहीं होती। ऋण का ज़्यादा निदान इस विद्या की सबसे आम
+                 चूक है — नतीजा एक भारी रिपोर्ट, डरा हुआ आदमी, और माँग भरे उपायों
+                 का ढेर जिनमें से ज़्यादातर किसी चीज़ का इलाज नहीं करते। इसलिए
+                 पुष्टि-दर्जा दिखाया जाता है, और "कमज़ोर संकेत" को ऋण कहकर
+                 बताया ही नहीं जाता — वह साधारण ग्रह-दोष है। */
+              $PRr = ($lk['process']['rin'] ?? null);
+              if (is_array($PRr) && !empty($PRr['reportable'])): ?>
+        <div style="border:1px solid #fed7aa;background:#fff7ed;border-radius:10px;padding:9px 12px;margin-bottom:10px">
+          <div style="font-weight:800;font-size:.87rem;color:#7c2d12;margin-bottom:4px">🔎 जाँच का नतीजा — पुष्टि व हालत सहित</div>
+          <?php foreach ($PRr['reportable'] as $re): ?>
+            <div style="font-size:.83rem;line-height:1.6;color:#7c2d12;margin-bottom:5px">
+              <b><?= $h((string) $re['rin']) ?></b>
+              <span style="font-size:.75rem;background:#fed7aa;border-radius:6px;padding:1px 6px"><?= $h((string) $re['kind']) ?></span>
+              <span style="font-size:.75rem;background:#fde68a;border-radius:6px;padding:1px 6px">पुष्टि: <?= $h((string) $re['confidence']) ?></span>
+              <span style="font-size:.75rem;background:#e2e8f0;border-radius:6px;padding:1px 6px">हालत: <?= $h((string) $re['status']) ?></span>
+              <span style="font-size:.75rem;background:#e2e8f0;border-radius:6px;padding:1px 6px">तीव्रता: <?= $h((string) $re['severity']) ?></span>
+              <br><?= $h((string) $re['line_hi']) ?>
+              <div style="font-size:.8rem;color:#166534;margin-top:2px">🛠 उपाय (<?= $h((string) $re['direction']) ?>): <?= $h((string) $re['upay']) ?></div>
+              <?php if ($re['protector'] !== ''): ?>
+                <div style="font-size:.78rem;color:#b91c1c;margin-top:2px">
+                  🛡 <?= $h((string) $re['protector']) ?> इसे अभी रोके हुए है — इस ग्रह को शांत करने वाला कोई उपाय न करें,
+                  वरना कवच हट जाएगा।
+                </div>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+          <?php if (!empty($PRr['excluded'])): ?>
+            <div style="font-size:.78rem;color:#78350f;margin-top:4px">
+              ℹ️ <?= count((array) $PRr['excluded']) ?> और योग सिर्फ़ कमज़ोर संकेत हैं — इन्हें ऋण नहीं माना गया,
+              इनका इलाज साधारण ग्रह-उपाय ही है।
+            </div>
+          <?php endif; ?>
+        </div>
+        <?php endif; ?>
         <?php if ($rinPresent === []): ?>
           <div class="lk-card good"><div class="lk-card-h">✅ कोई पैतृक ऋण नहीं</div>
             <div class="lk-txt">इस कुंडली में नौ में से कोई पैतृक-ऋण योग नहीं बनता — शुभ संकेत।</div></div>
