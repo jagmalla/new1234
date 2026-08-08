@@ -345,7 +345,23 @@ final class CalcController
                             'phase' => $sadeSati['phase'] ?? null,
                         ] : null,
                     ];
-                    return \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart, $age, $lkActive);
+                    $lkOut = \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart, $age, $lkActive);
+                    // प्रक्रिया-परत (चरण 7-10) — इंजन सब निकालता है, यह परत चुनती है:
+                    // निचोड़ की 3-5 बातें, 1-2 उपाय, और सरल हिंदी का ग्राहक-पन्ना।
+                    // विफल हो तो पूरी रिपोर्ट फिर भी जाती है, बस निचोड़ के बिना।
+                    try {
+                        $native = [
+                            'father_living'  => (string) ($_GET['father_living'] ?? ''),
+                            'mother_living'  => (string) ($_GET['mother_living'] ?? ''),
+                            'marital_status' => (string) ($_GET['marital_status'] ?? ''),
+                        ];
+                        $lkOut['process'] = \AutoBusiness\Astro\LalKitab\LalKitabProcess::run($lkOut, $native);
+                    } catch (\Throwable $pe) {
+                        error_log('Lal Kitab process layer failed: ' . $pe->getMessage()
+                            . ' @ ' . $pe->getFile() . ':' . $pe->getLine());
+                        $lkOut['process'] = ['ok' => false, 'error' => $pe->getMessage()];
+                    }
+                    return $lkOut;
                 } catch (\Throwable $e) {
                     error_log('Lal Kitab compute failed: ' . $e->getMessage()
                         . ' @ ' . $e->getFile() . ':' . $e->getLine());

@@ -137,7 +137,7 @@ final class LalKitabEngine
         // the "active now" summary strip.
         $supt      = self::suptReadings($house, $occupants);
         $yutiDosha = self::yutiDoshaReadings($occupants);
-        $planets   = self::planetReadings($chart, $house, $occupants, $supt, $yutiDosha);
+        $planets   = self::planetReadings($chart, $house, $occupants, $supt, $yutiDosha, $age);
         // मसनूई sits on top of the per-planet analysis: it needs each source
         // planet's own verdict to decide which of the two to send away.
         $masnui    = self::masnuiReadings($house, $occupants, $planets, $age);
@@ -202,8 +202,9 @@ final class LalKitabEngine
      * @param array<string,int> $house
      * @return array<int,array<string,mixed>>
      */
-    private static function planetReadings(array $chart, array $house, array $occupants = [], array $supt = [], array $yutiDosha = []): array
+    private static function planetReadings(array $chart, array $house, array $occupants = [], array $supt = [], array $yutiDosha = [], ?int $age = null): array
     {
+        $sb  = LalKitabData::section('supt_bhav');     // भाव => चाबी (जगाने वाला ग्रह)
         $gp  = LalKitabData::section('graha_parichay');
         $sab = LalKitabData::section('shubh_ashubh_bhav');
         $un  = LalKitabData::section('uch_neech_niyam');
@@ -329,17 +330,60 @@ final class LalKitabEngine
             $isAsleep = in_array($impair['code'], ['SOYA', 'GUNGA', 'ANDHA', 'MRIT'], true);
             if ($impair['state'] !== '') { $vWhy[] = $impair['state'] . ' ग्रह — ' . (LalKitabData::SITUATION[$impair['code']]['phal'] ?? 'फल दबा रहेगा'); }
 
-            $verdict = $v > 0 ? 'शुभ' : ($v < 0 ? 'अशुभ' : 'मध्यम');
-            if ($isAsleep && $verdict === 'शुभ') { $verdict = 'मध्यम'; }
-            // फरमान 13 — अकेला बृहस्पति दृष्टि/टक्कर से कितना ही मंदा क्यों न हो,
-            // कभी अशुभ फल नहीं देता। (साथ शत्रु हों तो मंदा हो सकता है — तब बुध जैसा
-            // असर; पर अकेले की सूरत में फल कभी अशुभ नहीं।)
-            if ($p === 'Jupiter' && $alone && $verdict === 'अशुभ') {
-                $verdict = 'मध्यम';
-                $vWhy[] = 'अकेला बृहस्पति — गुरु का रक्षक स्वभाव, दृष्टि/टक्कर से भी अशुभ नहीं';
+            // नींद का रिकॉर्ड — कौन सुला रहा है, कौन जगाएगा (उपाय इसी पर निशाना लगाता है)
+            $wake = self::wakeRecord($p, $h, $impair, $mates, $inHits, $age, $sg, $sb);
+
+            // ---- फ़ैसले के गेट — जोड़-घटा नहीं, क्रम से पूछे गए सवाल ----
+            // गेट 0 — क्या ग्रह काम कर भी सकता है? सोया + कोई जगाने वाला नहीं = निष्क्रिय।
+            // निष्क्रिय ≠ मध्यम: यह "कुछ होता ही नहीं" है, "ठीक-ठाक" नहीं। आगे कोई गेट
+            // नहीं पूछा जाता, और उपाय की दिशा उलट जाती है — शांति नहीं, जगाना।
+            $decidedAtGate = 5;
+            if ($isAsleep && !$wake['awake']) {
+                $verdict = 'निष्क्रिय';
+                $decidedAtGate = 0;
+                $vWhy[] = 'गेट-0: ' . ($impair['state'] ?: 'सोया') . ' ग्रह और जगाने की शर्त अभी पूरी नहीं — '
+                    . 'इसके मामले आगे नहीं बढ़ेंगे (यह बुरा फल नहीं, रुका हुआ फल है)';
+            } else {
+                $verdict = $v > 0 ? 'शुभ' : ($v < 0 ? 'अशुभ' : 'मध्यम');
+                if ($isAsleep && $wake['awake']) {
+                    $decidedAtGate = 1;
+                    $vWhy[] = 'सोया था, पर जागृति की शर्त पूरी हो चुकी ('
+                        . ($wake['condition'] !== '' ? $wake['condition'] : 'आयु ' . $wake['wake_age'] . ' वर्ष') . ') — फल खुलता है';
+                }
+                // फरमान 13 — अकेला बृहस्पति दृष्टि/टक्कर से कितना ही मंदा क्यों न हो,
+                // कभी अशुभ फल नहीं देता। (साथ शत्रु हों तो मंदा हो सकता है — तब बुध जैसा
+                // असर; पर अकेले की सूरत में फल कभी अशुभ नहीं।)
+                if ($p === 'Jupiter' && $alone && $verdict === 'अशुभ') {
+                    $verdict = 'मध्यम';
+                    $vWhy[] = 'अकेला बृहस्पति — गुरु का रक्षक स्वभाव, दृष्टि/टक्कर से भी अशुभ नहीं';
+                }
             }
             $isAshubh = $verdict === 'अशुभ';
             $isShubh = $verdict === 'शुभ';
+
+            // ---- क्षमता — दिशा से बिल्कुल अलग धुरी ----
+            // दिशा (नेक/बद) बताती है "भला करेगा या बुरा"; क्षमता बताती है "कितना कर
+            // सकता है"। उपाय का क्रम क्षमता से बनता है, दिशा से नहीं — प्रबल बद ग्रह
+            // पहले सँभाला जाता है, कमज़ोर बद ग्रह सिर्फ़ खीझ देता है।
+            $capScore = 0;
+            if ($pukka) { $capScore++; }
+            if ($status === 'उच्च' && !$digBhang) { $capScore++; }
+            if ($status === 'स्वगृही') { $capScore++; }
+            if ($status === 'नीच') { $capScore--; }
+            if ($kachcha) { $capScore--; }
+            if ($digBhang) { $capScore--; }
+            if ($impair['code'] !== '' && !$isAsleep) { $capScore--; }
+            $kshamata = $verdict === 'निष्क्रिय' ? 'शून्य'
+                : ($capScore >= 2 ? 'प्रबल' : ($capScore <= -1 ? 'कमज़ोर' : 'मध्यम'));
+
+            // ---- बैठक का विरोध — औसत नहीं किया जाता, दोनों तथ्य दर्ज रहते हैं ----
+            // "उच्च पर कच्चे घर में" जैसी हालत +1−1=0 करके मिटा देना सबसे क़ीमती
+            // जानकारी फेंक देना है। इसे चिह्नित रखते हैं ताकि फल में qualifier बने।
+            $seatConflict = '';
+            if ($status === 'उच्च' && $digBhang) { $seatConflict = 'उच्च — पर भंग की शर्त लगी है'; }
+            elseif ($status === 'उच्च' && $kachcha) { $seatConflict = 'उच्च — पर कच्चे घर में, फल अधूरा'; }
+            elseif ($status === 'नीच' && $pukka) { $seatConflict = 'नीच — पर अपने पक्के घर में, अधिकार बना रहता है'; }
+            elseif ($pukka && $isAshubh) { $seatConflict = 'पक्का घर — पर संगत/दृष्टि से फल बिगड़ा'; }
 
             // 5) टिप्पणी के "अगर-तो" नियम — इस कुंडली पर जाँचे हुए: केवल लागू
             //    वाले मुख्य फल बनते हैं, शेष संदर्भ में जाते हैं।
@@ -368,9 +412,15 @@ final class LalKitabEngine
                 ? 'इन क्षेत्रों में उन्नति, लाभ व अनुकूल फल मिलेगा।'
                 : ($verdict === 'अशुभ'
                     ? 'इन क्षेत्रों में बाधा, कष्ट व हानि की सम्भावना है — उपाय आवश्यक।'
-                    : 'इन क्षेत्रों में मिश्रित/सामान्य फल रहेगा।');
-            if ($isAsleep) {
-                $effectVerb .= ' (ग्रह सुप्त होने से यह फल देर से व दबे रूप में प्रकट होगा।)';
+                    : ($verdict === 'निष्क्रिय'
+                        ? 'इन क्षेत्रों में अभी कुछ आगे नहीं बढ़ रहा — काम रुका-सा रहेगा। '
+                          . 'यह बुरा फल नहीं है; इसका उपाय शांति नहीं, इस ग्रह को जगाना है।'
+                        : 'इन क्षेत्रों में मिश्रित/सामान्य फल रहेगा।'));
+            if ($isAsleep && $verdict !== 'निष्क्रिय') {
+                $effectVerb .= ' (ग्रह सुप्त था, अब जागृत — फल देर से पर मिलेगा।)';
+            }
+            if ($seatConflict !== '') {
+                $effectVerb .= ' (' . $seatConflict . ' — इसलिए फल पूरा नहीं, अधूरा रहेगा।)';
             }
             $predHead = LalKitabData::planetHi($p) . ' के कारक क्षेत्र — ' . implode('; ', array_unique($areas))
                 . ' — पर इस स्थिति का असर पड़ता है। ' . $effectVerb;
@@ -405,6 +455,11 @@ final class LalKitabEngine
                 'uch_bhang' => $digBhang,
                 'verdict'   => $verdict,
                 'verdict_why' => $vWhy,
+                'kshamata'  => $kshamata,          // दिशा से अलग धुरी — उपाय-क्रम इसी से
+                'decided_at_gate' => $decidedAtGate,
+                'seat_conflict' => $seatConflict,  // औसत नहीं — दोनों तथ्य क़ायम
+                'wake'      => $wake,              // कारण-ग्रह / जगाने वाला / शर्त
+                'is_nishkriya' => $verdict === 'निष्क्रिय',
                 'is_ashubh' => $isAshubh,
                 'pukka'     => $pukka,
                 'kachcha'   => $kachcha,
@@ -455,6 +510,54 @@ final class LalKitabEngine
             ];
         }
         return $out;
+    }
+
+    /**
+     * नींद का रिकॉर्ड — सिर्फ़ "सोया है" जान लेना काफ़ी नहीं। यह भी चाहिए कि उसे
+     * किसने सुलाया और क्या उसे जगाएगा, क्योंकि उपाय प्रायः दूसरे ग्रह पर जाता है:
+     * गुरु शनि के दबाव से सोया हो तो गुरु को बल देने से कुछ नहीं होता — शनि शांत
+     * करो, गुरु अपने-आप उठ जाता है।
+     *
+     * @param array{state:string,code:string} $impair
+     * @param list<array{planet:string,hi:string,rel:string}> $mates
+     * @param list<array<string,mixed>> $inHits
+     * @return array{asleep:bool,awake:bool,cause_hi:string,agent_hi:string,condition:string,wake_age:int|null}
+     */
+    private static function wakeRecord(string $p, int $h, array $impair, array $mates, array $inHits, ?int $age, array $sg, array $sb): array
+    {
+        if ($impair['code'] === '') {
+            return ['asleep' => false, 'awake' => true, 'cause_hi' => '',
+                'agent_hi' => '', 'condition' => '', 'wake_age' => null];
+        }
+        // सुलाने वाला — पहले साथ बैठा शत्रु, वरना टक्कर मारने वाला
+        $cause = '';
+        foreach ($mates as $m) {
+            if ($m['rel'] === 'शत्रु') { $cause = $m['hi']; break; }
+        }
+        if ($cause === '') {
+            foreach ($inHits as $ih) {
+                if ($ih['kind'] === 'टकराव' && ($ih['planets_hi'] ?? []) !== []) {
+                    $cause = (string) $ih['planets_hi'][0];
+                    break;
+                }
+            }
+        }
+        // जगाने वाला — इस भाव की "चाबी", वरना ग्रह की अपनी जागृति-शर्त
+        $chaabi = trim((string) ($sb[(string) $h] ?? ''));
+        $cond   = trim((string) ($sg[$p]['jagega'] ?? ''));
+        $aayu   = trim((string) ($sg[$p]['aayu'] ?? ''));
+        $wakeAge = null;
+        if ($aayu !== '' && preg_match('/\d+/', $aayu, $mm)) { $wakeAge = (int) $mm[0]; }
+        // जागृति की शर्त तभी पूरी मानी जाती है जब आयु ज्ञात हो और वह उम्र निकल चुकी हो
+        $awake = $wakeAge !== null && $age !== null && $age >= $wakeAge;
+        return [
+            'asleep'    => true,
+            'awake'     => $awake,
+            'cause_hi'  => $cause,
+            'agent_hi'  => $chaabi !== '' ? $chaabi : $cond,
+            'condition' => $cond !== '' ? $cond : ($aayu !== '' ? 'आयु ' . $aayu : ''),
+            'wake_age'  => $wakeAge,
+        ];
     }
 
     /**
@@ -547,8 +650,48 @@ final class LalKitabEngine
                 elseif ($ih['kind'] === 'सहायता') { $v++; $why[] = $ih['house'] . 'वें (' . implode(', ', $ih['planets_hi']) . ') से सहायता (+)'; }
             }
             if (!$isAwake) { $why[] = 'भाव सुप्त — विषय दबे रहेंगे'; }
+
+            // ---- मालिक और मेहमान ----
+            // भरा हुआ भाव तीन अलग फल नहीं होता, एक ही भीड़ भरा कमरा होता है।
+            // जो ग्रह अपने पक्के घर में बैठा है वह उस कमरे का गृहस्वामी है; बाक़ी
+            // मेहमान। कमरे का मिज़ाज मालिक तय करता है, मेहमान उसे रंग देते हैं।
+            // और जब भीड़ हो पर कोई मालिक न हो — तो किसी का अधिकार नहीं चलता और
+            // उस भाव के मामले कभी तय नहीं होते।
+            $malik = null; $mehmaan = [];
+            foreach ($occ as $oe) {
+                $pe = $pMap[$oe['planet']] ?? null;
+                if ($pe !== null && !empty($pe['pukka'])) { $malik = $oe; } else { $mehmaan[] = $oe; }
+            }
+            $vivadit = $malik === null && count($occ) >= 2;
+            if ($malik !== null) {
+                $why[] = 'इस भाव का मालिक ' . $malik['hi'] . ' (अपने पक्के घर में) — कमरे का मिज़ाज इसी से';
+            } elseif ($vivadit) {
+                $why[] = 'भाव में भीड़ पर कोई मालिक नहीं — विवादित भाव, मामले टिकते नहीं';
+            }
+
+            // ---- पाँच दर्जे ----
+            // शुभ · मंदा · मिश्रित (स्थिर बँटवारा) · अस्थिर (वही बात कभी ठीक कभी
+            // बिगड़ी — कोई टिकाव नहीं) · सुप्त (कुछ हिलता ही नहीं)। ये पाँच अलग
+            // ज़िंदगियाँ हैं; किन्हीं दो को एक शब्द से कहना आठ चरणों की मेहनत
+            // फेंक देना है।
             $verdict = $v > 0 ? 'शुभ' : ($v < 0 ? 'अशुभ' : 'मध्यम');
-            if (!$isAwake && $verdict === 'शुभ') { $verdict = 'मध्यम'; }
+            $allNishkriya = $occ !== [];
+            foreach ($occ as $oe) {
+                if (($pMap[$oe['planet']]['verdict'] ?? '') !== 'निष्क्रिय') { $allNishkriya = false; }
+            }
+            if ($vivadit) {
+                $verdict = 'अस्थिर';
+                $why[] = 'मालिक-विहीन भीड़ — फल एक-सा नहीं रहता';
+            } elseif ($allNishkriya || (!$isAwake && $occ === [])) {
+                $verdict = 'सुप्त';
+                $why[] = $allNishkriya ? 'भाव के सभी ग्रह निष्क्रिय — विषय आगे नहीं बढ़ते' : 'भाव सुप्त व ख़ाली';
+            } elseif ($malik !== null && $verdict === 'अशुभ') {
+                // अपने घर का मालिक बुरे मेहमानों से नष्ट नहीं होता — परेशान होता है
+                $verdict = 'मध्यम';
+                $why[] = 'मालिक अपने घर में है — मेहमान परेशान करते हैं, अधिकार छीनते नहीं';
+            } elseif (!$isAwake && $verdict === 'शुभ') {
+                $verdict = 'मध्यम';
+            }
 
             // फल — क्या होगा: इस भाव के जीवन-क्षेत्र + verdict-अनुसार परिणाम।
             $hTopic = LalKitabData::HOUSE_TOPIC[$h] ?? '';
@@ -556,8 +699,19 @@ final class LalKitabEngine
                 ? 'इन विषयों में उन्नति, सुख व अनुकूल फल मिलेगा।'
                 : ($verdict === 'अशुभ'
                     ? 'इन विषयों में बाधा, कष्ट या हानि की सम्भावना है — उपाय आवश्यक।'
-                    : 'इन विषयों में मिश्रित/सामान्य फल रहेगा।');
-            if (!$isAwake) { $hEffect .= ' (भाव सुप्त होने से ये विषय दबे रहेंगे — समय पर पूरा फल नहीं मिलेगा।)'; }
+                    : ($verdict === 'अस्थिर'
+                        ? 'यह मामला कभी ठीक, कभी बिगड़ा रहेगा — टिकाव नहीं आता। '
+                          . '(यह "कुछ अच्छा कुछ बुरा" नहीं है; यही एक बात बार-बार पलटती रहती है।)'
+                        : ($verdict === 'सुप्त'
+                            ? 'यह हिस्सा अभी रुका हुआ है — इन विषयों में कुछ आगे नहीं बढ़ रहा। '
+                              . 'यह बुरा फल नहीं, ठहरा हुआ फल है।'
+                            : 'इन विषयों में मिश्रित/सामान्य फल रहेगा।')));
+            if (!$isAwake && !in_array($verdict, ['सुप्त', 'अस्थिर'], true)) {
+                $hEffect .= ' (भाव सुप्त होने से ये विषय दबे रहेंगे — समय पर पूरा फल नहीं मिलेगा।)';
+            }
+            if ($malik !== null) {
+                $hEffect .= ' इस भाव का मालिक ' . $malik['hi'] . ' है — इस कमरे में इसी की चलती है।';
+            }
             $hPredHead = 'इस भाव से ' . $hTopic . ' का विचार होता है। ' . $hEffect;
             $hPredEffects = [];
             foreach ($occ as $oe) {
@@ -570,7 +724,7 @@ final class LalKitabEngine
             foreach ($warn as $wl) { $hPredEffects[] = $wl; }
 
             // 5) उपाय — only when the house needs strengthening.
-            $needRemedy = $verdict === 'अशुभ' || !$isAwake;
+            $needRemedy = in_array($verdict, ['अशुभ', 'अस्थिर', 'सुप्त'], true) || !$isAwake;
             $remedies = [];
             if ($needRemedy) {
                 $est = trim((string) ($bs[(string) $h] ?? ''));
@@ -615,6 +769,9 @@ final class LalKitabEngine
                 'warn'       => $warn,
                 'verdict'    => $verdict,
                 'verdict_why' => $why,
+                'malik_hi'   => $malik['hi'] ?? '',       // कमरे का गृहस्वामी
+                'mehmaan_hi' => array_column($mehmaan, 'hi'),
+                'vivadit'    => $vivadit,                 // भीड़ पर मालिक कोई नहीं
                 'pred_head'  => $hPredHead,
                 'pred_effects' => $hPredEffects,
                 'maas'       => $bm[(string) $h] ?? '',
@@ -1703,24 +1860,62 @@ final class LalKitabEngine
         }
 
         // लाल किताब की चल रही दशा — 35-साला चक्र (विंशोत्तरी नहीं)
+        // दशा का अपना कोई स्वभाव नहीं होता: फल उस ग्रह की हालत का है जो चल रहा है।
+        // शासक ग्रह निष्क्रिय हो तो अवधि "मंदी" नहीं, "ठहराव" की होती है — ये साल
+        // बिना ख़ास हलचल के निकलते हैं। दोनों को एक शब्द से कहना अलग-अलग ज़िंदगियों
+        // को एक कह देना है।
         $dasha = null;
         if ($age !== null) {
             $d = LalKitabDasha::at($age);
             $lord = $d['planet'] ?? null;
             $dasha = $mk($lord);
             if ($dasha !== null) {
+                $ruler = $byKey[$lord] ?? null;
+                $rv = (string) ($ruler['verdict'] ?? 'मध्यम');
                 $dasha['from'] = $d['from'] ?? null;
                 $dasha['to'] = $d['to'] ?? null;
                 $dasha['cycle'] = $d['cycle'] ?? null;
+                $dasha['kshamata'] = (string) ($ruler['kshamata'] ?? '');
+                $dasha['period_type'] = $rv === 'निष्क्रिय' ? 'ठहराव'
+                    : ($rv === 'शुभ' ? 'शुभ' : ($rv === 'अशुभ' ? 'मंदा' : 'मिश्रित'));
+                // समाप्ति — आयु और (जन्म-वर्ष ज्ञात हो तो) अनुमानित सन् दोनों।
+                // अंत-तिथि के साथ कठिन दौर सँभाला जा सकता है; बिना अंत के वही दौर डर बन जाता है।
+                $endAge = $d['to'] ?? null;
+                $curYear = (int) date('Y');
+                $dasha['ends_at_age'] = $endAge;
+                $dasha['ends_year'] = $endAge !== null ? $curYear + max(0, (int) $endAge - $age) : null;
+                $dasha['ends_hi'] = $endAge !== null
+                    ? 'आयु ' . $endAge . ' वर्ष तक' . ($dasha['ends_year'] !== null ? ' (लगभग सन् ' . $dasha['ends_year'] . ')' : '')
+                    : '';
+                $dasha['phal_hi'] = $dasha['period_type'] === 'ठहराव'
+                    ? 'ये साल बिना ख़ास हलचल के निकलेंगे — न बड़ी तरक़्क़ी, न बड़ी मुसीबत। यह बुरा समय नहीं, रुका हुआ समय है।'
+                    : ($dasha['period_type'] === 'शुभ'
+                        ? 'इस दौर में इस ग्रह के मामले आगे बढ़ेंगे — मेहनत का फल मिलेगा।'
+                        : ($dasha['period_type'] === 'मंदा'
+                            ? 'इस दौर में दबाव रहेगा — सँभलकर चलें और उपाय साथ रखें।'
+                            : 'इस दौर में कुछ बातें ठीक, कुछ में अड़चन।'));
+                // कोई भी दौर पूरा बुरा नहीं होता — जो सहारा दे रहा है वह भी बताना ज़रूरी है
+                $support = [];
+                foreach ($planets as $sp) {
+                    if (($sp['verdict'] ?? '') === 'शुभ') {
+                        $support[] = $sp['hi'] . ' (' . $sp['house_ord'] . ' भाव)';
+                    }
+                }
+                $dasha['supported_hi'] = $support === []
+                    ? [] : array_slice($support, 0, 3);
             }
         }
 
         $ss = $active['sadesati'] ?? null;
         return [
             'dasha'     => $dasha,
+            // साढ़े साती लाल किताब की अपनी विधि नहीं है — इसकी पहचान वैदिक गोचर से
+            // होती है। इसलिए हर पंक्ति पर स्रोत का लेबल, ताकि पढ़ने वाला जाने कि यह
+            // बात कहाँ से आई। उपाय फिर भी लाल किताब का ही रहता है।
             'sadesati'  => is_array($ss) ? [
                 'label' => (($ss['kind'] ?? '') === 'dhaiya') ? 'ढैय्या' : 'साढ़े साती',
                 'phase' => $ss['phase'] ?? null,
+                'source_label' => 'वैदिक आधार पर',
             ] : null,
             'year_eff'  => $yearEff,
             'year_bad'  => $yearBad,

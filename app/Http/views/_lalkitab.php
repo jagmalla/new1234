@@ -159,9 +159,17 @@ $scorePill = static function (int $score): string {
       <?php if (!empty($act['dasha'])): ?>
         लाल किताब दशा (35-साला चक्र) — <b><?= $h((string) $act['dasha']['hi']) ?></b>
         (<?= $h((string) $act['dasha']['house_ord']) ?> भाव · आयु <?= (int) ($act['dasha']['from'] ?? 0) ?>–<?= (int) ($act['dasha']['to'] ?? 0) ?>)<?= $pill((string) $act['dasha']['verdict'], 'v') ?>
+        <?php /* अंत-तिथि के साथ कठिन दौर सँभाला जा सकता है; बिना अंत के वही दौर डर बन जाता है। */ ?>
+        <?php if (trim((string) ($act['dasha']['ends_hi'] ?? '')) !== ''): ?>
+          <span style="font-weight:700;color:#166534"> — <?= $h((string) $act['dasha']['ends_hi']) ?></span>
+        <?php endif; ?>
+        <?php if (($act['dasha']['period_type'] ?? '') === 'ठहराव'): ?>
+          <div style="font-size:.8rem;color:#475569;margin-top:2px">⏸ <?= $h((string) $act['dasha']['phal_hi']) ?></div>
+        <?php endif; ?>
       <?php endif; ?>
       <?php if (!empty($act['sadesati'])): ?>
         · <b><?= $h((string) $act['sadesati']['label']) ?> चल रही है</b><?= $act['sadesati']['phase'] ? ' (चरण ' . (int) $act['sadesati']['phase'] . ')' : '' ?>
+        <i style="font-size:.75rem;color:#6d28d9">(<?= $h((string) ($act['sadesati']['source_label'] ?? 'वैदिक आधार पर')) ?>)</i>
       <?php endif; ?>
       <?php if (!empty($act['year_eff']) || !empty($act['year_bad'])): ?>
         <br><b>इस आयु-वर्ष (<?= (int) ($act['age'] ?? 0) ?>) में:</b>
@@ -173,6 +181,9 @@ $scorePill = static function (int $score): string {
 
     <div class="flex items-center gap-2 mb-2" style="flex-wrap:wrap">
       <select id="lk-select" class="l2-select" aria-label="लाल किताब श्रेणी चुनें" style="flex:1;min-width:190px">
+        <optgroup label="📋 सरल रिपोर्ट / Client Report">
+          <option value="nichod">📋 निचोड़ — मुख्य बातें व उपाय (सबसे पहले यही पढ़ें)</option>
+        </optgroup>
         <optgroup label="⭐ विशेष उपकरण / Interactive Tools">
           <option value="varsh">📅 वर्ष कुंडली / Varsh Kundali (Annual)</option>
           <option value="agecycle">🕰️ आयु-दशा टाइमलाइन / Age Timeline (Dasha)</option>
@@ -224,7 +235,132 @@ $scorePill = static function (int $score): string {
     <div class="lk-scroll">
 
       <!-- ===== OVERVIEW ===== -->
-      <div class="lk-view active" data-lk="overview">
+      <!-- ══════════ 📋 निचोड़ — ग्राहक का पन्ना (चरण 8-10) ══════════
+           बाक़ी सब अनुभाग ज्योतिषी के लिए हैं; यह एक पन्ना उस आदमी के लिए है
+           जिसकी कुंडली है। क्रम तय है और बदला नहीं जाता: पहले मिज़ाज, फिर
+           मज़बूती, फिर ध्यान देने की बातें (हर एक अपने उपाय के साथ), फिर अभी
+           का समय अंत-तिथि सहित, फिर उपाय, फिर करें/न-करें, फिर सीमा। -->
+      <div class="lk-view active" data-lk="nichod">
+        <?php $PR = $lk['process'] ?? null; if (!is_array($PR) || empty($PR['ok'])): ?>
+          <h3 class="lk-h">📋 निचोड़</h3>
+          <div class="lk-empty">निचोड़ अभी उपलब्ध नहीं<?= !empty($PR['error']) ? ' — ' . $h((string) $PR['error']) : '' ?>।
+            नीचे के अनुभागों में पूरा विश्लेषण मौजूद है।</div>
+        <?php else: $C = $PR['client']; ?>
+          <h3 class="lk-h">📋 निचोड़ — मुख्य बातें व उपाय</h3>
+          <div style="font-size:.82rem;color:#475569;margin-bottom:10px"><?= $h((string) $C['intro']) ?></div>
+
+          <!-- 1. कुंडली का मिज़ाज -->
+          <div style="border:1px solid #c7d2fe;background:#eef2ff;border-radius:10px;padding:10px 13px;margin-bottom:11px">
+            <div style="font-weight:800;font-size:.9rem;margin-bottom:3px;color:#3730a3">🧭 कुंडली का मिज़ाज — <?= $h((string) $PR['temperament']['primary']) ?></div>
+            <div style="font-size:.85rem;line-height:1.65;color:#1e1b4b"><?= $h((string) $C['mizaj']) ?></div>
+          </div>
+
+          <!-- 2. मज़बूती — हमेशा पहले -->
+          <?php if (!empty($C['strengths'])): ?>
+          <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:10px;padding:10px 13px;margin-bottom:11px">
+            <div style="font-weight:800;font-size:.9rem;margin-bottom:4px;color:#14532d">💪 आपकी मज़बूती</div>
+            <?php foreach ($C['strengths'] as $s): ?>
+              <div style="font-size:.85rem;line-height:1.65;color:#14532d;margin-bottom:4px">
+                <b><?= $h((string) $s['title']) ?></b><br><?= $h((string) $s['text']) ?>
+              </div>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; ?>
+
+          <!-- 3. ध्यान देने की बातें — हर एक अपने उपाय के साथ, उसी जगह -->
+          <?php if (!empty($C['issues'])): ?>
+          <div style="font-weight:800;font-size:.9rem;margin:0 0 6px;color:#7f1d1d">⚠️ ध्यान देने की बातें</div>
+          <?php foreach ($C['issues'] as $it): ?>
+            <div style="border:1px solid #fecaca;background:#fef2f2;border-radius:10px;padding:9px 12px;margin-bottom:8px">
+              <div style="font-weight:700;font-size:.86rem;color:#7f1d1d"><?= $h((string) $it['title']) ?></div>
+              <div style="font-size:.84rem;line-height:1.65;color:#7f1d1d;margin-top:2px"><?= $h((string) $it['text']) ?></div>
+              <?php if (trim((string) ($it['upay_inline'] ?? '')) !== ''): ?>
+                <div style="margin-top:6px;padding:6px 9px;background:#fff;border-radius:7px;border:1px dashed #fca5a5;font-size:.83rem;color:#166534">
+                  <b>🛠 उपाय:</b> <?= $h((string) $it['upay_inline']) ?>
+                </div>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+          <?php endif; ?>
+
+          <!-- 4. अभी का समय — अंत-तिथि के साथ -->
+          <?php if (trim((string) $C['samay']) !== ''): ?>
+          <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:10px;padding:10px 13px;margin-bottom:11px">
+            <div style="font-weight:800;font-size:.9rem;margin-bottom:3px;color:#713f12">📅 अभी का समय</div>
+            <div style="font-size:.85rem;line-height:1.65;color:#713f12"><?= $h((string) $C['samay']) ?></div>
+            <?php $ssX = $lk['active']['sadesati'] ?? null; if (is_array($ssX)): ?>
+              <div style="font-size:.8rem;margin-top:5px;color:#92400e">
+                <b><?= $h((string) $ssX['label']) ?></b> चल रही है<?= $ssX['phase'] ? ' (चरण ' . (int) $ssX['phase'] . ')' : '' ?>
+                — <i><?= $h((string) ($ssX['source_label'] ?? 'वैदिक आधार पर')) ?></i>। यह एक तय अवधि है और समाप्त होती है।
+              </div>
+            <?php endif; ?>
+          </div>
+          <?php endif; ?>
+
+          <!-- 5. उपाय — एक, ज़्यादा से ज़्यादा दो -->
+          <div style="border:1px solid #86efac;background:#f0fdf4;border-radius:10px;padding:10px 13px;margin-bottom:11px">
+            <div style="font-weight:800;font-size:.9rem;margin-bottom:5px;color:#14532d">🛠 अभी करने योग्य उपाय
+              <span style="font-weight:600;font-size:.75rem">(सिर्फ़ इतना — बाक़ी बाद में)</span></div>
+            <?php if (empty($C['upaay'])): ?>
+              <div style="font-size:.84rem;color:#166534">इस समय कोई तात्कालिक उपाय अनिवार्य नहीं।</div>
+            <?php else: foreach ($C['upaay'] as $i => $u): ?>
+              <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px 11px;margin-bottom:7px">
+                <div style="font-weight:700;font-size:.85rem;color:#14532d">
+                  <?= (int) ($i + 1) ?>. <?= $h((string) $u['target']) ?> — दिशा: <?= $h((string) $u['direction']) ?>
+                </div>
+                <?php if (trim((string) ($u['target_note'] ?? '')) !== ''): ?>
+                  <div style="font-size:.78rem;color:#475569;margin:2px 0 4px"><?= $h((string) $u['target_note']) ?></div>
+                <?php endif; ?>
+                <?php foreach ((array) $u['upay'] as $t): ?>
+                  <div style="font-size:.84rem;line-height:1.6;color:#14532d">• <?= $h((string) $t) ?></div>
+                <?php endforeach; ?>
+                <div style="font-size:.77rem;color:#475569;margin-top:4px">
+                  ⏱ <?= $h((string) $u['kind']) ?> · अवधि: <?= $h((string) $u['duration']) ?> ·
+                  कब रोकें: <?= $h((string) $u['stop_when']) ?> · दोहराव: <?= $h((string) $u['repeat']) ?>
+                </div>
+              </div>
+            <?php endforeach; endif; ?>
+            <?php if (!empty($C['held'])): ?>
+              <div style="font-size:.78rem;color:#475569;margin-top:4px">
+                📌 बाक़ी <?= count($C['held']) ?> उपाय नोट कर लिए गए हैं — पहला पूरा होने के बाद उनकी बारी आएगी।
+                (एक साथ कई उपाय शुरू करने से कोई पूरा नहीं होता।)
+              </div>
+            <?php endif; ?>
+            <?php if (!empty($PR['upaay']['note'])): ?>
+              <div style="font-size:.78rem;color:#92400e;margin-top:5px">ℹ️ <?= $h((string) $PR['upaay']['note']) ?></div>
+            <?php endif; ?>
+            <?php if (!empty($PR['upaay']['excluded'])): ?>
+              <?php foreach ($PR['upaay']['excluded'] as $ex): ?>
+                <div style="font-size:.77rem;color:#7f1d1d;margin-top:4px">🚫 <?= $h((string) $ex['target']) ?> का शांति-उपाय रोका गया — <?= $h((string) $ex['reason']) ?>।</div>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+
+          <!-- 6. करें / न करें -->
+          <div class="lk-grid2" style="margin-bottom:11px">
+            <div style="border:1px solid #bbf7d0;border-radius:9px;padding:8px 11px">
+              <div style="font-weight:700;font-size:.84rem;color:#14532d;margin-bottom:3px">✅ करने योग्य</div>
+              <?php foreach ((array) $C['karne'] as $d): ?><div style="font-size:.81rem;line-height:1.55">• <?= $h((string) $d) ?></div><?php endforeach; ?>
+            </div>
+            <div style="border:1px solid #fecaca;border-radius:9px;padding:8px 11px">
+              <div style="font-weight:700;font-size:.84rem;color:#7f1d1d;margin-bottom:3px">⛔ न करने योग्य</div>
+              <?php foreach ((array) $C['na_karne'] as $d): ?><div style="font-size:.81rem;line-height:1.55">• <?= $h((string) $d) ?></div><?php endforeach; ?>
+            </div>
+          </div>
+
+          <!-- 7. सीमा व चिकित्सा-नोट -->
+          <div style="border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:9px 12px;font-size:.82rem;line-height:1.65;color:#334155">
+            <div style="margin-bottom:5px">🕊 <?= $h((string) $C['boundary']) ?></div>
+            <div>🩺 <?= $h((string) $C['medical']) ?></div>
+          </div>
+          <div style="font-size:.72rem;color:#94a3b8;margin-top:7px">
+            नियम-सेटिंग: सोई दृष्टि = <?= $h((string) $PR['settings']['soya_drishti']) ?> ·
+            बैठक-क्रम = <?= $h((string) $PR['settings']['seat_precedence']) ?>
+          </div>
+        <?php endif; ?>
+      </div>
+
+      <div class="lk-view" data-lk="overview">
         <h3 class="lk-h">सामान्य परिचय (Lal Kitab Overview)</h3>
 
         <!-- 📢 सम्पूर्ण-कुंडली सार + करें/न करें -->
@@ -890,6 +1026,15 @@ $scorePill = static function (int $score): string {
       <div class="lk-view" data-lk="sadesati">
         <?php $ss = $lk['sadesati']; $ssPhase = (int) ($ss['running_phase'] ?? 0); ?>
         <h3 class="lk-h">साढ़े साती / ढैय्या — चन्द्र राशि <?= $h((string) $ss['rashi_hi']) ?></h3>
+        <!-- यह पूरा तंत्र लाल किताब की अपनी व्याकरण पर चलता है; साढ़े साती इकलौता
+             अपवाद है — इसकी पहचान वैदिक गोचर से होती है। इसलिए स्रोत का लेबल
+             ज़रूरी है, ताकि पढ़ने वाला जाने कि यह बात कहाँ से आई। उपाय फिर भी
+             लाल किताब का ही रहता है, और यह किसी भाव-आधारित फल को काट नहीं सकती। -->
+        <div style="border:1px solid #ddd6fe;background:#f5f3ff;border-radius:9px;padding:8px 11px;margin-bottom:9px;font-size:.82rem;line-height:1.6;color:#4c1d95">
+          <b>वैदिक आधार पर</b> — साढ़े साती/ढैय्या की पहचान जन्म-चन्द्र राशि पर शनि के गोचर से होती है,
+          जो वैदिक विधि है; उपाय लाल किताब के ही हैं। यह एक <b>तय अवधि</b> है और समाप्त होती है —
+          इसका असर कितना भारी पड़ेगा, यह आपकी कुंडली में शनि की अपनी हालत पर निर्भर है।
+        </div>
 
         <?php if (!empty($ss['running'])): ?>
           <div class="lk-card bad">
@@ -1124,6 +1269,12 @@ $scorePill = static function (int $score): string {
       <div class="lk-view" data-lk="health">
         <?php $hl = $lk['health']; ?>
         <h3 class="lk-h">रोग / संतान उपाय (Health &amp; Progeny)</h3>
+        <!-- यही एक जगह है जहाँ आत्मविश्वास से भरा इंजन असली नुक़सान कर सकता है।
+             इसलिए यह पंक्ति स्थायी है, शैली की पसंद नहीं। -->
+        <div style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:9px;padding:8px 11px;margin-bottom:9px;font-size:.82rem;line-height:1.6;color:#1e3a8a">
+          🩺 <b>ध्यान दें:</b> यहाँ दी बातें सिर्फ़ सावधानी के संकेत हैं — किसी रोग की पहचान या भविष्यवाणी नहीं।
+          जाँच और इलाज डॉक्टर से ही कराएँ, और चल रहा इलाज किसी उपाय के भरोसे बंद न करें।
+        </div>
         <?php if (!empty($hl['afflicted'])): ?>
           <div class="lk-card bad">
             <div class="lk-card-h">⚠ इस कुंडली में ध्यान देने योग्य ग्रह</div>
@@ -1595,6 +1746,39 @@ $ssAct = $act['sadesati'] ?? null;
 <div id="lk-report" hidden>
   <div class="lkr-title">लाल किताब रिपोर्ट (Lal Kitab Report)</div>
   <div class="lkr-sub"><?= $h($birthLine) ?> · लग्न: <?= $h((string) $lk['lagna_hi']) ?> · चन्द्र राशि: <?= $h((string) $lk['moon_hi']) ?><?= $lk['age'] !== null ? ' · वर्तमान आयु: ' . (int) $lk['age'] . ' वर्ष' : '' ?></div>
+
+  <?php /* निचोड़ छपी रिपोर्ट में भी सबसे ऊपर — वही क्रम, वही अनुशासन:
+           मिज़ाज → मज़बूती → ध्यान की बातें (उपाय साथ) → उपाय → सीमा। */
+        $PRp = $lk['process'] ?? null;
+        if (is_array($PRp) && !empty($PRp['ok'])): $Cp = $PRp['client']; ?>
+  <div class="lkr-h">📋 निचोड़ — सबसे ज़रूरी बातें</div>
+  <div class="lkr-box">
+    <b>कुंडली का मिज़ाज — <?= $h((string) $PRp['temperament']['primary']) ?></b>
+    <div class="lkr-why"><?= $h((string) $Cp['mizaj']) ?></div>
+  </div>
+  <?php foreach ((array) $Cp['strengths'] as $s): ?>
+    <div class="lkr-box"><b>💪 <?= $h((string) $s['title']) ?></b><div class="lkr-why"><?= $h((string) $s['text']) ?></div></div>
+  <?php endforeach; ?>
+  <?php foreach ((array) $Cp['issues'] as $it): ?>
+    <div class="lkr-box"><b>⚠️ <?= $h((string) $it['title']) ?></b>
+      <div class="lkr-why"><?= $h((string) $it['text']) ?></div>
+      <?php if (trim((string) ($it['upay_inline'] ?? '')) !== ''): ?>
+        <div class="lkr-why"><b>🛠 उपाय:</b> <?= $h((string) $it['upay_inline']) ?></div>
+      <?php endif; ?>
+    </div>
+  <?php endforeach; ?>
+  <?php if (trim((string) $Cp['samay']) !== ''): ?>
+    <div class="lkr-box"><b>📅 अभी का समय</b><div class="lkr-why"><?= $h((string) $Cp['samay']) ?></div></div>
+  <?php endif; ?>
+  <?php foreach ((array) $Cp['upaay'] as $i => $u): ?>
+    <div class="lkr-box"><b>🛠 उपाय <?= (int) ($i + 1) ?> — <?= $h((string) $u['target']) ?> (दिशा: <?= $h((string) $u['direction']) ?>)</b>
+      <ul class="lkr-ul"><?php foreach ((array) $u['upay'] as $t): ?><li><?= $h((string) $t) ?></li><?php endforeach; ?></ul>
+      <div class="lkr-why">अवधि: <?= $h((string) $u['duration']) ?> · कब रोकें: <?= $h((string) $u['stop_when']) ?></div>
+    </div>
+  <?php endforeach; ?>
+  <div class="lkr-box"><div class="lkr-why">🕊 <?= $h((string) $Cp['boundary']) ?></div>
+    <div class="lkr-why">🩺 <?= $h((string) $Cp['medical']) ?></div></div>
+  <?php endif; ?>
 
   <?php if (!empty($act['dasha']) || $ssAct): ?>
   <div class="lkr-box lkr-hot">
