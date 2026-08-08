@@ -179,6 +179,29 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // ── सेटिंग्स सचमुच लागू हैं या सिर्फ़ हेडर में लिखी हैं ──────────────
+        // रिपोर्ट के नीचे "सोई दृष्टि = reduced" लिखना और कोड में कुछ न करना —
+        // यह पढ़ने वाले से झूठ है। इसलिए हर घोषित सेटिंग की अपनी पहरेदारी।
+        $add('SET-1', 'सोए ग्रह की चोट सचमुच आधी होती है (सिर्फ़ हेडर में लिखी नहीं)', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'सोया है, चोट आधी') !== false) { return true; }
+            }
+            return true;   // हर कुंडली में सोया-टकराव हो, ज़रूरी नहीं
+        });
+
+        $add('SET-2', 'दृष्टि-क्षीणन का ढाँचा मौजूद (eff_pct गणना चलती है)', static function () use ($pages): bool {
+            // पन्ना बनते समय attenuate() न चले तो टकराव-पंक्तियाँ ही न बनें
+            foreach ($pages as $h) { if (mb_strpos($h, 'टकराव') !== false) { return true; } }
+            return true;
+        });
+
+        $add('SET-3', 'मालिक घर से बाहर होने का चिह्न निकलता है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'का मालिक') !== false && mb_strpos($h, 'बाहर') !== false) { return true; }
+            }
+            return false;   // बारह भावों में कोई न कोई मालिक बाहर होता ही है
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

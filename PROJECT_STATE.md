@@ -1,4 +1,4 @@
-# PROJECT_STATE — analysisofkarma.com (Vedic astrology site)
+# PROJECT_STATE — p.analysisofkarma.com (Vedic astrology site)
 
 **Repo/branch:** `jagmalla/new1234` · work branch `claude/astrology-software-mods-ccwpjf` (push here only).
 **Delivery:** commit + push **AND** hand a credential-scanned ZIP of *only changed files* (preserve `app/` & `public_html/` paths); user extracts onto live hosting (not auto-deployed). Keep the "System is Under Testing" popup LIVE.

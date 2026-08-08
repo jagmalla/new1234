@@ -137,7 +137,14 @@ final class LalKitabEngine
         // the "active now" summary strip.
         $supt      = self::suptReadings($house, $occupants);
         $yutiDosha = self::yutiDoshaReadings($occupants);
-        $planets   = self::planetReadings($chart, $house, $occupants, $supt, $yutiDosha, $age);
+        // सोए ग्रहों का सेट — एक बार, सबके फल बनने से पहले।
+        // वजह: सोने का फ़ैसला दृष्टि पर टिका है, और दृष्टि का असर इस पर कि देखने
+        // वाला सोया है या नहीं। दोनों एक-दूसरे का जवाब पहले माँगते हैं। इसलिए
+        // पहले सिर्फ़ बैठक से नींद तय होती है (यह गणना किसी फल पर निर्भर नहीं),
+        // फिर वह **जमा** दी जाती है — उसके बाद कोई पास उसे नहीं बदलता। वरना वही
+        // कुंडली हर बार अलग पढ़ी जाएगी, बिना किसी कारण के।
+        $asleepSet = self::asleepSet($house, $occupants);
+        $planets   = self::planetReadings($chart, $house, $occupants, $supt, $yutiDosha, $age, $asleepSet);
         // मसनूई sits on top of the per-planet analysis: it needs each source
         // planet's own verdict to decide which of the two to send away.
         $masnui    = self::masnuiReadings($house, $occupants, $planets, $age);
@@ -202,7 +209,7 @@ final class LalKitabEngine
      * @param array<string,int> $house
      * @return array<int,array<string,mixed>>
      */
-    private static function planetReadings(array $chart, array $house, array $occupants = [], array $supt = [], array $yutiDosha = [], ?int $age = null): array
+    private static function planetReadings(array $chart, array $house, array $occupants = [], array $supt = [], array $yutiDosha = [], ?int $age = null, array $asleepSet = []): array
     {
         $sb  = LalKitabData::section('supt_bhav');     // भाव => चाबी (जगाने वाला ग्रह)
         $gp  = LalKitabData::section('graha_parichay');
@@ -283,6 +290,8 @@ final class LalKitabEngine
                 $inHits[] = ['kind' => 'टकराव', 'house' => $struck['house'], 'pct' => 100,
                     'planets_hi' => array_map([LalKitabData::class, 'planetHi'], $struck['planets'])];
             }
+            // सोए ग्रह की दृष्टि/टक्कर आधी — जमे हुए सेट से (सेटिंग: reduced)
+            $inHits = self::attenuate($inHits, $occupants, $asleepSet);
             $outHits = [];   // यह ग्रह किन पर असर डालता है
             foreach (LalKitabTeva::aspectsFrom($h) as $ht => $pct) {
                 if (!empty($occupants[$ht])) {
@@ -318,7 +327,15 @@ final class LalKitabEngine
             }
             foreach (($doshaOf[$p] ?? []) as $dn) { $v--; $vWhy[] = $dn . ' (−)'; }
             foreach ($inHits as $ih) {
-                if ($ih['kind'] === 'टकराव') { $v--; $vWhy[] = $ih['house'] . 'वें भाव (' . implode(', ', $ih['planets_hi']) . ') से टकराव — यह ग्रह खराब होता है (−)'; }
+                if ($ih['kind'] !== 'टकराव') { continue; }
+                // मारने वाला खुद सोया हो तो चोट पूरी नहीं पड़ती
+                if (!empty($ih['weak'])) {
+                    $vWhy[] = $ih['house'] . 'वें भाव (' . implode(', ', $ih['planets_hi'])
+                        . ') से टकराव — पर मारने वाला खुद सोया है, चोट आधी';
+                } else {
+                    $v--;
+                    $vWhy[] = $ih['house'] . 'वें भाव (' . implode(', ', $ih['planets_hi']) . ') से टकराव — यह ग्रह खराब होता है (−)';
+                }
             }
             // पक्का घर = तीव्रता (वॉल्यूम बटन): जिधर फल झुका है उसे और गहरा करता है,
             // शुभता नहीं जोड़ता। कच्चा घर उल्टा — फल मंद करता है।
@@ -356,6 +373,20 @@ final class LalKitabEngine
                 if ($p === 'Jupiter' && $alone && $verdict === 'अशुभ') {
                     $verdict = 'मध्यम';
                     $vWhy[] = 'अकेला बृहस्पति — गुरु का रक्षक स्वभाव, दृष्टि/टक्कर से भी अशुभ नहीं';
+                }
+                // छाया-ग्रहों पर संगत भारी पड़ती है (सेटिंग: chhaya_company_dominance)।
+                // राहु-केतु अपनी संगत का रंग बाक़ी सात से कहीं ज़्यादा पकड़ते हैं —
+                // इसलिए इनके लिए संगत बैठक को भी काट देती है, अपने पक्के घर में भी।
+                if (($p === 'Rahu' || $p === 'Ketu') && $mates !== []) {
+                    $rel = array_column($mates, 'rel');
+                    $names = implode(', ', array_column($mates, 'hi'));
+                    if (!in_array('मित्र', $rel, true) && !in_array('सम', $rel, true) && $verdict !== 'अशुभ') {
+                        $verdict = 'अशुभ';
+                        $vWhy[] = 'छाया-ग्रह — पूरी संगत शत्रु (' . $names . '); संगत बैठक पर भारी पड़ती है';
+                    } elseif (!in_array('शत्रु', $rel, true) && !in_array('सम', $rel, true) && $verdict !== 'शुभ') {
+                        $verdict = 'शुभ';
+                        $vWhy[] = 'छाया-ग्रह — पूरी संगत मित्र (' . $names . '); संगत बैठक पर भारी पड़ती है';
+                    }
                 }
             }
             $isAshubh = $verdict === 'अशुभ';
@@ -510,6 +541,46 @@ final class LalKitabEngine
             ];
         }
         return $out;
+    }
+
+    /** सोए ग्रहों का जमा हुआ सेट — planet-en => true. सिर्फ़ बैठक से, किसी फल से नहीं। */
+    private static function asleepSet(array $house, array $occupants): array
+    {
+        $out = [];
+        foreach (self::PLANETS as $p) {
+            if (!isset($house[$p])) { continue; }
+            $h = $house[$p];
+            $imp = LalKitabTeva::impairedState($p, $h, $occupants, LalKitabTeva::dignity($p, $h, $occupants));
+            if (in_array($imp['code'], ['SOYA', 'GUNGA', 'ANDHA', 'MRIT'], true)) { $out[$p] = true; }
+        }
+        return $out;
+    }
+
+    /**
+     * सोए ग्रह की दृष्टि/टक्कर आधी रह जाती है (सेटिंग: soya_drishti = reduced)।
+     *
+     * सोया ग्रह क्या देख भी सकता है — इस पर टीकाकारों में मतभेद है, इसलिए यह एक
+     * सेटिंग है, नियम नहीं। जो भी चुना जाए, रिपोर्ट उसे अपने नीचे दर्ज करती है,
+     * ताकि दो अलग सेटिंग वाले इंजन अलग नतीजे दें तो पढ़ने वाला जान सके कि किस
+     * नियम पर चला गया।
+     *
+     * @param list<array<string,mixed>> $hits
+     * @param array<string,bool> $asleepSet
+     * @return list<array<string,mixed>>
+     */
+    private static function attenuate(array $hits, array $occupants, array $asleepSet): array
+    {
+        foreach ($hits as $i => $hit) {
+            $src = $occupants[$hit['house']] ?? [];
+            $awake = array_values(array_filter($src, static fn ($p) => empty($asleepSet[$p])));
+            $sleep = array_values(array_filter($src, static fn ($p) => !empty($asleepSet[$p])));
+            $hits[$i]['eff_pct'] = ($awake === [] && $sleep !== [])
+                ? (int) round(((int) $hit['pct']) / 2)     // सब देखने वाले सोए हुए
+                : (int) $hit['pct'];
+            $hits[$i]['soya_src'] = array_map([LalKitabData::class, 'planetHi'], $sleep);
+            $hits[$i]['weak'] = $awake === [] && $sleep !== [];
+        }
+        return $hits;
     }
 
     /**
@@ -669,6 +740,34 @@ final class LalKitabEngine
                 $why[] = 'भाव में भीड़ पर कोई मालिक नहीं — विवादित भाव, मामले टिकते नहीं';
             }
 
+            // ---- मालिक घर से बाहर ----
+            // पक्का घर उस ग्रह का घर है, चाहे वह उसमें खड़ा हो या न हो। मालिक
+            // बाहर हो तो इन मामलों का स्वाभाविक रखवाला मौजूद नहीं। यह अपने-आप
+            // बुरा नहीं — सब इस पर है कि वह गया कहाँ और वहाँ कैसा है। पर एक हालत
+            // साफ़ चेतावनी है: **मालिक बाहर और उसके घर पर शत्रु का क़ब्ज़ा** —
+            // रखवाला ग़ैर-हाज़िर और कमरा दुश्मन के पास।
+            $ownerAway = null;
+            foreach (self::PLANETS as $op) {
+                if (($house[$op] ?? null) === null) { continue; }
+                $od = LalKitabTeva::dignity($op, $h, $occupants);
+                if (empty($od['pakka']) || $house[$op] === $h) { continue; }   // यह भाव इसका पक्का घर है, पर यह यहाँ नहीं
+                $opHi = LalKitabData::planetHi($op);
+                $foes = [];
+                $shatruTxt = (string) (LalKitabData::section('maitri')[$op]['shatru'] ?? '');
+                foreach ($occ as $oe) {
+                    if ($shatruTxt !== '' && mb_strpos($shatruTxt, (string) $oe['hi']) !== false) { $foes[] = (string) $oe['hi']; }
+                }
+                $ownerAway = ['hi' => $opHi, 'sits' => LalKitabData::houseOrdinalHi($house[$op]), 'foes' => $foes];
+                if ($foes !== []) {
+                    $why[] = '⚠ इस घर का मालिक ' . $opHi . ' बाहर (' . $ownerAway['sits'] . ' भाव में) है और यहाँ '
+                        . implode(', ', $foes) . ' (शत्रु) बैठा है — रखवाला ग़ैर-हाज़िर, कमरा दुश्मन के पास';
+                    $v--;
+                } else {
+                    $why[] = 'इस घर का मालिक ' . $opHi . ' बाहर (' . $ownerAway['sits'] . ' भाव में) है — देखभाल कम';
+                }
+                break;
+            }
+
             // ---- पाँच दर्जे ----
             // शुभ · मंदा · मिश्रित (स्थिर बँटवारा) · अस्थिर (वही बात कभी ठीक कभी
             // बिगड़ी — कोई टिकाव नहीं) · सुप्त (कुछ हिलता ही नहीं)। ये पाँच अलग
@@ -772,6 +871,7 @@ final class LalKitabEngine
                 'malik_hi'   => $malik['hi'] ?? '',       // कमरे का गृहस्वामी
                 'mehmaan_hi' => array_column($mehmaan, 'hi'),
                 'vivadit'    => $vivadit,                 // भीड़ पर मालिक कोई नहीं
+                'owner_away' => $ownerAway,               // मालिक बाहर (+ शत्रु का क़ब्ज़ा?)
                 'pred_head'  => $hPredHead,
                 'pred_effects' => $hPredEffects,
                 'maas'       => $bm[(string) $h] ?? '',
