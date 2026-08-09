@@ -815,6 +815,29 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // लाल किताब का वर्ष-कुंडली पन्ना — बाएँ दोनों वर्ष-कुंडलियाँ (लाल किताब व
+        // वैदिक, मुंथा सहित) एक के नीचे एक, दाएँ सिर्फ़ फल और वह अपने भीतर सरकता।
+        $add('LKV-1', 'वर्ष-कुंडली पन्ने पर दोनों वर्ष-कुंडलियाँ बाएँ, फल दाएँ', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (!preg_match('/<div class="lkv-charts">(.*?)<\/div>\s*<!-- server-rendered/su', $h, $m)) {
+                    // ढाँचा बदल गया — तब भी क्रम व मौजूदगी जाँची जाए
+                    $m = [1 => $h];
+                }
+                foreach (['id="lkv-chart"', 'id="lkv-vedic"', 'id="lkv-janam"'] as $need) {
+                    if (mb_strpos($m[1], $need) === false) { return false; }
+                }
+                // क्रम: लाल किताब की वर्ष-कुंडली पहले, वैदिक उसके नीचे
+                if (mb_strpos($m[1], 'id="lkv-chart"') > mb_strpos($m[1], 'id="lkv-vedic"')) { return false; }
+                // वैदिक कार्ड मुंथा का चिह्न बताए (वरना MUN अक्षर पहेली रह जाता है)
+                if (mb_strpos($h, 'मुंथा <b>MUN</b> से चिह्नित') === false) { return false; }
+                // फल का खाना चित्रों के बाद आए और सरकने वाला हो
+                $body = mb_strpos($h, 'id="lkv-body"');
+                if ($body === false || $body < mb_strpos($h, 'id="lkv-janam"')) { return false; }
+                if (!preg_match('/id="lkv-body" class="[^"]*lk-scroll/u', $h)) { return false; }
+            }
+            return true;
+        });
+
         // ───────────────────── लाल किताब मिलान ─────────────────────
         // ये पाँच जाँचें उन्हीं पाँच चूकों की रखवाली करती हैं जो मिलान में मिलीं:
         // निष्क्रिय ग्रह का "शुभ" छपना, नकली प्रतिशत, दूसरी कुंडली वाले परिहार का

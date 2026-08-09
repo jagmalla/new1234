@@ -255,8 +255,18 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab #lk-vim-btn{margin-bottom:6px}
   /* Varsh inner layout: annual chart (left) + prediction (right), like Varshaphal. */
   #sec-lalkitab .lkv-main{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:6px}
-  @media(min-width:980px){#sec-lalkitab.lk-wide .lkv-main{grid-template-columns:minmax(300px,360px) minmax(0,1fr)}}
+  @media(min-width:980px){#sec-lalkitab.lk-wide .lkv-main{grid-template-columns:minmax(320px,400px) minmax(0,1fr)}}
   #sec-lalkitab .lkv-main>#lkv-body{min-width:0}
+  /* बाएँ खाने के तीनों चित्र एक के नीचे एक; चित्र खाने की पूरी चौड़ाई लें ताकि
+     दोनों वर्ष-कुंडलियाँ एक ही नाप पर पढ़ी जाएँ। */
+  #sec-lalkitab .lkv-charts{display:flex;flex-direction:column;gap:12px;min-width:0}
+  #sec-lalkitab #lkv-chart, #sec-lalkitab #lkv-vedic, #sec-lalkitab #lkv-janam{width:100%}
+  /* फल का खाना अपने भीतर सरके — चित्र ऊपर टिके रहें। छोटी स्क्रीन पर यह बंधन
+     हटा दिया जाता है, वहाँ पूरा पन्ना ही एक धारा में पढ़ा जाता है। */
+  @media(min-width:980px){
+    #sec-lalkitab.lk-wide .lkv-main>#lkv-body{max-height:78vh;overflow-y:auto;padding-right:6px}
+    #sec-lalkitab.lk-wide .lkv-charts{position:sticky;top:8px}
+  }
 </style>
 
 <?php if (!$ok): ?>
@@ -2064,23 +2074,43 @@ function lkNativeGo(el) {
           नियम, भविष्यवाणी, उपाय व करें/न करें दिए गए हैं। आयु बदलकर किसी भी वर्ष की वर्ष-कुंडली देखें।
         </details>
 
-        <!-- main row: LEFT = annual (varsh) chart · RIGHT = prediction
-             (like the Vedic Varshaphal chart | prediction layout) -->
+        <?php /* ══════ बाएँ तीनों चित्र, दाएँ सिर्फ़ फल ══════
+             पहले बाएँ खाने में अकेली लाल किताब की वर्ष-कुंडली थी और वैदिक वर्ष-कुंडली
+             इस पन्ने पर थी ही नहीं — मिलाने के लिए हर बार वर्षफल का पन्ना अलग से
+             खोलना पड़ता था। अब दोनों वर्ष-कुंडलियाँ एक के नीचे एक हैं और **दोनों एक
+             ही वर्ष पर चलती हैं**: आयु बदलते ही दोनों नई बनती हैं।
+             दायाँ खाना अब सिर्फ़ फल का है और बाक़ी लाल किताब पन्नों की तरह अपने भीतर
+             सरकता (scroll) है — पहले वह साढ़े सात हज़ार पिक्सल लंबा खुला पड़ा रहता था,
+             इसलिए चित्र ऊपर छूट जाते और पढ़ने वाला उन्हें ढूँढ़ता रह जाता। */ ?>
         <div class="lkv-main">
-          <div class="lk-card" style="padding:8px;align-self:start">
-            <div class="lk-card-h" style="font-size:.85rem">वर्ष कुंडली (Aries-fixed) — आयु <span id="lkv-agelab"><?= $lkAge > 0 ? $lkAge : 1 ?></span> वर्ष</div>
-            <div id="lkv-chart" style="max-width:340px;margin:0 auto"></div>
-            <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">इस वर्ष प्रत्येक भाव में जन्म-कुंडली का जो भाव-फल सक्रिय है, ग्रह उसी अनुसार यहाँ स्थापित हैं।</div>
+          <div class="lkv-charts">
+            <div class="lk-card" style="padding:8px">
+              <div class="lk-card-h" style="font-size:.85rem">📕 लाल किताब वर्ष कुंडली (Aries-fixed) — आयु <span id="lkv-agelab"><?= $lkAge > 0 ? $lkAge : 1 ?></span> वर्ष</div>
+              <div id="lkv-chart"></div>
+              <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">इस वर्ष प्रत्येक भाव में जन्म-कुंडली का जो भाव-फल सक्रिय है, ग्रह उसी अनुसार यहाँ स्थापित हैं।</div>
+            </div>
+
+            <?php /* वैदिक वर्ष-कुंडली — उसी वर्ष की, मुंथा (MUN) सहित। यह वर्षफल की
+                     अपनी गणना है, यहाँ सिर्फ़ दिखाई जा रही है — लाल किताब का फल इससे
+                     नहीं बनता। */ ?>
+            <div class="lk-card" style="padding:8px">
+              <div class="lk-card-h" style="font-size:.85rem">🎯 वैदिक वर्ष कुंडली (Varshaphal) — <span id="lkv-vyear">…</span>
+                <span style="font-weight:400;color:#94a3b8;font-size:.74rem">मुंथा <b>MUN</b> से चिह्नित</span></div>
+              <div id="lkv-vedic"></div>
+              <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">
+                वर्षारंभ: <span id="lkv-vdate">—</span> · वर्षेश: <span id="lkv-vlord">—</span>
+                <span id="lkv-vstatus" style="color:#94a3b8"></span>
+              </div>
+            </div>
+
+            <div class="lk-card" style="padding:8px">
+              <div class="lk-card-h" style="font-size:.85rem">📕 लाल किताब जन्म कुंडली (Teva) — संदर्भ हेतु</div>
+              <div id="lkv-janam"></div>
+              <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">जन्म की स्थिर-मेष लाल किताब कुंडली — वर्ष-कुंडली से तुलना के लिए।</div>
+            </div>
           </div>
           <!-- server-rendered prediction/remedy/do-dont fragment -->
-          <div id="lkv-body"></div>
-        </div>
-
-        <!-- next row: the Lal Kitab (janam) teva chart — for reference, below -->
-        <div class="lk-card" style="padding:8px;margin-top:12px">
-          <div class="lk-card-h" style="font-size:.85rem">📕 लाल किताब जन्म कुंडली (Teva) — संदर्भ हेतु</div>
-          <div id="lkv-janam" style="max-width:340px;margin:0 auto"></div>
-          <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">जन्म की स्थिर-मेष लाल किताब कुंडली — वर्ष-कुंडली से तुलना के लिए।</div>
+          <div id="lkv-body" class="lk-scroll"></div>
         </div>
       </div>
 
