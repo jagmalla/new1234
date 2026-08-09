@@ -4158,7 +4158,9 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     (function () {
       var d1 = document.getElementById('lk-d1-side');
       if (d1 && !d1._done && window.ABChart && window.AB_VARGAS && window.AB_VARGAS.D1) {
-        try { window.ABChart.renderNorth(d1, window.AB_VARGAS.D1, { showDeg: true, fit: true }); d1._done = true; }
+        // टेवे जैसा ही नाप: चौड़ाई से बढ़े, ऊँचाई अपने-आप — big से अक्षर भी उसी
+        // आकार के, ताकि दोनों चित्र एक साथ पढ़े जा सकें।
+        try { window.ABChart.renderNorth(d1, window.AB_VARGAS.D1, { showDeg: true, big: true }); d1._done = true; }
         catch (e) { d1.innerHTML = '<div style="font-size:.8rem;color:#94a3b8">D1 चित्र उपलब्ध नहीं।</div>'; }
       }
       var vb = document.getElementById('lk-vim-btn');

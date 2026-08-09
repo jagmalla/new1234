@@ -249,6 +249,10 @@ $scorePill = static function (int $score): string {
      Vedic Varshaphal page instead of the narrow right prediction column. */
   #sec-lalkitab.lk-wide .lk-sec-grid{grid-template-columns:1fr}
   #sec-lalkitab.lk-wide #lk-teva-col{display:none}
+  /* टेवा-स्तंभ के पेंदे में साँस लेने की जगह — विंशोत्तरी बटन कार्ड की धार से
+     चिपका न रहे। */
+  #sec-lalkitab #lk-teva-col{padding-bottom:18px}
+  #sec-lalkitab #lk-vim-btn{margin-bottom:6px}
   /* Varsh inner layout: annual chart (left) + prediction (right), like Varshaphal. */
   #sec-lalkitab .lkv-main{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:6px}
   @media(min-width:980px){#sec-lalkitab.lk-wide .lkv-main{grid-template-columns:minmax(300px,360px) minmax(0,1fr)}}
@@ -320,13 +324,10 @@ function lkNativeGo(el) {
       <span class="font-semibold text-gray-800">लाल किताब कुंडली
         <span class="text-xs text-gray-400 font-normal">(स्थिर मेष लग्न — Lal Kitab Teva)</span></span>
     </div>
+    <?php /* टेवे के नीचे की पुरानी व्याख्या हटा दी गई — स्थिर भाव-स्वामियों की सूची
+             हर पन्ने पर दोहराने की चीज़ नहीं, और लग्न/चन्द्र राशि अब नीचे की असली
+             D1 कुंडली में सीधे दिखती है। जगह चित्र को मिली, शब्दों को नहीं। */ ?>
     <div id="lk-chart" class="w-full"></div>
-    <div class="lk-legend">
-      हर भाव का स्वामी स्थिर है — 1 मंगल, 2 शुक्र, 3 बुध, 4 चन्द्र, 5 सूर्य, 6 बुध,
-      7 शुक्र, 8 मंगल, 9 गुरु, 10 शनि, 11 शनि, 12 गुरु। ग्रह अपने जन्म-भाव के अनुसार बैठते हैं।<br>
-      <b>जन्म-लग्न:</b> <?= $h((string) $lk['lagna_hi']) ?> ·
-      <b>चन्द्र राशि:</b> <?= $h((string) $lk['moon_hi']) ?>
-    </div>
 
     <?php /* ══════ वैदिक D1 यहीं, टेवे के नीचे ══════
          लाल किताब का टेवा स्थिर मेष का है — उसमें राशि नहीं दिखती, सिर्फ़ भाव।
@@ -337,7 +338,9 @@ function lkNativeGo(el) {
     <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0">
       <div class="lk-card-h" style="font-size:.85rem;margin-bottom:4px">🌟 जन्म कुंडली (D1 — वैदिक)
         <span style="font-weight:400;font-size:.74rem;color:#94a3b8">संदर्भ हेतु — मिलान के लिए</span></div>
-      <div id="lk-d1-side" style="max-width:340px;margin:0 auto"></div>
+      <?php /* चौड़ाई टेवे जितनी — दोनों चित्र एक ही नाप पर पढ़े जाएँ, तभी आँख उन्हें
+               आमने-सामने रख पाती है। छोटा D1 मिलान का काम नहीं देता। */ ?>
+      <div id="lk-d1-side" class="w-full"></div>
       <div class="lk-legend" style="margin-top:5px">
         लाल किताब टेवे में लग्न सदा मेष है, इसलिए राशि वहाँ नहीं दिखती। असली राशि-स्थिति यहाँ देखें।
       </div>

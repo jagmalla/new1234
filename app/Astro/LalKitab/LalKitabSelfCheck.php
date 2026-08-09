@@ -703,6 +703,19 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // टेवे के नीचे की स्थिर भाव-स्वामी सूची हटाई गई — वह हर पन्ने पर दोहराने की
+        // चीज़ नहीं थी, और उसकी जगह अब D1 चित्र को मिली है। D1 टेवे जितना चौड़ा हो,
+        // वरना दोनों चित्र आमने-सामने पढ़े नहीं जाते।
+        $add('D1-2', 'टेवे की पुरानी भाव-स्वामी सूची हटी, D1 पूरी चौड़ाई में', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'हर भाव का स्वामी स्थिर है') !== false) { return false; }
+                if (mb_strpos($h, '<div id="lk-d1-side" class="w-full">') === false) { return false; }
+                // राशि की जानकारी कहीं और से भी मिलती रहे — छपने वाली रिपोर्ट में
+                if (mb_strpos($h, 'चन्द्र राशि') === false) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;
