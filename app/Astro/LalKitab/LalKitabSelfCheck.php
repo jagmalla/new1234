@@ -551,6 +551,26 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // दशा-सूची जन्म से शुरू हो, और खुली सिर्फ़ चालू दशा मिले। बीता हुआ जीवन ही
+        // वह हिस्सा है जिससे ज्योतिषी मिलान करता है — उसके बिना बाक़ी फल पर भरोसा
+        // बनने का कोई रास्ता नहीं। पर सब खोलकर रख देना पन्ने को फिर से ढेर बना देता।
+        $add('TM-3', 'दशा-सूची जन्म से है और खुली सिर्फ़ चालू दशा', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="agecycle">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="ayu">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                $rows = substr_count($seg, '<details class="lk-dasha-row"');
+                $open = substr_count($seg, '<details class="lk-dasha-row" open');
+                // एक पूरे चक्र में नौ दौर। जवान जातक की सूची छोटी होती है (आगे का
+                // दायरा आयु+36 तक है), इसलिए कसौटी एक पूरा चक्र है, दो नहीं।
+                if ($rows < 9 || $open !== 1) { return false; }
+                if (mb_strpos($seg, 'चक्र 1 — आयु 1–35') === false) { return false; }
+                if (mb_strpos($seg, 'मिलान के लिए') === false) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

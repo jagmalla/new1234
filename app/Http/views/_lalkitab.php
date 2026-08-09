@@ -186,6 +186,13 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab .lk-mode.active{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,.12)}
   #sec-lalkitab .lk-mode.active span{color:#64748b}
   #sec-lalkitab.lk-simple #lk-detail-bar{display:none}
+  /* जन्म से आगे तक की दशा-सूची — हर दौर एक + पंक्ति; खुला सिर्फ़ चालू दौर। */
+  #sec-lalkitab .lk-dasha-row > summary::-webkit-details-marker{display:none}
+  #sec-lalkitab .lk-dasha-row > summary:hover{background:rgba(0,0,0,.03)}
+  #sec-lalkitab .lk-dasha-row[open] > summary .lk-dasha-plus{color:#b45309}
+  #sec-lalkitab .lk-dasha-row[open] > summary .lk-dasha-plus::after{content:'−'}
+  #sec-lalkitab .lk-dasha-row:not([open]) > summary .lk-dasha-plus::after{content:'+'}
+  #sec-lalkitab .lk-dasha-row .lk-dasha-plus{font-size:1rem;line-height:1}
   #sec-lalkitab .lk-view{display:none}
   #sec-lalkitab .lk-view.active{display:block}
   #sec-lalkitab .lk-scroll{max-height:74vh;overflow-y:auto;padding-right:6px}
@@ -1694,43 +1701,73 @@ function lkNativeGo(el) {
           </div>
         <?php endif; ?>
 
-        <!-- ==== वर्तमान 35-वर्षीय चक्र ==== -->
-        <h3 class="lk-h" style="font-size:.9rem;margin-top:12px">🎡 वर्तमान 35-वर्षीय चक्र — पूरा पहिया</h3>
-        <div class="lk-txt" style="margin-bottom:7px;color:#64748b">क्रम स्थिर है: शनि → राहु → केतु → गुरु → सूर्य → चन्द्र → शुक्र → मंगल → बुध (6·6·3·6·2·1·3·6·2 = 35 वर्ष)</div>
-        <?php foreach (($AC['dasha_cycle'] ?? []) as $pd): $pc = $tcol($pd['tone']); ?>
-          <div style="margin-bottom:8px;background:<?= $tbg($pd['tone']) ?>;border:1px solid;border-radius:8px;padding:7px 10px<?= $pd['active'] ? ';box-shadow:0 0 0 2px #f59e0b' : '' ?>">
-            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <!-- ==== जन्म से आगे तक — हर दौर, खोलकर पढ़ने योग्य ==== -->
+        <?php /* ══════ जन्म से, न कि सिर्फ़ चालू चक्र से ══════
+             पहले यहाँ सिर्फ़ वही 35-साला चक्र दिखता था जिसमें जातक अभी है — यानी
+             बीता हुआ जीवन पन्ने पर था ही नहीं। पर ज्योतिषी सबसे पहले वही मिलाता है:
+             "उन सालों में यह हुआ था न?" — और वही मिलान बाक़ी फल का भरोसा बनाता है।
+             अब जन्म (आयु 0) से आगे तक हर दौर है, पर सब खुला हुआ नहीं: हर दौर एक
+             + पंक्ति है, और खुला सिर्फ़ चालू दौर मिलता है। पूरा ब्योरा तभी आता है
+             जब पढ़ने वाला ख़ुद माँगे। */ ?>
+        <h3 class="lk-h" style="font-size:.9rem;margin-top:12px">🗓 जन्म से आगे तक — हर दशा</h3>
+        <div class="lk-txt" style="margin-bottom:7px;color:#64748b">
+          क्रम स्थिर है: शनि → राहु → केतु → गुरु → सूर्य → चन्द्र → शुक्र → मंगल → बुध
+          (6·6·3·6·2·1·3·6·2 = 35 वर्ष), और यही 35-35 वर्ष पर दोहराता है।
+          <b>+</b> दबाकर किसी भी दौर का पूरा फल व उपाय खोलें; चालू दौर पहले से खुला है।
+        </div>
+        <?php $lastCycle = null; foreach (($AC['dasha_all'] ?? []) as $pd):
+              $pc = $tcol($pd['tone']); $wn = (string) ($pd['when'] ?? '');
+              $cyc = (int) ($pd['cycle'] ?? 0); ?>
+          <?php if ($cyc !== $lastCycle): $lastCycle = $cyc; ?>
+            <div style="margin:10px 0 5px;font-size:.78rem;font-weight:800;color:#475569;border-bottom:1px solid #e2e8f0;padding-bottom:3px">
+              चक्र <?= $cyc ?> — आयु <?= ($cyc - 1) * 35 + 1 ?>–<?= $cyc * 35 ?>
+            </div>
+          <?php endif; ?>
+          <details class="lk-dasha-row" <?= $pd['active'] ? 'open' : '' ?>
+                   style="margin-bottom:6px;background:<?= $tbg($pd['tone']) ?>;border:1px solid;border-radius:8px<?= $pd['active'] ? ';box-shadow:0 0 0 2px #f59e0b' : '' ?>">
+            <summary style="cursor:pointer;padding:7px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;list-style:none">
+              <span class="lk-dasha-plus" aria-hidden="true" style="width:14px;font-weight:800;color:#64748b"></span>
               <span style="width:9px;height:9px;border-radius:50%;background:<?= $pc ?>"></span>
-              <b style="font-size:.88rem;color:<?= $pc ?>"><?= $h((string) $pd['hi']) ?> दशा</b>
+              <b style="font-size:.86rem;color:<?= $pc ?>"><?= $h((string) $pd['hi']) ?> दशा</b>
               <span class="lk-pill" style="background:#fff;border:1px solid #e2e8f0;color:#334155">आयु <?= (int) $pd['from'] ?>–<?= (int) $pd['to'] ?> (<?= (int) $pd['years'] ?> वर्ष)</span>
               <?php if (!empty($pd['from_year'])): ?>
                 <span class="lk-pill" style="background:#fff;border:1px solid #c7d2fe;color:#3730a3">सन् <?= (int) $pd['from_year'] ?>–<?= (int) $pd['to_year'] ?></span>
               <?php endif; ?>
-              <?php $wn = (string) ($pd['when'] ?? ''); if ($wn === 'बीता'): ?>
-                <span class="lk-pill" style="background:#f1f5f9;color:#64748b">बीत चुका</span>
-              <?php elseif ($wn === 'आगे'): ?>
-                <span class="lk-pill" style="background:#eff6ff;color:#1e40af">आगे</span>
-              <?php endif; ?>
               <?php if ($pd['house_ord'] !== ''): ?><span class="lk-pill" style="background:#fff;border:1px solid #e2e8f0;color:#475569"><?= $h((string) $pd['house_ord']) ?> भाव</span><?php endif; ?>
               <span class="lk-pill" style="<?= $pd['verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($pd['verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $pd['verdict']) ?></span>
               <?php if (!empty($pd['asleep'])): ?><span class="lk-pill" style="background:#f1f5f9;color:#64748b">😴 सुप्त</span><?php endif; ?>
-              <?php if ($pd['active']): ?><span class="lk-pill" style="background:#fde68a;color:#92400e">▶ अभी</span><?php endif; ?>
+              <?php if ($pd['active']): ?><span class="lk-pill" style="background:#fde68a;color:#92400e">▶ अभी</span>
+              <?php elseif ($wn === 'बीता'): ?><span class="lk-pill" style="background:#f1f5f9;color:#64748b">बीत चुका</span>
+              <?php elseif ($wn === 'आगे'): ?><span class="lk-pill" style="background:#eff6ff;color:#1e40af">आगे</span><?php endif; ?>
+            </summary>
+            <div style="padding:0 10px 9px">
+              <?php /* बीते दौर पर यही पाठ भविष्यवाणी की तरह नहीं पढ़ा जाना चाहिए —
+                       वहाँ इसका काम **मिलान** है: "उन सालों में ऐसा हुआ था?" वही
+                       मिलान बाक़ी फल का भरोसा बनाता है, और जन्म से सूची दिखाने की
+                       असली वजह भी यही है। */ ?>
+              <?php if ($wn === 'बीता'): ?>
+                <div style="font-size:.78rem;color:#475569;margin-bottom:2px">
+                  🔎 <b>मिलान के लिए</b> — उन वर्षों में इस ग्रह के मामले कैसे रहे, यह जातक से पूछकर मिलाएँ:
+                </div>
+              <?php endif; ?>
+              <div class="lk-txt" style="line-height:1.55">📖 <?= $h((string) $pd['pred']) ?></div>
+              <?php if (trim((string) $pd['do']) !== '' || trim((string) $pd['dont']) !== ''): ?>
+                <div style="margin-top:4px;font-size:.8rem;line-height:1.55">
+                  <?php if (trim((string) $pd['do']) !== ''): ?><span style="color:#166534;font-weight:700">✅ करें:</span> <?= $h((string) $pd['do']) ?><?php endif; ?>
+                  <?php if (trim((string) $pd['dont']) !== ''): ?><br><span style="color:#991b1b;font-weight:700">⛔ न करें:</span> <?= $h((string) $pd['dont']) ?><?php endif; ?>
+                </div>
+              <?php endif; ?>
+              <?php if (!empty($pd['remedies'])):
+                    $note = $wn === 'आगे' ? ' (उसी दौर के लिए — अभी शुरू न करें)'
+                          : ($wn === 'बीता' ? ' (यह दौर बीत चुका — अब करने की बात नहीं)' : '');
+                    $dim  = $note !== ''; ?>
+                <div style="margin-top:5px;background:<?= $dim ? '#f8fafc' : '#fffbeb' ?>;border:1px solid <?= $dim ? '#e2e8f0' : '#fde68a' ?>;border-radius:6px;padding:4px 8px;font-size:.78rem;line-height:1.5">
+                  <span style="color:<?= $dim ? '#64748b' : '#92400e' ?>;font-weight:700">🪔 उपाय<?= $note ?>:</span>
+                  <?= $h(implode(' · ', $pd['remedies'])) ?>
+                </div>
+              <?php endif; ?>
             </div>
-            <div class="lk-txt" style="margin-top:4px;line-height:1.55">📖 <?= $h((string) $pd['pred']) ?></div>
-            <?php /* आगे वाले दौर का उपाय आज शुरू करना उस अनुशासन के ख़िलाफ़ है जिस पर
-                     निचोड़ टिका है (एक बार में एक-दो उपाय)। इसलिए उसे साफ़ "उस समय के
-                     लिए" कहकर दिया जाता है, आज के काम की तरह नहीं। */ ?>
-            <?php if (!empty($pd['remedies'])):
-                  $wn2 = (string) ($pd['when'] ?? '');
-                  $note = $wn2 === 'आगे' ? ' (उसी दौर के लिए — अभी शुरू न करें)'
-                        : ($wn2 === 'बीता' ? ' (यह दौर बीत चुका — अब करने की बात नहीं)' : '');
-                  $dim  = $note !== ''; ?>
-              <div style="margin-top:5px;background:<?= $dim ? '#f8fafc' : '#fffbeb' ?>;border:1px solid <?= $dim ? '#e2e8f0' : '#fde68a' ?>;border-radius:6px;padding:4px 8px;font-size:.78rem;line-height:1.5">
-                <span style="color:<?= $dim ? '#64748b' : '#92400e' ?>;font-weight:700">🪔 उपाय<?= $note ?>:</span>
-                <?= $h(implode(' · ', $pd['remedies'])) ?>
-              </div>
-            <?php endif; ?>
-          </div>
+          </details>
         <?php endforeach; ?>
 
         <!-- ==== अवस्था — कुण्डली के 4 टाइम-ज़ोन ==== -->

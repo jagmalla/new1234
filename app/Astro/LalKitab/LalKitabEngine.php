@@ -1327,6 +1327,7 @@ final class LalKitabEngine
         $dashaNow = null;
         $dashaCycle = [];
         $dashaAhead = [];
+        $dashaAll = [];
         if ($age !== null) {
             $cur = LalKitabDasha::at($age);
             $dashaNow = $dashaRow($cur + ['active' => true]);
@@ -1338,6 +1339,14 @@ final class LalKitabEngine
             }
             foreach (LalKitabDasha::timeline($age, $age + 30, $age) as $t) {
                 $dashaAhead[] = $dashaRow($t);
+            }
+            // जन्म से आगे तक की पूरी सूची। पहले सिर्फ़ वही 35-साला चक्र दिखता था
+            // जिसमें जातक अभी है — यानी बीता हुआ जीवन पन्ने पर था ही नहीं, जबकि
+            // ज्योतिषी सबसे पहले वही मिलाता है ("उस साल यह हुआ था न?")। पिछला
+            // मिलान ही बाक़ी फल का भरोसा बनाता है।
+            $capAge = min(105, max($age + 36, 36));
+            foreach (LalKitabDasha::timeline(0, $capAge, $age) as $t) {
+                $dashaAll[] = $dashaRow($t);
             }
         }
 
@@ -1431,6 +1440,7 @@ final class LalKitabEngine
             'dasha_now' => $dashaNow,       // currently running 35-yr-cycle period
             'dasha_cycle' => $dashaCycle,   // the whole 35-year wheel the native is in
             'dasha_ahead' => $dashaAhead,   // upcoming periods (this age → +30 yrs)
+            'dasha_all' => $dashaAll,       // जन्म (आयु 0) से आगे तक — हर दौर
             'cycle_len' => LalKitabDasha::CYCLE,
             'stages' => $stages,            // 4 avastha time-zones (+ peak / empty)
             'peak' => $peak,
