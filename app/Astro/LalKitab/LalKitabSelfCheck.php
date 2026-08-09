@@ -432,6 +432,37 @@ final class LalKitabSelfCheck
                 return true;
             });
 
+        // योग-पन्ना पूरी पुस्तक-सूची रखता है, पर डिफ़ॉल्ट रूप से सिर्फ़ लागू सूत्र
+        // दिखने चाहिए — और चेक हटाने पर चेतावनी। बिना इसके पढ़ने वाला उन सैकड़ों
+        // सूत्रों का फल अपने ऊपर पढ़ लेता है जो उसकी कुंडली की बात ही नहीं।
+        $add('YG-1', 'योग-पन्ना डिफ़ॉल्ट रूप से सिर्फ़ लागू सूत्र दिखाता है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (!preg_match('/class="lk-onlyapp" data-scope="yoga" checked/u', $h)) { return false; }
+                if (mb_strpos($h, 'सूत्रों में से इस कुंडली पर') === false) { return false; }
+                if (mb_strpos($h, 'lk-yoga-allwarn') === false) { return false; }
+            }
+            return true;
+        });
+
+        // दृष्टि-पन्ना: जो सचमुच लग रहा है वह पहले, और टक्करें क़िस्म के हिसाब से
+        // गिनती के साथ — क्योंकि वे औसतन हर कुंडली में पंद्रह बार बनती हैं।
+        $add('DR-1', 'दृष्टि-पन्ना जीवित संबंध पहले दिखाता है और टक्करें समूह में', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="drishti">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="remedy">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                if (mb_strpos($seg, 'असल में क्या लग रहा है') === false) { return false; }
+                if (mb_strpos($seg, 'विशेष टक्करें') !== false) {
+                    // गिनती व "असामान्य नहीं" वाली सच्चाई साथ होनी चाहिए
+                    if (mb_strpos($seg, 'यह असामान्य नहीं है') === false) { return false; }
+                    // और उपाय क़िस्म पर एक बार, हर जगह दोहराया हुआ नहीं
+                    if (substr_count($seg, 'सब जगहों पर यही') < 1) { return false; }
+                }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

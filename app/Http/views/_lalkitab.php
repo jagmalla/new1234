@@ -1274,9 +1274,35 @@ function lkNativeGo(el) {
         <?php endif; ?>
 
         <h3 class="lk-h">योग — भविष्यवाणी सूत्र</h3>
+        <?php /* ══════ पूरी किताब बनाम आपकी कुंडली ══════
+             यहाँ पुस्तक के सारे सूत्र मौजूद हैं, पर लागू सिर्फ़ मुट्ठी भर होते हैं।
+             चेक हटाते ही बाक़ी सैकड़ों सूत्र भी खुल जाते हैं — और उनमें ऐसी पंक्तियाँ
+             हैं जो किसी की भी आँख में पड़ें तो डरा दें ("मंगल को विष देगा",
+             "भाई-भतीजे को मरवा देगा")। वे इस कुंडली की बात नहीं हैं, संदर्भ हैं।
+             इसलिए गिनती ऊपर लिखी जाती है, और चेक हटाने पर चेतावनी दिखती है। */ ?>
+        <?php $yApp = 0; $yTot = 0; $yBad = [];
+              foreach ((array) ($lk['yoga'] ?? []) as $Yc) { $yTot++;
+                  if (!empty($Yc['applicable'])) { $yApp++;
+                      if (($Yc['tone'] ?? '') === 'neg') { $yBad[] = (string) ($Yc['sthiti'] ?? $Yc['name'] ?? ''); } } } ?>
+        <div class="lk-card" style="border-color:#c7d2fe;background:#eef2ff">
+          <div class="lk-card-h" style="color:#3730a3">📘 पुस्तक के <?= (int) $yTot ?> सूत्रों में से इस कुंडली पर <?= (int) $yApp ?> लागू</div>
+          <div class="lk-txt" style="color:#3730a3">
+            <?php if ($yApp === 0): ?>
+              इस कुंडली पर कोई नामी सूत्र नहीं बैठता — यह अपने-आप में ठीक बात है।
+            <?php else: ?>
+              नीचे सिर्फ़ वही <?= (int) $yApp ?> दिख रहे हैं।
+              <?php if ($yBad !== []): ?>इनमें <b><?= count($yBad) ?></b> सावधानी वाले हैं।<?php endif; ?>
+              बाक़ी <?= (int) max(0, $yTot - $yApp) ?> सूत्र आपकी कुंडली की बात नहीं हैं।
+            <?php endif; ?>
+          </div>
+        </div>
         <div class="lk-flt">
           <label><input type="checkbox" class="lk-onlyapp" data-scope="yoga" checked> केवल लागू योग दिखाएँ</label>
-          <span style="color:#94a3b8">(सभी सूत्र देखने हेतु चेक हटाएँ)</span>
+          <span style="color:#94a3b8">(चेक हटाने पर पूरी पुस्तक-सूची खुलती है — संदर्भ हेतु)</span>
+        </div>
+        <div class="lk-note" id="lk-yoga-allwarn" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:8px 11px;margin-bottom:8px;color:#7f1d1d">
+          <b>ध्यान दें —</b> अब पूरी पुस्तक-सूची खुली है। जिन पर <b>लागू</b> का ठप्पा नहीं है,
+          वे <b>इस कुंडली पर लागू नहीं होते</b> — उनका फल यहाँ नहीं पढ़ा जाता। वे केवल संदर्भ के लिए हैं।
         </div>
         <?php foreach ($lk['yoga'] as $Y):
             // Card colour follows the RESULT (शुभ/अशुभ), not mere applicability;
@@ -1988,16 +2014,132 @@ function lkNativeGo(el) {
           4→10 · 5→9 · 6→12। भाव 7–12 आगे किसी को नहीं देखते। एकमात्र अपवाद भाव 8 की <b>उल्टी टक्कर</b> 8→2।
           साथ ही हर ग्रह अपने से <b>आठवें</b> भाव के ग्रह को टक्कर मारकर खराब करता है।
         </div>
-        <?php foreach ($lk['drishti'] as $d):
-            $fmtH = static function (array $hs) use ($h) { return $hs ? $h(implode(', ', array_map('strval',$hs))) . ' भाव' : '—'; }; ?>
-          <div class="lk-card">
+        <?php /* ══════ जो सचमुच लग रही है, वही पहले ══════
+             यह पन्ना पहले बारहों भाव की मशीनी सूची था, और उसमें ज़्यादातर पंक्तियाँ
+             *अभाव* की थीं — "देखता है: —" और "वहाँ कोई ग्रह नहीं"। खाली पंक्तियों
+             के बीच वह एक टक्कर दब जाती थी जो सचमुच लग रही है। अब जीवित संबंध ऊपर,
+             अर्थ के साथ; और जिन भावों में कुछ हो ही नहीं रहा, वे एक पंक्ति में
+             समेट दिए जाते हैं। */ ?>
+        <?php
+          $live = []; $quiet = [];
+          foreach ((array) ($lk['drishti'] ?? []) as $d) {
+              $seesP  = (array) ($d['drishti_p'] ?? []);
+              $hitsP  = (array) ($d['takkar_p'] ?? []);
+              if ($seesP === [] && $hitsP === []) { $quiet[] = $d; continue; }
+              $live[] = $d;
+          }
+          // मारने वाले पहले — टक्कर दृष्टि से भारी है
+          usort($live, static fn ($a, $b) => (empty($b['takkar_p']) ? 0 : 1) <=> (empty($a['takkar_p']) ? 0 : 1));
+          $coll = (array) ($lk['collisions'] ?? []);
+        ?>
+        <div class="lk-card" style="border-color:#c7d2fe;background:#eef2ff">
+          <div class="lk-card-h" style="color:#3730a3">🎯 इस कुंडली में असल में क्या लग रहा है</div>
+          <div class="lk-txt" style="color:#3730a3">
+            <b><?= count($live) ?></b> भाव सचमुच किसी को देख या मार रहे हैं;
+            <b><?= count($quiet) ?></b> भावों से कुछ नहीं जा रहा।
+            <?php if ($coll !== []): ?>साथ ही <b><?= count($coll) ?></b> विशेष टक्करें बनी हुई हैं — नीचे देखें।<?php endif; ?>
+            <?php if ($live === [] && $coll === []): ?>यानी ग्रह एक-दूसरे को छेड़ नहीं रहे — यह अपने-आप में अच्छी ख़बर है।<?php endif; ?>
+          </div>
+        </div>
+
+        <?php foreach ($live as $d): ?>
+          <div class="lk-card<?= !empty($d['takkar_p']) ? ' bad' : '' ?>">
             <div class="lk-card-h"><?= $h((string) $d['house_ord']) ?> भाव — <?= $h(implode(', ', $d['planets_hi'])) ?></div>
-            <div class="lk-sub"><b>👁 दृष्टि (देखता है):</b>
-              <?php if (!empty($d['drishti'])): $bits=[]; foreach($d['drishti_pct'] as $th=>$pc){$bits[]=$th.' भाव ('.$pc.'%)';} echo $h(implode(' · ',$bits)); ?><?= $d['drishti_p'] ? ' → ' . $h(implode(', ', $d['drishti_p'])) : '' ?><?php else: ?>—<?php endif; ?>
-            </div>
-            <div class="lk-sub" style="color:#991b1b"><b>⚔ टक्कर (आठवें को मारता है):</b> <?= $fmtH($d['takkar']) ?><?= !empty($d['takkar_p']) ? ' → ' . $h(implode(', ', $d['takkar_p'])) . ' — यह ग्रह खराब होगा' : ' (वहाँ कोई ग्रह नहीं)' ?></div>
+            <?php if (!empty($d['drishti_p'])): $bits = []; foreach ((array) $d['drishti_pct'] as $th => $pc) { $bits[] = $th . ' भाव (' . $pc . '%)'; } ?>
+              <div class="lk-sub"><b>👁 देखता है:</b> <?= $h(implode(' · ', $bits)) ?> → <b><?= $h(implode(', ', $d['drishti_p'])) ?></b>
+                <div style="font-size:.82rem;color:#475569">असर दूर से पड़ता है — सीधा नहीं, पर लगातार।</div>
+              </div>
+            <?php endif; ?>
+            <?php if (!empty($d['takkar_p'])): ?>
+              <div class="lk-sub" style="color:#991b1b"><b>⚔ टक्कर मारता है:</b>
+                <?= $h(implode(', ', array_map('strval', (array) $d['takkar']))) ?> भाव → <b><?= $h(implode(', ', $d['takkar_p'])) ?></b>
+                <div style="font-size:.82rem">यही वह ग्रह है जो इससे बिगड़ता है — इसके मामलों में बार-बार अड़चन इसी चोट से आती है।
+                  उपाय <b><?= $h(implode(', ', $d['planets_hi'])) ?></b> पर जाता है, मार खाने वाले पर नहीं।</div>
+              </div>
+            <?php endif; ?>
           </div>
         <?php endforeach; ?>
+
+        <?php if ($quiet !== []): ?>
+          <div class="lk-card" style="background:#f8fafc">
+            <div class="lk-sub" style="color:#64748b"><b>इनसे कुछ नहीं जा रहा:</b>
+              <?php $qb = []; foreach ($quiet as $q) { $qb[] = $q['house_ord'] . ' भाव (' . implode(', ', $q['planets_hi']) . ')'; } ?>
+              <?= $h(implode(' · ', $qb)) ?>
+              — भाव 7–12 आगे किसी को नहीं देखते, और इनकी टक्कर जिस भाव पर पड़ती है वह ख़ाली है।
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <?php /* तीन टक्करें इसी पन्ने की चीज़ हैं — पन्ने का नाम ही "दृष्टि व टक्कर"
+                 है — पर अब तक ये यहाँ आती ही नहीं थीं। */ ?>
+        <?php /* ══════ टक्करें क़िस्म के हिसाब से, गिनती के साथ ══════
+             पहले हर टक्कर का अपना पूरा कार्ड बनता था — एक ही कुंडली पर सत्रह कार्ड,
+             और हर कार्ड में वही फल और वही उपाय दोहराया हुआ, क्योंकि पाठ क़िस्म का
+             है, जगह का नहीं।
+             3000 बेतरतीब कुंडलियों पर नापा: **औसतन 14.7 विशेष टक्करें प्रति
+             कुंडली**, और सिर्फ़ 0.1% कुंडलियों में एक भी नहीं। यानी "विश्वासघात की
+             आशंका" हर किसी की कुंडली में पाँच बार बनती है। जो चेतावनी सब पर लगे,
+             वह चेतावनी नहीं रह जाती — इसलिए यहाँ पहले सच लिखा जाता है कि यह कितनी
+             आम है, फिर क़िस्म के हिसाब से एक बार फल-उपाय, और नीचे वे जगहें जहाँ यह
+             बनी है। जिन पर सचमुच ध्यान देना है (चालू दशा का ग्रह, या निचोड़ में
+             आया ग्रह) वे ऊपर अलग से दिखाए जाते हैं। */ ?>
+        <?php if ($coll !== []): ?>
+          <?php
+            $byKind = [];
+            foreach ($coll as $c) { $byKind[(string) $c['kind']][] = $c; }
+            // कौन-से निशाने सचमुच मायने रखते हैं
+            $dashaHi = (string) (($lk['active']['dasha']['hi']) ?? '');
+            $corePl  = [];
+            foreach ((array) (($lk['process']['core_points']) ?? []) as $cp) {
+                if (trim((string) ($cp['planet'] ?? '')) !== '') { $corePl[] = (string) $cp['planet']; }
+            }
+            $matters = [];
+            foreach ($coll as $c) {
+                foreach ((array) $c['target_hi'] as $tg) {
+                    if ($tg === $dashaHi || in_array($tg, $corePl, true)) {
+                        $matters[$tg][] = (string) $c['kind'];
+                    }
+                }
+            }
+          ?>
+          <h3 class="lk-h" style="margin-top:14px">⚠️ विशेष टक्करें (विश्वासघात · साझी · अचानक)</h3>
+          <div class="lk-card" style="border-color:#fde68a;background:#fffbeb">
+            <div class="lk-txt" style="color:#78350f">
+              इस कुंडली में <b><?= count($coll) ?></b> जगह ये टक्करें बनती हैं।
+              <b>यह असामान्य नहीं है</b> — लाल किताब की गणना में ये प्रायः हर कुंडली में
+              दस से पंद्रह बार बनती हैं (औसत लगभग 15)। इसलिए इन्हें गिनकर न घबराएँ;
+              देखने लायक़ वही हैं जो उस ग्रह पर पड़ रही हैं जो अभी चल रहा है या जिसका
+              नाम निचोड़ में आया है।
+              <?php if ($matters !== []): ?>
+                <div style="margin-top:5px;color:#991b1b"><b>👉 ध्यान देने लायक़:</b>
+                  <?php $mb = []; foreach ($matters as $tg => $ks) { $mb[] = $tg . ' (' . implode(', ', array_unique($ks)) . ')'; } ?>
+                  <?= $h(implode(' · ', $mb)) ?>
+                </div>
+              <?php else: ?>
+                <div style="margin-top:5px;color:#166534">👉 इनमें से कोई भी उस ग्रह पर नहीं पड़ रही जो अभी चल रहा है या निचोड़ में आया है।</div>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php foreach ($byKind as $kindName => $list): $c0 = $list[0]; ?>
+            <div class="lk-card bad">
+              <div class="lk-card-h" style="color:#991b1b"><?= $h((string) $kindName) ?>
+                <span class="lk-pill" style="background:#fee2e2;color:#991b1b"><?= count($list) ?> जगह</span></div>
+              <?php if (trim((string) $c0['phal']) !== ''): ?>
+                <div class="lk-txt" style="margin-top:2px"><b>📢 फल:</b> <?= $h((string) $c0['phal']) ?></div>
+              <?php endif; ?>
+              <div class="lk-sub" style="margin-top:4px"><b>कहाँ-कहाँ बनी है:</b></div>
+              <?php foreach ($list as $c): $hot = false;
+                    foreach ((array) $c['target_hi'] as $tg) { if (isset($matters[$tg])) { $hot = true; } } ?>
+                <div class="lk-txt" style="font-size:.82rem;padding-left:10px;border-left:3px solid <?= $hot ? '#991b1b' : '#e2e8f0' ?>;margin:2px 0">
+                  <?= $hot ? '👉 ' : '' ?><b><?= $h(implode(', ', (array) $c['target_hi'])) ?></b>
+                  (<?= $h((string) $c['house_ord']) ?> भाव) ← <?= $h(implode(' · ', (array) $c['from_hi'])) ?>
+                </div>
+              <?php endforeach; ?>
+              <?php /* उपाय क़िस्म का है, जगह का नहीं — इसलिए एक बार। */ ?>
+              <?php if (!empty($c0['upay'])): ?><?= $remBlock((array) $c0['upay'], (string) $kindName . ' — उपाय (सब जगहों पर यही)') ?><?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
 
       <!-- ===== REMEDY ===== -->

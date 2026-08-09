@@ -4083,6 +4083,16 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     document.querySelectorAll('#sec-lalkitab .lk-onlybad, #sec-lalkitab .lk-onlyapp').forEach(function (chk) {
       chk.addEventListener('change', applyLkFilters);
     });
+    // पूरी पुस्तक-सूची खोलते ही चेतावनी — उसमें सैकड़ों सूत्र हैं जो इस कुंडली पर
+    // लागू नहीं होते, और उनमें से कई अपने-आप में डरावने हैं।
+    (function () {
+      var yc = document.querySelector('#sec-lalkitab .lk-onlyapp[data-scope="yoga"]');
+      var yw = document.getElementById('lk-yoga-allwarn');
+      if (!yc || !yw) { return; }
+      var sync = function () { yw.style.display = yc.checked ? 'none' : ''; };
+      yc.addEventListener('change', sync);
+      sync();
+    })();
 
     // ---- Print (पूर्ण रिपोर्ट + उपाय checklist): shared print window helper.
     var pr = document.getElementById('lk-print-report');
