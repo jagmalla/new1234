@@ -59,6 +59,24 @@ final class LalKitabSelfCheck
             $pages[$d] = $html;
         }
 
+        // ── मिलान के पन्ने ──
+        // तीन अलग जोड़े, ताकि यह भी परखा जा सके कि मिलान भेद करता है या सब पर
+        // एक ही दर्जा छापता है। (पुराना मिलान 80 में से एक भी जोड़े को "शुभ"
+        // नहीं कह पाता था — और कोई जाँच उसे पकड़ नहीं रही थी, क्योंकि हर जाँच
+        // एक ही पन्ना देखती थी।)
+        $couples = [
+            'A' => ['01-12-1980', '12:31', '15-08-1985', '09:20'],
+            'B' => ['07-07-2001', '14:45', '26-01-1998', '05:10'],
+            'C' => ['20-03-1962', '18:20', '11-11-1966', '21:40'],
+        ];
+        $milan = [];
+        foreach ($couples as $ck => [$bd, $bt, $gd, $gt]) {
+            $url = $base . '/milan?boy_date=' . rawurlencode($bd) . '&boy_time=' . rawurlencode($bt)
+                . '&girl_date=' . rawurlencode($gd) . '&girl_time=' . rawurlencode($gt);
+            $html = self::fetch($url);
+            if ($html !== null) { $milan[$ck] = self::lkmBlock($html); }
+        }
+
         $rows = [];
         $add = static function (string $id, string $what, callable $fn) use (&$rows): void {
             try { $ok = (bool) $fn(); } catch (\Throwable $e) { $ok = false; $what .= ' [' . $e->getMessage() . ']'; }
@@ -716,6 +734,84 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // ───────────────────── लाल किताब मिलान ─────────────────────
+        // ये पाँच जाँचें उन्हीं पाँच चूकों की रखवाली करती हैं जो मिलान में मिलीं:
+        // निष्क्रिय ग्रह का "शुभ" छपना, नकली प्रतिशत, दूसरी कुंडली वाले परिहार का
+        // कभी न जाँचा जाना, बिना दिशा के ढेर-सारे उपाय, और हर जोड़े पर एक ही दर्जा।
+
+        $add('MM-1', 'मिलान में निष्क्रिय ग्रह "शुभ" नहीं छपता', static function () use ($milan): bool {
+            if ($milan === []) { return false; }
+            foreach ($milan as $b) {
+                // तालिका में सोया ग्रह अपने नाम से दिखे
+                if (mb_strpos($b, 'निष्क्रिय (सोया)') === false) { return false; }
+                // और उसे हरा (शुभ) रंग कभी न मिले — पुराना कोड इसी तरह हर तीसरे
+                // ख़ाने में सोए ग्रह को "शुभ" छाप रहा था
+                if (preg_match('/<span class="st-good">[^<]*निष्क्रिय/u', $b)) { return false; }
+            }
+            return true;
+        });
+
+        $add('MM-2', 'मिलान अंक/प्रतिशत नहीं, निर्दोष बिंदुओं की गिनती दिखाता है', static function () use ($milan): bool {
+            if ($milan === []) { return false; }
+            foreach ($milan as $b) {
+                if (mb_strpos($b, '<div class="lbl">निर्दोष बिंदु</div>') === false) { return false; }
+                // पुराना प्रतिशत-गेज लौट न आए। ("अनुकूलता" शब्द वाक्यों में चलता
+                // है — जाँच गेज के अपने लेबल पर है, शब्द पर नहीं।)
+                if (mb_strpos($b, '<div class="lbl">अनुकूलता</div>') !== false) { return false; }
+                if (preg_match('/लाल किताब अनुकूलता \(सांकेतिक\)/u', $b)) { return false; }
+                if (preg_match('/<div class="big">\s*\d+<span[^>]*>%/u', $b)) { return false; }
+                // और यह भी कहा जाए कि गिनती को गुण-मिलान के अंकों से न जोड़ें
+                if (mb_strpos($b, 'गुण-मिलान के अंकों से जोड़कर न पढ़ें') === false) { return false; }
+            }
+            return true;
+        });
+
+        $add('MM-3', 'दूसरी कुंडली वाले परिहार सचमुच जाँचे जाते हैं', static function () use ($milan): bool {
+            if ($milan === []) { return false; }
+            $seenApplied = false;
+            foreach ($milan as $b) {
+                // हर जोड़े पर परिहार का नतीजा कहा जाए — लागू हुआ या नहीं हुआ
+                $said = mb_strpos($b, 'परिहार लागू') !== false
+                    || mb_strpos($b, 'परिहार-सूची में से कोई शर्त') !== false
+                    || mb_strpos($b, 'भाव में पाप ग्रह नहीं') !== false;
+                if (!$said) { return false; }
+                if (mb_strpos($b, 'परिहार लागू: दूसरी कुंडली') !== false) { $seenApplied = true; }
+            }
+            return $seenApplied;   // कम-से-कम एक जोड़े पर क्रॉस-परिहार सचमुच लगा हो
+        });
+
+        $add('MM-4', 'हर उपाय के साथ दिशा, और गिनती पाँच से ऊपर नहीं', static function () use ($milan): bool {
+            if ($milan === []) { return false; }
+            foreach ($milan as $b) {
+                if (!preg_match('/🛠 उपाय \(मिलान के अनुसार\)(.*?)<\/ul>/su', $b, $m)) { continue; }
+                $li  = preg_match_all('/<li>/u', $m[1]);
+                $dir = preg_match_all('/class="lkm-dir /u', $m[1]);
+                if ($li > 5) { return false; }
+                if ($li !== $dir) { return false; }   // बिना दिशा का उपाय नहीं
+            }
+            return true;
+        });
+
+        $add('MM-5', 'मिलान दोनों कुंडलियों को एक ही कसौटी पर देखता है (पक्षपात-चेतावनी)', static function () use ($milan): bool {
+            if ($milan === []) { return false; }
+            foreach ($milan as $b) {
+                if (mb_strpos($b, 'केवल कन्या को दोषी ठहराना पक्षपात है') === false) { return false; }
+            }
+            return true;
+        });
+
+        $add('MM-6', 'मिलान का दर्जा जोड़े-दर-जोड़े बदलता है (सब पर एक-सा नहीं)', static function () use ($milan): bool {
+            if (count($milan) < 3) { return false; }
+            $sig = [];
+            foreach ($milan as $b) {
+                preg_match('/निर्दोष बिंदु/u', $b);
+                $n = preg_match('/<div class="big">(\d+)<span/u', $b, $m) ? $m[1] : '?';
+                $t = preg_match('/(शुभ मिलान|शुभ — कुछ बिंदुओं पर उपाय के बाद|सावधानी योग्य[^<—]*|कठिन[^<—]*)/u', $b, $m2) ? trim($m2[1]) : '?';
+                $sig[] = $n . '|' . $t;
+            }
+            return count(array_unique($sig)) > 1;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;
@@ -744,6 +840,19 @@ final class LalKitabSelfCheck
     /**
      * पन्ना लाना — cURL पहले, क्योंकि कई साझा होस्ट पर allow_url_fopen बंद रहता है।
      */
+    /**
+     * मिलान-पन्ने में से केवल लाल किताब वाला हिस्सा — बाक़ी पन्ने पर गुण-मिलान
+     * का अपना प्रतिशत व अपने शब्द हैं, और उन्हें इन जाँचों में घसीटने से जाँच
+     * ग़लत जगह लाल/हरी होती।
+     */
+    private static function lkmBlock(string $html): string
+    {
+        $a = mb_strpos($html, 'लाल किताब मिलान — Lal Kitab Compatibility');
+        if ($a === false) { return ''; }
+        $b = mb_strpos($html, 'विवाह-मुहूर्त तिथि-खोजक', $a);
+        return $b === false ? mb_substr($html, $a) : mb_substr($html, $a, $b - $a);
+    }
+
     private static function fetch(string $url): ?string
     {
         if (function_exists('curl_init')) {

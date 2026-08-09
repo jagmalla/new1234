@@ -598,27 +598,40 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         // tone -> chip/border class + Hindi tag
         $toneChip = ['pos' => 'k-full', 'mix' => 'k-part', 'neg' => 'k-zero'];
         $toneBar  = ['pos' => '#22c55e', 'mix' => '#f59e0b', 'neg' => '#ef4444'];
-        $toneTag  = ['pos' => 'शुभ', 'mix' => 'मिश्र', 'neg' => 'अशुभ'];
-        $lkGauge  = 'g-' . ($lk['tier'] === 'shubh' ? 'shubh' : ($lk['tier'] === 'ashubh' ? 'ashubh' : 'mishrit'));
+        $toneTag  = ['pos' => 'निर्दोष', 'mix' => 'ध्यान दें', 'neg' => 'दोष'];
+        $lkGauge  = 'g-' . (in_array($lk['tier'], ['shubh', 'shubh_upay'], true) ? 'shubh'
+                    : ($lk['tier'] === 'kathin' ? 'ashubh' : 'mishrit'));
     ?>
     <style>
         .lkm-axes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        @media (max-width: 820px) { .lkm-axes { grid-template-columns: 1fr; } }
+        @media (max-width: 1080px) { .lkm-axes { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 720px) { .lkm-axes { grid-template-columns: 1fr; } }
         .lkm-axis { border: 1px solid var(--line); border-left-width: 5px; border-radius: 10px; padding: 12px 14px; background: #fff; }
-        .lkm-axis h3 { font-size: 1rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .lkm-axis .rsn { font-size: .9rem; color: var(--ink); }
-        .lkm-axis ul { margin: 8px 0 0; padding-left: 18px; font-size: .85rem; color: var(--ink-soft); }
+        .lkm-axis h3 { font-size: .98rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .lkm-axis .rsn { font-size: .89rem; color: var(--ink); }
+        .lkm-axis ul { margin: 8px 0 0; padding-left: 18px; font-size: .84rem; color: var(--ink-soft); }
         .lkm-axis ul li { margin-bottom: 3px; }
-        .lkm-tag { font-weight: 800; border-radius: 999px; padding: 2px 12px; font-size: .78rem; white-space: nowrap; }
+        .lkm-tag { font-weight: 800; border-radius: 999px; padding: 2px 12px; font-size: .76rem; white-space: nowrap; }
         table.lkm { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 6px; }
         table.lkm th, table.lkm td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
         table.lkm th { color: var(--ink-soft); font-weight: 700; }
         table.lkm td.stat { white-space: nowrap; }
+        table.lkm tr.kk td { background: #fffaf2; }
         .st-bad { color: #991b1b; font-weight: 700; }
         .st-good { color: #166534; font-weight: 700; }
+        .st-dull { color: #7c3aed; font-weight: 700; }
         .lkm-rem { border-left: 4px solid var(--accent); background: #fff8ef; border-radius: 0 8px 8px 0; padding: 10px 14px; margin-top: 12px; }
-        .lkm-rem li { margin-bottom: 5px; font-size: .9rem; }
+        .lkm-rem li { margin-bottom: 7px; font-size: .9rem; }
         .lkm-rem .who { font-weight: 700; color: var(--accent); }
+        .lkm-dir { font-size: .7rem; font-weight: 800; border-radius: 999px; padding: 1px 9px; margin-left: 4px; white-space: nowrap; }
+        .lkm-dir.d-jag { background: #ede9fe; color: #5b21b6; }
+        .lkm-dir.d-sha { background: #e0f2fe; color: #075985; }
+        .lkm-dir.d-bal { background: #dcfce7; color: #166534; }
+        .lkm-dir.d-chu { background: #fee2e2; color: #991b1b; }
+        .lkm-why { display: block; font-size: .78rem; color: var(--ink-soft); margin-top: 2px; }
+        .lkm-note { font-size: .8rem; color: var(--ink-soft); background: #f8fafc; border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; margin-top: 12px; line-height: 1.75; }
+        .lkm-note b { color: var(--ink); }
+        .lkm-count .big { font-size: 1.9rem; line-height: 1.1; }
     </style>
     <div class="card mt">
         <h2 class="sec-title">📕 लाल किताब मिलान — Lal Kitab Compatibility</h2>
@@ -627,9 +640,14 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
                 <div class="nm">वर — <?= $h($lk['nameA']) ?></div>
                 <div class="dt">लाल किताब तेवा</div>
             </div>
-            <div class="gauge <?= $lkGauge ?>">
-                <div class="big"><?= (int) $lk['percent'] ?><span style="font-size:1.1rem">%</span></div>
-                <div class="lbl">अनुकूलता</div>
+            <?php /* अंक नहीं, गिनती। पाँच बिंदुओं में से कितने निर्दोष — यही वह
+                     नाप है जो सचमुच गिनी जा सकती है। प्रतिशत यहाँ से हटा दिया गया:
+                     पाँच धुरियों का औसत निकालकर "67%" छापना नाप जैसा दिखता था, था
+                     नहीं — और बग़ल में रखे 36-गुण के अंक से पढ़ने वाला उसे अपने-आप
+                     जोड़ लेता था, जबकि दोनों अलग प्रणालियाँ हैं। */ ?>
+            <div class="gauge lkm-count <?= $lkGauge ?>">
+                <div class="big"><?= (int) $lk['clear'] ?><span style="font-size:1.1rem">/<?= (int) $lk['total'] ?></span></div>
+                <div class="lbl">निर्दोष बिंदु</div>
             </div>
             <div class="mini">
                 <div class="nm">कन्या — <?= $h($lk['nameB']) ?></div>
@@ -640,7 +658,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
             <?= $h($lk['tier_hi']) ?> — <?= $h($lk['verdict']) ?>
         </div>
 
-        <!-- three axes: मंगल · पितृ-ऋण · ग्रह-स्थिति -->
+        <!-- पाँच बिंदु: सप्तम · कारक · मंगल · गृहस्थी · ऋण -->
         <div class="lkm-axes" style="margin-top:14px">
             <?php foreach ($lk['axes'] as $ax): $t = (string) $ax['tone']; ?>
                 <div class="lkm-axis" style="border-left-color:<?= $toneBar[$t] ?? '#94a3b8' ?>">
@@ -655,9 +673,36 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
             <?php endforeach; ?>
         </div>
 
-        <!-- planet-by-planet harmony -->
+        <!-- विवाह-कारक की आमने-सामने तालिका -->
+        <?php $kr = $lk['axes']['karak']['rows'] ?? []; if ($kr !== []): ?>
+        <h3 style="font-size:1.02rem;margin:16px 0 4px">विवाह-कारक — आमने-सामने</h3>
+        <div style="overflow-x:auto">
+        <table class="lkm">
+            <thead><tr>
+                <th>कारक</th><th>विषय</th>
+                <th><?= $h($lk['nameA']) ?></th>
+                <th><?= $h($lk['nameB']) ?></th>
+                <th>निष्कर्ष</th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($kr as $r): ?>
+                <tr class="<?= !empty($r['mukhya']) ? 'kk' : '' ?>">
+                    <td><b><?= $h($r['hi']) ?></b><?= !empty($r['mukhya']) ? ' <span style="font-size:.68rem;color:#b45309">मुख्य</span>' : '' ?></td>
+                    <td style="font-size:.8rem;color:var(--ink-soft)"><?= $h($r['vishay']) ?></td>
+                    <td class="stat"><?= (int) $r['a_house'] ?> · <span class="<?= $r['a_bad'] ? 'st-bad' : 'st-good' ?>"><?= $h($r['a_state']) ?></span></td>
+                    <td class="stat"><?= (int) $r['b_house'] ?> · <span class="<?= $r['b_bad'] ? 'st-bad' : 'st-good' ?>"><?= $h($r['b_state']) ?></span></td>
+                    <td><?= $h($r['note']) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        </div>
+        <?php endif; ?>
+
+        <!-- planet-by-planet: जानकारी के लिए, फ़ैसले के लिए नहीं -->
         <?php if (!empty($lk['pairs'])): ?>
-        <h3 style="font-size:1.02rem;margin:16px 0 4px">ग्रह-स्थिति तुलना</h3>
+        <h3 style="font-size:1.02rem;margin:16px 0 4px">ग्रह-स्थिति तुलना
+            <span style="font-weight:400;font-size:.76rem;color:var(--ink-soft)">— जानकारी हेतु; मिलान का दर्जा ऊपर के पाँच बिंदुओं से तय होता है</span></h3>
         <div style="overflow-x:auto">
         <table class="lkm">
             <thead><tr>
@@ -667,11 +712,14 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
                 <th>निष्कर्ष</th>
             </tr></thead>
             <tbody>
-            <?php foreach ($lk['pairs'] as $pr): ?>
-                <tr>
+            <?php foreach ($lk['pairs'] as $pr):
+                $cls = static fn (string $s, bool $bad): string =>
+                    mb_strpos($s, 'निष्क्रिय') !== false ? 'st-dull' : ($bad ? 'st-bad' : 'st-good');
+            ?>
+                <tr class="<?= !empty($pr['vivah_karak']) ? 'kk' : '' ?>">
                     <td><b><?= $h($pr['hi']) ?></b></td>
-                    <td class="stat"><?= (int) $pr['a_house'] ?> · <span class="<?= $pr['a_bad'] ? 'st-bad' : 'st-good' ?>"><?= $h($pr['a_status']) ?></span></td>
-                    <td class="stat"><?= (int) $pr['b_house'] ?> · <span class="<?= $pr['b_bad'] ? 'st-bad' : 'st-good' ?>"><?= $h($pr['b_status']) ?></span></td>
+                    <td class="stat"><?= (int) $pr['a_house'] ?> · <span class="<?= $cls($pr['a_status'], (bool) $pr['a_bad']) ?>"><?= $h($pr['a_status']) ?></span></td>
+                    <td class="stat"><?= (int) $pr['b_house'] ?> · <span class="<?= $cls($pr['b_status'], (bool) $pr['b_bad']) ?>"><?= $h($pr['b_status']) ?></span></td>
                     <td>
                         <span class="lkm-tag <?= $toneChip[$pr['tone']] ?? '' ?>" style="font-size:.7rem"><?= $h($toneTag[$pr['tone']] ?? '') ?></span>
                         <?= $h($pr['note']) ?>
@@ -683,18 +731,43 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         </div>
         <?php endif; ?>
 
-        <!-- combined remedies for every negative finding -->
-        <?php if (!empty($lk['remedies'])): ?>
+        <!-- उपाय — दिशा सहित -->
+        <?php if (!empty($lk['remedies'])):
+            $dirCls = ['जगाना' => 'd-jag', 'शांति' => 'd-sha', 'बल-वृद्धि' => 'd-bal', 'चुकाना' => 'd-chu'];
+        ?>
         <div class="lkm-rem">
-            <div style="font-weight:700;color:var(--accent);margin-bottom:6px">🛠 उपाय (मिलान के अनुसार)</div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:6px">🛠 उपाय (मिलान के अनुसार)
+                <span style="font-weight:400;font-size:.78rem;color:var(--ink-soft)">— हर उपाय के साथ उसकी दिशा; सोए ग्रह को शांत नहीं किया जाता</span></div>
             <ul style="margin:0;padding-left:18px">
                 <?php foreach ($lk['remedies'] as $rm): ?>
-                    <li><span class="who"><?= $h($rm['who']) ?><?= trim((string) $rm['hi']) !== '' ? ' · ' . $h($rm['hi']) : '' ?>:</span> <?= $h($rm['text']) ?></li>
+                    <li>
+                        <span class="who"><?= $h((string) $rm['who']) ?><?= trim((string) ($rm['hi'] ?? '')) !== '' ? ' · ' . $h((string) $rm['hi']) : '' ?>:</span>
+                        <?= $h((string) $rm['text']) ?>
+                        <?php if (trim((string) ($rm['direction'] ?? '')) !== ''): ?>
+                            <span class="lkm-dir <?= $dirCls[(string) $rm['direction']] ?? 'd-sha' ?>"><?= $h((string) $rm['direction']) ?></span>
+                        <?php endif; ?>
+                        <?php if (trim((string) ($rm['why'] ?? '')) !== ''): ?>
+                            <span class="lkm-why">क्यों — <?= $h((string) $rm['why']) ?><?php
+                                if (trim((string) ($rm['stop_when'] ?? '')) !== '') {
+                                    echo ' · कब तक — ' . $h((string) $rm['stop_when']);
+                                } ?></span>
+                        <?php endif; ?>
+                    </li>
                 <?php endforeach; ?>
             </ul>
         </div>
         <?php else: ?>
-        <div style="margin-top:12px;color:#166534;font-weight:600">✓ किसी दोष के लिए उपाय की आवश्यकता नहीं — मिलान शुभ है।</div>
+        <div style="margin-top:12px;color:#166534;font-weight:600">✓ किसी बिंदु पर दोष नहीं — मिलान के लिए अलग से कोई उपाय आवश्यक नहीं।</div>
+        <?php endif; ?>
+
+        <!-- सीमा — जो यह पन्ना नहीं कहता -->
+        <?php if (!empty($lk['caution'])): ?>
+        <div class="lkm-note">
+            <b>सीमा व स्पष्टीकरण</b>
+            <ul style="margin:6px 0 0;padding-left:18px">
+                <?php foreach ($lk['caution'] as $c): ?><li><?= $h($c) ?></li><?php endforeach; ?>
+            </ul>
+        </div>
         <?php endif; ?>
     </div>
 

@@ -802,11 +802,21 @@ final class LalKitabEngine
             // बुरा नहीं — सब इस पर है कि वह गया कहाँ और वहाँ कैसा है। पर एक हालत
             // साफ़ चेतावनी है: **मालिक बाहर और उसके घर पर शत्रु का क़ब्ज़ा** —
             // रखवाला ग़ैर-हाज़िर और कमरा दुश्मन के पास।
-            $ownerAway = null;
+            // कुछ भावों के दो पक्के मालिक हैं (सातवाँ — बुध व शुक्र दोनों का)।
+            // पहले सूची में जो पहले आ जाता वही "मालिक" छप जाता था, इसलिए सप्तम
+            // भाव का मालिक ऊपर *शुक्र* और नीचे *बुध* लिखा दिखता था — एक ही पन्ने
+            // पर दो जवाब। जहाँ दावेदार एक से अधिक हों वहाँ भाव की अपनी राशि का
+            // स्वामी पहले गिना जाता है, ताकि दोनों जगह एक ही नाम रहे।
+            $claimants = [];
             foreach (self::PLANETS as $op) {
                 if (($house[$op] ?? null) === null) { continue; }
                 $od = LalKitabTeva::dignity($op, $h, $occupants);
-                if (empty($od['pakka']) || $house[$op] === $h) { continue; }   // यह भाव इसका पक्का घर है, पर यह यहाँ नहीं
+                if (empty($od['pakka']) || $house[$op] === $h) { continue; }
+                $claimants[] = $op;
+            }
+            if (in_array($lord, $claimants, true)) { $claimants = [$lord]; }
+            $ownerAway = null;
+            foreach ($claimants as $op) {
                 $opHi = LalKitabData::planetHi($op);
                 $foes = [];
                 $shatruTxt = (string) (LalKitabData::section('maitri')[$op]['shatru'] ?? '');
@@ -815,11 +825,11 @@ final class LalKitabEngine
                 }
                 $ownerAway = ['hi' => $opHi, 'sits' => LalKitabData::houseOrdinalHi($house[$op]), 'foes' => $foes];
                 if ($foes !== []) {
-                    $why[] = '⚠ इस घर का मालिक ' . $opHi . ' बाहर (' . $ownerAway['sits'] . ' भाव में) है और यहाँ '
+                    $why[] = '⚠ इस घर का पक्का मालिक ' . $opHi . ' बाहर (' . $ownerAway['sits'] . ' भाव में) है और यहाँ '
                         . implode(', ', $foes) . ' (शत्रु) बैठा है — रखवाला ग़ैर-हाज़िर, कमरा दुश्मन के पास';
                     $v--;
                 } else {
-                    $why[] = 'इस घर का मालिक ' . $opHi . ' बाहर (' . $ownerAway['sits'] . ' भाव में) है — देखभाल कम';
+                    $why[] = 'इस घर का पक्का मालिक ' . $opHi . ' बाहर (' . $ownerAway['sits'] . ' भाव में) है — देखभाल कम';
                 }
                 break;
             }
@@ -2229,12 +2239,21 @@ final class LalKitabEngine
         // वैदिक पद्धति का विचार है और उसमें राशि असली वाली ही गिनी जाती है।
         $marsSign = isset($chart['planets']['Mars']['sign_index'])
             ? (int) $chart['planets']['Mars']['sign_index'] : null;
-        // राशि+भाव की वे जोड़ियाँ जिन पर पुस्तक दोष प्रायः समाप्त मानती है
+        // राशि+भाव की वे जोड़ियाँ जिन पर पुस्तक दोष प्रायः समाप्त मानती है।
+        // सूची परिहार-बैंक की *दो* पंक्तियों का जोड़ है। पहले यहाँ सिर्फ़ चार
+        // जोड़ियाँ थीं — यानी पुस्तक में छपा परिहार जाँचा ही नहीं जाता था और
+        // जिस जातक का दोष कट रहा था, उसे भी "दोष है" पढ़ाया जाता था।
         static $pariharPairs = [
             ['sign' => 'Aries',       'house' => 1,  'hi' => 'मेष राशि का मंगल लग्न में'],
             ['sign' => 'Scorpio',     'house' => 4,  'hi' => 'वृश्चिक राशि का मंगल चौथे भाव में'],
+            ['sign' => 'Aries',       'house' => 4,  'hi' => 'मेष राशि का मंगल चौथे भाव में'],
             ['sign' => 'Capricorn',   'house' => 7,  'hi' => 'मकर राशि का मंगल सातवें भाव में'],
+            ['sign' => 'Cancer',      'house' => 7,  'hi' => 'कर्क राशि का मंगल सातवें भाव में'],
             ['sign' => 'Cancer',      'house' => 8,  'hi' => 'कर्क राशि का मंगल आठवें भाव में'],
+            ['sign' => 'Pisces',      'house' => 8,  'hi' => 'मीन राशि का मंगल आठवें भाव में'],
+            ['sign' => 'Sagittarius', 'house' => 12, 'hi' => 'धनु राशि का मंगल बारहवें भाव में'],
+            ['sign' => 'Aries',       'house' => 12, 'hi' => 'मेष राशि का मंगल बारहवें भाव में'],
+            ['sign' => 'Cancer',      'house' => 12, 'hi' => 'कर्क राशि का मंगल बारहवें भाव में'],
         ];
         $pariharHit = [];
         foreach ($pariharPairs as $pp) {
