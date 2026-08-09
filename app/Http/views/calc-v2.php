@@ -1258,13 +1258,16 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             <div class="l2-mi">
                 <button type="button" data-sec="lalkitab"><span class="l2-ic">📕</span>Laal Kitab</button>
                 <div class="l2-sub">
-                    <button type="button" data-sec="lalkitab" data-lk="overview">🔎 सामान्य फल / Overview</button>
-                    <button type="button" data-sec="lalkitab" data-lk="planet">🪐 ग्रह फल / Planet</button>
-                    <button type="button" data-sec="lalkitab" data-lk="yoga">✨ योग · मसनूई · टक्करें</button>
-                    <button type="button" data-sec="lalkitab" data-lk="supt">😴 सोया / अपंग ग्रह</button>
-                    <button type="button" data-sec="lalkitab" data-lk="varsh">📅 वर्ष कुंडली / Varsh Kundali</button>
-                    <button type="button" data-sec="lalkitab" data-lk="agecycle">🕰️ आयु-दशा (35-साला) / Timeline</button>
-                    <button type="button" data-sec="lalkitab" data-lk="remedy">🛠 उपाय / Remedy</button>
+                    <?php /* वही आठ समूह जो पन्ने की ड्रॉपडाउन में हैं — हर लिंक अपने
+                             समूह का पहला विभाग खोलता है, आगे का चुनाव ड्रॉपडाउन से। */ ?>
+                    <button type="button" data-sec="lalkitab" data-lk="nichod">📋 निचोड़ व प्राथमिकता</button>
+                    <button type="button" data-sec="lalkitab" data-lk="planet">🪐 ग्रह फल</button>
+                    <button type="button" data-sec="lalkitab" data-lk="house">🏠 भाव फल</button>
+                    <button type="button" data-sec="lalkitab" data-lk="yoga">🔗 संबंध-जाल (योग · मसनूई · टक्कर · दृष्टि)</button>
+                    <button type="button" data-sec="lalkitab" data-lk="shrap">🧬 ऋण · श्राप · दोष</button>
+                    <button type="button" data-sec="lalkitab" data-lk="agecycle">📅 समय (आयु-दशा · वर्ष · साढ़ेसाती)</button>
+                    <button type="button" data-sec="lalkitab" data-lk="remedy">🛠 उपाय</button>
+                    <button type="button" data-sec="lalkitab" data-lk="reference">📚 संदर्भ व तुलना</button>
                 </div>
             </div>
             <div class="l2-mi">
@@ -4034,11 +4037,48 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     }
     // esc helper (same as saved_charts) for safe HTML
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-    // Category dropdown → toggle the matching .lk-view.
+    // ---- दो ढंग: सरल रिपोर्ट (ग्राहक) बनाम विस्तृत जाँच (ज्योतिषी).
+    // एक पन्ना दोनों काम नहीं कर सकता — ग्राहक को निचोड़ चाहिए, ज्योतिषी को कच्चा
+    // माल। सरल ढंग में सिर्फ़ निचोड़ खुलता है और चुनाव-पट्टी छिप जाती है; कुछ भी
+    // हटता नहीं, एक क्लिक पर सब लौट आता है। चुनाव localStorage में याद रहता है।
+    function setLkMode(mode, keepView) {
+      var secLk = document.getElementById('sec-lalkitab');
+      if (!secLk) { return; }
+      var simple = mode !== 'detail';
+      secLk.classList.toggle('lk-simple', simple);
+      document.querySelectorAll('#sec-lalkitab .lk-mode').forEach(function (b) {
+        b.classList.toggle('active', (b.getAttribute('data-lkmode') === 'detail') !== simple);
+      });
+      try { window.localStorage.setItem('ab_lk_mode', simple ? 'simple' : 'detail'); } catch (e) { /* निजी विंडो */ }
+      if (simple && !keepView) {
+        var s = document.getElementById('lk-select');
+        if (s) { s.value = 'nichod'; }
+        showLkView('nichod');
+      }
+    }
+    window.ABLkMode = setLkMode;
+    document.querySelectorAll('#sec-lalkitab .lk-mode').forEach(function (b) {
+      if (b._bound) { return; }
+      b._bound = true;
+      b.addEventListener('click', function () { setLkMode(b.getAttribute('data-lkmode')); });
+    });
+    (function () {
+      var saved = null;
+      try { saved = window.localStorage.getItem('ab_lk_mode'); } catch (e) { /* निजी विंडो */ }
+      // पहली बार आने वाले को निचोड़ ही मिले — यही spec का क्रम है।
+      setLkMode(saved === 'detail' ? 'detail' : 'simple', true);
+    })();
+
+    // Category dropdown → toggle the matching .lk-view. कोई भी दूसरा विभाग चुनते
+    // ही ढंग अपने-आप विस्तृत हो जाता है, वरना चुना हुआ पन्ना छिपी पट्टी के पीछे
+    // खुलता और चुनाव बेअसर दिखता।
     var sel = document.getElementById('lk-select');
     if (sel && !sel._bound) {
       sel._bound = true;
-      sel.addEventListener('change', function () { showLkView(sel.value); });
+      sel.addEventListener('change', function () {
+        if (sel.value !== 'nichod') { setLkMode('detail', true); }
+        showLkView(sel.value);
+      });
     }
     document.querySelectorAll('#sec-lalkitab .lk-onlybad, #sec-lalkitab .lk-onlyapp').forEach(function (chk) {
       chk.addEventListener('change', applyLkFilters);
@@ -4111,6 +4151,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         if (so) { so.hidden = false; }
         sel.value = 'search';
       }
+      setLkMode('detail', true);   // खोज-परिणाम विस्तृत ढंग का पन्ना है
       showLkView('search');
     }
     document.querySelectorAll('#sec-lalkitab .lk-chip').forEach(function (chip) {

@@ -90,6 +90,15 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab .lk-sub b{color:#334155}
   #sec-lalkitab .lk-dd{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
   @media(max-width:560px){#sec-lalkitab .lk-dd{grid-template-columns:1fr}}
+  /* दो-ढंग टॉगल: सरल (ग्राहक) बनाम विस्तृत (ज्योतिषी) */
+  #sec-lalkitab .lk-moderow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+  #sec-lalkitab .lk-modebar{display:flex;gap:6px;flex:1;min-width:230px;background:#f1f5f9;padding:4px;border-radius:10px}
+  #sec-lalkitab .lk-mode{flex:1;border:0;background:transparent;border-radius:8px;padding:6px 10px;cursor:pointer;
+    font-size:.85rem;font-weight:700;color:#475569;line-height:1.3}
+  #sec-lalkitab .lk-mode span{font-weight:400;font-size:.76rem;color:#94a3b8}
+  #sec-lalkitab .lk-mode.active{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  #sec-lalkitab .lk-mode.active span{color:#64748b}
+  #sec-lalkitab.lk-simple #lk-detail-bar{display:none}
   #sec-lalkitab .lk-view{display:none}
   #sec-lalkitab .lk-view.active{display:block}
   #sec-lalkitab .lk-scroll{max-height:74vh;overflow-y:auto;padding-right:6px}
@@ -233,44 +242,66 @@ function lkNativeGo(el) {
     </div>
     <?php endif; ?>
 
+    <?php /* ══════ दो दस्तावेज़, एक पन्ना नहीं ══════
+         एक ही पन्ना ग्राहक और ज्योतिषी दोनों का काम नहीं कर सकता: ग्राहक को
+         निचोड़ चाहिए, ज्योतिषी को कच्चा माल। इसलिए ऊपर टॉगल है। सरल मोड में
+         सिर्फ़ निचोड़ खुलता है और चुनाव-पट्टी छिप जाती है; विस्तृत मोड में सारे
+         बाईस विभाग आठ समूहों में मिलते हैं (कुछ हटाया नहीं गया, समेटा गया है)।
+         चुनाव localStorage में याद रहता है। */ ?>
+    <div class="lk-moderow">
+      <div class="lk-modebar" role="group" aria-label="पढ़ने का ढंग">
+        <button type="button" class="lk-mode" data-lkmode="simple">📋 सरल रिपोर्ट <span>(ग्राहक)</span></button>
+        <button type="button" class="lk-mode" data-lkmode="detail">🔬 विस्तृत जाँच <span>(ज्योतिषी)</span></button>
+      </div>
+      <?php /* छपाई दोनों ढंगों में चाहिए — सरल रिपोर्ट का असली रूप काग़ज़ ही है,
+               इसलिए ये दो बटन समेटी जाने वाली पट्टी से बाहर हैं। */ ?>
+      <button type="button" id="lk-print-report" class="lk-btn">🖨 पूर्ण रिपोर्ट</button>
+      <button type="button" id="lk-print-checklist" class="lk-btn">📋 उपाय Checklist</button>
+    </div>
+
+    <div id="lk-detail-bar">
     <div class="flex items-center gap-2 mb-2" style="flex-wrap:wrap">
       <select id="lk-select" class="l2-select" aria-label="लाल किताब श्रेणी चुनें" style="flex:1;min-width:190px">
-        <optgroup label="📋 सरल रिपोर्ट / Client Report">
+        <optgroup label="1 · 🔎 निचोड़ व प्राथमिकता">
           <option value="nichod">📋 निचोड़ — मुख्य बातें व उपाय (सबसे पहले यही पढ़ें)</option>
-        </optgroup>
-        <optgroup label="⭐ विशेष उपकरण / Interactive Tools">
-          <option value="varsh">📅 वर्ष कुंडली / Varsh Kundali (Annual)</option>
-          <option value="agecycle">🕰️ आयु-दशा टाइमलाइन / Age Timeline (Dasha)</option>
-        </optgroup>
-        <optgroup label="📖 फल-विचार / Predictions">
           <option value="overview">🔎 सामान्य परिचय / General Overview</option>
+        </optgroup>
+        <optgroup label="2 · 🪐 ग्रह फल">
           <option value="planet">🪐 ग्रह फल / Planet Prediction</option>
+          <option value="supt">😴 सोया / अपंग ग्रह / Soya &amp; Impaired</option>
+          <option value="inter">🔗 ग्रह अंतर्संबंध / Planet Inter-effects</option>
+        </optgroup>
+        <optgroup label="3 · 🏠 भाव फल">
           <option value="house">🏠 भाव (Bhav) फल / House Prediction</option>
           <option value="karak">🎯 कारक / Karak</option>
+        </optgroup>
+        <optgroup label="4 · 🔗 संबंध-जाल">
           <option value="yoga">✨ योग · मसनूई · टक्करें · बुनियाद / Yog &amp; Collisions</option>
-          <option value="shrap">🧬 श्राप / पैतृक ऋण / Shrap</option>
-          <option value="sadesati">🪐 साढ़े साती / ढैय्या / Sadde Satti</option>
-          <option value="manglik">🔴 मंगलीक दोष / Manglik</option>
-          <option value="ayu">⏳ आयु योग / Longevity</option>
-          <option value="health">🩺 रोग / संतान / Health</option>
-          <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
-        </optgroup>
-        <optgroup label="🔗 विश्लेषण / Analysis">
-          <option value="inter">🔗 ग्रह अंतर्संबंध / Planet Inter-effects</option>
-          <option value="supt">😴 सोया / अपंग ग्रह / Soya &amp; Impaired</option>
           <option value="drishti">👁 दृष्टि व टक्कर (एकतरफ़ा) / Aspects &amp; Takkar</option>
-          <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
         </optgroup>
-        <optgroup label="🛠 उपाय व संदर्भ / Remedies &amp; Reference">
+        <optgroup label="5 · 🧬 ऋण · श्राप · दोष">
+          <option value="shrap">🧬 श्राप / पैतृक ऋण / Shrap</option>
+          <option value="manglik">🔴 मंगलीक दोष / Manglik</option>
+        </optgroup>
+        <optgroup label="6 · 📅 समय">
+          <option value="agecycle">🕰️ आयु-दशा टाइमलाइन / Age Timeline (Dasha)</option>
+          <option value="varsh">📅 वर्ष कुंडली / Varsh Kundali (Annual)</option>
+          <option value="sadesati">🪐 साढ़े साती / ढैय्या / Sadde Satti</option>
+        </optgroup>
+        <optgroup label="7 · 🛠 उपाय">
           <option value="remedy">🛠 उपाय / Remedy</option>
           <option value="calendar">🗓 उपाय-कैलेंडर / Remedy Calendar</option>
           <option value="rules">⛔ वर्जित उपाय व नियम / Rules &amp; Don'ts</option>
+        </optgroup>
+        <optgroup label="8 · 📚 संदर्भ व तुलना">
+          <option value="health">🩺 रोग / संतान / Health</option>
+          <option value="ayu">⏳ आयु योग / Longevity</option>
+          <option value="bhavan">🏗 गृह निर्माण / Vastu</option>
+          <option value="compare">⚖ D1 ↔ लाल किताब तुलना / Compare</option>
           <option value="reference">📚 संदर्भ चक्र / Reference</option>
         </optgroup>
         <option value="search" hidden>🔍 खोज परिणाम / Search Results</option>
       </select>
-      <button type="button" id="lk-print-report" class="lk-btn">🖨 पूर्ण रिपोर्ट</button>
-      <button type="button" id="lk-print-checklist" class="lk-btn">📋 उपाय Checklist</button>
     </div>
 
     <!-- topic search across every category (#6) -->
@@ -285,6 +316,7 @@ function lkNativeGo(el) {
       <button type="button" class="lk-chip" data-topic="मुकदमा">⚖ मुकदमा</button>
       <button type="button" class="lk-chip" data-topic="विदेश">✈ विदेश</button>
     </div>
+    </div><!-- /#lk-detail-bar -->
 
     <div class="lk-scroll">
 

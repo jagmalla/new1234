@@ -202,6 +202,31 @@ final class LalKitabSelfCheck
             return false;   // बारह भावों में कोई न कोई मालिक बाहर होता ही है
         });
 
+        // नया विभाग जोड़कर ड्रॉपडाउन में डालना भूल जाना सबसे आसान चूक है — तब वह
+        // पन्ना बन तो जाता है पर उस तक पहुँचने का कोई रास्ता नहीं होता।
+        $add('NAV-1', 'हर विभाग ड्रॉपडाउन में ठीक एक बार है (कोई अनाथ पन्ना नहीं)', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                preg_match_all('/class="lk-view[^"]*" data-lk="([a-z0-9]+)"/', $h, $vm);
+                if (!preg_match('/<select id="lk-select".*?<\/select>/s', $h, $sm)) { return false; }
+                preg_match_all('/<option value="([a-z0-9]+)"/', $sm[0], $om);
+                $views = array_unique($vm[1]);
+                $opts  = $om[1];
+                if ($views === [] || count($opts) !== count(array_unique($opts))) { return false; }
+                if (array_diff($views, $opts) !== [] || array_diff($opts, $views) !== []) { return false; }
+            }
+            return true;
+        });
+
+        // दो ढंग (सरल/विस्तृत) और आठ समूह — spec §10.1 का ढाँचा।
+        $add('NAV-2', 'सरल/विस्तृत टॉगल और आठों समूह मौजूद हैं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'data-lkmode="simple"') === false) { return false; }
+                if (mb_strpos($h, 'data-lkmode="detail"') === false) { return false; }
+                if (substr_count($h, '<optgroup label=') < 8) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;
