@@ -672,6 +672,24 @@ final class LalKitabSelfCheck
                 return true;
             });
 
+        // टेवे के नीचे वैदिक D1 और विंशोत्तरी का बटन। D1 इसलिए कि लाल किताब का
+        // टेवा स्थिर मेष का है और उसमें राशि दिखती ही नहीं — मिलान के लिए असली
+        // कुंडली पास चाहिए। विंशोत्तरी अलग पॉपअप में रहती है, पन्ने में घुली हुई
+        // नहीं, ताकि वह लाल किताब के फल में मिलावट न करे।
+        $add('D1-1', 'लाल किताब टेवे के नीचे वैदिक D1 और विंशोत्तरी का बटन मौजूद', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'id="lk-d1-side"') === false) { return false; }
+                if (mb_strpos($h, 'id="lk-vim-btn"') === false) { return false; }
+                // टेवे के बाद आए, पहले नहीं
+                $teva = mb_strpos($h, 'id="lk-chart"');
+                $d1   = mb_strpos($h, 'id="lk-d1-side"');
+                if ($teva === false || $d1 < $teva) { return false; }
+                // और पॉपअप का ✕ बंद-बटन भी हो
+                if (mb_strpos($h, 'id="dasha-modal-close"') === false) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

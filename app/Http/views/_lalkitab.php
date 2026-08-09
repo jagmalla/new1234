@@ -327,6 +327,28 @@ function lkNativeGo(el) {
       <b>जन्म-लग्न:</b> <?= $h((string) $lk['lagna_hi']) ?> ·
       <b>चन्द्र राशि:</b> <?= $h((string) $lk['moon_hi']) ?>
     </div>
+
+    <?php /* ══════ वैदिक D1 यहीं, टेवे के नीचे ══════
+         लाल किताब का टेवा स्थिर मेष का है — उसमें राशि नहीं दिखती, सिर्फ़ भाव।
+         ज्योतिषी हर दूसरी बात पर असली जन्म-कुंडली से मिलान करता है (राशि, उच्च-नीच,
+         दृष्टि), और अब तक उसके लिए दूसरा पन्ना खोलना पड़ता था। दोनों साथ हों तो
+         मिलान वहीं हो जाता है। D1 वही है जो वैदिक पक्ष का है — यह लाल किताब की
+         गणना नहीं बदलता, सिर्फ़ संदर्भ देता है। */ ?>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0">
+      <div class="lk-card-h" style="font-size:.85rem;margin-bottom:4px">🌟 जन्म कुंडली (D1 — वैदिक)
+        <span style="font-weight:400;font-size:.74rem;color:#94a3b8">संदर्भ हेतु — मिलान के लिए</span></div>
+      <div id="lk-d1-side" style="max-width:340px;margin:0 auto"></div>
+      <div class="lk-legend" style="margin-top:5px">
+        लाल किताब टेवे में लग्न सदा मेष है, इसलिए राशि वहाँ नहीं दिखती। असली राशि-स्थिति यहाँ देखें।
+      </div>
+    </div>
+
+    <?php /* विंशोत्तरी दशा लाल किताब की व्याकरण नहीं है — इसकी अपनी 35-साला दशा
+             अलग है। इसलिए वह इस पन्ने में घुली हुई नहीं, एक अलग पॉपअप में है:
+             मिलाना हो तो खोल लें, वरना वह लाल किताब के फल में मिलावट न करे। */ ?>
+    <button type="button" id="lk-vim-btn" class="lk-btn" style="margin-top:10px;width:100%">
+      ⏳ विंशोत्तरी दशा देखें <span style="font-weight:400;color:#94a3b8">(वैदिक — अलग खिड़की में)</span>
+    </button>
   </div>
 
   <!-- RIGHT: category predictions -->

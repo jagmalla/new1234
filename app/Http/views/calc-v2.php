@@ -2832,6 +2832,9 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       if (body) { body.scrollTop = 0; }
     }
     function close() { overlay.classList.add('hidden'); document.body.style.overflow = ''; }
+    // लाल किताब पन्ना भी यही पॉपअप खोलता है — दूसरा बनाना बेकार होता, और दो
+    // पॉपअप का मतलब दो जगह बंद करने का बटन, दो जगह Esc, दो जगह ग़लती।
+    window.ABDashaModal = { open: open, close: close };
     var btn = document.getElementById('dasha-detail-btn');
     if (btn) { btn.addEventListener('click', open); }
     document.querySelectorAll('.dasha-strip').forEach(function (s) {
@@ -4119,6 +4122,24 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       try { saved = window.localStorage.getItem('ab_lk_mode'); } catch (e) { /* निजी विंडो */ }
       // पहली बार आने वाले को निचोड़ ही मिले — यही spec का क्रम है।
       setLkMode(saved === 'detail' ? 'detail' : 'simple', true);
+    })();
+
+    // ---- टेवे के नीचे वैदिक D1 + विंशोत्तरी बटन ----
+    // चित्र छिपी हुई जगह में नहीं बनाया जा सकता (नाप शून्य आती है), इसलिए यह तभी
+    // बनता है जब लाल किताब पन्ना खुल चुका हो — और एक ही बार।
+    (function () {
+      var d1 = document.getElementById('lk-d1-side');
+      if (d1 && !d1._done && window.ABChart && window.AB_VARGAS && window.AB_VARGAS.D1) {
+        try { window.ABChart.renderNorth(d1, window.AB_VARGAS.D1, { showDeg: true, fit: true }); d1._done = true; }
+        catch (e) { d1.innerHTML = '<div style="font-size:.8rem;color:#94a3b8">D1 चित्र उपलब्ध नहीं।</div>'; }
+      }
+      var vb = document.getElementById('lk-vim-btn');
+      if (vb && !vb._bound) {
+        vb._bound = true;
+        vb.addEventListener('click', function () {
+          if (window.ABDashaModal) { window.ABDashaModal.open(); }
+        });
+      }
     })();
 
     // Category dropdown → toggle the matching .lk-view. कोई भी दूसरा विभाग चुनते
