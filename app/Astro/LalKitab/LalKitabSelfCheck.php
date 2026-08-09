@@ -649,6 +649,29 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // आयु-पन्ना: नियम इतने चौड़े हैं कि हर कुंडली पर कई योग एक साथ बनते हैं और
+        // आपस में उलटे पड़ते हैं। उन्हें "लागू · लागू · लागू" की सूची बनाकर छापना
+        // पढ़ने वाले को यह समझाता है कि उसकी आयु पर कई ओर से ख़तरा है। और बालारिष्ट
+        // बचपन का योग है — बड़ी उम्र वाले को उसे आज की चेतावनी दिखाना सादा ग़लती है।
+        $add('AY-1', 'आयु-योग गिनती के रूप में दिखते हैं, और बीत चुका बालारिष्ट वैसा कहा जाता है',
+            static function () use ($pages): bool {
+                foreach ($pages as $h) {
+                    $i = mb_strpos($h, '<div class="lk-view" data-lk="ayu">');
+                    $j = mb_strpos($h, '<div class="lk-view" data-lk="bhavan">');
+                    if ($i === false || $j === false || $j <= $i) { return false; }
+                    $seg = mb_substr($h, $i, $j - $i);
+                    if (mb_strpos($seg, 'आयु-योग बनते हैं') === false) { continue; }   // कोई योग नहीं बना
+                    if (mb_strpos($seg, 'कोई अंक या निष्कर्ष नहीं निकाला जाता') === false) { return false; }
+                    // बालारिष्ट दिखे तो या तो वह बीता हुआ कहा जाए, या चेतावनी के साथ हो
+                    if (mb_strpos($seg, 'बालारिष्ट आयु के योग') !== false) {
+                        $past = mb_strpos($seg, 'यह प्रश्न बीत चुका') !== false;
+                        $warn = mb_strpos($seg, 'घबराने की बात नहीं') !== false;
+                        if (!$past && !$warn) { return false; }
+                    }
+                }
+                return true;
+            });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

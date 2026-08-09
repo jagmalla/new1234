@@ -1869,16 +1869,77 @@ function lkNativeGo(el) {
         <div class="lk-note" style="margin-bottom:9px">लाल किताब में आयु का विचार ग्रहों की युति से होता है। इसे यहाँ <b>पाँच वर्गों</b> में दिखाया जाता है
           — बालारिष्ट · अल्प · मध्यम · दीर्घ · पूर्ण। (किसी भी अंक या "मृत्यु" के रूप में नहीं — यह केवल एक
           योग है, जिसका उपाय साथ में दिया गया है।)</div>
+        <?php /* ══════ आयु-योग गिने जाते हैं, जोड़े नहीं जाते ══════
+             ये नियम प्रायः तौलनीय हैं ("चन्द्र किसी भी ग्रह के साथ" जैसी शर्तें),
+             इसलिए हर कुंडली पर छह से ग्यारह योग एक साथ बनते हैं — और वे आपस में
+             उलटे होते हैं: अल्प भी, मध्यम भी, कभी बालारिष्ट भी। इन्हें एक सूची
+             में "लागू · लागू · लागू" करके छाप देना पढ़ने वाले को यही समझाता है कि
+             उसकी आयु पर कई ओर से ख़तरा है — जबकि असल में यह गिनती का नतीजा है,
+             फ़ैसले का नहीं। इसलिए ऊपर सच लिखा जाता है, फिर वर्ग-वार गिनती।
+
+             और सबसे ज़रूरी: **बालारिष्ट बचपन का योग है।** जिसकी उम्र वह पार कर
+             चुकी है, उसके लिए वह बीता हुआ प्रश्न है — उसे आज की चेतावनी बनाकर
+             दिखाना सादा ग़लती है, और इस पूरे पन्ने पर सबसे डरावनी। */ ?>
+        <?php
+          $ayAge = $lk['age'] ?? null;
+          $bands = [];
+          foreach ($ayOn as $y) {
+              $b = (string) $y['band'];
+              $key = mb_strpos($b, 'बालारिष्ट') !== false ? 'बालारिष्ट'
+                   : (mb_strpos($b, 'अल्प') !== false ? 'अल्प'
+                   : (mb_strpos($b, 'मध्यम') !== false ? 'मध्यम'
+                   : (mb_strpos($b, 'दीर्घ') !== false ? 'दीर्घ' : 'पूर्ण')));
+              $bands[$key][] = $y;
+          }
+          $balaPast = isset($bands['बालारिष्ट']) && is_int($ayAge) && $ayAge >= 12;
+        ?>
         <?php if ($ayOn === []): ?>
           <div class="lk-card"><div class="lk-txt">इस कुंडली में कोई विशेष आयु-योग नहीं बनता (कोई ग्रह-युति नहीं)।</div></div>
-        <?php else: foreach ($ayOn as $y): $isBala = mb_strpos((string) $y['band'], 'बालारिष्ट') !== false; ?>
-          <div class="lk-card <?= $isBala ? 'bad' : '' ?>" data-app="1">
-            <div class="lk-card-h" style="font-size:.9rem"><?= $h((string) $y['band']) ?> <?= $pill('लागू', 'a') ?></div>
-            <div class="lk-sub"><?= $h((string) $y['yog']) ?><?php if (trim((string) $y['why']) !== ''): ?> <span style="color:#166534">(<?= $h((string) $y['why']) ?>)</span><?php endif; ?></div>
-            <?php if (trim((string) $y['band_note']) !== ''): ?><div class="lk-reason"><?= $h((string) $y['band_note']) ?></div><?php endif; ?>
-            <?php if ($isBala): ?><div class="lk-sub" style="color:#991b1b">⚠️ सावधानी व उपाय आवश्यक — घबराने की बात नहीं, समाधान उपलब्ध है।</div><?php endif; ?>
+        <?php else: ?>
+          <div class="lk-card" style="border-color:#c7d2fe;background:#eef2ff">
+            <div class="lk-card-h" style="color:#3730a3">🧮 इस कुंडली पर <?= count($ayOn) ?> आयु-योग बनते हैं — और वे एक-दूसरे से उलटे हैं</div>
+            <div class="lk-txt" style="color:#3730a3">
+              <?php $bb = []; foreach ($bands as $k => $list) { $bb[] = $k . ' — ' . count($list); } ?>
+              वर्ग-वार: <b><?= $h(implode(' · ', $bb)) ?></b>।
+              इनके नियम बहुत चौड़े हैं (जैसे "चन्द्र किसी भी ग्रह के साथ"), इसलिए लगभग हर कुंडली पर
+              कई योग एक साथ बनते हैं। <b>इनसे आयु का कोई अंक या निष्कर्ष नहीं निकाला जाता</b> —
+              यह गिनती है, फ़ैसला नहीं। नीचे वर्ग-वार देखें, और उपाय वही करें जो निचोड़ में आया है।
+            </div>
           </div>
-        <?php endforeach; endif; ?>
+
+          <?php if ($balaPast): ?>
+            <div class="lk-card good">
+              <div class="lk-card-h" style="color:#14532d">✅ बालारिष्ट — यह प्रश्न बीत चुका</div>
+              <div class="lk-txt" style="color:#14532d">
+                बालारिष्ट बचपन का योग है। आपकी आयु <b><?= (int) $ayAge ?> वर्ष</b> है, यानी वह काल
+                पार हो चुका — इसे आज की चेतावनी की तरह न पढ़ें। नीचे यह सिर्फ़ रिकॉर्ड के लिए है।
+              </div>
+            </div>
+          <?php endif; ?>
+
+          <?php foreach ($bands as $bandKey => $list): $isBala = $bandKey === 'बालारिष्ट'; ?>
+            <div class="lk-card <?= ($isBala && !$balaPast) ? 'bad' : '' ?>" data-app="1"
+                 style="<?= ($isBala && $balaPast) ? 'opacity:.75' : '' ?>">
+              <div class="lk-card-h" style="font-size:.9rem"><?= $h($bandKey) ?> आयु के योग
+                <span class="lk-pill" style="background:#f1f5f9;color:#475569"><?= count($list) ?></span>
+                <?php if ($isBala && $balaPast): ?><span class="lk-pill" style="background:#dcfce7;color:#166534">बीत चुका</span><?php endif; ?>
+              </div>
+              <?php foreach ($list as $y): ?>
+                <div class="lk-sub"><?= $h((string) $y['yog']) ?><?php if (trim((string) $y['why']) !== ''): ?> <span style="color:#166534">(<?= $h((string) $y['why']) ?>)</span><?php endif; ?></div>
+              <?php endforeach; ?>
+              <?php $bn = trim((string) ($list[0]['band_note'] ?? '')); if ($bn !== ''): ?>
+                <?php /* बीत चुके वर्ग पर वही वाक्य वर्तमान काल में छोड़ना डराता है,
+                         जबकि वह प्रश्न ही बीत चुका है। */ ?>
+                <div class="lk-reason"<?= ($isBala && $balaPast) ? ' style="color:#64748b"' : '' ?>>
+                  <?= ($isBala && $balaPast) ? 'किताब का मूल पाठ (बचपन के काल के लिए): ' : '' ?><?= $h($bn) ?>
+                </div>
+              <?php endif; ?>
+              <?php if ($isBala && !$balaPast): ?>
+                <div class="lk-sub" style="color:#991b1b">⚠️ सावधानी व उपाय आवश्यक — घबराने की बात नहीं, समाधान उपलब्ध है।</div>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
         <?php if ($ayOff !== []): ?>
           <details style="margin-top:6px"><summary style="cursor:pointer;font-size:.8rem;color:#94a3b8">अन्य आयु-योग नियम — इस कुंडली में लागू नहीं (<?= count($ayOff) ?>)</summary>
             <?php foreach ($ayOff as $y): ?><div style="font-size:.78rem;color:#94a3b8;margin:2px 0"><?= $h((string) $y['band'] ?: '—') ?> — <?= $h((string) $y['yog']) ?></div><?php endforeach; ?>
