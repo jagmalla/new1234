@@ -84,6 +84,10 @@ final class LalKitabSelfCheck
         $mdfYear = self::fetch($base . '/milan?mdf_from=' . rawurlencode(date('d-m-Y'))
             . '&mdf_to=' . rawurlencode(date('d-m-Y', strtotime('+1 year'))));
 
+        // कन्या के लिंग वाली एक कुंडली — मिलान की कड़ी सही तरफ़ भरती है या नहीं
+        $femalePage = self::fetch($base . '/calc?date=01-12-1980&time=10:30&lat=28.6139&lon=77.2090'
+            . '&tz=5.5&gender=Female');
+
         $rows = [];
         $add = static function (string $id, string $what, callable $fn) use (&$rows): void {
             try { $ok = (bool) $fn(); } catch (\Throwable $e) { $ok = false; $what .= ' [' . $e->getMessage() . ']'; }
@@ -770,6 +774,43 @@ final class LalKitabSelfCheck
                         if (!preg_match('/<option value="' . preg_quote($lkv, '/') . '"[^>]*>/u', $h)) { return false; }
                     }
                 }
+            }
+            return true;
+        });
+
+        // मिलान की कड़ी उसी तरफ़ भरे जो लिंग चुना गया है। ग़लत तरफ़ भरना चुपचाप
+        // होता है — पन्ना खुल जाता है, बस जातक उल्टे खाने में बैठा होता है।
+        $add('MLN-1', 'मिलान की कड़ी चुने गए लिंग वाली तरफ़ भरती है', static function () use ($pages, $femalePage): bool {
+            // बिना लिंग वाली कुंडलियाँ — वर की तरफ़
+            foreach ($pages as $h) {
+                if (!preg_match('/data-more="url" data-val="([^"]*)"/u', $h, $m)) { return false; }
+                $u = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
+                if (mb_strpos($u, 'boy_date=') === false || mb_strpos($u, 'mfrom=boy') === false) { return false; }
+            }
+            if ($femalePage === null) { return false; }
+            if (!preg_match('/data-more="url" data-val="([^"]*)"/u', $femalePage, $m2)) { return false; }
+            $u2 = html_entity_decode($m2[1], ENT_QUOTES, 'UTF-8');
+            if (mb_strpos($u2, 'girl_date=') === false || mb_strpos($u2, 'mfrom=girl') === false) { return false; }
+            if (mb_strpos($u2, 'boy_date=') !== false) { return false; }
+            // साइड-मेन्यू की कड़ी भी वही हो, दो अलग नहीं
+            return mb_strpos($femalePage, 'class="l2-mi-link" title="यह कुंडली कन्या की ओर') !== false;
+        });
+
+        // वर्षफल पन्ने की दूसरी पंक्ति — लाल किताब की वर्ष कुंडली बाएँ, मुद्दा दशा
+        // दाएँ, और ग्रह-स्थिति की तालिका समेटी हुई (पर मौजूद, ताकि मेन्यू व
+        // "और देखें" के उसके लिंक टूटें नहीं)।
+        $add('VP-1', 'वर्षफल में लाल किताब वर्ष-कुंडली मुद्दा दशा के साथ है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $lk = mb_strpos($h, 'id="vpl-card"');
+                $md = mb_strpos($h, 'id="vp-mudda-cell"');
+                $det = mb_strpos($h, 'id="vp-positions-wrap"');
+                $tbl = mb_strpos($h, 'id="card-varshadet"');
+                if ($lk === false || $md === false || $det === false || $tbl === false) { return false; }
+                if ($lk > $md) { return false; }            // चित्र पहले (बाएँ)
+                if ($det > $tbl) { return false; }          // तालिका समेटन के भीतर
+                if (mb_strpos($h, 'id="vpl-chart"') === false) { return false; }
+                // और पट्टी मेन्यू के नीचे न जाए
+                if (mb_strpos($h, '#more-panel { grid-column: 2 / 4') === false) { return false; }
             }
             return true;
         });

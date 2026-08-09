@@ -97,9 +97,21 @@
       var a = leftEl.getBoundingClientRect(), b = rightEl.getBoundingClientRect();
       return a.width > 0 && b.width > 0 && Math.abs(a.top - b.top) < 40 && (b.left - a.left) > 40;
     }
+    // पंक्ति-2 में साथी अब बाएँ है और दशा दाएँ — इसलिए यह जाँच क्रम नहीं देखती।
+    // पुरानी sameRow() "बायाँ फिर दायाँ" माँगती थी और उलटी जोड़ी पर चुपचाप false
+    // लौटाकर ऊँचाई-मिलान बंद कर देती थी।
+    function sameRowEither(a, b) {
+      if (!a || !b) { return false; }
+      var x = a.getBoundingClientRect(), y = b.getBoundingClientRect();
+      return x.width > 0 && y.width > 0 && Math.abs(x.top - y.top) < 40 && Math.abs(y.left - x.left) > 40;
+    }
     function syncMuddaHeight() {
       var pred = global.document.getElementById('varsha-pred-card');   // row 1, right
-      var pos  = global.document.getElementById('card-varshadet');     // row 2, right
+      // पंक्ति 2 का साथी — अब लाल किताब की वर्ष-कुंडली वाला कार्ड। तालिका
+      // नीचे समेट दी गई है, इसलिए वह पुराना साथी सिर्फ़ तब बचता है जब यह
+      // कार्ड किसी कारण मौजूद न हो।
+      var pos  = global.document.getElementById('vpl-card')
+             || global.document.getElementById('card-varshadet');
       if (split) {
         // Row 1: prediction panel = Varsha chart height (its list scrolls) —
         // only when the two are actually side by side.
@@ -108,7 +120,7 @@
           else { pred.style.height = ''; }
         }
         // Row 2: Mudda dasha = annual-positions table height (dasha list scrolls).
-        if (sameRow(dashaCell, pos)) {
+        if (sameRowEither(dashaCell, pos)) {
           var posH = pos.getBoundingClientRect().height;
           dashaCell.style.height = posH + 'px'; dashaCell.style.maxHeight = posH + 'px';
         } else {
@@ -134,8 +146,10 @@
         clearTimeout(rT); rT = setTimeout(syncMuddaHeight, 30);
       });
       ro.observe(chartCell);
-      var posEl = global.document.getElementById('card-varshadet');
-      if (posEl) { ro.observe(posEl); }
+      ['vpl-card', 'card-varshadet'].forEach(function (id) {
+        var posEl = global.document.getElementById(id);
+        if (posEl) { ro.observe(posEl); }
+      });
     }
 
     // Build the three current-dasha header lines for the Mudda chain at "now".
@@ -213,6 +227,14 @@
               if (el && f[1] != null) { el.innerHTML = f[1]; }
             });
           if (global.ABBindVarshaPred) { global.ABBindVarshaPred(); }
+          // वर्ष बदल गया — जो और हिस्से इसी वर्ष पर चलते हैं (जैसे लाल किताब
+          // की वर्ष-कुंडली) वे इस ख़बर से अपने-आप बदल जाते हैं। सीधे बुलाने
+          // के बजाय ख़बर इसलिए, कि यह फ़ाइल उनके बारे में कुछ न जाने।
+          try {
+            global.dispatchEvent(new CustomEvent('ab:varsha-year', {
+              detail: { year: v.year, age: v.age_completed }
+            }));
+          } catch (e) { /* पुराना ब्राउज़र */ }
           // Sync row heights AFTER the chart + positions table are in the DOM
           // (twice, to catch late reflow from the chart SVG / fonts).
           setTimeout(syncMuddaHeight, 80);

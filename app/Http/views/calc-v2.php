@@ -362,7 +362,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         .dasha-strip { cursor: pointer; }
         @media (max-width: 640px) { .dm-box { max-height: 92vh; border-radius: 10px; } .dm-body { padding: 10px 10px; } }
         /* ---- "और देखें" पट्टी व उसकी खिड़की ---- */
-        #more-panel { grid-column: 1 / -1; }
+        /* पट्टी वहीं से शुरू हो जहाँ से चार्ट और फल शुरू होते हैं (दूसरा स्तंभ),
+           पहले से नहीं — वरना वह मेन्यू के नीचे चली जाती है और चिपके हुए मेन्यू
+           के पीछे उसके बटन छिप जाते हैं। यही .l2-full वाली सीमा है। */
+        #more-panel { grid-column: 2 / 4; min-width: 0; }
         #more-panel.hidden { display: none; }
         .mp-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 16px; }
         .mp-head h2 { font-size: 1.05rem; font-weight: 800; color: var(--sindoor); margin: 0; display: inline; }
@@ -1247,6 +1250,30 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     ?>
 
     <!-- ============ THREE-PANEL SHELL (layout v2, Phase 2) ============ -->
+    <?php
+        /* ══ मिलान की कड़ी — एक ही जगह बनती है, दो जगह इस्तेमाल होती है ══
+           (साइड-मेन्यू का "Kundali Milan" और नीचे "और देखें" वाला बटन)। भरा किस
+           तरफ़ जाए यह ऊपर चुने गए लिंग से तय होता है: कन्या हो तो कन्या वाले खाने
+           में, वरना वर वाले में। पहले सब कुछ हमेशा "वर" में चला जाता था — यानी
+           कन्या की कुंडली खोले बैठे ज्योतिषी को हर बार दोनों तरफ़ का विवरण हाथ से
+           बदलना पड़ता था, और भूल जाने पर मिलान उल्टी तरफ़ से बन जाता था। */
+        $milanSide = in_array(mb_strtolower(trim((string) $in['gender'])), ['female', 'स्त्री', 'कन्या'], true)
+            ? 'girl' : 'boy';
+        $milanSideHi = $milanSide === 'girl' ? 'कन्या' : 'वर';
+        $milanUrl = \AutoBusiness\Core\Asset::url('/milan?' . http_build_query([
+            $milanSide . '_name'  => (string) $in['name'],
+            $milanSide . '_date'  => (string) $in['date'],
+            $milanSide . '_time'  => (string) $in['time'],
+            $milanSide . '_lat'   => (string) $in['latIn'],
+            // समय-मंडल इसी कुंडली का — डिफ़ॉल्ट 5:30 भर देने पर विदेश में जन्मे
+            // जातक की मिलान-कुंडली चुपचाप ग़लत समय पर बनती।
+            $milanSide . '_lon'   => (string) $in['lonIn'],
+            $milanSide . '_tz'    => (string) (float) ($meta['tz'] ?? 5.5),
+            $milanSide . '_place' => (string) $in['place'],
+            // मिलान-पन्ना इसी से जानता है कि कौन-सा पक्ष खुली कुंडली से आया है
+            'mfrom' => $milanSide,
+        ]));
+    ?>
     <div id="sec-home" class="l2-grid">
 
         <!-- Side menu -->
@@ -1338,7 +1365,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
                 </div>
             </div>
             <div class="l2-mi">
-                <a href="<?= $h(\AutoBusiness\Core\Asset::url('/milan')) ?>" class="l2-mi-link"><span class="l2-ic">💑</span>Kundali Milan</a>
+                <a href="<?= $h($milanUrl) ?>" class="l2-mi-link" title="यह कुंडली <?= $h($milanSideHi) ?> की ओर भरी मिलेगी"><span class="l2-ic">💑</span>Kundali Milan</a>
             </div>
         </nav>
         <!-- Backdrop for the mobile/tablet slide-in menu drawer. -->
@@ -2095,16 +2122,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             ?>
 
             <?php /* 7) मिलान अपना अलग पन्ना है (दो कुंडलियाँ चाहिए) — इसलिए वह
-                     खिड़की में उसी पन्ने की तरह खुलता है, वर की जगह यह जातक भरा हुआ। */
-            $milanQ = '/milan?' . http_build_query([
-                'boy_name' => (string) $in['name'], 'boy_date' => (string) $in['date'],
-                'boy_time' => (string) $in['time'], 'boy_lat' => (string) $in['latIn'],
-                // समय-मंडल इसी कुंडली का — डिफ़ॉल्ट 5:30 भर देने पर विदेश में जन्मे
-                // जातक की मिलान-कुंडली चुपचाप ग़लत समय पर बनती।
-                'boy_lon' => (string) $in['lonIn'], 'boy_tz' => (string) (float) ($meta['tz'] ?? 5.5),
-                'boy_place' => (string) $in['place'],
-            ]);
-            $c = $mpChip('💑 कुंडली मिलान (गुण + लाल किताब)', ['more' => 'url', 'val' => \AutoBusiness\Core\Asset::url($milanQ)])
+                     खिड़की में उसी पन्ने की तरह खुलता है, यही जातक पहले से भरा हुआ
+                     (कड़ी ऊपर एक ही बार बनती है)। */
+            $c = $mpChip('💑 कुंडली मिलान — यह कुंडली ' . ($milanSide === 'girl' ? 'कन्या' : 'वर') . ' की ओर',
+                    ['more' => 'url', 'val' => $milanUrl])
                . $mpChip('📆 Today · आज', ['more' => 'sec', 'val' => 'today'])
                . $mpChip('🧩 Custom Screen', ['more' => 'sec', 'val' => 'custom']);
             echo $mpGroup('🔎 अन्य / More', $c);
@@ -2546,13 +2567,42 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             </div>
         </div>
 
-        <!-- ROW 2: Mudda Dasha on the LEFT + annual positions detail on the RIGHT. -->
+        <?php /* ══════ ROW 2 — दोनों प्रणालियों की वर्ष-कुंडली एक ही पन्ने पर ══════
+             बाएँ **लाल किताब की वर्ष कुंडली**, दाएँ मुद्दा दशा। ज्योतिषी वर्ष का फल
+             पढ़ते समय बार-बार दोनों में मिलान करता है, और अब तक उसके लिए लाल किताब
+             का पन्ना अलग से खोलना पड़ता था। यह चित्र ऊपर चुने गए **वर्ष के साथ ही
+             बदलता है** (वर्ष घटाकर जन्म-वर्ष = आयु, और लाल किताब की वर्ष-कुंडली
+             आयु से बनती है)।
+
+             वार्षिक ग्रह-स्थिति की तालिका यहाँ से हटाकर नीचे समेट दी गई है — जगह
+             दो चित्रों को मिली। तालिका मिटाई नहीं गई: वह एक क्लिक पर खुलती है और
+             मेन्यू व "और देखें" के उसके लिंक पहले की तरह काम करते हैं। */ ?>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div id="vpl-card" class="bg-white rounded-lg shadow p-3 flex flex-col">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2 pb-2 border-b text-sm">
+                    <span class="font-semibold text-gray-800">📕 लाल किताब — वर्ष कुंडली</span>
+                    <span id="vpl-lab" class="text-xs text-gray-400 font-normal">वर्ष चुनें</span>
+                </div>
+                <div id="vpl-chart" class="w-full"></div>
+                <div id="vpl-sum" style="margin-top:8px"></div>
+                <div id="vpl-status" class="text-xs text-gray-400" style="margin-top:6px"></div>
+                <div class="text-xs text-gray-400" style="margin-top:6px;line-height:1.6">
+                    स्थिर मेष लग्न — लाल किताब की अपनी वर्ष-कुंडली (आयु-आधारित)। यह वैदिक वर्षफल की गणना
+                    नहीं बदलती; मिलान के लिए साथ रखी है। विस्तार से पढ़ने हेतु
+                    <b>लाल किताब → वर्ष कुंडली</b> खोलें।
+                </div>
+            </div>
             <div id="vp-mudda-cell"></div>
-            <div id="card-varshadet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto">
+        </div>
+
+        <details id="vp-positions-wrap" style="margin-top:4px">
+            <summary style="cursor:pointer;font-weight:700;font-size:.88rem;color:#b45309;padding:6px 2px">
+                📋 वार्षिक ग्रह-स्थिति की तालिका (खोलने के लिए क्लिक करें)
+            </summary>
+            <div id="card-varshadet" class="bg-white rounded-lg shadow p-4 text-sm overflow-x-auto" style="margin-top:6px">
             <?php $forYear = (int) $in['forYear']; require __DIR__ . '/_varsha_positions.php'; ?>
             </div>
-        </div>
+        </details>
 
         <!-- ROW 3: PL-style Panchavargeeya Bala table + Year Lord (Panchadhikari) card. -->
         <div id="vp-row3" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
@@ -3478,6 +3528,52 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       if (!el.hasAttribute('tabindex')) { el.setAttribute('tabindex', '0'); }
     });
   }
+
+  // ---- वर्षफल पन्ने पर लाल किताब की वर्ष कुंडली ----
+  // वैदिक वर्ष-चुनाव बदलते ही यह चित्र भी बदल जाए, ताकि दोनों प्रणालियों का वर्ष
+  // एक ही पन्ने पर आमने-सामने पढ़ा जा सके। वर्षफल की गणना यह नहीं छूता — सिर्फ़
+  // उसकी चुनी हुई आयु लेकर लाल किताब का अपना endpoint बुलाता है (वही जो लाल
+  // किताब के पन्ने पर चलता है)।
+  (function () {
+    var busy = 0;
+    function draw(age, year) {
+      var box = document.getElementById('vpl-chart');
+      if (!box) { return; }
+      var lab = document.getElementById('vpl-lab');
+      var st  = document.getElementById('vpl-status');
+      var sum = document.getElementById('vpl-sum');
+      age = parseInt(age, 10) || 0;
+      if (age < 1) { age = 1; }
+      if (age > 96) { age = 96; }
+      if (lab) { lab.textContent = 'आयु ' + age + (year ? ' · वर्ष ≈ ' + year + ' ई.' : ''); }
+      if (st) { st.textContent = 'गणना हो रही है…'; }
+      var b = window.AB_BIRTH || {};
+      var q = new URLSearchParams({
+        age: age, bdate: b.date || '', btime: b.time || '',
+        blat: b.lat != null ? b.lat : '', blon: b.lon != null ? b.lon : '',
+        btz: b.tz != null ? b.tz : '', ayanamsa: b.ayanamsa || 'lahiri'
+      });
+      var mine = ++busy;   // देर से लौटा पुराना जवाब नया चित्र न मिटाए
+      fetch('/calc/lalkitabVarsh?' + q.toString(), { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (v) {
+          if (mine !== busy) { return; }
+          if (v.error) { if (st) { st.textContent = 'त्रुटि: ' + v.error; } return; }
+          if (st) { st.textContent = ''; }
+          if (lab) { lab.textContent = 'आयु ' + v.age + ' · वर्ष ≈ ' + v.year + ' ई.'; }
+          if (window.ABChart && v.north) {
+            ABChart.renderNorth(box, v.north, { showDeg: false, big: true });
+          }
+          if (sum) { sum.innerHTML = v.bar_html || ''; }
+          window.dispatchEvent(new Event('resize'));   // ऊँचाई-मिलान दोबारा चले
+        })
+        .catch(function (e) { if (mine === busy && st) { st.textContent = 'अनुरोध विफल: ' + e; } });
+    }
+    window.addEventListener('ab:varsha-year', function (e) {
+      var d = (e && e.detail) || {};
+      draw(d.age, d.year);
+    });
+  })();
 
   // ---- Gochar page: four configurable panes (2 charts + 2 predictions) ----
   // Each pane carries a dropdown so the viewer chooses what fills that space.
@@ -4607,7 +4703,13 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       }
       if (tgt) {
         var el = document.getElementById(tgt);
-        if (el) { setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80); }
+        if (el) {
+          // निशाना किसी समेटे हुए हिस्से (<details>) के भीतर हो तो पहले उसे खोलो —
+          // वरना मेन्यू का लिंक दबता है, कुछ खुलता नहीं, और वह टूटा हुआ लगता है।
+          var dd = el.closest ? el.closest('details') : null;
+          if (dd && !dd.open) { dd.open = true; }
+          setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
+        }
       }
     });
   });

@@ -399,16 +399,35 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     <?php endif; ?>
 
     <!-- ============ INPUT FORMS ============ -->
+    <?php
+    /* जन्म-कुंडली से आए हुए ग्राहक को यह साफ़ दिखे कि उसका जातक किस खाने में
+       बैठा है और दूसरा खाना अभी भरा जाना है। बिना इसके दोनों खाने एक जैसे भरे
+       दिखते हैं और लोग नमूने वाली कुंडली से मिलान करके निष्कर्ष निकाल लेते हैं। */
+    $fromChart = (string) ($view['fromChart'] ?? '');
+    if ($fromChart !== ''):
+        $mineHi  = $fromChart === 'girl' ? 'कन्या' : 'वर';
+        $otherHi = $fromChart === 'girl' ? 'वर' : 'कन्या';
+    ?>
+    <div class="card noprint" style="border-left:5px solid #db2777;background:#fff5f9;padding:11px 15px;font-size:.9rem;color:#831843">
+        📥 <b><?= $h($mineHi) ?></b> वाला खाना आपकी खुली कुंडली से भरा गया है
+        <span style="color:#9d174d">(<?= $h(trim(($boyIn['name'] ?? '') !== '' && $fromChart === 'boy' ? $boyIn['name'] : (($girlIn['name'] ?? '') !== '' && $fromChart === 'girl' ? $girlIn['name'] : ''))) ?: 'नाम रिक्त' ?>
+        · <?= $h($fromChart === 'boy' ? $boyIn['date'] : $girlIn['date']) ?>)</span>।
+        अब <b><?= $h($otherHi) ?></b> का विवरण भरकर <b>मिलान करें</b> दबाएँ —
+        तब तक नीचे दिखा मिलान <?= $h($otherHi) ?> के नमूना-विवरण पर बना है।
+    </div>
+    <?php endif; ?>
     <form class="card noprint" method="get" action="">
         <input type="hidden" name="r" value="milan">
+        <?php if ($fromChart !== ''): ?><input type="hidden" name="mfrom" value="<?= $h($fromChart) ?>"><?php endif; ?>
         <div class="forms">
             <?php
-            $formCol = static function (string $p, array $in, callable $h): void {
+            $formCol = static function (string $p, array $in, callable $h) use ($fromChart): void {
                 $title = $p === 'boy' ? 'वर (Boy)' : 'कन्या (Girl)';
+                $mine = $fromChart !== '' && $fromChart === $p;
                 ?>
-                <div>
+                <div<?= $mine ? ' style="outline:2px solid #f0abcd;outline-offset:6px;border-radius:8px"' : '' ?>>
                     <div class="fcol-head">
-                        <h2><?= $h($title) ?></h2>
+                        <h2><?= $h($title) ?><?= $mine ? ' <span style="font-size:.72rem;font-weight:700;color:#be185d;background:#fce7f3;border-radius:999px;padding:2px 9px;vertical-align:middle">आपकी कुंडली</span>' : '' ?></h2>
                         <div class="fcol-acts">
                             <button type="button" class="mlk-btn mlk-btn-ghost" data-mlk-open="<?= $p ?>" title="सहेजा गया चार्ट इस ओर खोलें">📂 Open</button>
                             <button type="button" class="mlk-btn" data-mlk-save="<?= $p ?>" title="इस ओर का चार्ट सहेजें">💾 Save</button>

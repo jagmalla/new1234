@@ -99,6 +99,10 @@ final class MilanController
             'marriageDates' => $marriageDates ?? null,
             'mdfFrom' => $mdfFromRaw ?? '',
             'mdfTo' => $mdfToRaw ?? '',
+            // खुली हुई कुंडली से आए तो कौन-सी तरफ़ — पन्ना यह बता सके कि आपका
+            // जातक किस खाने में बैठा है और दूसरा खाना अभी नमूना है
+            'fromChart' => in_array((string) ($_GET['mfrom'] ?? ''), ['boy', 'girl'], true)
+                ? (string) $_GET['mfrom'] : '',
         ];
         require dirname(__DIR__) . '/Http/views/milan.php';
     }
