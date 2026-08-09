@@ -838,6 +838,24 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // गोचर पन्ने के दोनों चार्ट-खानों में घुमाने का चुनाव। गोचर पढ़ते समय
+        // ज्योतिषी चन्द्र या किसी और भाव को पहले घर पर लाकर देखता है; यह सुविधा
+        // अब तक सिर्फ़ जन्म-कुंडली वाले पैनल पर थी।
+        $add('ROT-1', 'गोचर पन्ने के दोनों चार्ट घुमाए जा सकते हैं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (!preg_match('/<div id="sec-gochar".*?<div id="gp-pred-src"/su', $h, $m)) { return false; }
+                $sec = $m[0];
+                foreach (['c1', 'c2'] as $slot) {
+                    if (!preg_match('/<select class="gp-sel gp-rot-sel" data-slot-id="' . $slot . '"(.*?)<\/select>/su', $sec, $r)) {
+                        return false;
+                    }
+                    if (preg_match_all('/<option value="\d+"/u', $r[1]) !== 12) { return false; }
+                }
+                if (mb_substr_count($sec, 'gp-rot-tag') !== 2) { return false; }
+            }
+            return true;
+        });
+
         // ───────────────────── लाल किताब मिलान ─────────────────────
         // ये पाँच जाँचें उन्हीं पाँच चूकों की रखवाली करती हैं जो मिलान में मिलीं:
         // निष्क्रिय ग्रह का "शुभ" छपना, नकली प्रतिशत, दूसरी कुंडली वाले परिहार का

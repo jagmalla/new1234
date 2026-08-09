@@ -525,6 +525,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             background: #f8fafc url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 9px center;
             -webkit-appearance: none; appearance: none; max-width: 100%; }
         .gp-sel:hover { background-color: #eef2f7; }
+        .gp-rot-tag { font-size: .74rem; font-weight: 800; color: #2563eb; white-space: nowrap; }
+        .gp-rot-sel { font-size: .8rem; font-weight: 700; color: #1e3a8a; border-color: #bfdbfe;
+            background-color: #eff6ff; padding: 5px 28px 5px 9px; }
+        .gp-rot-sel:hover { background-color: #dbeafe; }
         .gp-sub { font-size: .72rem; color: #9ca3af; margin-left: auto; white-space: nowrap; }
         .gp-body { height: var(--gp-h); padding: 12px 14px; }
         .gp-body-chart { display: flex; align-items: center; justify-content: center; padding: 10px; }
@@ -2395,6 +2399,14 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             <div class="gpane" data-slot="chart" data-slot-id="c1">
                 <div class="gp-head">
                     <select class="gp-sel gp-chart-sel" data-slot-id="c1" aria-label="चार्ट चुनें / choose chart"></select>
+                    <?php /* घुमाने का चुनाव — जन्म-कुंडली वाले पैनल जैसा ही। गोचर पढ़ते
+                             समय ज्योतिषी चन्द्र या किसी और भाव को पहले घर पर लाकर देखता
+                             है; अब तक यह सुविधा सिर्फ़ D1 वाले पैनल पर थी। */ ?>
+                    <span class="gp-rot-tag">Rotate ▾</span>
+                    <select class="gp-sel gp-rot-sel" data-slot-id="c1" aria-label="चार्ट घुमाएँ (भाव चुनें)">
+                        <option value="1" selected>भाव 1 — लग्न</option>
+                        <?php for ($gr = 2; $gr <= 12; $gr++): ?><option value="<?= $gr ?>">भाव <?= $gr ?></option><?php endfor; ?>
+                    </select>
                     <span class="gp-sub" data-sub="c1"></span>
                 </div>
                 <div class="gp-body gp-body-chart"><div class="gp-chart-host" data-host="c1"></div></div>
@@ -2412,6 +2424,14 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             <div class="gpane" data-slot="chart" data-slot-id="c2">
                 <div class="gp-head">
                     <select class="gp-sel gp-chart-sel" data-slot-id="c2" aria-label="चार्ट चुनें / choose chart"></select>
+                    <?php /* घुमाने का चुनाव — जन्म-कुंडली वाले पैनल जैसा ही। गोचर पढ़ते
+                             समय ज्योतिषी चन्द्र या किसी और भाव को पहले घर पर लाकर देखता
+                             है; अब तक यह सुविधा सिर्फ़ D1 वाले पैनल पर थी। */ ?>
+                    <span class="gp-rot-tag">Rotate ▾</span>
+                    <select class="gp-sel gp-rot-sel" data-slot-id="c2" aria-label="चार्ट घुमाएँ (भाव चुनें)">
+                        <option value="1" selected>भाव 1 — लग्न</option>
+                        <?php for ($gr = 2; $gr <= 12; $gr++): ?><option value="<?= $gr ?>">भाव <?= $gr ?></option><?php endfor; ?>
+                    </select>
                     <span class="gp-sub" data-sub="c2"></span>
                 </div>
                 <div class="gp-body gp-body-chart"><div class="gp-chart-host" data-host="c2"></div></div>
@@ -3601,9 +3621,18 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     ];
   }
 
+  // हर चार्ट-खाने का अपना घुमाव — एक में गोचर चन्द्र-लग्न से देखा जा सकता है और
+  // दूसरे में जन्म-कुंडली लग्न से, दोनों साथ-साथ।
+  var gpRotState = { c1: 1, c2: 1 };
+  function gpRotEl(hostId) { return document.querySelector('.gp-rot-sel[data-slot-id="' + hostId + '"]'); }
+  function gpRotVal(hostId) {
+    var v = parseInt(gpRotState[hostId], 10);
+    return (v >= 1 && v <= 12) ? v : 1;
+  }
   function gpRenderChart(hostId, key) {
     var host = document.querySelector('.gp-chart-host[data-host="' + hostId + '"]');
     if (!host || !window.ABChart) { return; }
+    var rot = gpRotVal(hostId), rEl = gpRotEl(hostId);
     if (key === 'gochar') {
       var g = window.AB_GOCHAR || {};
       if (!g.transits || !g.ascendant) { host.innerHTML = '<div class="text-gray-400 italic text-sm">गोचर की गणना हो रही है…</div>'; return; }
@@ -3611,12 +3640,19 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         var t = g.transits[n];
         return { abbr: GP_ABBR[n] || n.slice(0, 2), sign: t.sign_index, deg: Math.floor(t.deg), retro: !!t.retro };
       });
-      window.ABChart.renderNorth(host, { asc_sign: g.ascendant.sign_index, planets: pls }, { showDeg: true, fit: true });
+      window.ABChart.renderNorth(host, { asc_sign: g.ascendant.sign_index, planets: pls }, { showDeg: true, fit: true, rotate: rot });
+      updateRotateLabels(g.ascendant.sign_index, rEl);
     } else if (key === 'varsha') {
-      if (window.AB_VARSHAN && window.AB_VARSHAN.planets) { window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg: true, fit: true }); }
+      if (window.AB_VARSHAN && window.AB_VARSHAN.planets) {
+        window.ABChart.renderNorth(host, window.AB_VARSHAN, { showDeg: true, fit: true, rotate: rot });
+        updateRotateLabels(window.AB_VARSHAN.asc_sign, rEl);
+      }
     } else {
       var V = window.AB_VARGAS || {};
-      if (V[key]) { window.ABChart.renderNorth(host, V[key], { showDeg: true, fit: true }); }
+      if (V[key]) {
+        window.ABChart.renderNorth(host, V[key], { showDeg: true, fit: true, rotate: rot });
+        updateRotateLabels(V[key].asc_sign, rEl);
+      }
     }
   }
   function gpChartSub(key) {
@@ -3668,8 +3704,24 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       sel.innerHTML = charts.map(function (c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('');
       if (!charts.some(function (c) { return c.key === gpChartState[slotId]; })) { gpChartState[slotId] = charts[0].key; }
       sel.value = gpChartState[slotId];
-      sel.addEventListener('change', function () { gpChartState[slotId] = sel.value; gpApplyChart(slotId); });
+      sel.addEventListener('change', function () {
+        // दूसरा चार्ट चुनने पर घुमाव पहले घर पर लौटा दिया जाता है — नए चार्ट की
+        // लग्न-राशि अलग होती है, इसलिए पुराना "भाव 7" वहाँ कुछ और अर्थ रखता।
+        gpChartState[slotId] = sel.value;
+        gpRotState[slotId] = 1;
+        var r = gpRotEl(slotId);
+        if (r) { r.value = '1'; }
+        gpApplyChart(slotId);
+      });
       gpApplyChart(slotId);
+    });
+    // घुमाने वाले दोनों चुनाव — हर खाना अपने चित्र को अपने हिसाब से घुमाता है
+    document.querySelectorAll('.gp-rot-sel').forEach(function (sel) {
+      var slotId = sel.getAttribute('data-slot-id');
+      sel.addEventListener('change', function () {
+        gpRotState[slotId] = sel.value;
+        gpRenderChart(slotId, gpChartState[slotId]);
+      });
     });
     // Populate + wire the two prediction dropdowns.
     document.querySelectorAll('.gp-pred-sel').forEach(function (sel) {
@@ -3689,8 +3741,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     return (v >= 1 && v <= 12) ? v : 1;
   }
   // Show each house's actual rashi in the Rotate dropdown for the current chart.
-  function updateRotateLabels(ascSign) {
-    var rs = document.getElementById('chart-rotate');
+  // दूसरा तर्क देने पर वही चुनाव भरा जाता है — गोचर पन्ने के दोनों खानों के अपने
+  // चुनाव हैं, और हर चार्ट की लग्न-राशि अलग होती है, इसलिए लेबल भी अलग बनते हैं।
+  function updateRotateLabels(ascSign, el) {
+    var rs = el || document.getElementById('chart-rotate');
     if (!rs || ascSign == null) { return; }
     for (var hh = 1; hh <= 12; hh++) {
       var opt = rs.querySelector('option[value="' + hh + '"]');
