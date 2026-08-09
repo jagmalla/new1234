@@ -70,12 +70,19 @@ final class LalKitabSelfCheck
             'C' => ['20-03-1962', '18:20', '11-11-1966', '21:40'],
         ];
         $milan = [];
+        $milanRaw = '';
         foreach ($couples as $ck => [$bd, $bt, $gd, $gt]) {
             $url = $base . '/milan?boy_date=' . rawurlencode($bd) . '&boy_time=' . rawurlencode($bt)
                 . '&girl_date=' . rawurlencode($gd) . '&girl_time=' . rawurlencode($gt);
             $html = self::fetch($url);
-            if ($html !== null) { $milan[$ck] = self::lkmBlock($html); }
+            if ($html !== null) {
+                $milan[$ck] = self::lkmBlock($html);
+                if ($milanRaw === '') { $milanRaw = $html; }   // तिथि-खोजक का फ़ॉर्म पूरे पन्ने में है
+            }
         }
+        // विवाह-मुहूर्त तिथि-खोजक — पूरे एक साल की माँग पर पूरा साल जाँचा जाए
+        $mdfYear = self::fetch($base . '/milan?mdf_from=' . rawurlencode(date('d-m-Y'))
+            . '&mdf_to=' . rawurlencode(date('d-m-Y', strtotime('+1 year'))));
 
         $rows = [];
         $add = static function (string $id, string $what, callable $fn) use (&$rows): void {
@@ -843,6 +850,35 @@ final class LalKitabSelfCheck
                 $sig[] = $n . '|' . $t;
             }
             return count(array_unique($sig)) > 1;
+        });
+
+        // विवाह-मुहूर्त तिथि-खोजक — तिथियाँ पहले से भरी हों (ख़ाली डिब्बा किसी काम
+        // का नहीं) और अवधि-टैब मौजूद हों।
+        $add('MDF-1', 'विवाह-तिथि खोजक में आज व छह-माह की तिथि पहले से भरी है', static function () use ($milanRaw): bool {
+            if ($milanRaw === '') { return false; }
+            if (!preg_match('/id="mdf_from"[^>]*value="(\d{2}-\d{2}-\d{4})"/u', $milanRaw, $mf)) { return false; }
+            if (!preg_match('/id="mdf_to"[^>]*value="(\d{2}-\d{2}-\d{4})"/u', $milanRaw, $mt)) { return false; }
+            if ($mf[1] !== date('d-m-Y')) { return false; }
+            if ($mt[1] === $mf[1] || strtotime(str_replace('-', '/', $mt[1])) <= time()) { return false; }
+            foreach ([1, 3, 6, 12] as $mn) {
+                if (mb_strpos($milanRaw, 'data-months="' . $mn . '"') === false) { return false; }
+            }
+            return true;
+        });
+
+        // और माँगी हुई अवधि सचमुच जाँची जाए। पहले यह 120 दिन पर चुपचाप कट जाती
+        // थी — साल भर माँगने वाले को चार महीने का जवाब मिलता था, और आधे से ज़्यादा
+        // शुभ दिन उसे दिखते ही नहीं थे।
+        $add('MDF-2', 'साल भर की माँग पर पूरा साल जाँचा जाता है (कटता नहीं)', static function () use ($mdfYear): bool {
+            if ($mdfYear === null) { return false; }
+            if (mb_strpos($mdfYear, 'सीमा बड़ी है') !== false) { return false; }
+            if (!preg_match('/(\d+) दिन जाँचे/u', $mdfYear, $m)) { return false; }
+            if ((int) $m[1] < 365) { return false; }
+            // और खोज के बाद फ़ॉर्म वही सीमा दिखाता रहे — पहले डिब्बे ख़ाली हो जाते
+            // थे, इसलिए यह भी पता नहीं चलता था कि नीचे की सूची किस अवधि की है
+            $want = date('d-m-Y', strtotime('+1 year'));
+            if (!preg_match('/id="mdf_to"[^>]*value="' . preg_quote($want, '/') . '"/u', $mdfYear)) { return false; }
+            return preg_match('/class="mdf-tab on"\s*\n?\s*data-months="12"/u', $mdfYear) === 1;
         });
 
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {

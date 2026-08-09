@@ -8,6 +8,11 @@ $milan = $view['milan'] ?? null;
 $boy = $view['boy'] ?? null;
 $girl = $view['girl'] ?? null;
 $error = $view['error'] ?? null;
+/* खोजी हुई तिथि-सीमा। ये दोनों अब तक यहाँ पढ़ी ही नहीं जाती थीं — इसलिए खोज
+   चलाने के बाद फ़ॉर्म के डिब्बे ख़ाली हो जाते थे और यह भी पता नहीं चलता था कि
+   नीचे दिखाई गई सूची किस अवधि की है। */
+$mdfFrom = (string) ($view['mdfFrom'] ?? '');
+$mdfTo   = (string) ($view['mdfTo'] ?? '');
 
 $h = static fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
 $asset = static fn(string $p): string => \AutoBusiness\Core\Asset::url($p);
@@ -783,6 +788,14 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
       .mdf-fld label{font-size:.74rem;font-weight:700;color:#9d174d}
       .mdf-fld input{border:1.5px solid #f0abcd;border-radius:8px;padding:8px 11px;font-size:.9rem;font-family:inherit;min-width:150px}
       .mdf-btn{background:#db2777;color:#fff;border:0;border-radius:9px;padding:9px 20px;font-size:.9rem;font-weight:700;cursor:pointer}
+      /* अवधि-टैब अपनी पूरी पंक्ति लेते हैं, तिथि-डिब्बों के ठीक ऊपर */
+      .mdf-tabs{flex:0 0 100%;display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px}
+      .mdf-tabs-h{font-size:.74rem;font-weight:700;color:#9d174d}
+      .mdf-tabs-n{font-size:.72rem;color:#9ca3af}
+      .mdf-tab{border:1.5px solid #f0abcd;background:#fff;color:#9d174d;border-radius:999px;
+        padding:4px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit}
+      .mdf-tab:hover{background:#fdf2f8}
+      .mdf-tab.on{background:#db2777;border-color:#db2777;color:#fff}
       .mdf-tally{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
       .mdf-pill{border-radius:999px;padding:4px 13px;font-size:.8rem;font-weight:700}
       .mdf-pill.g{background:#dcfce7;color:#166534}.mdf-pill.y{background:#fef9c3;color:#854d0e}.mdf-pill.r{background:#fee2e2;color:#991b1b}
@@ -814,12 +827,82 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
         <?php endforeach; endforeach; ?>
         <input type="hidden" name="ayanamsa" value="<?= $h($ayanamsa) ?>">
         <input type="hidden" name="phala_lang" value="<?= $h($lang) ?>">
+        <?php
+        /* तिथियाँ पहले से भरी हुई — ख़ाली डिब्बे में "01-12-2026" जैसा नमूना पड़ा
+           रहता था और उसे बहुत लोग असली तारीख़ समझकर सीधे खोज दबा देते थे, जिससे
+           कुछ नहीं निकलता। अब प्रारम्भ आज है और अन्त छह महीने बाद — यही सबसे
+           आम माँग है, और चाहें तो नीचे की पट्टी से एक टैप में बदल जाती है।
+
+           महीने जोड़ते समय PHP का अपना "+1 month" 31 जनवरी को 3 मार्च बना देता है।
+           इसलिए महीना पहले जोड़ा जाता है, फिर दिन उस महीने की लम्बाई पर काटा
+           जाता है — 31-01 से एक माह यानी 28/29-02, 3 मार्च नहीं। */
+        $mdfPlus = static function (int $months): string {
+            $t = new \DateTimeImmutable('today');
+            $day = (int) $t->format('j');
+            $m = $t->modify('first day of this month')->modify('+' . $months . ' months');
+            return $m->setDate((int) $m->format('Y'), (int) $m->format('n'),
+                min($day, (int) $m->format('t')))->format('d-m-Y');
+        };
+        $mdfFromV = trim((string) ($mdfFrom ?? '')) !== '' ? (string) $mdfFrom : date('d-m-Y');
+        $mdfToV   = trim((string) ($mdfTo ?? '')) !== '' ? (string) $mdfTo : $mdfPlus(6);
+        // कौन-सा टैब चालू दिखे — वही जो इन दोनों तिथियों से मेल खाता हो
+        $mdfSpans = [1 => '1 माह', 3 => '3 माह', 6 => '6 माह', 12 => '1 वर्ष'];
+        $mdfActive = 0;
+        if ($mdfFromV === date('d-m-Y')) {
+            foreach ($mdfSpans as $mn => $_) { if ($mdfToV === $mdfPlus($mn)) { $mdfActive = $mn; break; } }
+        }
+        ?>
+        <div class="mdf-tabs" role="group" aria-label="अवधि चुनें">
+          <span class="mdf-tabs-h">अवधि:</span>
+          <?php foreach ($mdfSpans as $mn => $lbl): ?>
+            <button type="button" class="mdf-tab<?= $mdfActive === $mn ? ' on' : '' ?>"
+                    data-months="<?= (int) $mn ?>" aria-pressed="<?= $mdfActive === $mn ? 'true' : 'false' ?>">
+              <?= $h($lbl) ?></button>
+          <?php endforeach; ?>
+          <span class="mdf-tabs-n">आज से गिनकर भर जाएगी</span>
+        </div>
         <div class="mdf-fld"><label for="mdf_from">प्रारम्भ तिथि (DD-MM-YYYY)</label>
-          <input id="mdf_from" name="mdf_from" type="text" placeholder="01-12-2026" value="<?= $h($mdfFrom ?? '') ?>" autocomplete="off"></div>
+          <input id="mdf_from" name="mdf_from" type="text" placeholder="DD-MM-YYYY" value="<?= $h($mdfFromV) ?>" autocomplete="off"></div>
         <div class="mdf-fld"><label for="mdf_to">अन्तिम तिथि (DD-MM-YYYY)</label>
-          <input id="mdf_to" name="mdf_to" type="text" placeholder="31-03-2027" value="<?= $h($mdfTo ?? '') ?>" autocomplete="off"></div>
+          <input id="mdf_to" name="mdf_to" type="text" placeholder="DD-MM-YYYY" value="<?= $h($mdfToV) ?>" autocomplete="off"></div>
         <button class="mdf-btn" type="submit">🔍 शुभ विवाह-तिथि खोजें</button>
       </form>
+      <script>
+      /* अवधि-टैब — आज से 1 / 3 / 6 / 12 महीने। महीना पहले, दिन बाद में काटा जाता
+         है, ठीक वैसे ही जैसे ऊपर PHP करता है; वरना 31 तारीख़ को खोली गई कुंडली पर
+         दोनों जगह अलग-अलग अन्तिम तिथि बनती। */
+      (function () {
+        var wrap = document.querySelector('.mdf-tabs');
+        var f = document.getElementById('mdf_from');
+        var t = document.getElementById('mdf_to');
+        if (!wrap || !f || !t) { return; }
+        function two(n) { return (n < 10 ? '0' : '') + n; }
+        function fmt(d) { return two(d.getDate()) + '-' + two(d.getMonth() + 1) + '-' + d.getFullYear(); }
+        function plus(months) {
+          var now = new Date();
+          var day = now.getDate();
+          var end = new Date(now.getFullYear(), now.getMonth() + months + 1, 0); // उस महीने का आख़िरी दिन
+          return new Date(end.getFullYear(), end.getMonth(), Math.min(day, end.getDate()));
+        }
+        function mark(btn) {
+          wrap.querySelectorAll('.mdf-tab').forEach(function (b) {
+            var on = b === btn;
+            b.classList.toggle('on', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+        }
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest ? e.target.closest('.mdf-tab') : null;
+          if (!b) { return; }
+          f.value = fmt(new Date());
+          t.value = fmt(plus(parseInt(b.getAttribute('data-months'), 10) || 1));
+          mark(b);
+        });
+        // हाथ से तारीख़ बदलते ही कोई टैब चालू नहीं रहता — वरना पट्टी कुछ और कहती
+        // और डिब्बे कुछ और।
+        [f, t].forEach(function (el) { el.addEventListener('input', function () { mark(null); }); });
+      })();
+      </script>
 
       <?php $md = $marriageDates ?? null;
       if ($md !== null):
