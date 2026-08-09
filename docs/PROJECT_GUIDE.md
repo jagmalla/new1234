@@ -1,5 +1,12 @@
 # Analysis of Karma — "Auto Business" Project: The Complete Guide
 
+> ⚠️ **Superseded — read `docs/PROJECT_DOCUMENTATION.md` first.**
+> This guide was written in July 2026 and is still useful for the Vedic engines,
+> the workflow canvas and the database tables. It predates the entire Lal Kitab
+> subsystem, the Muhurat modules, the rebuilt Kundali Milan, the "और देखें"
+> panel and the self-check harness, none of which appear below. Where the two
+> disagree, `PROJECT_DOCUMENTATION.md` is current.
+
 > **Who this is for:** anyone — even with zero coding experience — who wants to
 > understand, run, edit, or extend this project. Everything is explained from
 > the ground up: what the project is, how it works, what every file does, where
