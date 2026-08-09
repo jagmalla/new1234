@@ -128,6 +128,8 @@ final class LalKitabProcess
         // पर कोई उन्हें मिलाकर एक वाक्य नहीं कहता था, इसलिए एक ही कार्ड "मृत —
         // कारकत्व अनुपस्थित" और "लाभ मिलेगा" दोनों कह देता था।
         $briefs      = self::planetBriefs($planets, $upaay, $lk);
+        $hBriefs     = self::houseBriefs($lk, $briefs);
+        $kBriefs     = self::karakBriefs($lk, $planets);
 
         return [
             'ok'          => true,
@@ -145,6 +147,8 @@ final class LalKitabProcess
             'upaay'       => $upaay,
             'client'      => $client,
             'briefs'      => $briefs,
+            'house_briefs'=> $hBriefs,
+            'karak_briefs'=> $kBriefs,
         ];
     }
 
@@ -1085,6 +1089,173 @@ final class LalKitabProcess
                 'qualifier' => trim((string) ($p['seat_conflict'] ?? '')),
                 'in_dasha'  => $dashaHi !== '' && $dashaHi === $hi,
             ];
+        }
+        return $out;
+    }
+
+    /**
+     * हर भाव का निचोड़ — "अभी क्या मानें"।
+     *
+     * भाव-पन्ने की दिक़्क़त वही थी जो ग्रह-पन्ने की: तथ्य सब थे, मेल कोई नहीं। एक ही
+     * कार्ड पर ऊपर दो चेतावनियाँ छपतीं (विश्वासघात की आशंका · अचानक चोट की आशंका)
+     * और उसी कार्ड के अंत में **"✅ भाव सबल — कोई उपाय आवश्यक नहीं।"** यह सिर्फ़
+     * बेतुका नहीं, ख़तरनाक है: पढ़ने वाला उसी पंक्ति को फ़ैसला मानकर चेतावनी छोड़
+     * देता है।
+     *
+     * यहाँ भाव का दर्जा उसकी चेतावनियों के **साथ** तय होता है, और "उपाय ज़रूरी
+     * नहीं" तभी कहा जाता है जब सचमुच कोई चेतावनी न हो।
+     *
+     * दो अलग शब्द भी साफ़ किए जाते हैं। **स्वामी** = स्थिर मेष-टेवे का मालिक (भाव 1
+     * का मंगल), जो कभी नहीं बदलता। **मालिक** = वह ग्रह जिसका यह पक्का घर है और जो
+     * अभी यहाँ बैठा है। दोनों को बिना बताए साथ छापने से कार्ड पर दो "मालिक" दिखते
+     * थे और पढ़ने वाला उलझ जाता था।
+     *
+     * @param array<string,array<string,mixed>> $planetBriefs
+     * @return array<int,array<string,mixed>>
+     */
+    private static function houseBriefs(array $lk, array $planetBriefs): array
+    {
+        $out = [];
+        foreach ((array) ($lk['houses'] ?? []) as $hh) {
+            $n    = (int) ($hh['house'] ?? 0);
+            if ($n < 1) { continue; }
+            $ord  = (string) ($hh['house_ord'] ?? '');
+            $verd = (string) ($hh['verdict'] ?? 'मध्यम');
+            $topicShort = trim((string) (LalKitabData::HOUSE_TOPIC[$n] ?? ''));
+            if ($topicShort === '') { $topicShort = 'इस भाव के विषय'; }
+            $warn = array_values(array_filter(array_map(
+                static fn ($w) => trim((string) (is_array($w) ? ($w['text'] ?? $w['rule'] ?? '') : $w)),
+                (array) ($hh['warn'] ?? [])
+            )));
+            $occHi = (array) ($hh['planets_hi'] ?? []);
+
+            // ---- अभी क्या मानें ----
+            if ($verd === 'सुप्त') {
+                $line = $topicShort . ' — यह हिस्सा अभी रुका हुआ है, इसमें कुछ आगे नहीं बढ़ रहा।'
+                    . (trim((string) ($hh['waker_hi'] ?? '')) !== ''
+                        ? ' जगाने वाला ग्रह ' . $hh['waker_hi'] . ' है।' : '');
+            } elseif ($verd === 'अस्थिर') {
+                $line = $topicShort . ' — यहाँ टिकाव नहीं रहता: बात बनते-बनते पलट जाती है।';
+            } else {
+                $kya = $verd === 'शुभ' ? 'यहाँ काम बनता चलेगा'
+                    : ($verd === 'मंदा' || $verd === 'अशुभ' ? 'यहाँ दिक़्क़त आती रहेगी'
+                    : 'कुछ बातें ठीक, कुछ में अड़चन');
+                $line = $topicShort . ' — ' . $kya . '।';
+            }
+            // चेतावनी को दर्जे में घुलने नहीं दिया जाता; वह अलग से साथ चलती है।
+            if ($warn !== []) {
+                $line .= ' पर इस भाव पर ' . count($warn) . ' चेतावनी भी है — नीचे देखें; '
+                    . 'दर्जा अच्छा हो तब भी वह अपने-आप नहीं टलती।';
+            }
+
+            // ---- स्वामी बनाम मालिक ----
+            $lordHi = (string) ($hh['lord_hi'] ?? '');
+            $malik  = trim((string) ($hh['malik_hi'] ?? ''));
+            $roles  = [];
+            if ($lordHi !== '') {
+                $roles[] = 'स्वामी ' . $lordHi . ' (स्थिर मेष-टेवे का, कभी नहीं बदलता)'
+                    . (($hh['lord_house'] ?? null) !== null
+                        ? ' — अभी ' . LalKitabData::houseOrdinalHi((int) $hh['lord_house']) . ' भाव में' : '');
+            }
+            if ($malik !== '' && $malik !== $lordHi) {
+                $roles[] = 'मालिक ' . $malik . ' (यह उसका पक्का घर है, और वह यहीं बैठा है)';
+            }
+            if (!empty($hh['vivadit'])) {
+                $roles[] = 'इस भाव पर मालिक कोई नहीं — कमरा विवादित है';
+            }
+
+            // ---- अब क्या करें — यहाँ बैठे ग्रहों के निचोड़ से ----
+            $act = ['status' => '', 'text' => '', 'planet' => ''];
+            foreach ($occHi as $ph) {
+                $b = $planetBriefs[(string) $ph] ?? null;
+                $st = (string) (($b['action']['status']) ?? '');
+                if ($st === 'जारी') {
+                    $act = ['status' => 'जारी', 'text' => (string) $b['action']['text'], 'planet' => (string) $ph];
+                    break;
+                }
+                if ($st === 'कतार में' && $act['status'] === '') {
+                    $act = ['status' => 'कतार में', 'text' => '', 'planet' => (string) $ph];
+                }
+            }
+
+            $out[$n] = [
+                'house' => $n, 'house_ord' => $ord, 'verdict' => $verd,
+                'line' => $line, 'warn' => $warn, 'roles' => $roles, 'action' => $act,
+                // यही वह पंक्ति है जो पहले चेतावनी के बावजूद "उपाय ज़रूरी नहीं" कह देती थी
+                'safe' => $warn === [] && !in_array($verd, ['मंदा', 'अशुभ', 'सुप्त', 'अस्थिर'], true),
+                // पढ़ने का क्रम — जिन भावों पर चेतावनी या दिक़्क़त है, वही पहले
+                'weight' => count($warn) * 2
+                    + (in_array($verd, ['मंदा', 'अशुभ'], true) ? 3 : 0)
+                    + ($verd === 'अस्थिर' ? 2 : 0) + ($verd === 'सुप्त' ? 1 : 0),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * हर भाव के कारक का निचोड़।
+     *
+     * इस पन्ने पर दो असली ग़लतियाँ थीं।
+     *
+     * **पहली — धुरी की।** कारक-पंक्ति पर *अशुभ* लिखा जाता था, जबकि नीचे उसी ग्रह
+     * पर *शुभ* का ठप्पा होता था। दोनों सही थे और दोनों साथ बेतुके: ग्रह की दिशा
+     * नेक थी, पर सोया होने से उसकी **क्षमता** शून्य थी। नेक/बद और कितना-कर-सकता-है
+     * दो अलग धुरियाँ हैं; कारक की बात हमेशा दूसरी धुरी की है। इसलिए यहाँ अब
+     * बलवान/मध्यम/दुर्बल कहा जाता है, शुभ/अशुभ नहीं।
+     *
+     * **दूसरी — दिशा की।** सोए कारक के लिए *"शराब न पीएँ, वायदा न तोड़ें"* जैसा
+     * शांति-उपाय दिया जा रहा था। सोए ग्रह को शांत करना उसे और गहरी नींद सुला देता
+     * है — यही वह चूक है जिसे निचोड़-पन्ने पर जाँच X3 रोकती है, पर यह पन्ना उसकी
+     * नज़र से बाहर था। अब दिशा पहले तय होती है और सोए कारक पर **जगाना** लिखा जाता
+     * है, उसकी चाबी के साथ।
+     *
+     * @param list<array<string,mixed>> $planets
+     * @return array<int,array<string,mixed>>
+     */
+    private static function karakBriefs(array $lk, array $planets): array
+    {
+        $pMap = [];
+        foreach ($planets as $pe) { $pMap[(string) ($pe['hi'] ?? '')] = $pe; }
+
+        $out = [];
+        foreach ((array) ($lk['karak'] ?? []) as $kh) {
+            $n = (int) ($kh['house'] ?? 0);
+            if ($n < 1) { continue; }
+            $rows = [];
+            $anyWeak = false; $allStrong = true;
+            foreach ((array) ($kh['karaks'] ?? []) as $k) {
+                $hi   = (string) ($k['hi'] ?? '');
+                $pe   = $pMap[$hi] ?? [];
+                $ksh  = (string) ($pe['kshamata'] ?? '');
+                $imp  = trim((string) ($pe['impair'] ?? ''));
+                $weak = !empty($k['weak']) || $ksh === 'शून्य' || $ksh === 'कमज़ोर';
+                $asleep = !empty($k['asleep']) || $imp !== '' || (string) ($pe['verdict'] ?? '') === 'निष्क्रिय';
+                if ($weak) { $anyWeak = true; }
+                if ($weak || $ksh !== 'प्रबल') { $allStrong = false; }
+                // दिशा पहले, उपाय बाद में — उलटा करने पर सोए ग्रह को शांत कर बैठते हैं
+                $dir = $asleep ? 'जगाना' : ($weak ? 'बल-वृद्धि' : '');
+                $rows[] = [
+                    'hi' => $hi,
+                    'placed_ord' => (string) ($k['placed_ord'] ?? ''),
+                    'bal' => $weak ? 'दुर्बल' : ($ksh === 'प्रबल' ? 'बलवान' : 'मध्यम'),
+                    'asleep' => $asleep,
+                    'impair' => $imp,
+                    'dir' => $dir,
+                    'chaabi' => (string) (($pe['wake']['agent_hi']) ?? ''),
+                    'remedies' => (array) ($k['remedies'] ?? []),
+                ];
+            }
+            $bal = $anyWeak ? 'दुर्बल' : ($allStrong ? 'बलवान' : 'मध्यम');
+            $topic = trim((string) (LalKitabData::HOUSE_TOPIC[$n] ?? ''));
+            if ($topic === '') { $topic = 'इस भाव के विषय'; }
+            $line = $bal === 'बलवान'
+                ? $topic . ' — इनका कारक मज़बूत है, ये विषय अपने बल पर चलते हैं।'
+                : ($bal === 'दुर्बल'
+                    ? $topic . ' — इनका कारक कमज़ोर है। इसका मतलब बुरा फल नहीं; मतलब यह कि ये विषय '
+                      . 'अपने-आप नहीं चलेंगे, इन्हें सहारा चाहिए।'
+                    : $topic . ' — कारक सामान्य बल का है, ये विषय ठीक-ठाक चलेंगे।');
+            $out[$n] = ['house' => $n, 'house_ord' => (string) ($kh['house_ord'] ?? ''),
+                'bal' => $bal, 'line' => $line, 'rows' => $rows];
         }
         return $out;
     }

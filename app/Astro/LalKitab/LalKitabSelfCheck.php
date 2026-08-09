@@ -384,6 +384,54 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // भाव पर चेतावनी हो तो "कोई उपाय आवश्यक नहीं" कभी न छपे। यह पंक्ति कार्ड के
+        // अंत में आती है और पढ़ने वाला अंत की पंक्ति को फ़ैसला मानता है — इसलिए वह
+        // ऊपर लिखी विश्वासघात/चोट की चेतावनी को छोड़ देता।
+        $add('HB-1', 'चेतावनी वाले भाव पर "उपाय आवश्यक नहीं" नहीं छपता', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="house">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="karak">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                foreach (preg_split('/(?=<div class="lk-card[^"]*" data-bad=)/', $seg) as $card) {
+                    if (mb_strpos($card, '⚠️') !== false && mb_strpos($card, 'कोई उपाय आवश्यक नहीं') !== false) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        });
+
+        // हर भाव-कार्ड पर उसका अपना निचोड़।
+        $add('HB-2', 'हर भाव-कार्ड पर उसका अपना निचोड़ मौजूद है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (substr_count($h, '🏠 अभी क्या मानें') < 12) { return false; }
+            }
+            return true;
+        });
+
+        // कारक की बात क्षमता की धुरी पर होती है, दिशा की नहीं — और सोए कारक पर
+        // दिशा "जगाना" होनी चाहिए, शांति-उपाय नहीं (वही नियम जो X3 कहता है)।
+        $add('KB-1', 'कारक क्षमता की धुरी पर कहा जाता है, और सोए कारक की दिशा जगाना है',
+            static function () use ($pages): bool {
+                foreach ($pages as $h) {
+                    $i = mb_strpos($h, '<div class="lk-view" data-lk="karak">');
+                    $j = mb_strpos($h, '<div class="lk-view" data-lk="yoga">');
+                    if ($i === false || $j === false || $j <= $i) { return false; }
+                    $seg = mb_substr($h, $i, $j - $i);
+                    if (mb_strpos($seg, 'बलवान / मध्यम / दुर्बल') === false) { return false; }
+                    // सोया कारक दिखे तो उसके साथ "जगाना" भी दिखना चाहिए
+                    if (mb_strpos($seg, '😴') !== false && mb_strpos($seg, 'दिशा: जगाना') === false) {
+                        return false;
+                    }
+                    // और उस पर शांति-उपाय की सूची नहीं लगनी चाहिए
+                    if (mb_strpos($seg, 'शांत नहीं करना') === false && mb_strpos($seg, '😴') !== false) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

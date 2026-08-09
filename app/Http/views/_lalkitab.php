@@ -113,6 +113,34 @@ $briefBox = static function (?array $b) use ($h): string {
     $o .= '</div></div>';
     return $o;
 };
+/** एक भाव का निचोड़ — दर्जा, चेतावनी और करने योग्य काम, एक जगह। */
+$houseBriefBox = static function (?array $b) use ($h): string {
+    if (!is_array($b) || trim((string) ($b['line'] ?? '')) === '') { return ''; }
+    $warn = (array) ($b['warn'] ?? []);
+    $bad  = $warn !== [] || in_array((string) $b['verdict'], ['मंदा', 'अशुभ', 'अस्थिर'], true);
+    [$bg, $bd, $fg] = $bad ? ['#fffbeb', '#fde68a', '#78350f']
+        : (((string) $b['verdict']) === 'सुप्त' ? ['#f8fafc', '#cbd5e1', '#334155'] : ['#f0fdf4', '#bbf7d0', '#14532d']);
+    $o  = '<div style="background:' . $bg . ';border:1px solid ' . $bd . ';border-radius:10px;padding:9px 12px;margin:2px 0 9px">';
+    $o .= '<div style="font-weight:800;font-size:.8rem;color:' . $fg . ';margin-bottom:3px">🏠 अभी क्या मानें</div>';
+    $o .= '<div style="font-size:.85rem;line-height:1.65;color:' . $fg . '">' . $h((string) $b['line']) . '</div>';
+    foreach ($warn as $w) {
+        $o .= '<div style="font-size:.81rem;margin-top:3px;color:#991b1b">⚠️ ' . $h((string) $w) . '</div>';
+    }
+    foreach ((array) ($b['roles'] ?? []) as $r) {
+        $o .= '<div style="font-size:.78rem;margin-top:2px;color:#475569">👑 ' . $h((string) $r) . '</div>';
+    }
+    $a  = (array) ($b['action'] ?? []);
+    $st = (string) ($a['status'] ?? '');
+    if ($st !== '') {
+        $o .= '<div style="margin-top:6px;padding-top:5px;border-top:1px dashed ' . $bd . ';font-size:.82rem;color:'
+            . ($st === 'जारी' ? '#166534' : '#92400e') . '">'
+            . '<b>' . ($st === 'जारी' ? '🛠' : '🔒') . ' अब क्या करें — ' . $h($st) . '</b>'
+            . ($a['planet'] !== '' ? ' <span class="lk-pill" style="background:#fff;border:1px solid ' . $bd . '">' . $h((string) $a['planet']) . ' के रास्ते</span>' : '')
+            . (trim((string) $a['text']) !== '' ? '<div style="margin-top:2px">' . $h((string) $a['text']) . '</div>' : '')
+            . '</div>';
+    }
+    return $o . '</div>';
+};
 /** render a remedy (उपाय) block under a problem. */
 $remBlock = static function (array $items, string $title = 'उपाय / टोटके') use ($h): string {
     $items = array_values(array_filter($items, static fn ($x) => trim((string) $x) !== ''));
@@ -745,7 +773,9 @@ function lkNativeGo(el) {
 
       <?php /* प्रक्रिया-परत के प्रति-ग्रह निचोड़ — तीनों ग्रह-पन्ने इन्हीं से बोलते हैं,
                इसलिए वे और निचोड़-पन्ना कभी दो अलग बातें नहीं कहते। */
-            $LKB = (array) (($lk['process']['briefs']) ?? []); ?>
+            $LKB = (array) (($lk['process']['briefs']) ?? []);
+            $LKH = (array) (($lk['process']['house_briefs']) ?? []);
+            $LKK = (array) (($lk['process']['karak_briefs']) ?? []); ?>
       <!-- ===== PLANET PREDICTION ===== -->
       <div class="lk-view" data-lk="planet">
         <h3 class="lk-h">ग्रह फल एवं उपाय (Planet-wise)</h3>
@@ -974,6 +1004,9 @@ function lkNativeGo(el) {
               <?php if (empty($H['awake'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php else: ?><span class="lk-pill" style="background:#dcfce7;color:#166534">⚡ जागृत</span><?php endif; ?>
               <?= $srcTag('भाव विचार + दृष्टि चक्र') ?>
             </div>
+            <?php /* निचोड़ पहले, ब्योरा बाद में — और चेतावनी दर्जे में घुलने नहीं
+                     दी जाती। "शुभ" भाव पर भी विश्वासघात की आशंका बनी रह सकती है। */ ?>
+            <?= $houseBriefBox($LKH[(int) $H['house']] ?? null) ?>
 
             <div class="lk-anlz">
               <div class="lk-anlz-row"><span class="lk-anlz-k">🪐 स्थित ग्रह</span>
@@ -1071,7 +1104,15 @@ function lkNativeGo(el) {
             <?php if (!empty($H['need_remedy']) && !empty($H['remedies'])): ?>
               <?= $remBlock($H['remedies'], $H['house_ord'] . ' भाव — बल हेतु उपाय') ?>
             <?php elseif ($H['verdict'] === 'शुभ'): ?>
-              <div style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:5px 9px;font-size:.78rem;color:#166534">✅ भाव सबल — कोई उपाय आवश्यक नहीं।</div>
+              <?php /* यह पंक्ति पहले चेतावनियों के बावजूद छप जाती थी — उसी कार्ड पर
+                       जिस पर ऊपर "विश्वासघात की आशंका" लिखा था। पढ़ने वाला अंत की
+                       पंक्ति को फ़ैसला मानता है, इसलिए वह चेतावनी छोड़ देता। अब यह
+                       तभी छपती है जब सचमुच कोई चेतावनी न हो। */ ?>
+              <?php if (!empty(($LKH[(int) $H['house']]['safe']) ?? false)): ?>
+                <div style="margin-top:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:5px 9px;font-size:.78rem;color:#166534">✅ भाव सबल — कोई उपाय आवश्यक नहीं।</div>
+              <?php else: ?>
+                <div style="margin-top:6px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:5px 9px;font-size:.78rem;color:#92400e">⚠️ इस भाव पर ऊपर दी चेतावनी बनी हुई है — दर्जा अच्छा होने भर से वह नहीं टलती।</div>
+              <?php endif; ?>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
@@ -1080,34 +1121,67 @@ function lkNativeGo(el) {
       <!-- ===== KARAK ===== -->
       <div class="lk-view" data-lk="karak">
         <h3 class="lk-h">कारक (Natural Significators) — computed</h3>
-        <div class="lk-txt" style="margin-bottom:9px">प्रत्येक भाव का कारक ग्रह इस कुंडली में जहाँ बैठा है वहाँ उसकी स्थिति के अनुसार उस भाव का फल तय होता है — कारक अशुभ/नीच/सुप्त हो तो उस भाव के विषय दुर्बल; तब नीचे उपाय दिया गया है।</div>
+        <div class="lk-txt" style="margin-bottom:9px">हर भाव का एक स्वाभाविक कारक ग्रह है। वह इस कुंडली में जहाँ बैठा है, वहाँ की हालत से तय होता है कि उस भाव के विषयों को <b>सहारा</b> मिल रहा है या नहीं।</div>
+        <?php /* ══════ यहाँ शब्द ही ग़लत था ══════
+             पहले कारक-पंक्ति पर *अशुभ* लिखा जाता था और ठीक नीचे उसी ग्रह पर *शुभ*
+             का ठप्पा होता था। दोनों सही थे और साथ में बेतुके: ग्रह की दिशा नेक थी,
+             पर सोया होने से उसकी **क्षमता** शून्य थी। नेक/बद और कितना-कर-सकता-है
+             दो अलग धुरियाँ हैं, और कारक की बात हमेशा दूसरी धुरी की है — इसलिए अब
+             बलवान / मध्यम / दुर्बल कहा जाता है। "दुर्बल" का मतलब बुरा नहीं;
+             मतलब है कि यह विषय अपने-आप नहीं चलेगा, इसे सहारा चाहिए। */ ?>
+        <div class="lk-note" style="margin-bottom:9px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:9px;padding:7px 10px;color:#3730a3">
+          यहाँ <b>शुभ/अशुभ</b> नहीं लिखा जाता — <b>बलवान / मध्यम / दुर्बल</b> लिखा जाता है।
+          कारक की बात "अच्छा या बुरा" की नहीं, "कितना कर सकता है" की है। दोनों अलग बातें हैं:
+          कोई ग्रह नेक होकर भी सोया हो सकता है, और तब उसका सहारा मिलता ही नहीं।
+        </div>
         <?php foreach ($lk['karak'] as $K): if (!$K['karaks']) { continue; }
-            $kCls = $K['verdict'] === 'अशुभ' ? 'bad' : ($K['verdict'] === 'शुभ' ? 'good' : ''); ?>
+            $KB = $LKK[(int) $K['house']] ?? null;
+            $kBal = (string) (($KB['bal']) ?? 'मध्यम');
+            $kCls = $kBal === 'दुर्बल' ? 'bad' : ($kBal === 'बलवान' ? 'good' : ''); ?>
           <div class="lk-card <?= $kCls ?>">
-            <div class="lk-card-h"><?= (int) $K['house'] ?>. <?= $h((string) $K['house_ord']) ?> भाव के कारक <?= $pill((string) $K['verdict'], 'v') ?></div>
-            <!-- 📢 फल — क्या होगा (कारक-बल से) -->
-            <?php if (trim((string) ($K['pred_head'] ?? '')) !== ''):
-                $kpBg = $K['verdict'] === 'अशुभ' ? 'background:#fef2f2;border-color:#fecaca;color:#7f1d1d'
-                    : ($K['verdict'] === 'शुभ' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#14532d'
-                    : 'background:#fffbeb;border-color:#fde68a;color:#713f12'); ?>
-              <div style="border:1px solid;border-radius:9px;padding:7px 10px;margin:4px 0 6px;<?= $kpBg ?>">
-                <div style="font-weight:700;font-size:.82rem;margin-bottom:2px">📢 फल — क्या होगा</div>
-                <div style="font-size:.84rem;line-height:1.55"><?= $h((string) $K['pred_head']) ?></div>
-                <?php if (!empty($K['weak_list'])): ?><div style="font-size:.78rem;margin-top:3px">दुर्बल कारक: <b><?= $h(implode(', ', $K['weak_list'])) ?></b></div><?php endif; ?>
-              </div>
+            <div class="lk-card-h"><?= (int) $K['house'] ?>. <?= $h((string) $K['house_ord']) ?> भाव के कारक
+              <span class="lk-pill" style="<?= $kBal === 'दुर्बल' ? 'background:#fee2e2;color:#991b1b' : ($kBal === 'बलवान' ? 'background:#dcfce7;color:#166534' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h($kBal) ?></span></div>
+            <?php if ($KB !== null): ?>
+              <div style="font-size:.85rem;line-height:1.6;color:#334155;margin:2px 0 6px"><?= $h((string) $KB['line']) ?></div>
             <?php endif; ?>
-            <?php foreach ($K['karaks'] as $kk): ?>
+            <?php /* पुराना "📢 फल" डिब्बा यहाँ से हटाया गया। वह अब भी नेक/बद वाली
+                     पुरानी गिनती से बनता था, इसलिए ऊपर वाली नई पंक्ति से उलटा पड़
+                     जाता — एक ही कार्ड पर "मध्यम" और "कारक बलवान है" साथ छपते।
+                     ऊपर की पंक्ति वही बात ठीक धुरी पर कहती है। */ ?>
+            <?php $wk = array_values(array_filter(array_map(
+                    static fn ($r) => ($r['bal'] ?? '') === 'दुर्बल' ? (string) $r['hi'] : '',
+                    (array) ($KB['rows'] ?? [])))); ?>
+            <?php if ($wk !== []): ?>
+              <div style="font-size:.79rem;margin:2px 0 6px;color:#991b1b">सहारे की ज़रूरत वाले कारक: <b><?= $h(implode(', ', $wk)) ?></b></div>
+            <?php endif; ?>
+            <?php foreach (($KB['rows'] ?? []) as $kk): ?>
               <div class="lk-sub">
                 <b><?= $h((string) $kk['hi']) ?></b>
-                <?php if ($kk['placed']): ?>
+                <?php if (trim((string) $kk['placed_ord']) !== ''): ?>
                   — <?= $h((string) $kk['placed_ord']) ?> भाव में
-                  <?= $pill((string) $kk['verdict'], 's') ?>
-                  <?php if (!empty($kk['asleep'])): ?><span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 सुप्त</span><?php endif; ?>
-                  <?php if (!empty($kk['weak'])): ?><span style="color:#991b1b"> — इस भाव का फल दुर्बल</span><?php endif; ?>
+                  <span class="lk-pill" style="<?= $kk['bal'] === 'दुर्बल' ? 'background:#fee2e2;color:#991b1b' : ($kk['bal'] === 'बलवान' ? 'background:#dcfce7;color:#166534' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $kk['bal']) ?></span>
+                  <?php if (!empty($kk['asleep'])): ?><span class="lk-pill" style="background:#f1f5f9;color:#475569">😴 <?= $h($kk['impair'] !== '' ? (string) $kk['impair'] : 'सुप्त') ?></span><?php endif; ?>
                 <?php else: ?>
                   — स्थिति अज्ञात
                 <?php endif; ?>
-                <?php if (!empty($kk['remedies'])): ?>
+                <?php /* दिशा पहले, उपाय बाद में। सोए कारक को "शराब न पीएँ" जैसा शांति-उपाय
+                         देना उसे और गहरी नींद सुलाता है — यही चूक निचोड़-पन्ने पर जाँच X3
+                         रोकती है, पर यह पन्ना उसकी नज़र से बाहर था। */ ?>
+                <?php if (trim((string) $kk['dir']) !== ''): ?>
+                  <div style="margin-top:4px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:6px 9px;font-size:.82rem;color:#3730a3">
+                    <b>दिशा: <?= $h((string) $kk['dir']) ?></b>
+                    <?php if ($kk['dir'] === 'जगाना'): ?>
+                      — यह कारक सोया है, इसलिए इसे <b>शांत नहीं करना</b>; जगाना है।
+                      <?php if (trim((string) $kk['chaabi']) !== ''): ?>
+                        चाबी <b><?= $h((string) $kk['chaabi']) ?></b> के पास है — उपाय उसी पर जाता है।
+                      <?php endif; ?>
+                      <div style="font-size:.78rem;margin-top:2px">नीचे दिए सामान्य उपाय शांति के हैं — इन्हें इस कारक पर न लगाएँ।</div>
+                    <?php else: ?>
+                      — इसे बल देना है।
+                    <?php endif; ?>
+                  </div>
+                <?php endif; ?>
+                <?php if (!empty($kk['remedies']) && $kk['dir'] !== 'जगाना'): ?>
                   <?= $remBlock($kk['remedies'], $kk['hi'] . ' — कारक-बल हेतु उपाय') ?>
                 <?php endif; ?>
               </div>
