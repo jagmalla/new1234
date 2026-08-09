@@ -51,16 +51,27 @@ final class LalKitabProcess
     ];
 
     /**
-     * तयशुदा सेटिंग्स — दो इंजन अलग सेटिंग पर अलग नतीजे देंगे, इसलिए हर रिपोर्ट
-     * के सिरहाने यह दर्ज रहती हैं कि किस नियम पर चला गया।
+     * चल रही सेटिंग्स — दो इंजन अलग सेटिंग पर अलग नतीजे देंगे, इसलिए हर रिपोर्ट
+     * के सिरहाने दर्ज रहता है कि किस नियम पर चला गया।
+     *
+     * यह पहले जड़ा हुआ स्थिरांक था। दिक़्क़त यह थी कि सेटिंग बदलने पर भी यहाँ वही
+     * पुराना मान छपता रहता — यानी रिपोर्ट का सिरहाना झूठ बोल सकता था। अब यह
+     * LalKitabSettings से बनता है, इसलिए दोनों कभी अलग नहीं हो सकते।
+     *
+     * @return array<string,string|bool>
      */
-    public const SETTINGS = [
-        'soya_drishti'      => 'reduced',   // सोए ग्रह की दृष्टि आधी मानी गई
-        'seat_precedence'   => 'पक्का घर > नीच > उच्च > शत्रु घर > मित्र घर > सम',
-        'chhaya_company'    => true,        // राहु-केतु पर संगत भारी पड़ती है
-        'rin_severity'      => 'graded',
-        'masnui_drishti'    => false,       // मसनूई ग्रह दृष्टि नहीं डालता
-    ];
+    private static function settings(): array
+    {
+        return [
+            'soya_drishti'    => LalKitabSettings::get('soya_drishti'),
+            'seat_precedence' => (string) (LalKitabSettings::FIELDS['seat_precedence']['options']
+                [LalKitabSettings::get('seat_precedence')] ?? ''),
+            'chhaya_company'  => LalKitabSettings::get('chhaya_company'),
+            'rin_severity'    => LalKitabSettings::get('rin_severity'),
+            'mrit_avastha'    => LalKitabSettings::get('mrit_avastha'),
+            'masnui_drishti'  => false,     // मसनूई ग्रह दृष्टि नहीं डालता — यह विवादित नहीं
+        ];
+    }
 
     /**
      * चरण 10 §10.2 — शब्दों का नक्शा। यह जड़ा हुआ है, हर बार नया नहीं गढ़ा जाता;
@@ -116,7 +127,10 @@ final class LalKitabProcess
 
         return [
             'ok'          => true,
-            'settings'    => self::SETTINGS,
+            'settings'    => self::settings(),
+            'niyam'       => LalKitabSettings::all(),
+            'niyam_hi'    => LalKitabSettings::describe(),
+            'niyam_default' => LalKitabSettings::allDefault(),
             'temperament' => $temperament,
             'core_points' => $core,
             'conflicts'   => $conflicts['resolved'],
@@ -225,6 +239,25 @@ final class LalKitabProcess
     ];
 
     /**
+     * भार-क्रम, सेटिंग लागू करके। दो रैंक spec में ख़ुद [INFERRED] हैं — "विश्वासघात
+     * बनाम टक्कर" और "उच्च/नीच बनाम शत्रु/मित्र घर"। जिस घराने का मत अलग है, उसके
+     * लिए यह अदला-बदली सेटिंग से होती है; बाक़ी क्रम वैसा ही रहता है।
+     *
+     * @return array<string,int>
+     */
+    private static function bharKram(): array
+    {
+        $k = self::BHAR_KRAM;
+        if (LalKitabSettings::get('rank_vishwasghat') === 'below') {
+            [$k['विश्वासघात'], $k['टक्कर']] = [$k['टक्कर'], $k['विश्वासघात']];
+        }
+        if (LalKitabSettings::get('rank_dignity') === 'below') {
+            [$k['उच्च/नीच'], $k['शत्रु/मित्र घर']] = [$k['शत्रु/मित्र घर'], $k['उच्च/नीच']];
+        }
+        return $k;
+    }
+
+    /**
      * चरण 7 — विरोधाभास का हल।
      *
      * औसत निकालना ही वह चूक है जिसे रोकने के लिए यह चरण मौजूद है। दो उलटी बातें
@@ -304,8 +337,9 @@ final class LalKitabProcess
                 continue;
             }
             // 7.5 — भार-क्रम
-            $ra = self::BHAR_KRAM[$c['a_type']] ?? 99;
-            $rb = self::BHAR_KRAM[$c['b_type']] ?? 99;
+            $kram = self::bharKram();
+            $ra = $kram[$c['a_type']] ?? 99;
+            $rb = $kram[$c['b_type']] ?? 99;
             if ($ra !== $rb) {
                 $win = $ra < $rb ? 'a' : 'b';
                 $c['resolution'] = 'भार-क्रम';
@@ -438,7 +472,10 @@ final class LalKitabProcess
             }
             $status = $allDormant ? 'सुप्त' : (($anyBad || $protector === '') ? 'चालू' : 'दबा हुआ');
             // तीव्रता — चरण 9 को कई ऋणों में क्रम लगाना है, उसी के लिए
-            $sev = count($corrob) >= 2 ? 'तीव्र' : (count($corrob) === 1 ? 'मध्यम' : 'हल्का');
+            // दर्जों में नापें या सिर्फ़ है/नहीं — विवादित, इसलिए सेटिंग से।
+            $sev = LalKitabSettings::get('rin_severity') === 'binary'
+                ? ($corrob !== [] ? 'तीव्र' : 'हल्का')
+                : (count($corrob) >= 2 ? 'तीव्र' : (count($corrob) === 1 ? 'मध्यम' : 'हल्का'));
             if ($status === 'सुप्त') { $sev = 'हल्का'; }
 
             $entries[] = [

@@ -212,18 +212,54 @@ final class LalKitabSelfCheck
         // ── सेटिंग्स सचमुच लागू हैं या सिर्फ़ हेडर में लिखी हैं ──────────────
         // रिपोर्ट के नीचे "सोई दृष्टि = reduced" लिखना और कोड में कुछ न करना —
         // यह पढ़ने वाले से झूठ है। इसलिए हर घोषित सेटिंग की अपनी पहरेदारी।
-        $add('SET-1', 'सोए ग्रह की चोट सचमुच आधी होती है (सिर्फ़ हेडर में लिखी नहीं)', static function () use ($pages): bool {
-            foreach ($pages as $h) {
-                if (mb_strpos($h, 'सोया है, चोट आधी') !== false) { return true; }
-            }
-            return true;   // हर कुंडली में सोया-टकराव हो, ज़रूरी नहीं
-        });
+        // ये दोनों जाँचें पहले `return true` पर ख़त्म होती थीं — यानी कभी लाल हो
+        // ही नहीं सकती थीं। हरा रंग दिखाकर कुछ न परखना, न परखने से बुरा है: भरोसा
+        // वहाँ बनता है जहाँ बचाव है ही नहीं। अब दोनों सचमुच परखती हैं।
 
-        $add('SET-2', 'दृष्टि-क्षीणन का ढाँचा मौजूद (eff_pct गणना चलती है)', static function () use ($pages): bool {
-            // पन्ना बनते समय attenuate() न चले तो टकराव-पंक्तियाँ ही न बनें
-            foreach ($pages as $h) { if (mb_strpos($h, 'टकराव') !== false) { return true; } }
-            return true;
-        });
+        // SET-1 — सोए ग्रह की मार। सेटिंग बदलकर वही कुंडली दोबारा माँगी जाती है:
+        // "पूरी" पर मार पूरी पड़नी चाहिए, "बिल्कुल नहीं" पर पहुँचनी ही नहीं चाहिए।
+        // दोनों का नतीजा एक-सा निकले तो सेटिंग सजावट है, नियम नहीं।
+        $add('SET-1', 'सोई दृष्टि की सेटिंग सचमुच फल बदलती है (सिर्फ़ हेडर में लिखी नहीं)',
+            static function () use ($base): bool {
+                $strip = static function (?string $h): string {
+                    if ($h === null) { return ''; }
+                    $i = strpos($h, 'id="sec-lalkitab"');
+                    if ($i === false) { return ''; }
+                    $j = strpos($h, 'id="sec-today"');
+                    $seg = substr($h, $i, $j !== false && $j > $i ? $j - $i : null);
+                    // सेटिंग-पट्टी व नियम-फुटर ख़ुद सेटिंग छापते हैं, और vid हर बार
+                    // बदलता है — इन्हें हटाए बिना हर बदलाव "फल बदला" दिखेगा।
+                    $seg = (string) preg_replace('/<details id="lk-niyam".*?<\/script>/su', '', $seg);
+                    $seg = (string) preg_replace('/<div data-lk-protectors=.*?<\/div>/su', '', $seg);
+                    $seg = (string) preg_replace('/vid = "[0-9a-f]+"/', '', $seg);
+                    return (string) preg_replace('/\s+/u', ' ', strip_tags($seg));
+                };
+                [$d, $t, $la, $lo] = self::CHARTS[0];
+                $u = $base . '/calc?date=' . rawurlencode($d) . '&time=' . rawurlencode($t)
+                    . '&lat=' . $la . '&lon=' . $lo . '&tz=5.5&layout=lalkitab';
+                $full = $strip(self::fetch($u . '&soya_drishti=full'));
+                $none = $strip(self::fetch($u . '&soya_drishti=none'));
+                if ($full === '' || $none === '') { return false; }
+                return $full !== $none;
+            });
+
+        // SET-2 — जो सेटिंग चली, वही छपे। दोनों अलग हो जाएँ तो रिपोर्ट का सिरहाना
+        // झूठ बोलता है, और कोई कभी बता ही नहीं सकेगा कि फल किस मत पर बना।
+        $add('SET-2', 'रिपोर्ट में वही नियम-सेटिंग छपती है जो सचमुच चली',
+            static function () use ($base): bool {
+                [$d, $t, $la, $lo] = self::CHARTS[0];
+                $u = $base . '/calc?date=' . rawurlencode($d) . '&time=' . rawurlencode($t)
+                    . '&lat=' . $la . '&lon=' . $lo . '&tz=5.5&layout=lalkitab'
+                    . '&soya_drishti=none&mrit_avastha=drop&rin_severity=binary';
+                $h = self::fetch($u);
+                if ($h === null || !preg_match('/data-lk-niyam="([^"]*)"/u', $h, $m)) { return false; }
+                $got = html_entity_decode($m[1], ENT_QUOTES, 'UTF-8');
+                foreach (['soya_drishti=none', 'mrit_avastha=drop', 'rin_severity=binary'] as $need) {
+                    if (mb_strpos($got, $need) === false) { return false; }
+                }
+                // और बिना माँगे कोई सेटिंग बदली हुई न हो
+                return mb_strpos($got, 'seat_precedence=pakka_first') !== false;
+            });
 
         $add('SET-3', 'मालिक घर से बाहर होने का चिह्न निकलता है', static function () use ($pages): bool {
             foreach ($pages as $h) {

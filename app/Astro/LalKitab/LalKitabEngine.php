@@ -326,16 +326,35 @@ final class LalKitabEngine
                 elseif ($mEntry['rel'] === 'शत्रु') { $v--; $vWhy[] = $mEntry['hi'] . ' (शत्रु) साथ (−)'; }
             }
             foreach (($doshaOf[$p] ?? []) as $dn) { $v--; $vWhy[] = $dn . ' (−)'; }
+            // मारने वाला ख़ुद सोया हो तो चोट पूरी नहीं पड़ती — पर कितनी पड़ती है,
+            // यह सेटिंग तय करती है (soya_drishti)।
+            //
+            // "आधी" को पूर्णांक अंक में सीधे नहीं लिखा जा सकता, और उसे शून्य मान
+            // लेना ग़लत होगा — तब "आधी" और "बिल्कुल नहीं" एक ही चीज़ हो जातीं, यानी
+            // सेटिंग का एक विकल्प झूठा हो जाता। इसलिए आधी चोटें गिनी जाती हैं और
+            // दो आधी मिलकर एक पूरी बनती हैं। सोए हुए दो ग्रहों की मार सचमुच जुड़ती
+            // भी यही तरह है।
+            $soyaMode = LalKitabSettings::get('soya_drishti');
+            $halfHits = 0;
             foreach ($inHits as $ih) {
                 if ($ih['kind'] !== 'टकराव') { continue; }
-                // मारने वाला खुद सोया हो तो चोट पूरी नहीं पड़ती
+                $who = $ih['house'] . 'वें भाव (' . implode(', ', $ih['planets_hi']) . ')';
                 if (!empty($ih['weak'])) {
-                    $vWhy[] = $ih['house'] . 'वें भाव (' . implode(', ', $ih['planets_hi'])
-                        . ') से टकराव — पर मारने वाला खुद सोया है, चोट आधी';
+                    if ($soyaMode === 'none') {
+                        $vWhy[] = $who . ' से टकराव — पर मारने वाला ख़ुद सोया है; चुनी हुई सेटिंग पर सोई मार पहुँचती ही नहीं';
+                    } else {
+                        $halfHits++;
+                        $vWhy[] = $who . ' से टकराव — पर मारने वाला ख़ुद सोया है, चोट आधी';
+                    }
                 } else {
                     $v--;
-                    $vWhy[] = $ih['house'] . 'वें भाव (' . implode(', ', $ih['planets_hi']) . ') से टकराव — यह ग्रह खराब होता है (−)';
+                    $vWhy[] = $who . ' से टकराव — यह ग्रह खराब होता है (−)';
                 }
+            }
+            if ($halfHits >= 2) {
+                $whole = intdiv($halfHits, 2);
+                $v -= $whole;
+                $vWhy[] = $halfHits . ' आधी चोटें मिलकर ' . $whole . ' पूरी बनीं (−' . $whole . ')';
             }
             // पक्का घर = तीव्रता (वॉल्यूम बटन): जिधर फल झुका है उसे और गहरा करता है,
             // शुभता नहीं जोड़ता। कच्चा घर उल्टा — फल मंद करता है।
@@ -377,7 +396,11 @@ final class LalKitabEngine
                 // छाया-ग्रहों पर संगत भारी पड़ती है (सेटिंग: chhaya_company_dominance)।
                 // राहु-केतु अपनी संगत का रंग बाक़ी सात से कहीं ज़्यादा पकड़ते हैं —
                 // इसलिए इनके लिए संगत बैठक को भी काट देती है, अपने पक्के घर में भी।
-                if (($p === 'Rahu' || $p === 'Ketu') && $mates !== []) {
+                // छाया-ग्रह पर संगत की प्रधानता — और पक्के घर में भी लागू हो या
+                // नहीं, यह घरानों में विवादित है। इसलिए सेटिंग से।
+                $chhaya = LalKitabSettings::get('chhaya_company');
+                $chhayaOn = $chhaya === 'yes' || ($chhaya === 'not_pakka' && !$pukka);
+                if ($chhayaOn && ($p === 'Rahu' || $p === 'Ketu') && $mates !== []) {
                     $rel = array_column($mates, 'rel');
                     $names = implode(', ', array_column($mates, 'hi'));
                     if (!in_array('मित्र', $rel, true) && !in_array('सम', $rel, true) && $verdict !== 'अशुभ') {
@@ -410,11 +433,24 @@ final class LalKitabEngine
             // ---- बैठक का विरोध — औसत नहीं किया जाता, दोनों तथ्य दर्ज रहते हैं ----
             // "उच्च पर कच्चे घर में" जैसी हालत +1−1=0 करके मिटा देना सबसे क़ीमती
             // जानकारी फेंक देना है। इसे चिह्नित रखते हैं ताकि फल में qualifier बने।
+            // कौन-सा तथ्य पहले बोले, यह क्रम सेटिंग से आता है: पक्के घर का अधिकार
+            // पहले, या उच्च/नीच की अवस्था पहले। दोनों मत चलन में हैं, और वाक्य का
+            // ज़ोर इसी से बदलता है — इसलिए इसे जड़ा नहीं रखा।
             $seatConflict = '';
-            if ($status === 'उच्च' && $digBhang) { $seatConflict = 'उच्च — पर भंग की शर्त लगी है'; }
-            elseif ($status === 'उच्च' && $kachcha) { $seatConflict = 'उच्च — पर कच्चे घर में, फल अधूरा'; }
-            elseif ($status === 'नीच' && $pukka) { $seatConflict = 'नीच — पर अपने पक्के घर में, अधिकार बना रहता है'; }
-            elseif ($pukka && $isAshubh) { $seatConflict = 'पक्का घर — पर संगत/दृष्टि से फल बिगड़ा'; }
+            $seatFacts = [];
+            if ($status === 'नीच' && $pukka) {
+                $seatFacts['pakka']   = 'नीच — पर अपने पक्के घर में, अधिकार बना रहता है';
+                $seatFacts['dignity'] = 'पक्का घर — पर ग्रह नीच का, अधिकार का उपयोग कमज़ोर';
+            } elseif ($pukka && $isAshubh) {
+                $seatFacts['pakka'] = 'पक्का घर — पर संगत/दृष्टि से फल बिगड़ा';
+            }
+            if ($status === 'उच्च' && $digBhang) { $seatFacts['dignity'] ??= 'उच्च — पर भंग की शर्त लगी है'; }
+            elseif ($status === 'उच्च' && $kachcha) { $seatFacts['dignity'] ??= 'उच्च — पर कच्चे घर में, फल अधूरा'; }
+            $seatOrder = LalKitabSettings::get('seat_precedence') === 'dignity_first'
+                ? ['dignity', 'pakka'] : ['pakka', 'dignity'];
+            foreach ($seatOrder as $sk) {
+                if (isset($seatFacts[$sk])) { $seatConflict = $seatFacts[$sk]; break; }
+            }
 
             // 5) टिप्पणी के "अगर-तो" नियम — इस कुंडली पर जाँचे हुए: केवल लागू
             //    वाले मुख्य फल बनते हैं, शेष संदर्भ में जाते हैं।
@@ -570,15 +606,21 @@ final class LalKitabEngine
      */
     private static function attenuate(array $hits, array $occupants, array $asleepSet): array
     {
+        // कितनी दृष्टि बचती है, यह विवादित है — इसलिए सेटिंग से आता है, यहाँ जड़ा
+        // हुआ नहीं। (देखें LalKitabSettings::FIELDS['soya_drishti'])
+        $mode = LalKitabSettings::get('soya_drishti');
         foreach ($hits as $i => $hit) {
             $src = $occupants[$hit['house']] ?? [];
             $awake = array_values(array_filter($src, static fn ($p) => empty($asleepSet[$p])));
             $sleep = array_values(array_filter($src, static fn ($p) => !empty($asleepSet[$p])));
-            $hits[$i]['eff_pct'] = ($awake === [] && $sleep !== [])
-                ? (int) round(((int) $hit['pct']) / 2)     // सब देखने वाले सोए हुए
-                : (int) $hit['pct'];
+            $allAsleep = $awake === [] && $sleep !== [];
+            $pct = (int) $hit['pct'];
+            if ($allAsleep) {
+                $pct = $mode === 'none' ? 0 : ($mode === 'full' ? $pct : (int) round($pct / 2));
+            }
+            $hits[$i]['eff_pct'] = $pct;
             $hits[$i]['soya_src'] = array_map([LalKitabData::class, 'planetHi'], $sleep);
-            $hits[$i]['weak'] = $awake === [] && $sleep !== [];
+            $hits[$i]['weak'] = $allAsleep && $mode !== 'full';
         }
         return $hits;
     }

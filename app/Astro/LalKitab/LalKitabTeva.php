@@ -185,7 +185,11 @@ final class LalKitabTeva
 
         // most-severe first; सोया (owner-confirmed, actionable) outranks a plain बहरा
         if (($gunga || !$castsAspect) && $behra && !$mate) {
-            return ['state' => 'मृत', 'code' => 'MRIT'];
+            // "मृत" को अलग अवस्था मानना है या उसे अंधे का ही गहरा रूप — इस पर
+            // घराने बँटे हुए हैं, इसलिए यह सेटिंग से तय होता है।
+            return LalKitabSettings::get('mrit_avastha') === 'drop'
+                ? ['state' => 'अंधा', 'code' => 'ANDHA']
+                : ['state' => 'मृत', 'code' => 'MRIT'];
         }
         if ($gunga && $behra) {
             return ['state' => 'अंधा', 'code' => 'ANDHA'];

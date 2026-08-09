@@ -257,6 +257,62 @@ function lkNativeGo(el) {
     </div>
 
     <div id="lk-detail-bar">
+    <?php /* ══════ विवादित नियम — ज्योतिषी का फ़ैसला ══════
+         लाल किताब की कुछ बातों पर घराने सहमत नहीं हैं (सोई दृष्टि कितनी बचे,
+         मृत अवस्था मानें या नहीं…)। चुपचाप एक पक्ष चुनकर उसे नियम की तरह छाप
+         देना सबसे बड़ी बेईमानी होगी — पढ़ने वाले को पता ही नहीं चलेगा कि उसका फल
+         किस मत पर बना। इसलिए यहाँ खुला चुनाव है, चुनाव URL में जाता है (वही लिंक
+         दोबारा खोलने पर वही फल), और चुनी हुई सेटिंग रिपोर्ट के नीचे छपती है।
+         यह सवाल ग्राहक से नहीं पूछे जाते — इसीलिए यह पट्टी सिर्फ़ विस्तृत ढंग में
+         दिखती है, और बंद रहती है। */ ?>
+    <?php $LKSF = \AutoBusiness\Astro\LalKitab\LalKitabSettings::FIELDS;
+          $LKSV = \AutoBusiness\Astro\LalKitab\LalKitabSettings::all();
+          $LKSD = \AutoBusiness\Astro\LalKitab\LalKitabSettings::allDefault(); ?>
+    <details id="lk-niyam" style="border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;margin-bottom:10px" <?= $LKSD ? '' : 'open' ?>>
+      <summary style="cursor:pointer;padding:7px 12px;font-size:.83rem;font-weight:700;color:#334155">
+        ⚖ विवादित नियमों की सेटिंग
+        <span style="font-weight:500;font-size:.76rem;color:<?= $LKSD ? '#64748b' : '#b45309' ?>">
+          — <?= $LKSD ? 'सब spec के सुझाए रूप पर' : 'बदली हुई — फल इन्हीं पर बना है' ?>
+        </span>
+      </summary>
+      <form method="get" action="" id="lk-niyam-form" style="padding:2px 12px 11px">
+        <?php foreach ($_GET as $gk => $gv):
+              if (isset($LKSF[$gk]) || in_array($gk, ['sec', 'lkview'], true) || is_array($gv)) { continue; } ?>
+          <input type="hidden" name="<?= $h((string) $gk) ?>" value="<?= $h((string) $gv) ?>">
+        <?php endforeach; ?>
+        <input type="hidden" name="sec" value="lalkitab">
+        <input type="hidden" name="lkview" id="lk-niyam-view" value="<?= $h((string) ($_GET['lkview'] ?? 'nichod')) ?>">
+        <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(275px,1fr))">
+          <?php foreach ($LKSF as $sk => $sf): ?>
+            <label style="font-size:.79rem;color:#475569;display:block">
+              <b style="color:#334155"><?= $h($sf['q']) ?></b>
+              <select name="<?= $h($sk) ?>" onchange="lkNiyamGo(this)"
+                      style="width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:3px 6px;font-size:.79rem;background:#fff">
+                <?php foreach ($sf['options'] as $ov => $ol): ?>
+                  <option value="<?= $h($ov) ?>" <?= ($LKSV[$sk] ?? '') === $ov ? 'selected' : '' ?>><?= $h($ol) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <span style="font-size:.73rem;color:#94a3b8"><?= $h($sf['help']) ?></span>
+            </label>
+          <?php endforeach; ?>
+        </div>
+        <?php if (!$LKSD): ?>
+          <div style="margin-top:8px;font-size:.78rem">
+            <a href="?<?= $h(http_build_query(array_diff_key(array_filter($_GET, 'is_string'), $LKSF) + ['sec' => 'lalkitab'])) ?>"
+               style="color:#b45309;font-weight:700">↺ सब वापस spec के सुझाए रूप पर</a>
+          </div>
+        <?php endif; ?>
+      </form>
+    </details>
+    <script>
+    /* जो पढ़ाई खुली है वही लौटने पर खुले। */
+    function lkNiyamGo(el) {
+      var sel = document.getElementById('lk-select');
+      var box = document.getElementById('lk-niyam-view');
+      if (sel && box && sel.value) { box.value = sel.value; }
+      el.form.submit();
+    }
+    </script>
     <div class="flex items-center gap-2 mb-2" style="flex-wrap:wrap">
       <select id="lk-select" class="l2-select" aria-label="लाल किताब श्रेणी चुनें" style="flex:1;min-width:190px">
         <optgroup label="1 · 🔎 निचोड़ व प्राथमिकता">
@@ -502,11 +558,18 @@ function lkNativeGo(el) {
             </div>
           <?php endif; ?>
 
+          <?php /* किस मत पर यह फल बना — पूरा, न कि दो चुनी हुई पंक्तियाँ। दो
+                   ज्योतिषी अलग सेटिंग पर अलग नतीजे देंगे; बिना इस पंक्ति के कोई
+                   बता ही नहीं सकता कि फ़र्क़ कहाँ से आया। */ ?>
           <div data-lk-protectors="<?= $h(implode('|', (array) ($PR['upaay']['protectors'] ?? []))) ?>"
-               style="font-size:.72rem;color:#94a3b8;margin-top:7px">
-            नियम-सेटिंग: सोई दृष्टि = <?= $h((string) $PR['settings']['soya_drishti']) ?> ·
-            बैठक-क्रम = <?= $h((string) $PR['settings']['seat_precedence']) ?> ·
-            विरोध-घनत्व = <?= $h((string) $PR['density']) ?>
+               data-lk-niyam="<?= $h(implode('|', array_map(static fn ($k, $v) => $k . '=' . $v,
+                     array_keys((array) ($PR['niyam'] ?? [])), array_values((array) ($PR['niyam'] ?? []))))) ?>"
+               style="font-size:.72rem;color:#94a3b8;margin-top:7px;line-height:1.6">
+            <b>नियम-सेटिंग<?= empty($PR['niyam_default']) ? ' (बदली हुई)' : '' ?>:</b>
+            <?= $h(implode(' · ', (array) ($PR['niyam_hi'] ?? []))) ?>
+            · सोई दृष्टि = <?= $h((string) $PR['settings']['soya_drishti']) ?>
+            · बैठक-क्रम = <?= $h((string) $PR['settings']['seat_precedence']) ?>
+            · विरोध-घनत्व = <?= $h((string) $PR['density']) ?>
           </div>
         <?php endif; ?>
       </div>
@@ -2086,6 +2149,16 @@ $ssAct = $act['sadesati'] ?? null;
     <?php foreach (array_slice($lk['rules']['upay_niyam'] ?? [], 0, 6) as $n): ?><li><?= $h((string) $n) ?></li><?php endforeach; ?>
   </ul>
   <div class="lkr-foot">यह रिपोर्ट लाल किताब के शास्त्रीय नियमों पर आधारित है। उपाय श्रद्धा एवं नियम-पूर्वक 40–43 दिन निरंतर करें।</div>
+  <?php /* छपी रिपोर्ट किसी के हाथ में महीनों रहती है, और वही आगे दूसरे ज्योतिषी
+           को दिखाई जाती है। उस पर यह लिखा होना ज़रूरी है कि फल किस मत पर बना —
+           वरना दो रिपोर्टों का फ़र्क़ कोई समझा ही नहीं सकेगा। */ ?>
+  <?php $PRn = $lk['process'] ?? null; if (is_array($PRn) && !empty($PRn['niyam_hi'])): ?>
+    <div class="lkr-foot" style="font-size:.72rem">
+      <b>नियम-सेटिंग<?= empty($PRn['niyam_default']) ? ' (spec के सुझाए रूप से बदली हुई)' : '' ?>:</b>
+      <?= $h(implode(' · ', (array) $PRn['niyam_hi'])) ?>
+    </div>
+  <?php endif; ?>
+  <div class="lkr-foot" style="font-size:.72rem">कुंडली रास्ता दिखाती है, बाँधती नहीं — जो लिखा है वह बदला जा सकता है, इसीलिए उपाय हैं।</div>
 </div>
 
 <div id="lk-checklist" hidden>

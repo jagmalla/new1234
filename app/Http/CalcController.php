@@ -345,6 +345,9 @@ final class CalcController
                             'phase' => $sadeSati['phase'] ?? null,
                         ] : null,
                     ];
+                    // विवादित नियमों की सेटिंग — गणना से *पहले*, क्योंकि इंजन इन्हें
+                    // फ़ैसला लेते वक़्त पढ़ता है (सोई दृष्टि, छाया-संगत, मृत अवस्था…)।
+                    \AutoBusiness\Astro\LalKitab\LalKitabSettings::apply($_GET);
                     $lkOut = \AutoBusiness\Astro\LalKitab\LalKitabEngine::compute($chart, $age, $lkActive);
                     // प्रक्रिया-परत (चरण 7-10) — इंजन सब निकालता है, यह परत चुनती है:
                     // निचोड़ की 3-5 बातें, 1-2 उपाय, और सरल हिंदी का ग्राहक-पन्ना।
