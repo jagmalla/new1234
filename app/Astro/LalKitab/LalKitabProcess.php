@@ -664,6 +664,7 @@ final class LalKitabProcess
     private static function remedySequence(array $planets, array $rin, array $native, array $lk, array $core = []): array
     {
         $protectors = (array) ($rin['protectors'] ?? []);
+        $vGateNotes = [];   // वर्जित-पहरे ने जो उपाय रोके
         $rank = ['प्रबल' => 3, 'मध्यम' => 2, 'कमज़ोर' => 1, 'शून्य' => 0];
         // निचोड़ ने जिन ग्रहों को मुख्य कहा, उपाय उन्हीं का पहले — इसी क्रम में।
         // वरना रिपोर्ट राहु को मुख्य कठिनाई बताएगी और उपाय गुरु का दे देगी।
@@ -718,6 +719,13 @@ final class LalKitabProcess
                 (string) (($p['remedies'][0] ?? '')),
                 (string) (($p['samanya'][0] ?? '')),
             ], static fn ($t) => trim($t) !== ''));
+
+            // ---- वर्जित उपाय का पहरा ----
+            // इस कुंडली में कुछ काम साफ़ मना हैं। अगर जारी होने वाला उपाय उन्हीं में
+            // से निकल आए तो वह मदद नहीं, नुक़सान है — और यह चूक चुपचाप होती, क्योंकि
+            // वर्जित-सूची अब तक सिर्फ़ अपने अलग पन्ने पर पड़ी थी, उपाय चुनते समय
+            // कोई उसे देखता ही नहीं था।
+            $upay = self::varjitGate($upay, $lk, $vGateNotes);
 
             // ---- हालात के गेट ----
             // ये बारीक अक्षर नहीं हैं। कई उपाय माता-पिता के जीवित होने या न होने
@@ -834,7 +842,8 @@ final class LalKitabProcess
             'held'      => $held,
             'excluded'  => array_values(array_filter($cands, static fn ($c) => $c['excluded'])),
             'protectors'=> $protectors,
-            'gate_notes'=> array_values(array_unique($gateAll)),
+            'gate_notes'=> array_values(array_unique(array_merge($gateAll, $vGateNotes))),
+            'varjit_blocked' => array_values(array_unique($vGateNotes)),
             'missing'   => $missing,
             'native_ok' => $missing === [],
             'note'      => $missing === []
@@ -843,6 +852,70 @@ final class LalKitabProcess
                   . '। कई उपाय इन्हीं हालात पर उलट जाते हैं, इसलिए हालत मालूम न होने पर वैसा उपाय '
                   . 'रोक दिया जाता है। तब तक नीचे दिए उपाय सामान्य व सुरक्षित हैं।',
         ];
+    }
+
+    /**
+     * वर्जित उपाय का पहरा — जो काम इस कुंडली में मना है, वह उपाय बनकर बाहर न जाए।
+     *
+     * वर्जित-सूची अब तक अपने अलग पन्ने पर पड़ी रहती थी और उपाय चुनते समय कोई उसे
+     * देखता ही नहीं था। यानी इंजन ठीक वही काम सुझा सकता था जिसके आगे किताब लिखती
+     * है *"निर्धन या कंगाल हो जायेंगे"* — और चूक चुपचाप होती, क्योंकि दोनों बातें
+     * दो अलग पन्नों पर सही-सही छपी रहतीं।
+     *
+     * मिलान शब्दों से होता है, इसलिए जान-बूझकर **ढीला** रखा गया है: वर्जित वाक्य
+     * के भारी शब्द (चार अक्षर से बड़े) उपाय में मिलें तो उसे रोक दिया जाता है।
+     * यहाँ ग़लती किस तरफ़ करनी है, यह साफ़ है — एक ठीक उपाय रुक जाना एक मना काम
+     * करा देने से कहीं सस्ता है।
+     *
+     * @param list<string> $upay
+     * @param list<string> $notes
+     * @return list<string>
+     */
+    private static function varjitGate(array $upay, array $lk, array &$notes): array
+    {
+        $bad = [];
+        foreach ((array) (($lk['varjit']['forbidden']) ?? []) as $f) {
+            $t = trim((string) ($f['varjit'] ?? ''));
+            if ($t !== '') { $bad[] = $t; }
+        }
+        if ($bad === []) { return $upay; }
+
+        $keyWords = static function (string $t): array {
+            // मात्राएँ \p{M} हैं, \p{L} नहीं — उन्हें छोड़ देने पर देवनागरी शब्द
+            // अक्षर-अक्षर टूट जाते हैं और कोई शब्द बचता ही नहीं। यही चूक पहले
+            // पहरे को चुपचाप बेअसर कर रही थी।
+            $w = preg_split('/[^\p{L}\p{M}]+/u', $t, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            // हिंदी के बहुत से अर्थवान शब्द चार अक्षर के होते हैं (अनाथ, अपने, रखें),
+            // इसलिए सीमा चार रखी है — पर अकेले चार-अक्षरी शब्द आम भी बहुत हैं,
+            // इसलिए नीचे एक विशिष्ट (छह अक्षर से बड़ा) शब्द भी माँगा जाता है।
+            return array_values(array_filter($w, static fn ($x) => mb_strlen($x) >= 4));
+        };
+
+        $kept = [];
+        foreach ($upay as $u) {
+            $blockedBy = '';
+            foreach ($bad as $b) {
+                $words = $keyWords($b);
+                if ($words === []) { continue; }
+                $hits = 0; $distinct = false;
+                foreach ($words as $w) {
+                    if (mb_strpos($u, $w) === false) { continue; }
+                    $hits++;
+                    if (mb_strlen($w) >= 6) { $distinct = true; }
+                }
+                // दो शब्द मिलें और उनमें एक विशिष्ट भी हो — तभी संयोग नहीं माना जाता।
+                // सिर्फ़ गिनती पर चलने से "अपने", "रखें" जैसे आम शब्द किसी भी उपाय को
+                // रोक देते।
+                if ($hits >= 2 && $distinct) { $blockedBy = $b; break; }
+            }
+            if ($blockedBy !== '') {
+                $notes[] = 'एक उपाय रोका गया — यह इस कुंडली में वर्जित काम से मिलता है: “'
+                    . mb_substr($blockedBy, 0, 70) . '”। ("वर्जित उपाय व नियम" में पूरा विवरण।)';
+                continue;
+            }
+            $kept[] = $u;
+        }
+        return $kept;
     }
 
     /**
@@ -1389,10 +1462,19 @@ final class LalKitabProcess
     /** @return list<string> */
     private static function dontList(array $lk): array
     {
+        // ── कुंजी का मेल ──
+        // यहाँ `rule` / `text` पढ़ा जा रहा था, जबकि वर्जित-सूची की कुंजियाँ
+        // `sthiti` / `varjit` / `parinam` हैं। नतीजा: ग्राहक-पन्ने की "न करने
+        // योग्य" सूची से इस कुंडली के **असली** वर्जित काम चुपचाप ग़ायब थे — वही
+        // काम जिनके आगे किताब लिखती है "निर्धन या कंगाल हो जायेंगे"। सूची में
+        // सिर्फ़ साधारण ग्रह-परहेज़ बचते थे।
         $out = [];
         foreach ((array) (($lk['varjit']['forbidden']) ?? []) as $f) {
-            $t = trim((string) ($f['rule'] ?? $f['text'] ?? ''));
-            if ($t !== '') { $out[] = $t; }
+            $t = trim((string) ($f['varjit'] ?? $f['rule'] ?? $f['text'] ?? ''));
+            if ($t === '') { continue; }
+            // परिणाम साथ रहे तो बात टलती नहीं — "क्यों न करें" वही बताता है।
+            $why = trim((string) ($f['parinam'] ?? ''));
+            $out[] = $why !== '' ? ($t . ' — ' . $why) : $t;
         }
         foreach ((array) ($lk['planets'] ?? []) as $p) {
             if (($p['verdict'] ?? '') === 'अशुभ' && ($p['donts'][0] ?? '') !== '') {

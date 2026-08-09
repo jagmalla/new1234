@@ -2411,10 +2411,30 @@ function lkNativeGo(el) {
           <?php foreach ($rpTiers as $tk => $meta): if (empty($rp[$tk])) { continue; } ?>
             <div class="lk-card" style="border-color:<?= $meta[4] ?>;background:<?= $meta[3] ?>">
               <div class="lk-card-h" style="color:<?= $meta[2] ?>"><?= $meta[0] ?>
-                <span class="lk-pill" style="background:#fff;color:<?= $meta[2] ?>;border:1px solid <?= $meta[4] ?>"><?= count((array) $rp[$tk]) ?></span>
+                <span class="lk-pill" style="background:#fff;color:<?= $meta[2] ?>;border:1px solid <?= $meta[4] ?>"><?= count(array_unique(array_column((array) $rp[$tk], 'text'))) ?></span>
                 <span style="font-weight:400;font-size:.74rem;color:#64748b">— <?= $meta[1] ?></span></div>
+              <?php /* एक ही उपाय-पाठ कई जगहों पर बनता है (टक्करें भाव-दर-भाव), और
+                       पहले हर जगह की अपनी पंक्ति छपती थी — इक्कीस में से तेरह पंक्तियाँ
+                       वही तीन वाक्य दोहरा रही थीं। उपाय क़िस्म का है, जगह का नहीं;
+                       इसलिए पाठ एक बार, और उसके आगे सारी जगहें। दोहराव में असली
+                       (नाम लेकर बताए गए) उपाय दब जाते थे। */ ?>
+              <?php
+                $grp = [];
+                foreach ($rp[$tk] as $it) {
+                    $key = (string) $it['text'];
+                    if (!isset($grp[$key])) { $grp[$key] = ['where' => [], 'darja' => (string) ($it['darja'] ?? '')]; }
+                    $grp[$key]['where'][] = (string) $it['hi'];
+                }
+              ?>
               <ul class="lk-rem-list" style="color:<?= $meta[2] ?>">
-                <?php foreach ($rp[$tk] as $it): ?><li><b><?= $h((string) $it['hi']) ?>:</b> <?= $h((string) $it['text']) ?><?php if (($it['darja'] ?? '') === 'lambit'): ?> <span class="lk-pill" style="background:#dbeafe;color:#1e40af">अंतरिम</span><?php elseif (($it['darja'] ?? '') === 'anumanit'): ?> <span class="lk-pill" style="background:#fef3c7;color:#92400e">अनुमानित</span><?php endif; ?></li><?php endforeach; ?>
+                <?php foreach ($grp as $txt => $g): ?>
+                  <li><b><?= $h(implode(' · ', array_slice($g['where'], 0, 3))) ?><?= count($g['where']) > 3 ? ' +' . (count($g['where']) - 3) . ' और' : '' ?>:</b>
+                    <?= $h($txt) ?>
+                    <?php if (count($g['where']) > 1): ?><span class="lk-pill" style="background:#f1f5f9;color:#475569"><?= count($g['where']) ?> जगह — उपाय एक ही</span><?php endif; ?>
+                    <?php if ($g['darja'] === 'lambit'): ?> <span class="lk-pill" style="background:#dbeafe;color:#1e40af">अंतरिम</span>
+                    <?php elseif ($g['darja'] === 'anumanit'): ?> <span class="lk-pill" style="background:#fef3c7;color:#92400e">अनुमानित</span><?php endif; ?>
+                  </li>
+                <?php endforeach; ?>
               </ul>
             </div>
           <?php endforeach; ?>

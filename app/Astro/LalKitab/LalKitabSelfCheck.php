@@ -610,6 +610,45 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // इस कुंडली में जो काम मना हैं, वे ग्राहक-पन्ने की "न करने योग्य" सूची में
+        // होने ही चाहिए — किताब उन्हीं के आगे "निर्धन या कंगाल हो जायेंगे" लिखती है।
+        // पहले ये चुपचाप ग़ायब थे, क्योंकि सूची ग़लत कुंजी पढ़ रही थी।
+        $add('RM-1', 'वर्जित काम ग्राहक-पन्ने की "न करने योग्य" सूची में आते हैं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view active" data-lk="nichod">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="overview">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $nichod = mb_substr($h, $i, $j - $i);
+                // इस कुंडली की वर्जित सूची (नियम-पन्ने से) उठाकर मिलाओ
+                $vi = mb_strpos($h, '<div class="lk-view" data-lk="rules">');
+                if ($vi === false) { return false; }
+                $rules = mb_substr($h, $vi, 9000);
+                if (!preg_match('/🚫 ([^<]{12,})/u', $rules, $m)) { continue; }   // कोई वर्जित नहीं
+                $first = trim($m[1]);
+                if (mb_strpos($nichod, mb_substr($first, 0, 25)) === false) { return false; }
+            }
+            return true;
+        });
+
+        // उपाय-भंडार में एक ही पाठ जगह-दर-जगह दोहराया न जाए — दोहराव में वे उपाय
+        // दब जाते हैं जो सचमुच नाम लेकर बताए गए हैं।
+        $add('RM-2', 'उपाय-भंडार में एक ही उपाय-पाठ दोहराया नहीं जाता', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="remedy">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="calendar">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                // ऊपर की "पहले सिर्फ़ इतना करें" पट्टी जान-बूझकर वही उपाय दोहराती है
+                // जो जारी हुए हैं — वह दोहराव सही है। भंडार वहीं से आगे शुरू होता है।
+                $after = mb_strpos($seg, 'एक साथ कई उपाय शुरू करने से कोई पूरा नहीं होता');
+                if ($after !== false) { $seg = mb_substr($seg, $after); }
+                preg_match_all('/<li><b>[^<]*<\/b>\s*([^<]{20,})/u', $seg, $m);
+                $texts = array_map(static fn ($t) => trim($t), $m[1]);
+                if ($texts !== array_unique($texts)) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;
