@@ -463,6 +463,62 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // ऋण के "व" वाले नियम पूरे मिलने चाहिए। एक ग्रह पर ऋण घोषित कर देना सिर्फ़
+        // ग़लत गिनती नहीं — उसके साथ वे वाक्य भी छपते हैं जो पढ़ने वाले पर अपराध का
+        // आरोप लगाते हैं। इसलिए यह जाँच पन्ने पर ही परखती है कि जिन नियमों में
+        // ग्रह छूटे हैं, वे "बनता है" में न गिने जाएँ।
+        $add('RN-1', 'ऋण के "व" वाले नियम अधूरे मिलान पर नहीं बनते', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="shrap">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="sadesati">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                // बने हुए ऋणों वाला हिस्सा अधूरे-मिलान वाले खाने से पहले ख़त्म होता
+                // है — वहीं तक देखो, वरना नीचे का "नहीं मिले" ऊपर के कार्ड का लगने
+                // लगता है और जाँच बिना किसी असली ख़राबी के लाल हो जाती है।
+                $cut = mb_strpos($seg, 'अधूरा मिलान');
+                $built = $cut !== false ? mb_substr($seg, 0, $cut) : $seg;
+                if (mb_strpos($built, 'बनता है') !== false && mb_strpos($built, 'नहीं मिले') !== false) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        // "संकेत" पुस्तक के पहचान-चिह्न हैं, आरोप नहीं — और वे भूतकाल में लिखे हैं
+        // ("हत्या की होगी")। बिना लेबल के छापना पढ़ने वाले पर अपराध मढ़ना है।
+        $add('RN-2', 'ऋण के "संकेत" आरोप नहीं, मिलान के सवाल कहकर दिखते हैं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="shrap">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="sadesati">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                if (mb_strpos($seg, 'बनता है') === false) { continue; }   // इस कुंडली पर कोई ऋण नहीं
+                if (mb_strpos($seg, 'पहचान के चिह्न') === false) { return false; }
+                if (mb_strpos($seg, 'आरोप नहीं') === false) { return false; }
+                // अशुभ फल शर्त के साथ ही आए
+                if (mb_strpos($seg, 'अशुभ फल:') !== false) { return false; }
+                if (mb_strpos($seg, 'उपाय न किया जाए') === false) { return false; }
+            }
+            return true;
+        });
+
+        // मंगली दोष की तीव्रता — पुस्तक का अपना क्रम पन्ने पर लिखा है, इसलिए बरता
+        // भी जाना चाहिए। 12वें का मंगल 7वें जैसा नहीं पढ़ा जा सकता।
+        $add('MG-1', 'मंगली दोष तीव्रता के साथ बताया जाता है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="manglik">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="agecycle">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                if (mb_strpos($seg, 'मंगलीक दोष है') !== false) {
+                    if (mb_strpos($seg, 'तीव्रता —') === false) { return false; }
+                    if (mb_strpos($seg, 'वैदिक आधार पर') === false) { return false; }
+                }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

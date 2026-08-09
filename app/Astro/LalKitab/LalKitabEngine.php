@@ -2091,14 +2091,27 @@ final class LalKitabEngine
         $out = [];
         foreach ($rin as $r) {
             $cond = $r['cond'] ?? ['houses' => [], 'planets' => []];
-            $matched = [];
-            foreach (($cond['planets'] ?? []) as $cp) {
+            $pehchan = (string) ($r['pehchan'] ?? '');
+            // ── "या" बनाम "व" ──
+            // नियम ख़ुद दो तरह के हैं और पुस्तक यह भेद साफ़ लिखती है:
+            //   • "पाँचवें भाव में शुक्र **या** पापी ग्रह"      → कोई एक काफ़ी
+            //   • "दूसरे या सातवें भाव में सूर्य, राहु **व** चन्द्रमा स्थित हों" → तीनों चाहिए
+            // अब तक कोई एक ग्रह मिल जाने पर ही ऋण "बनता है" घोषित हो जाता था, यानी
+            // "व" वाले नियम भी "या" की तरह पढ़े जा रहे थे। नतीजा: जो ऋण किताब के
+            // अपने नियम से बनता ही नहीं, वह भी हर कुंडली पर लग रहा था — और उसके
+            // साथ वे भारी वाक्य भी, जो नीचे लिखे हैं।
+            $planetsC = (array) ($cond['planets'] ?? []);
+            $mode = (count($planetsC) >= 2 && mb_strpos($pehchan, ' व ') !== false) ? 'all' : 'any';
+            $matched = $missing = [];
+            foreach ($planetsC as $cp) {
                 $ph = $house[$cp] ?? null;
                 if ($ph !== null && in_array($ph, $cond['houses'] ?? [], true)) {
                     $matched[] = LalKitabData::planetHi($cp) . ' ' . LalKitabData::houseOrdinalHi($ph) . ' भाव में';
+                } else {
+                    $missing[] = LalKitabData::planetHi($cp);
                 }
             }
-            $present = $matched !== [];
+            $present = $mode === 'all' ? ($matched !== [] && $missing === []) : ($matched !== []);
             $out[] = [
                 'rin'         => (string) ($r['rin'] ?? ''),
                 'pehchan'     => (string) ($r['pehchan'] ?? ''),
@@ -2107,7 +2120,9 @@ final class LalKitabEngine
                 'ashubh_phal' => (string) ($r['ashubh_phal'] ?? ''),
                 'upay'        => (string) ($r['upay'] ?? ''),
                 'present'     => $present,           // exact chart match
+                'mode'        => $mode,              // 'all' = नियम "व" वाला, 'any' = "या" वाला
                 'matched'     => $matched,           // "राहु पाँचवें भाव में" …
+                'missing'     => $missing,           // "व" वाले नियम में जो ग्रह नहीं मिले
             ];
         }
         return $out;
@@ -2169,12 +2184,44 @@ final class LalKitabEngine
             7 => 'दाम्पत्य, जीवनसाथी व साझेदारी पर', 8 => 'आयु, दुर्घटना व अकस्मात बाधाओं पर',
             12 => 'व्यय, शयन-सुख व विदेश पर',
         ];
+        // ── तीव्रता ──
+        // पन्ना ख़ुद क्रम बताता है ("सप्तम भाव में प्रभाव सबसे अधिक, बारहवें में
+        // सबसे कम") पर उसे बरतता नहीं था: 12वें का मंगल भी वैसा ही "दोष है" पढ़ा
+        // जाता था जैसा 7वें का। जब तीव्रता का नियम पन्ने पर ही लिखा हो, उसे लागू
+        // न करना जानकारी फेंक देना है।
+        static $tivrataRank = [7 => 'सबसे अधिक', 1 => 'अधिक', 4 => 'मध्यम', 8 => 'मध्यम', 12 => 'सबसे कम'];
+        $tivrata = $isManglik ? ($tivrataRank[$mh] ?? 'मध्यम') : '';
+
+        // ── परिहार जो अभी जाँचे जा सकते हैं ──
+        // पुस्तक की परिहार-सूची में कुछ शर्तें इसी कुंडली की हैं (मंगल की राशि +
+        // भाव), और कुछ दूसरी कुंडली की (मिलान के समय)। जो अपनी हैं उन्हें छापकर
+        // छोड़ देना बेकार है — वे जाँची जा सकती हैं।
+        // असली राशि जन्म-कुंडली से आती है, स्थिर मेष-टेवे से नहीं — मंगली दोष
+        // वैदिक पद्धति का विचार है और उसमें राशि असली वाली ही गिनी जाती है।
+        $marsSign = isset($chart['planets']['Mars']['sign_index'])
+            ? (int) $chart['planets']['Mars']['sign_index'] : null;
+        // राशि+भाव की वे जोड़ियाँ जिन पर पुस्तक दोष प्रायः समाप्त मानती है
+        static $pariharPairs = [
+            ['sign' => 'Aries',       'house' => 1,  'hi' => 'मेष राशि का मंगल लग्न में'],
+            ['sign' => 'Scorpio',     'house' => 4,  'hi' => 'वृश्चिक राशि का मंगल चौथे भाव में'],
+            ['sign' => 'Capricorn',   'house' => 7,  'hi' => 'मकर राशि का मंगल सातवें भाव में'],
+            ['sign' => 'Cancer',      'house' => 8,  'hi' => 'कर्क राशि का मंगल आठवें भाव में'],
+        ];
+        $pariharHit = [];
+        foreach ($pariharPairs as $pp) {
+            if ($marsSign !== null && $pp['house'] === $mh && (Charts::SIGNS[$marsSign] ?? '') === $pp['sign']) {
+                $pariharHit[] = $pp['hi'];
+            }
+        }
+
         return [
             'is'         => $isManglik,
             'mars_house' => $mh,
             'mars_ord'   => $mh ? LalKitabData::houseOrdinalHi($mh) : '',
             'mars_effect'=> $isManglik ? ($mhMean[$mh] ?? '') : '',
             'lagna_hi'   => LalKitabData::signHi(Charts::SIGNS[$lagnaSign]),
+            'tivrata'    => $tivrata,
+            'parihar_hit'=> $pariharHit,        // इसी कुंडली से जाँचे हुए परिहार
             'upay'       => $upay,
             'parihar'    => LalKitabData::section('manglik_parihar'),
             'vichar'     => LalKitabData::section('manglik_vichar'),

@@ -1414,15 +1414,77 @@ function lkNativeGo(el) {
           <div class="lk-txt" style="margin-bottom:9px">नीचे वे ऋण हैं जो <b>इस कुंडली में वास्तव में बनते हैं</b> (ग्रह-भाव योग सिद्ध) — इनका अशुभ फल व मुक्ति-उपाय दिया गया है।</div>
           <?php foreach ($rinPresent as $S): ?>
             <div class="lk-card bad" data-app="1">
-              <div class="lk-card-h">⚠ <?= $h((string) $S['rin']) ?> <?= $pill('बनता है', 'p') ?></div>
+              <div class="lk-card-h">⚠ <?= $h((string) $S['rin']) ?> <?= $pill('बनता है', 'p') ?>
+                <?php if (($S['mode'] ?? 'any') === 'all'): ?><span class="lk-pill" style="background:#dcfce7;color:#166534">पूरा नियम मिला</span><?php endif; ?>
+              </div>
               <div class="lk-sub" style="color:#991b1b"><b>योग सिद्ध:</b> <?= $h(implode('; ', $S['matched'])) ?></div>
+              <?php /* यह पंक्ति कभी नहीं छपनी चाहिए: "व" वाला नियम अधूरा हो तो ऋण
+                       बनता ही नहीं। छपे तो मिलान में कहीं गड़बड़ है — और यही जाँच
+                       RN-1 पकड़ती है। इसे छिपाना आसान था, पर तब ग़लती चुपचाप चलती। */ ?>
+              <?php /* सिर्फ़ "व" वाले नियमों पर — "या" वाले नियम में बाक़ी ग्रहों का
+                       न मिलना सामान्य है, वहाँ एक ही काफ़ी है। */ ?>
+              <?php if (($S['mode'] ?? 'any') === 'all' && !empty($S['missing'])): ?>
+                <div class="lk-sub" style="color:#7f1d1d"><b>⚠ नहीं मिले:</b> <?= $h(implode(', ', (array) $S['missing'])) ?>
+                  <span style="font-size:.76rem">(नियम अधूरा है — फिर भी "बनता है" कहा गया, यह जाँचने योग्य है)</span></div>
+              <?php endif; ?>
               <div class="lk-sub"><b>पहचान-नियम:</b> <?= $h((string) $S['pehchan']) ?></div>
               <?php if (trim((string) $S['ashubh_grah']) !== ''): ?><div class="lk-sub"><b>अशुभ होने वाला ग्रह:</b> <?= $h((string) $S['ashubh_grah']) ?></div><?php endif; ?>
-              <?php if (trim((string) $S['sanket']) !== ''): ?><div class="lk-sub"><b>संकेत:</b> <?= $h((string) $S['sanket']) ?></div><?php endif; ?>
-              <?php if (trim((string) $S['ashubh_phal']) !== ''): ?><div class="lk-txt" style="color:#991b1b"><b>अशुभ फल:</b> <?= $h((string) $S['ashubh_phal']) ?></div><?php endif; ?>
+
+              <?php /* ══════ यह हिस्सा सबसे ज़्यादा नुक़सान करने वाला था ══════
+                   पुस्तक "संकेत" के नीचे पहचानने के चिह्न देती है — पर वे भूतकाल में
+                   लिखे हैं ("हत्या की होगी", "धोखा किया हो", "घर धोखे से लिया होगा")।
+                   उन्हें सीधे छाप देना पढ़ने वाले पर **अपराध का आरोप** है, वह भी एक
+                   ग्रह की बैठक के आधार पर। ये असल में मिलान के सवाल हैं: ज्योतिषी
+                   पूछता है कि ऐसा कुछ हुआ है या नहीं, और तभी ऋण की पुष्टि होती है।
+                   इसलिए अब यह हिस्सा सवाल के रूप में, साफ़ लेबल के साथ आता है। */ ?>
+              <?php if (trim((string) $S['sanket']) !== ''): ?>
+                <div style="border:1px solid #c7d2fe;background:#eef2ff;border-radius:9px;padding:8px 11px;margin-top:6px">
+                  <div style="font-weight:700;font-size:.82rem;color:#3730a3">❓ पहचान के चिह्न — जातक से मिलान करें</div>
+                  <div style="font-size:.78rem;color:#3730a3;margin:2px 0 4px">
+                    ये <b>आरोप नहीं</b> हैं। पुस्तक इन्हें पहचान के लिए गिनाती है — इनमें से कुछ
+                    सचमुच हुआ हो, तभी ऋण की पुष्टि मानी जाती है। कुछ न मिले तो यह योग
+                    रहते हुए भी ऋण नहीं माना जाता।
+                  </div>
+                  <div style="font-size:.83rem;line-height:1.6;color:#312e81"><?= $h((string) $S['sanket']) ?></div>
+                </div>
+              <?php endif; ?>
+
+              <?php /* अशुभ फल शर्त के साथ — किताब ख़ुद कहती है कि यह चुकाया जा सकता
+                       है; इसी आधार पर नीचे उपाय दिया गया है। उसे अटल बताकर छापना उसी
+                       किताब का खंडन है। */ ?>
+              <?php if (trim((string) $S['ashubh_phal']) !== ''): ?>
+                <div class="lk-txt" style="color:#991b1b;margin-top:6px">
+                  <b>अगर चिह्न मिलें और उपाय न किया जाए — किताब यह कहती है:</b>
+                  <div style="margin-top:2px"><?= $h((string) $S['ashubh_phal']) ?></div>
+                  <div style="font-size:.78rem;color:#78350f;margin-top:3px">
+                    यह अटल नहीं है। लाल किताब का पूरा ढाँचा इसी पर खड़ा है कि ऋण <b>चुकाया जा सकता है</b> —
+                    इसीलिए नीचे उपाय है।
+                  </div>
+                </div>
+              <?php endif; ?>
               <?= $remBlock([(string) $S['upay']], $S['rin'] . ' — ऋण-मुक्ति उपाय') ?>
             </div>
           <?php endforeach; ?>
+        <?php endif; ?>
+        <?php /* "व" वाले नियम में कुछ ग्रह मिले पर सब नहीं — ऐसा योग छिपाया नहीं
+                 जाता, पर उसे "बनता है" भी नहीं कहा जाता। ज्योतिषी के लिए यह जानना
+                 काम का है कि नियम कितना पास से चूका। */ ?>
+        <?php $rinPartial = array_values(array_filter($rinAbsent,
+                static fn ($x) => ($x['mode'] ?? 'any') === 'all' && !empty($x['matched']))); ?>
+        <?php if ($rinPartial !== []): ?>
+          <div class="lk-card" style="border-color:#fde68a;background:#fffbeb">
+            <div class="lk-card-h" style="color:#92400e">◐ अधूरा मिलान — नियम पूरा नहीं हुआ (<?= count($rinPartial) ?>)</div>
+            <div class="lk-txt" style="font-size:.8rem;color:#78350f">
+              इन नियमों में पुस्तक <b>सभी</b> ग्रह माँगती है ("व" = और), और यहाँ कुछ ही मिले।
+              इसलिए ये ऋण <b>नहीं बनते</b> — इनका फल इस कुंडली पर नहीं पढ़ा जाता।
+            </div>
+            <?php foreach ($rinPartial as $S): ?>
+              <div class="lk-txt" style="font-size:.81rem;margin-top:4px;padding-left:10px;border-left:3px solid #fcd34d">
+                <b><?= $h((string) $S['rin']) ?></b> — मिले: <?= $h(implode('; ', (array) $S['matched'])) ?>
+                · नहीं मिले: <b><?= $h(implode(', ', (array) ($S['missing'] ?? []))) ?></b>
+              </div>
+            <?php endforeach; ?>
+          </div>
         <?php endif; ?>
         <?php if ($rinAbsent !== []): ?>
           <details style="margin-top:8px">
@@ -1497,6 +1559,50 @@ function lkNativeGo(el) {
           <div class="lk-txt"><b>मंगल:</b> <?= $mg['mars_house'] ? $h((string) $mg['mars_ord']) . ' भाव में' : 'अज्ञात' ?> · <b>लग्न:</b> <?= $h((string) $mg['lagna_hi']) ?></div>
           <?php if ($mg['is'] && trim((string) $mg['mars_effect']) !== ''): ?>
             <div class="lk-txt" style="color:#991b1b;margin-top:3px"><b>प्रभाव:</b> मंगल का यह स्थान <?= $h((string) $mg['mars_effect']) ?> असर डालता है।</div>
+          <?php endif; ?>
+          <?php /* ══════ "दोष है" अकेला कुछ नहीं बताता ══════
+               तीव्रता का क्रम इसी पन्ने पर नीचे लिखा है — "सप्तम भाव में प्रभाव
+               सबसे अधिक, बारहवें में सबसे कम" — पर बरता नहीं जाता था। नतीजा:
+               बारहवें का मंगल भी उतना ही डरावना पढ़ा जाता था जितना सातवें का,
+               जबकि पुस्तक ख़ुद उन्हें बराबर नहीं मानती। */ ?>
+          <?php if ($mg['is']): ?>
+            <?php $tv = (string) ($mg['tivrata'] ?? '');
+                  $tvCol = $tv === 'सबसे अधिक' ? '#991b1b' : ($tv === 'सबसे कम' ? '#166534' : '#92400e'); ?>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:8px 11px;margin-top:6px">
+              <div style="font-weight:800;font-size:.82rem;color:<?= $tvCol ?>">
+                📏 तीव्रता — <?= $h($tv) ?>
+                <span style="font-weight:500;font-size:.76rem;color:#64748b">(पुस्तक का अपना क्रम: 7 &gt; 1 &gt; 4 · 8 &gt; 12)</span>
+              </div>
+              <div style="font-size:.83rem;line-height:1.6;color:#334155;margin-top:2px">
+                <?php if ($tv === 'सबसे कम'): ?>
+                  मंगल बारहवें भाव में है — पुस्तक इसी स्थान को <b>सबसे हल्का</b> मानती है।
+                  "मंगलीक" शब्द से घबराने की ज़रूरत नहीं; यह वही भारी दोष नहीं है जो सातवें भाव का होता है।
+                <?php elseif ($tv === 'सबसे अधिक'): ?>
+                  मंगल सातवें भाव में है — यही वह स्थान है जिसे पुस्तक <b>सबसे भारी</b> कहती है,
+                  और असर मुख्यतः दाम्पत्य पर पढ़ा जाता है।
+                <?php else: ?>
+                  यह मध्यम श्रेणी का है — न सबसे भारी, न सबसे हल्का।
+                <?php endif; ?>
+              </div>
+              <?php /* परिहार की जो शर्तें इसी कुंडली से जाँची जा सकती हैं, वे जाँच
+                       ली जाती हैं — सूची छापकर छोड़ देना पढ़ने वाले पर काम डालना है। */ ?>
+              <?php if (!empty($mg['parihar_hit'])): ?>
+                <div style="margin-top:5px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:6px 9px;font-size:.83rem;color:#14532d">
+                  ✅ <b>परिहार लागू:</b> <?= $h(implode(' · ', (array) $mg['parihar_hit'])) ?> —
+                  पुस्तक के अनुसार ऐसी स्थिति में दोष <b>प्रायः समाप्त</b> माना जाता है।
+                </div>
+              <?php else: ?>
+                <div style="margin-top:5px;font-size:.8rem;color:#475569">
+                  इस कुंडली की अपनी परिहार-शर्तें (मंगल की राशि + भाव) यहाँ पूरी नहीं होतीं।
+                  बाक़ी परिहार दूसरी कुंडली के हैं — वे <b>मिलान के समय</b> ही देखे जाते हैं।
+                </div>
+              <?php endif; ?>
+              <div style="margin-top:5px;font-size:.79rem;color:#3730a3;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:6px 9px">
+                ⚖ यह विचार <b>वैदिक आधार पर</b> है, लाल किताब की अपनी व्याकरण से नहीं।
+                और पुस्तक स्वयं कहती है कि केवल कन्या को दोषी ठहराना <b>पक्षपात है</b> —
+                यह दोष लड़का-लड़की दोनों पर एक-सा पढ़ा जाता है।
+              </div>
+            </div>
           <?php endif; ?>
           <?php if ($mg['is'] && trim((string) $mg['upay']) !== ''): ?>
             <?= $remBlock([(string) $mg['upay']], 'मंगल दोष उपाय') ?>
