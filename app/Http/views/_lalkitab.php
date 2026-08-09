@@ -193,6 +193,33 @@ $scorePill = static function (int $score): string {
   #sec-lalkitab .lk-dasha-row[open] > summary .lk-dasha-plus::after{content:'−'}
   #sec-lalkitab .lk-dasha-row:not([open]) > summary .lk-dasha-plus::after{content:'+'}
   #sec-lalkitab .lk-dasha-row .lk-dasha-plus{font-size:1rem;line-height:1}
+  /* वर्ष-कुंडली की ऊपरी पट्टी — वही रंग-रूप जो "उपाय हेतु आपकी स्थिति" वाली
+     पट्टी का है, ताकि यह पन्ना बाक़ी लाल किताब पन्नों से अलग न दिखे। */
+  #sec-lalkitab .lkv-top{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
+    padding:9px 13px;margin-bottom:10px}
+  #sec-lalkitab .lkv-top-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  #sec-lalkitab .lkv-top-lbl{font-weight:800;font-size:.87rem;color:#78350f;white-space:nowrap}
+  #sec-lalkitab .lkv-age-wrap{display:flex;align-items:center;gap:4px}
+  #sec-lalkitab .lkv-step{width:30px;height:30px;border:1px solid #fcd34d;border-radius:7px;
+    background:#fff;font-size:1.05rem;font-weight:700;cursor:pointer;color:#78350f;line-height:1}
+  #sec-lalkitab .lkv-step:hover{background:#fef3c7}
+  #sec-lalkitab #lkv-age{width:66px;border:1px solid #fcd34d;border-radius:7px;padding:5px 6px;
+    text-align:center;font-weight:700;background:#fff}
+  #sec-lalkitab .lkv-top-hint{font-size:.78rem;color:#92400e}
+  #sec-lalkitab .lkv-top-year{font-size:.84rem;color:#3730a3;font-weight:800;white-space:nowrap}
+  #sec-lalkitab .lkv-go{background:#7c3aed;color:#fff;border:none;border-radius:8px;
+    padding:7px 15px;font-weight:700;cursor:pointer;font-size:.83rem}
+  #sec-lalkitab .lkv-go:hover{background:#6d28d9}
+  #sec-lalkitab .lkv-top-yl{font-size:.82rem;color:#0f766e;font-weight:700}
+  #sec-lalkitab .lkv-top-st{font-size:.78rem;color:#92400e}
+  #sec-lalkitab .lkv-top #lkv-summary:not(:empty){margin-top:7px}
+  #sec-lalkitab .lkv-top #lkv-bar:not(:empty){margin-top:5px}
+  #sec-lalkitab .lkv-about{margin-bottom:10px}
+  #sec-lalkitab .lkv-about summary{cursor:pointer;font-weight:700;color:#475569}
+  @media(max-width:560px){
+    #sec-lalkitab .lkv-top-hint{display:none}
+    #sec-lalkitab .lkv-go{flex:1 1 100%}
+  }
   #sec-lalkitab .lk-view{display:none}
   #sec-lalkitab .lk-view.active{display:block}
   #sec-lalkitab .lk-scroll{max-height:74vh;overflow-y:auto;padding-right:6px}
@@ -1916,35 +1943,40 @@ function lkNativeGo(el) {
       <div class="lk-view" data-lk="varsh">
         <?php $lkAge = (int) ($lk['age'] ?? 0); ?>
         <h3 class="lk-h">📅 वर्ष कुंडली (Lal Kitab Varsh Kundali)</h3>
-        <div class="lk-txt" style="margin-bottom:9px">
+
+        <?php /* ══════ चुनाव व सार ऊपर, एक पट्टी में ══════
+             यह पन्ना बाक़ी लाल किताब पन्नों जैसा नहीं दिखता था: लंबा परिचय, फिर
+             चुनाव, फिर चिप्स, फिर मापक — चारों अलग-अलग खुले पड़े थे, और कुंडली
+             नीचे धकेल दी जाती थी। अब वही सब ऊपर एक पट्टी में है (उसी तरह जैसे
+             "उपाय हेतु आपकी स्थिति" वाली पट्टी), और परिचय समेट दिया गया है —
+             वह एक बार पढ़ने की चीज़ है, हर बार दिखने की नहीं। */ ?>
+        <div class="lkv-top">
+          <div class="lkv-top-row">
+            <span class="lkv-top-lbl">📅 वर्ष चुनें</span>
+            <span class="lkv-age-wrap">
+              <button type="button" id="lkv-prev" class="lkv-step" aria-label="पिछला वर्ष">−</button>
+              <input type="number" id="lkv-age" min="1" max="96" aria-label="आयु / Age"
+                     value="<?= $lkAge > 0 ? $lkAge : 1 ?>">
+              <button type="button" id="lkv-next" class="lkv-step" aria-label="अगला वर्ष">+</button>
+            </span>
+            <span class="lkv-top-hint">आयु (वर्ष)</span>
+            <?php /* आयु के साथ सन् — "आयु 45" सुनकर कोई नहीं जानता कि वह कौन-सा साल है। */ ?>
+            <span id="lkv-year" data-birth-year="<?= (int) ($lk['birth_year'] ?? 0) ?>" class="lkv-top-year"></span>
+            <button type="button" id="lkv-show" class="lkv-go">वर्ष कुंडली देखें</button>
+            <span id="lkv-yearlab" class="lkv-top-yl"></span>
+            <span id="lkv-status" class="lkv-top-st"></span>
+          </div>
+          <!-- सार-चिप्स व शुभता-मापक — JSON से भरे जाते हैं -->
+          <div id="lkv-summary"></div>
+          <div id="lkv-bar"></div>
+        </div>
+
+        <details class="lk-note lkv-about">
+          <summary>यह पन्ना क्या है?</summary>
           यह जन्म-कुंडली नहीं — <b>चुने हुए वर्ष की लाल-किताब वर्ष-कुंडली</b> है। वर्ष कुंडली ज्ञान चक्र के अनुसार
           हर आयु-वर्ष में जन्म-भावों का फल भिन्न भावों में सक्रिय होता है; नीचे उसी घूर्णित कुंडली पर लाल-किताब
           नियम, भविष्यवाणी, उपाय व करें/न करें दिए गए हैं। आयु बदलकर किसी भी वर्ष की वर्ष-कुंडली देखें।
-        </div>
-
-        <!-- age / year selector (mirrors the Vedic Varshaphal picker) -->
-        <div class="lkv-picker" style="display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin-bottom:10px">
-          <label style="display:flex;flex-direction:column;gap:3px;font-size:.8rem;color:#475569">
-            <span>आयु / Age (वर्ष)</span>
-            <span style="display:flex;align-items:center;gap:4px">
-              <button type="button" id="lkv-prev" class="lkv-step" aria-label="पिछला वर्ष" style="width:32px;height:32px;border:1px solid #cbd5e1;border-radius:7px;background:#f8fafc;font-size:1.1rem;font-weight:700;cursor:pointer">−</button>
-              <input type="number" id="lkv-age" min="1" max="96" value="<?= $lkAge > 0 ? $lkAge : 1 ?>" style="width:74px;border:1px solid #cbd5e1;border-radius:7px;padding:6px 8px;text-align:center;font-weight:700">
-              <button type="button" id="lkv-next" class="lkv-step" aria-label="अगला वर्ष" style="width:32px;height:32px;border:1px solid #cbd5e1;border-radius:7px;background:#f8fafc;font-size:1.1rem;font-weight:700;cursor:pointer">+</button>
-              <?php /* आयु के साथ सन् — "आयु 45" सुनकर कोई नहीं जानता कि वह कौन-सा
-                       साल है, और जो हिसाब हर बार ख़ुद करना पड़े वह किया नहीं जाता। */ ?>
-              <span id="lkv-year" data-birth-year="<?= (int) ($lk['birth_year'] ?? 0) ?>"
-                    style="font-size:.82rem;color:#3730a3;font-weight:700;white-space:nowrap"></span>
-            </span>
-          </label>
-          <button type="button" id="lkv-show" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">वर्ष कुंडली देखें</button>
-          <span id="lkv-yearlab" style="font-size:.82rem;color:#0f766e;font-weight:600"></span>
-          <span id="lkv-status" style="font-size:.78rem;color:#64748b"></span>
-        </div>
-
-        <!-- top small row: basic info chips + red→green शुभता signal bar
-             (filled from the JSON response — mirrors the Vedic Varshaphal row) -->
-        <div id="lkv-summary" style="margin-bottom:6px"></div>
-        <div id="lkv-bar" style="margin-bottom:10px"></div>
+        </details>
 
         <!-- main row: LEFT = annual (varsh) chart · RIGHT = prediction
              (like the Vedic Varshaphal chart | prediction layout) -->

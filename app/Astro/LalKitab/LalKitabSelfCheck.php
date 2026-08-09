@@ -571,6 +571,45 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // वर्ष-कुंडली पन्ना बाक़ी लाल किताब पन्नों जैसा दिखे: चुनाव व सार ऊपर एक
+        // पट्टी में (उसी तरह जैसे "उपाय हेतु आपकी स्थिति"), कुंडली उसके नीचे।
+        $add('VK-1', 'वर्ष-कुंडली में चुनाव व सार ऊपर की पट्टी में हैं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="varsh">');
+                if ($i === false) { return false; }
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="compare">');
+                if ($j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                // क्रम ही कसौटी है: पट्टी → चुनाव → सार → मापक → (समेटा परिचय) → कुंडली।
+                // सिर्फ़ "कुंडली से पहले" जाँचना काफ़ी नहीं — सार पट्टी से बाहर खिसका
+                // देने पर भी वह शर्त पूरी हो जाती थी, इसलिए हर पड़ाव का क्रम देखा
+                // जाता है और परिचय को सीमा-चिह्न की तरह बरता जाता है।
+                $pos = [];
+                foreach (['strip' => 'class="lkv-top"', 'age' => 'id="lkv-age"', 'year' => 'id="lkv-year"',
+                          'sum' => 'id="lkv-summary"', 'bar' => 'id="lkv-bar"',
+                          'about' => 'class="lk-note lkv-about"', 'main' => 'class="lkv-main"'] as $k => $needle) {
+                    $at = mb_strpos($seg, $needle);
+                    if ($at === false) { return false; }
+                    $pos[$k] = $at;
+                }
+                $order = ['strip', 'age', 'year', 'sum', 'bar', 'about', 'main'];
+                for ($n2 = 1; $n2 < count($order); $n2++) {
+                    if ($pos[$order[$n2]] <= $pos[$order[$n2 - 1]]) { return false; }
+                }
+                // क्रम भर देखना काफ़ी नहीं था — सार को पट्टी से बाहर खिसका देने पर भी
+                // क्रम वही रहता है। इसलिए सचमुच का घेराव जाँचा जाता है: पट्टी खुलने
+                // और सार के बीच जितने <div खुले, उतने ही बंद हुए हों (पट्टी ख़ुद अब भी
+                // खुली) — तभी सार उसके भीतर है।
+                foreach (['sum', 'bar'] as $inside) {
+                    $between = mb_substr($seg, $pos['strip'], $pos[$inside] - $pos['strip']);
+                    $opens  = substr_count($between, '<div');
+                    $closes = substr_count($between, '</div>');
+                    if ($opens - $closes < 1) { return false; }
+                }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;
