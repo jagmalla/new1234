@@ -361,6 +361,28 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         .dm-tree .dasha-tree, .dm-tree { font-size: .9rem; }
         .dasha-strip { cursor: pointer; }
         @media (max-width: 640px) { .dm-box { max-height: 92vh; border-radius: 10px; } .dm-body { padding: 10px 10px; } }
+        /* ---- "और देखें" पट्टी व उसकी खिड़की ---- */
+        #more-panel { grid-column: 1 / -1; }
+        #more-panel.hidden { display: none; }
+        .mp-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 16px; }
+        .mp-head h2 { font-size: 1.05rem; font-weight: 800; color: var(--sindoor); margin: 0; display: inline; }
+        .mp-sub { font-size: .78rem; color: var(--ink-soft); margin-left: 8px; }
+        .mp-grp { margin-top: 12px; }
+        .mp-grp-h { font-size: .82rem; font-weight: 800; color: #b45309; margin-bottom: 6px; }
+        .mp-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+        .mp-chip { border: 1px solid var(--line); background: #fff; border-radius: 999px;
+            padding: 6px 14px; font-size: .82rem; font-weight: 600; color: #334155; cursor: pointer;
+            font-family: inherit; line-height: 1.35; text-align: left; }
+        .mp-chip:hover { background: var(--sindoor-soft); border-color: #fca5a5; color: var(--sindoor); }
+        .mp-chip:focus-visible { outline: 2px solid var(--sindoor); outline-offset: 1px; }
+        /* खिड़की चौड़ी है — इसमें पूरा विभाग आता है, सिर्फ़ एक तालिका नहीं। */
+        #more-modal .dm-box { max-width: 1180px; max-height: 92vh; }
+        #more-modal .dm-body { padding: 12px 14px 18px; background: var(--paper, #fbf8f3); }
+        /* खिड़की में आया विभाग हमेशा दिखे — पन्ने पर वह hidden था। */
+        #more-slot > .l2-section, #more-slot > .l2-panel { display: block !important; }
+        #more-slot > * { margin: 0 !important; }
+        #more-frame { width: 100%; height: 78vh; border: 0; display: block; background: #fff; }
+        @media (max-width: 640px) { .mp-chip { font-size: .78rem; padding: 5px 12px; } #more-frame { height: 72vh; } }
         .saham-sel-main { flex: 3 1 190px; }
         .saham-sel-mudda { flex: 1 1 120px; min-width: 120px; max-width: 210px; }
         /* भाव-फल: भाव + श्रेणी selects share one line with the checkbox. */
@@ -1952,6 +1974,144 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             </div>
         </section>
 
+        <?php /* ══════════════ और देखें — सब कुछ यहीं से, पन्ना बदले बिना ══════════════
+             जन्म-कुंडली पढ़ते हुए ज्योतिषी को बीच-बीच में दस दूसरी चीज़ें देखनी पड़ती
+             हैं — नवांश, दशा, अष्टकवर्ग, गोचर, मुहूर्त, लाल किताब। अब तक हर बार
+             मेन्यू खोलकर पन्ना बदलना पड़ता था, और लौटने पर वह जगह ढूँढ़नी पड़ती थी
+             जहाँ से उठे थे। ये बटन वही पन्ना उसी जगह खड़ा रहने देते हैं और माँगी
+             हुई चीज़ ऊपर एक खिड़की में खोल देते हैं; ✕ दबाते ही खिड़की बंद और पढ़ाई
+             वहीं की वहीं।
+
+             सूची कहीं अलग से नहीं लिखी गई — चार्ट के नाम उसी `#chart-select` से,
+             फल के नाम उसी `#pred-select` से और बाक़ी उसी साइड-मेन्यू से बनते हैं
+             जो ऊपर है। इसलिए कल कोई विभाग जुड़े या हटे तो यह पट्टी अपने-आप वैसी
+             ही रहती है; दो जगह एक ही सूची रखने पर वे हमेशा अलग हो जाती हैं। */ ?>
+        <div id="more-panel" class="l2-full">
+          <div class="mp-card">
+            <div class="mp-head">
+              <h2>✨ और देखें — All Charts &amp; Predictions</h2>
+              <span class="mp-sub">किसी भी बटन पर टैप करें — जानकारी पॉप-अप में खुलेगी, यह पन्ना जहाँ है वहीं रहेगा</span>
+            </div>
+            <?php
+            /** एक चिप। $attr में वही जानकारी जो खोलने वाले को चाहिए। */
+            $mpChip = static function (string $label, array $attr) use ($h): string {
+                $a = '';
+                foreach ($attr as $k => $v) { $a .= ' data-' . $k . '="' . $h((string) $v) . '"'; }
+                return '<button type="button" class="mp-chip"' . $a . '>' . $label . '</button>';
+            };
+            $mpGroup = static function (string $title, string $chips): string {
+                return $chips === '' ? '' : '<div class="mp-grp"><div class="mp-grp-h">' . $title . '</div>'
+                    . '<div class="mp-chips">' . $chips . '</div></div>';
+            };
+            ?>
+
+            <?php // 1) कुंडलियाँ — वही सूची जो चार्ट-ड्रॉपडाउन में है
+            $c = '';
+            foreach ($vargaHi as $vk => $vlbl) {
+                if (!isset($vargas[$vk])) { continue; }
+                $c .= $mpChip('📊 ' . $h($vk) . ' — ' . $h($vlbl), ['more' => 'chart', 'val' => $vk]);
+            }
+            if ($gochar !== null) { $c .= $mpChip('🔭 Gochar (Transit)', ['more' => 'chart', 'val' => 'gochar']); }
+            if (($view['varshaNorth'] ?? null) !== null) {
+                $c .= $mpChip('🎂 Varsha Kundali (' . (int) $in['forYear'] . ')', ['more' => 'chart', 'val' => 'varsha']);
+            }
+            echo $mpGroup('📊 कुंडली / Charts', $c);
+            ?>
+
+            <?php // 2) जन्म-कुंडली फल — वही सूची जो फल-ड्रॉपडाउन में है
+            $preds = [
+                'general' => '🔎 General Overview (सारांश)', 'dasha' => '⏳ Dasha Phal (दशा फल)',
+                'grah' => '🪐 Graha Phal (ग्रह फल)', 'bhav' => '🏠 Bhava Phal (भाव फल)',
+                'bhavesh' => '🏛 Bhavesh Phal (भावेश)', 'karak' => '🎯 Karaka Phal (कारक)',
+                'yoga' => '✨ Kundali Yog (योग)', 'dosha' => '⚠️ Dosha (दोष व परिहार)',
+                'shaap' => '🧬 Shrap / Santaan (पूर्वशाप)',
+            ];
+            $c = '';
+            foreach ($preds as $pk => $plbl) { $c .= $mpChip($plbl, ['more' => 'pred', 'val' => $pk]); }
+            echo $mpGroup('📜 D1 जन्म-कुंडली फल / Birth-Chart Predictions', $c);
+            ?>
+
+            <?php // 3) विषय-आधारित पूरी पड़ताल (सिर्फ़ शब्द-खोज नहीं)
+            $topics = ['wealth' => '💰 धन-योग', 'career' => '💼 नौकरी / व्यवसाय', 'santan' => '👶 संतान-योग',
+                'videsh' => '✈ विदेश यात्रा व निवास', 'politics' => '🏛️ राजनीति'];
+            $c = '';
+            foreach ($topics as $tk => $tl) { $c .= $mpChip($tl, ['more' => 'topic', 'val' => $tk]); }
+            echo $mpGroup('🎯 विषय-आधारित पड़ताल / Topic Analysis', $c);
+            ?>
+
+            <?php // 4) ग्रह-स्थिति · दशा · बल · वर्ग
+            $c = $mpChip('🧾 Birth Details', ['more' => 'sec', 'val' => 'grah', 'target' => 'card-native'])
+               . $mpChip('🏠 House Details', ['more' => 'sec', 'val' => 'grah', 'target' => 'card-housedet'])
+               . $mpChip('🪐 Positions (D1)', ['more' => 'sec', 'val' => 'grah', 'target' => 'card-d1pos'])
+               . $mpChip('🔭 Gochar Details', ['more' => 'sec', 'val' => 'grah', 'target' => 'card-gochardetails'])
+               . $mpChip('🗂️ Varga Charts (सभी वर्ग)', ['more' => 'sec', 'val' => 'varga']);
+            echo $mpGroup('🪐 ग्रह-स्थिति / Planet Positions', $c);
+
+            $c = $mpChip('⏳ Current Dasha', ['more' => 'sec', 'val' => 'dasha', 'target' => 'card-curdasha'])
+               . $mpChip('🌳 Vimshottari (5 levels)', ['more' => 'sec', 'val' => 'dasha', 'target' => 'card-vimtree']);
+            echo $mpGroup('⏳ दशा / Dasha', $c);
+
+            $c = $mpChip('💪 Shadbala', ['more' => 'sec', 'val' => 'bal', 'tab' => 'shad'])
+               . $mpChip('🏛 Bhava Bala', ['more' => 'sec', 'val' => 'bal', 'tab' => 'bb'])
+               . $mpChip('🔢 Ashtakavarga', ['more' => 'sec', 'val' => 'bal', 'tab' => 'av'])
+               . $mpChip('🎚 Vimshopaka', ['more' => 'sec', 'val' => 'bal', 'tab' => 'vim']);
+            echo $mpGroup('💪 बल / Bala (Strength)', $c);
+            ?>
+
+            <?php // 5) गोचर · वर्षफल · मुहूर्त
+            $c = $mpChip('🔭 Gochar Calculation', ['more' => 'sec', 'val' => 'gochar', 'target' => 'card-gocharcalc'])
+               . $mpChip('📅 12-Month Timeline', ['more' => 'sec', 'val' => 'gochar', 'target' => 'yt-card']);
+            echo $mpGroup('🌌 गोचर फल / Gochar Predictions', $c);
+
+            $vps = ['general' => '🔎 Varshphal — General', 'muntha' => '📍 Muntha (मुंथा)',
+                'varshesh' => '👑 Varshesh (वर्षेश)', 'dasha' => '⏳ Mudda Dasha (दशा-फल)',
+                'tajik' => '✨ Tajik Yoga', 'saham' => '🎯 Saham (सहम)', 'bhava' => '🏠 Bhava-Phal (भाव-फल)'];
+            $c = '';
+            foreach ($vps as $vk2 => $vl2) { $c .= $mpChip($vl2, ['more' => 'sec', 'val' => 'varsha', 'vp' => $vk2]); }
+            $c .= $mpChip('🗓 Year Selection', ['more' => 'sec', 'val' => 'varsha', 'target' => 'card-vpbox'])
+                . $mpChip('📈 Annual Positions', ['more' => 'sec', 'val' => 'varsha', 'target' => 'card-varshadet'])
+                . $mpChip('👑 Bala + Year Lord', ['more' => 'sec', 'val' => 'varsha', 'target' => 'vp-row3']);
+            echo $mpGroup('🗓️ वर्षफल / Varshaphal Predictions', $c);
+
+            echo $mpGroup('🕉️ मुहूर्त / Muhurat',
+                $mpChip('🕉️ मुहूर्त — श्रेणी-वार शुभ समय', ['more' => 'sec', 'val' => 'muhurat']));
+            ?>
+
+            <?php // 6) लाल किताब — वही आठ समूह जो उसकी अपनी ड्रॉपडाउन में हैं
+            $lks = [
+                'nichod' => '📋 निचोड़ — मुख्य बातें व उपाय', 'overview' => '🔎 सामान्य परिचय',
+                'planet' => '🪐 ग्रह फल', 'supt' => '😴 सोया / अपंग ग्रह', 'inter' => '🔗 ग्रह अंतर्संबंध',
+                'house' => '🏠 भाव फल', 'karak' => '🎯 कारक',
+                'yoga' => '✨ योग · मसनूई · टक्करें', 'drishti' => '👁 दृष्टि व टक्कर',
+                'shrap' => '🧬 श्राप / पैतृक ऋण', 'manglik' => '🔴 मंगलीक दोष',
+                'agecycle' => '🕰️ आयु-दशा टाइमलाइन', 'varsh' => '📅 वर्ष कुंडली', 'sadesati' => '🪐 साढ़े साती / ढैय्या',
+                'remedy' => '🛠 उपाय', 'calendar' => '🗓 उपाय-कैलेंडर', 'rules' => '⛔ वर्जित उपाय व नियम',
+                'health' => '🩺 रोग / संतान', 'ayu' => '⏳ आयु योग', 'bhavan' => '🏗 गृह निर्माण',
+                'compare' => '⚖ D1 ↔ लाल किताब तुलना', 'reference' => '📚 संदर्भ चक्र',
+            ];
+            $c = '';
+            foreach ($lks as $lkk => $lkl) { $c .= $mpChip($lkl, ['more' => 'sec', 'val' => 'lalkitab', 'lk' => $lkk]); }
+            echo $mpGroup('📕 लाल किताब / Lal Kitab', $c);
+            ?>
+
+            <?php /* 7) मिलान अपना अलग पन्ना है (दो कुंडलियाँ चाहिए) — इसलिए वह
+                     खिड़की में उसी पन्ने की तरह खुलता है, वर की जगह यह जातक भरा हुआ। */
+            $milanQ = '/milan?' . http_build_query([
+                'boy_name' => (string) $in['name'], 'boy_date' => (string) $in['date'],
+                'boy_time' => (string) $in['time'], 'boy_lat' => (string) $in['latIn'],
+                // समय-मंडल इसी कुंडली का — डिफ़ॉल्ट 5:30 भर देने पर विदेश में जन्मे
+                // जातक की मिलान-कुंडली चुपचाप ग़लत समय पर बनती।
+                'boy_lon' => (string) $in['lonIn'], 'boy_tz' => (string) (float) ($meta['tz'] ?? 5.5),
+                'boy_place' => (string) $in['place'],
+            ]);
+            $c = $mpChip('💑 कुंडली मिलान (गुण + लाल किताब)', ['more' => 'url', 'val' => \AutoBusiness\Core\Asset::url($milanQ)])
+               . $mpChip('📆 Today · आज', ['more' => 'sec', 'val' => 'today'])
+               . $mpChip('🧩 Custom Screen', ['more' => 'sec', 'val' => 'custom']);
+            echo $mpGroup('🔎 अन्य / More', $c);
+            ?>
+          </div>
+        </div><!-- /more-panel -->
+
         <!-- ============ New / Profile (full-width section) — the birth-details
              form, shown beside the menu like the Gochar Calculation card ======= -->
         <div id="sec-profile" class="l2-section l2-full hidden space-y-4 md:space-y-6">
@@ -2663,6 +2823,23 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         </div>
         <div class="dm-body" id="dasha-modal-body">
             <div id="dasha-modal-tree" class="dm-tree"></div>
+        </div>
+    </div>
+</div>
+
+<?php /* "और देखें" की खिड़की। इसमें विभाग की नक़ल नहीं बनती — असली हिस्सा उठाकर
+         यहाँ रख दिया जाता है और बंद करने पर वापस अपनी जगह चला जाता है। नक़ल
+         बनाने पर उसके चित्र, ड्रॉपडाउन व बटन काम करना बंद कर देते (उनके handler
+         असली हिस्से पर लगे हैं), और पन्ने पर एक ही id दो बार होती। */ ?>
+<div id="more-modal" class="dm-overlay hidden" role="dialog" aria-modal="true" aria-label="और देखें">
+    <div class="dm-box">
+        <div class="dm-head">
+            <span class="dm-title" id="more-title">—</span>
+            <button type="button" class="dm-close" id="more-close" aria-label="Close / बंद करें" title="बंद करें (Esc)">✕</button>
+        </div>
+        <div class="dm-body">
+            <div id="more-slot"></div>
+            <iframe id="more-frame" hidden title="और देखें" loading="lazy"></iframe>
         </div>
     </div>
 </div>
@@ -4351,6 +4528,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       var el = document.getElementById(id);
       if (el) el.classList.toggle('hidden', id !== 'sec-' + key);
     });
+    // "और देखें" की पट्टी जन्म-कुंडली के पन्ने की चीज़ है — बाक़ी विभागों में
+    // वह नीचे लटकी नहीं रहनी चाहिए।
+    var mp = document.getElementById('more-panel');
+    if (mp) { mp.classList.toggle('hidden', !homeMode); }
     if (key === 'muhurat') { buildMahuratPage(); }
     if (key === 'grah') { buildGocharDetails(); }
     if (key === 'lalkitab') { buildLalKitab(); }
@@ -4430,6 +4611,148 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       }
     });
   });
+
+  // ---- "और देखें": हर विभाग एक खिड़की में, पन्ना बदले बिना ----
+  //
+  // तरीक़ा जान-बूझकर यह चुना गया कि विभाग की **नक़ल न बने**। नक़ल बनाने पर उसके
+  // चित्र, ड्रॉपडाउन और बटन मुर्दा हो जाते (सारे handler असली गाँठ पर लगे हैं)
+  // और एक ही id पन्ने पर दो बार आ जाती। इसलिए असली गाँठ उठाकर खिड़की में रखी
+  // जाती है और उसकी जगह एक निशान (placeholder) छोड़ दिया जाता है; बंद करते ही
+  // वह ठीक उसी निशान पर लौट जाती है, उन्हीं क्लासों के साथ।
+  //
+  // विभाग बनवाने के लिए साइड-मेन्यू का असली बटन ही दबाया जाता है — तभी वे सारे
+  // काम होते हैं जो सामान्य क्लिक पर होते हैं (lazy चित्र बनना, tab चुनना, लाल
+  // किताब की view बदलना)। उसके फ़ौरन बाद पन्ना वापस जन्म-कुंडली पर लाया जाता है,
+  // ताकि खिड़की बंद होने पर पढ़ने वाला वहीं मिले जहाँ से उठा था।
+  (function () {
+    var modal = document.getElementById('more-modal');
+    var slot  = document.getElementById('more-slot');
+    var frame = document.getElementById('more-frame');
+    var title = document.getElementById('more-title');
+    var closeBtn = document.getElementById('more-close');
+    var panel = document.getElementById('more-panel');
+    if (!modal || !slot || !panel) { return; }
+
+    var borrowed = null;     // { el, mark, cls }
+    var lastFocus = null;
+
+    function homeBtn() { return document.querySelector('#side-menu button[data-sec="home"]'); }
+
+    function putBack() {
+      if (!borrowed) { return; }
+      if (borrowed.mark && borrowed.mark.parentNode) {
+        borrowed.mark.parentNode.insertBefore(borrowed.el, borrowed.mark);
+        borrowed.mark.parentNode.removeChild(borrowed.mark);
+      }
+      borrowed.el.className = borrowed.cls;
+      borrowed = null;
+    }
+
+    function borrow(el) {
+      putBack();
+      var mark = document.createComment('more-slot');
+      el.parentNode.insertBefore(mark, el);
+      borrowed = { el: el, mark: mark, cls: el.className };
+      el.classList.remove('hidden');
+      slot.appendChild(el);
+    }
+
+    function open(label) {
+      title.textContent = label;
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      closeBtn.focus();
+      // भीतर आए चित्र/तालिकाएँ नई चौड़ाई पर दोबारा नापी जाएँ
+      setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 60);
+    }
+
+    function close() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      putBack();
+      frame.hidden = true;
+      frame.removeAttribute('src');
+      slot.hidden = false;
+      if (lastFocus && lastFocus.focus) { lastFocus.focus(); }
+      setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 60);
+    }
+
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) { close(); } });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) { close(); }
+    });
+
+    panel.addEventListener('click', function (e) {
+      var chip = e.target.closest ? e.target.closest('.mp-chip') : null;
+      if (!chip) { return; }
+      lastFocus = chip;
+      var kind = chip.getAttribute('data-more');
+      var val  = chip.getAttribute('data-val');
+      var label = (chip.textContent || '').trim();
+
+      if (kind === 'url') {
+        putBack();
+        slot.hidden = true;
+        frame.hidden = false;
+        frame.src = val;
+        open(label);
+        return;
+      }
+      slot.hidden = false;
+
+      if (kind === 'chart') {
+        var cs = document.getElementById('chart-select');
+        if (cs) { cs.value = val; cs.dispatchEvent(new Event('change')); }
+        borrow(document.getElementById('chart-panel'));
+        open(label);
+        return;
+      }
+      if (kind === 'pred' || kind === 'topic') {
+        if (kind === 'pred') {
+          var ps = document.getElementById('pred-select');
+          if (ps) { ps.value = val; ps.dispatchEvent(new Event('change')); }
+        } else {
+          // विषय-चिप की अपनी पड़ताल है — उसी चिप को दबाना सबसे भरोसेमंद है
+          var tc = document.querySelector('#pred-topic-row [data-' + val + ']');
+          if (tc) { tc.click(); }
+        }
+        borrow(document.getElementById('pred-panel'));
+        open(label);
+        return;
+      }
+      if (kind === 'sec') {
+        var sel = '#side-menu button[data-sec="' + val + '"]';
+        var tgt = chip.getAttribute('data-target');
+        var tab = chip.getAttribute('data-tab');
+        var lk  = chip.getAttribute('data-lk');
+        if (tgt) { sel += '[data-target="' + tgt + '"]'; }
+        else if (tab) { sel += '[data-tab="' + tab + '"]'; }
+        else if (lk) { sel += '[data-lk="' + lk + '"]'; }
+        var btn = document.querySelector(sel) || document.querySelector('#side-menu button[data-sec="' + val + '"]');
+        if (!btn) { return; }
+        btn.click();                       // विभाग बन जाए, tab/view भी चुन ली जाए
+        // लाल किताब की जो view मेन्यू में नहीं है (जैसे मंगलीक, कैलेंडर), वह
+        // यहीं से चुन ली जाती है — पन्ने की अपनी ड्रॉपडाउन के ज़रिए।
+        if (val === 'lalkitab' && lk) {
+          var lkSel = document.getElementById('lk-select');
+          if (lkSel && lkSel.querySelector('option[value="' + lk + '"]')) {
+            lkSel.value = lk; lkSel.dispatchEvent(new Event('change'));
+          }
+        }
+        if (val === 'varsha' && chip.getAttribute('data-vp')) {
+          var vps = document.getElementById('vp-pred-type');
+          if (vps) { vps.value = chip.getAttribute('data-vp'); vps.dispatchEvent(new Event('change')); }
+        }
+        var secEl = document.getElementById('sec-' + val);
+        var hb = homeBtn();
+        if (hb) { hb.click(); }            // पीछे का पन्ना फिर जन्म-कुंडली
+        if (secEl) { borrow(secEl); }
+        open(label);
+        return;
+      }
+    });
+  })();
 
   // ---- साइड-मेन्यू को पट्टी (rail) बनाना — सिर्फ़ लैपटॉप/डेस्कटॉप पर ----
   // मेन्यू काम का है, पर ग्राहक उसे देखने नहीं आया। समेटने पर कुंडली और फल को

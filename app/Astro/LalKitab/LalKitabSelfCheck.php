@@ -734,6 +734,39 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // "और देखें" पट्टी का हर बटन किसी न किसी असली चीज़ पर जाता है। यह जाँच
+        // वही टूटन पकड़ती है जो सबसे चुपचाप होती है: कोई विभाग या ड्रॉपडाउन-विकल्प
+        // कल बदल जाए और पट्टी का बटन कहीं न पहुँचे — बटन दिखता रहेगा, दबाने पर
+        // कुछ नहीं होगा, और किसी को पता तक न चलेगा।
+        $add('MORE-1', '"और देखें" के सब बटन असली विभाग/विकल्प पर जाते हैं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'id="more-panel"') === false) { return false; }
+                if (mb_strpos($h, 'id="more-modal"') === false) { return false; }
+                if (mb_strpos($h, 'id="more-close"') === false) { return false; }   // ✕ बंद करने का बटन
+                if (!preg_match_all('/data-more="(\w+)" data-val="([^"]*)"/u', $h, $m, PREG_SET_ORDER)) { return false; }
+                if (count($m) < 40) { return false; }   // सूची अचानक ख़ाली न हो जाए
+                foreach ($m as $one) {
+                    [$all, $kind, $val] = $one;
+                    if ($kind === 'chart') {
+                        if (mb_strpos($h, '<option value="' . $val . '">') === false) { return false; }
+                    } elseif ($kind === 'pred') {
+                        if (!preg_match('/<option value="' . preg_quote($val, '/') . '"[^>]*>[^<]*<\/option>/u', $h)) { return false; }
+                    } elseif ($kind === 'sec') {
+                        if (mb_strpos($h, 'id="sec-' . $val . '"') === false) { return false; }
+                    } elseif ($kind === 'url') {
+                        if (mb_strpos($val, '/milan') === false) { return false; }
+                    }
+                }
+                // लाल किताब वाले बटन उसी ड्रॉपडाउन के विकल्प हों जो पन्ने पर है
+                if (preg_match_all('/data-more="sec" data-val="lalkitab" data-lk="(\w+)"/u', $h, $lm)) {
+                    foreach ($lm[1] as $lkv) {
+                        if (!preg_match('/<option value="' . preg_quote($lkv, '/') . '"[^>]*>/u', $h)) { return false; }
+                    }
+                }
+            }
+            return true;
+        });
+
         // ───────────────────── लाल किताब मिलान ─────────────────────
         // ये पाँच जाँचें उन्हीं पाँच चूकों की रखवाली करती हैं जो मिलान में मिलीं:
         // निष्क्रिय ग्रह का "शुभ" छपना, नकली प्रतिशत, दूसरी कुंडली वाले परिहार का
