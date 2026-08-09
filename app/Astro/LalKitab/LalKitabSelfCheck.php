@@ -690,6 +690,19 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // ऊपर की पट्टी और D1 के नीचे — दोनों जगह लाल किताब दशा, सन् सहित। सूर्य-राशि
+        // की टाइल हटाई गई (वह जानकारी D1 पन्ने पर पहले से है)।
+        $add('TOP-1', 'ऊपर की टाइल व D1 के नीचे लाल किताब दशा सन् सहित दिखती है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, '<div class="ov-label">Sun Sign</div>') !== false) { return false; }
+                if (mb_strpos($h, '<div class="ov-label">लाल किताब दशा</div>') === false) { return false; }
+                if (mb_strpos($h, '📕 लाल किताब दशा:') === false) { return false; }
+                // दोनों जगह सन् भी हो — आयु अकेली कुछ नहीं बताती
+                if (!preg_match('/लाल किताब दशा.{0,400}सन् \d{4}/su', $h)) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

@@ -1164,10 +1164,23 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             <div class="ov-value"><?= $h($rashiHi[$ovMoon] ?? $ovMoon) ?></div>
             <div class="ov-sub">चंद्र राशि · <?= $h($ovMoon) ?></div>
         </div>
-        <div class="ov-tile" data-nav="chart" role="button" tabindex="0" title="जन्म कुंडली (D1) देखें">
-            <div class="ov-label">Sun Sign</div>
-            <div class="ov-value"><?= $h($rashiHi[$ovSun] ?? $ovSun) ?></div>
-            <div class="ov-sub">Sun Sign · <?= $h($ovSun) ?></div>
+        <?php /* सूर्य-राशि की टाइल हटाकर लाल किताब दशा — वह जानकारी D1 पन्ने पर
+                 पहले से है, जबकि लाल किताब दशा कहीं ऊपर नहीं दिखती थी और वही इस
+                 तंत्र का चालू समय बताती है। */ ?>
+        <?php
+            $lkTop = null;
+            $lkAc  = $view['lalkitab']['age_cycle']['dasha_now'] ?? null;
+            if (is_array($lkAc) && trim((string) ($lkAc['hi'] ?? '')) !== '') { $lkTop = $lkAc; }
+        ?>
+        <div class="ov-tile" data-nav="lalkitab" role="button" tabindex="0" title="लाल किताब दशा देखें">
+            <div class="ov-label">लाल किताब दशा</div>
+            <div class="ov-value"><?= $lkTop ? $h((string) $lkTop['hi']) : '—' ?></div>
+            <div class="ov-sub">
+                <?php if ($lkTop): ?>
+                    आयु <?= (int) $lkTop['from'] ?>–<?= (int) $lkTop['to'] ?><?php
+                        if (!empty($lkTop['from_year'])): ?> · सन् <?= (int) $lkTop['from_year'] ?>–<?= (int) $lkTop['to_year'] ?><?php endif; ?>
+                <?php else: ?>&nbsp;<?php endif; ?>
+            </div>
         </div>
         <div class="ov-tile" data-nav="dasha" role="button" tabindex="0" title="दशा देखें">
             <div class="ov-label">Current Dasha</div>
@@ -1365,6 +1378,21 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
                 <?= $stripRow('AntarDasha', $dashaNow['antar'], 1) ?>
                 <?= $stripRow('Pratyantar', $dashaNow['pratyantar'], 2, true) ?>
                 <?= $stripRow('Next Antardasha', $dashaNow['next_antar'], 1, false, '→') ?>
+                <?php /* लाल किताब की अपनी 35-साला दशा — विंशोत्तरी के ठीक नीचे, ताकि
+                         दोनों का मिलान एक नज़र में हो। यह वैदिक गणना नहीं बदलती;
+                         लेबल से साफ़ है कि यह दूसरी प्रणाली है। */ ?>
+                <?php $lkDs = $view['lalkitab']['age_cycle']['dasha_now'] ?? null; ?>
+                <?php if (is_array($lkDs) && trim((string) ($lkDs['hi'] ?? '')) !== ''): ?>
+                    <div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)">
+                        <span class="ds-label" style="color:#9a3412">📕 लाल किताब दशा:</span>
+                        <b style="color:#9a3412"><?= $h((string) $lkDs['hi']) ?></b>
+                        <span class="ds-dates">
+                            (आयु <?= (int) $lkDs['from'] ?>–<?= (int) $lkDs['to'] ?><?php
+                                if (!empty($lkDs['from_year'])): ?> · सन् <?= (int) $lkDs['from_year'] ?>–<?= (int) $lkDs['to_year'] ?><?php endif; ?>)
+                        </span>
+                        <span style="color:var(--ink-soft);font-size:.9em">— 35-साला चक्र, विंशोत्तरी नहीं</span>
+                    </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </section>
@@ -4494,6 +4522,11 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       profile: function () { var b = menuBtn('[data-sec="profile"]'); if (b) { b.click(); } },
       chart: function () { var b = menuBtn('[data-sec="home"][data-target="chart-panel"]'); if (b) { b.click(); } },
       dasha: function () { var b = menuBtn('[data-sec="dasha"]'); if (b) { b.click(); } },
+      // नई टाइल — लाल किताब दशा पर क्लिक सीधे उसी टाइमलाइन पर ले जाए
+      lalkitab: function () {
+        var b = menuBtn('[data-sec="lalkitab"][data-lk="agecycle"]') || menuBtn('[data-sec="lalkitab"]');
+        if (b) { b.click(); }
+      },
       yoga: function () {
         var b = menuBtn('[data-sec="home"][data-target="pred-panel"]'); if (b) { b.click(); }
         var ps = document.getElementById('pred-select');
