@@ -148,10 +148,11 @@ $scorePill = static function (int $score): string {
      हैं; इसलिए हालत अज्ञात हो तो वैसा उपाय रोक दिया जाता है, अंदाज़ा नहीं
      लगाया जाता। बदलते ही पन्ना दोबारा गणना करता है।
      मौजूदा सब पैरामीटर hidden में साथ जाते हैं ताकि कुंडली वही रहे। */ ?>
+<?php $LKNF = \AutoBusiness\Astro\LalKitab\LalKitabProcess::NATIVE_FIELDS; ?>
 <form method="get" action="" id="lk-native-form"
       style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:9px 13px;margin-bottom:12px">
   <?php foreach ($_GET as $gk => $gv):
-        if (in_array($gk, ['father_living', 'mother_living', 'marital_status', 'sec', 'lkview'], true) || is_array($gv)) { continue; } ?>
+        if (isset($LKNF[$gk]) || in_array($gk, ['sec', 'lkview'], true) || is_array($gv)) { continue; } ?>
     <input type="hidden" name="<?= $h((string) $gk) ?>" value="<?= $h((string) $gv) ?>">
   <?php endforeach; ?>
   <?php /* पन्ना दोबारा लोड होने पर सेक्शन JS से चुना जाता है — इसलिए लौटने का पता
@@ -159,28 +160,24 @@ $scorePill = static function (int $score): string {
   <input type="hidden" name="sec" value="lalkitab">
   <input type="hidden" name="lkview" id="lk-native-view" value="<?= $h((string) ($_GET['lkview'] ?? 'nichod')) ?>">
   <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-    <div style="font-weight:800;font-size:.87rem;color:#78350f;white-space:nowrap">👪 उपाय हेतु पारिवारिक स्थिति</div>
-    <label style="font-size:.8rem;color:#78350f">पिता जीवित?
-      <select name="father_living" onchange="lkNativeGo(this)" style="border:1px solid #fcd34d;border-radius:6px;padding:2px 6px;font-size:.8rem">
-        <option value="">— अज्ञात —</option>
-        <option value="हाँ"  <?= (($_GET['father_living'] ?? '') === 'हाँ')  ? 'selected' : '' ?>>हाँ</option>
-        <option value="नहीं" <?= (($_GET['father_living'] ?? '') === 'नहीं') ? 'selected' : '' ?>>नहीं</option>
-      </select></label>
-    <label style="font-size:.8rem;color:#78350f">माता जीवित?
-      <select name="mother_living" onchange="lkNativeGo(this)" style="border:1px solid #fcd34d;border-radius:6px;padding:2px 6px;font-size:.8rem">
-        <option value="">— अज्ञात —</option>
-        <option value="हाँ"  <?= (($_GET['mother_living'] ?? '') === 'हाँ')  ? 'selected' : '' ?>>हाँ</option>
-        <option value="नहीं" <?= (($_GET['mother_living'] ?? '') === 'नहीं') ? 'selected' : '' ?>>नहीं</option>
-      </select></label>
-    <label style="font-size:.8rem;color:#78350f">वैवाहिक स्थिति
-      <select name="marital_status" onchange="lkNativeGo(this)" style="border:1px solid #fcd34d;border-radius:6px;padding:2px 6px;font-size:.8rem">
-        <option value="">— अज्ञात —</option>
-        <option value="विवाहित"   <?= (($_GET['marital_status'] ?? '') === 'विवाहित')   ? 'selected' : '' ?>>विवाहित</option>
-        <option value="अविवाहित" <?= (($_GET['marital_status'] ?? '') === 'अविवाहित') ? 'selected' : '' ?>>अविवाहित</option>
-      </select></label>
-    <?php $nOk = ($_GET['father_living'] ?? '') !== '' && ($_GET['mother_living'] ?? '') !== '' && ($_GET['marital_status'] ?? '') !== ''; ?>
-    <span style="font-size:.76rem;color:<?= $nOk ? '#166534' : '#92400e' ?>">
-      <?= $nOk ? '✅ उपाय आपकी हालत के अनुसार छाँटे जा रहे हैं' : 'भरने पर उपाय आपकी हालत के अनुसार छँटेंगे — खाली छोड़ने पर भी रिपोर्ट पूरी बनती है।' ?>
+    <div style="font-weight:800;font-size:.87rem;color:#78350f;white-space:nowrap">👪 उपाय हेतु आपकी स्थिति</div>
+    <?php $nDone = 0; foreach ($LKNF as $nk => $nf): $nCur = (string) ($_GET[$nk] ?? '');
+          if ($nCur !== '') { $nDone++; } ?>
+      <label style="font-size:.8rem;color:#78350f"><?= $h($nf['q']) ?>
+        <select name="<?= $h($nk) ?>" onchange="lkNativeGo(this)"
+                style="border:1px solid #fcd34d;border-radius:6px;padding:2px 6px;font-size:.8rem">
+          <option value="">— अज्ञात —</option>
+          <?php foreach ($nf['values'] as $nv): ?>
+            <option value="<?= $h($nv) ?>" <?= $nCur === $nv ? 'selected' : '' ?>><?= $h($nv) ?></option>
+          <?php endforeach; ?>
+        </select></label>
+    <?php endforeach; ?>
+    <span style="font-size:.76rem;color:<?= $nDone === count($LKNF) ? '#166534' : '#92400e' ?>">
+      <?php if ($nDone === count($LKNF)): ?>
+        ✅ उपाय आपकी हालत के अनुसार छाँटे जा रहे हैं
+      <?php else: ?>
+        <?= (int) $nDone ?>/<?= count($LKNF) ?> भरे — बाक़ी भरने पर और उपाय खुलेंगे। खाली छोड़ने पर भी रिपोर्ट पूरी बनती है।
+      <?php endif; ?>
     </span>
   </div>
 </form>
@@ -347,7 +344,11 @@ function lkNativeGo(el) {
           <div style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:10px;padding:10px 13px;margin-bottom:11px">
             <div style="font-weight:800;font-size:.9rem;margin-bottom:4px;color:#14532d">💪 आपकी मज़बूती</div>
             <?php foreach ($C['strengths'] as $s): ?>
-              <div style="font-size:.85rem;line-height:1.65;color:#14532d;margin-bottom:4px">
+              <?php /* data-src = यह बात किस तकनीकी नतीजे से आई। ग्राहक इसे नहीं
+                       देखता, पर हर वाक्य का स्रोत होना ही चाहिए — बिना स्रोत का
+                       वाक्य ज्योतिष नहीं, भराव है (Y1)। */ ?>
+              <div data-lk-point="ताक़त" data-src="<?= $h((string) ($s['source'] ?? '')) ?>"
+                   style="font-size:.85rem;line-height:1.65;color:#14532d;margin-bottom:4px">
                 <b><?= $h((string) $s['title']) ?></b><br><?= $h((string) $s['text']) ?>
               </div>
             <?php endforeach; ?>
@@ -358,12 +359,19 @@ function lkNativeGo(el) {
           <?php if (!empty($C['issues'])): ?>
           <div style="font-weight:800;font-size:.9rem;margin:0 0 6px;color:#7f1d1d">⚠️ ध्यान देने की बातें</div>
           <?php foreach ($C['issues'] as $it): ?>
-            <div style="border:1px solid #fecaca;background:#fef2f2;border-radius:10px;padding:9px 12px;margin-bottom:8px">
+            <div data-lk-point="कठिनाई" data-src="<?= $h((string) ($it['source'] ?? '')) ?>"
+                 style="border:1px solid #fecaca;background:#fef2f2;border-radius:10px;padding:9px 12px;margin-bottom:8px">
               <div style="font-weight:700;font-size:.86rem;color:#7f1d1d"><?= $h((string) $it['title']) ?></div>
               <div style="font-size:.84rem;line-height:1.65;color:#7f1d1d;margin-top:2px"><?= $h((string) $it['text']) ?></div>
               <?php if (trim((string) ($it['upay_inline'] ?? '')) !== ''): ?>
                 <div style="margin-top:6px;padding:6px 9px;background:#fff;border-radius:7px;border:1px dashed #fca5a5;font-size:.83rem;color:#166534">
                   <b>🛠 उपाय:</b> <?= $h((string) $it['upay_inline']) ?>
+                </div>
+              <?php elseif (trim((string) ($it['hold_reason'] ?? '')) !== ''): ?>
+                <?php /* उपाय के बिना कठिनाई कभी अकेली नहीं छूटती — या उपाय, या
+                         उसके रुकने की वजह। ख़ाली जगह पढ़ने वाले को बेबस छोड़ती है। */ ?>
+                <div style="margin-top:6px;padding:6px 9px;background:#fff;border-radius:7px;border:1px dashed #fcd34d;font-size:.83rem;color:#92400e">
+                  🔒 <?= $h((string) $it['hold_reason']) ?>
                 </div>
               <?php endif; ?>
             </div>
@@ -391,7 +399,11 @@ function lkNativeGo(el) {
             <?php if (empty($C['upaay'])): ?>
               <div style="font-size:.84rem;color:#166534">इस समय कोई तात्कालिक उपाय अनिवार्य नहीं।</div>
             <?php else: foreach ($C['upaay'] as $i => $u): ?>
-              <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px 11px;margin-bottom:7px">
+              <?php /* निशाना और दिशा मशीन-पठनीय रूप में भी — जाँच-कवच इसी से परखता
+                       है कि कोई जारी उपाय किसी रक्षक ग्रह को शांत तो नहीं कर रहा
+                       (X2)। यही इस पूरी परत की सबसे महँगी चूक होगी। */ ?>
+              <div data-lk-upay="<?= $h((string) $u['target']) ?>" data-dir="<?= $h((string) $u['direction']) ?>"
+                   style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px 11px;margin-bottom:7px">
                 <div style="font-weight:700;font-size:.85rem;color:#14532d">
                   <?= (int) ($i + 1) ?>. <?= $h((string) $u['target']) ?> — दिशा: <?= $h((string) $u['direction']) ?>
                 </div>
@@ -416,6 +428,11 @@ function lkNativeGo(el) {
             <?php if (!empty($PR['upaay']['note'])): ?>
               <div style="font-size:.78rem;color:#92400e;margin-top:5px">ℹ️ <?= $h((string) $PR['upaay']['note']) ?></div>
             <?php endif; ?>
+            <?php /* कौन-सा उपाय हालत के कारण रुका — यह दिखाना ज़रूरी है, वरना
+                     पढ़ने वाले को लगता है कि उसके लिए कुछ है ही नहीं। */ ?>
+            <?php foreach ((array) ($PR['upaay']['gate_notes'] ?? []) as $gn): ?>
+              <div style="font-size:.77rem;color:#92400e;margin-top:4px">🔒 <?= $h((string) $gn) ?></div>
+            <?php endforeach; ?>
             <?php if (!empty($PR['upaay']['excluded'])): ?>
               <?php foreach ($PR['upaay']['excluded'] as $ex): ?>
                 <div style="font-size:.77rem;color:#7f1d1d;margin-top:4px">🚫 <?= $h((string) $ex['target']) ?> का शांति-उपाय रोका गया — <?= $h((string) $ex['reason']) ?>।</div>
@@ -471,7 +488,22 @@ function lkNativeGo(el) {
           </details>
           <?php endif; ?>
 
-          <div style="font-size:.72rem;color:#94a3b8;margin-top:7px">
+          <?php /* मना-शब्द इस समय कहीं नहीं हैं। यह पट्टी तभी दिखेगी जब कोई घुस
+                   आए — और तभी दिखना इसका पूरा काम है। */ ?>
+          <?php if (!empty($PR['client']['word_warn'])): ?>
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 11px;
+                        margin-top:7px;font-size:.78rem;color:#7f1d1d">
+              <b>⚠️ मना-शब्द मिला —</b> नीचे के वाक्य इंजन के अपने गढ़े हैं और इनमें ऐसा शब्द है जो
+              फल को अटल बताता है। लाल किताब का पूरा उपाय-तंत्र इसी पर खड़ा है कि फल बदला जा सकता है,
+              इसलिए वाक्य सुधारा जाना चाहिए:
+              <?php foreach ($PR['client']['word_warn'] as $ww): ?>
+                <div style="margin-top:3px">• <?= $h((string) $ww) ?></div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+
+          <div data-lk-protectors="<?= $h(implode('|', (array) ($PR['upaay']['protectors'] ?? []))) ?>"
+               style="font-size:.72rem;color:#94a3b8;margin-top:7px">
             नियम-सेटिंग: सोई दृष्टि = <?= $h((string) $PR['settings']['soya_drishti']) ?> ·
             बैठक-क्रम = <?= $h((string) $PR['settings']['seat_precedence']) ?> ·
             विरोध-घनत्व = <?= $h((string) $PR['density']) ?>
@@ -1674,10 +1706,36 @@ function lkNativeGo(el) {
           ];
           $anyPlan = false; foreach ($rpTiers as $tk => $x) { if (!empty($rp[$tk])) { $anyPlan = true; break; } }
         ?>
+        <?php /* ══════ पहले सिर्फ़ इतना ══════
+             यह पन्ना पूरा भंडार है — ज्योतिषी के लिए। पर आठ उपायों की सूची दूसरे
+             हफ़्ते छूट जाती है, और छूटा हुआ उपाय शुरू न किए गए उपाय से बुरा है:
+             आदमी के पास तब मूल समस्या भी होती है और नाकाम रहने का बोझ भी। इसलिए
+             सूची के सिरे पर वही एक-दो उपाय दोहराए जाते हैं जो प्रक्रिया-परत ने
+             सचमुच जारी किए हैं, और बाक़ी साफ़-साफ़ "भंडार" कहलाते हैं। */ ?>
+        <?php $PRr = $lk['process'] ?? null; $issuedR = (is_array($PRr) && !empty($PRr['ok'])) ? (array) ($PRr['upaay']['issued'] ?? []) : []; ?>
+        <?php if ($issuedR !== []): ?>
+          <div class="lk-card good" style="border-color:#86efac;background:#f0fdf4">
+            <div class="lk-card-h" style="color:#14532d">✅ पहले सिर्फ़ इतना करें
+              <span class="lk-pill" style="background:#dcfce7;color:#166534"><?= count($issuedR) ?> उपाय</span></div>
+            <ul class="lk-rem-list" style="color:#14532d">
+              <?php foreach ($issuedR as $ur): ?>
+                <li><b><?= $h((string) $ur['target']) ?> (<?= $h((string) $ur['direction']) ?>):</b>
+                  <?= $h((string) ($ur['upay'][0] ?? '')) ?>
+                  <span style="color:#475569;font-size:.78rem">— <?= $h((string) $ur['duration']) ?>, <?= $h((string) $ur['stop_when']) ?></span></li>
+              <?php endforeach; ?>
+            </ul>
+            <div class="lk-txt" style="font-size:.78rem;color:#475569;margin-top:4px">
+              नीचे की पूरी सूची <b>भंडार</b> है — उसमें से कुछ भी अपने-आप शुरू न करें।
+              एक साथ कई उपाय शुरू करने से कोई पूरा नहीं होता।
+            </div>
+          </div>
+        <?php endif; ?>
         <?php if ($anyPlan): ?>
           <?php foreach ($rpTiers as $tk => $meta): if (empty($rp[$tk])) { continue; } ?>
             <div class="lk-card" style="border-color:<?= $meta[4] ?>;background:<?= $meta[3] ?>">
-              <div class="lk-card-h" style="color:<?= $meta[2] ?>"><?= $meta[0] ?> <span style="font-weight:400;font-size:.74rem;color:#64748b">— <?= $meta[1] ?></span></div>
+              <div class="lk-card-h" style="color:<?= $meta[2] ?>"><?= $meta[0] ?>
+                <span class="lk-pill" style="background:#fff;color:<?= $meta[2] ?>;border:1px solid <?= $meta[4] ?>"><?= count((array) $rp[$tk]) ?></span>
+                <span style="font-weight:400;font-size:.74rem;color:#64748b">— <?= $meta[1] ?></span></div>
               <ul class="lk-rem-list" style="color:<?= $meta[2] ?>">
                 <?php foreach ($rp[$tk] as $it): ?><li><b><?= $h((string) $it['hi']) ?>:</b> <?= $h((string) $it['text']) ?><?php if (($it['darja'] ?? '') === 'lambit'): ?> <span class="lk-pill" style="background:#dbeafe;color:#1e40af">अंतरिम</span><?php elseif (($it['darja'] ?? '') === 'anumanit'): ?> <span class="lk-pill" style="background:#fef3c7;color:#92400e">अनुमानित</span><?php endif; ?></li><?php endforeach; ?>
               </ul>

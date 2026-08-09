@@ -31,6 +31,26 @@ namespace AutoBusiness\Astro\LalKitab;
 final class LalKitabProcess
 {
     /**
+     * जातक से पूछे जाने वाले छह सवाल। लाल किताब के बहुत से उपाय इन्हीं पर पलटते
+     * हैं — किराये के मकान की नींव नहीं खोदी जा सकती, और जो ख़ुद सबसे बड़ा है उसे
+     * "बड़े भाई की सेवा" नहीं कही जा सकती। हालत मालूम न हो तो अंदाज़ा लगाने के
+     * बजाय वैसा उपाय रोक दिया जाता है।
+     *
+     * क्रम वही है जिसमें फ़ॉर्म में दिखते हैं। values की पहली प्रविष्टि हमेशा
+     * "अज्ञात" (खाली) मानी जाती है, इसलिए यहाँ सिर्फ़ असली जवाब लिखे हैं।
+     *
+     * @var array<string,array{q:string,values:list<string>}>
+     */
+    public const NATIVE_FIELDS = [
+        'father_living'  => ['q' => 'पिता जीवित?',        'values' => ['हाँ', 'नहीं']],
+        'mother_living'  => ['q' => 'माता जीवित?',        'values' => ['हाँ', 'नहीं']],
+        'marital_status' => ['q' => 'वैवाहिक स्थिति',      'values' => ['विवाहित', 'अविवाहित']],
+        'children'       => ['q' => 'संतान है?',           'values' => ['हाँ', 'नहीं']],
+        'eldest'         => ['q' => 'भाई-बहनों में सबसे बड़े?', 'values' => ['हाँ', 'नहीं']],
+        'own_home'       => ['q' => 'घर अपना या किराये का?', 'values' => ['अपना', 'किराये का']],
+    ];
+
+    /**
      * तयशुदा सेटिंग्स — दो इंजन अलग सेटिंग पर अलग नतीजे देंगे, इसलिए हर रिपोर्ट
      * के सिरहाने यह दर्ज रहती हैं कि किस नियम पर चला गया।
      */
@@ -389,17 +409,34 @@ final class LalKitabProcess
                 if (($pp['verdict'] ?? '') !== 'निष्क्रिय') { $allDormant = false; }
                 if (($pp['verdict'] ?? '') === 'अशुभ') { $anyBad = true; }
             }
-            $status = $allDormant ? 'सुप्त' : ($anyBad ? 'चालू' : 'दबा हुआ');
-
             // दबा हुआ = कोई ग्रह इसे अभी रोक रहा है। उसे शांत करना सबसे ख़तरनाक
             // ग़लती होगी — कवच हटते ही मुसीबत सामने आती है, और वह भी उपाय शुरू
             // करने के हफ़्तों बाद। इसलिए रक्षक का नाम दर्ज रखना ज़रूरी है।
+            //
+            // और इसीलिए "दबा हुआ" तभी कहा जाता है जब रोकने वाले का नाम सचमुच
+            // निकल आए। बिना नाम के यह कहना कि "कोई इसे रोके हुए है" एक ऐसा दावा
+            // है जिसकी जाँच नहीं हो सकती — और जिस पर आगे चलकर उपाय-बहिष्कार टिकता
+            // है। नाम न मिले तो हालत चालू मानी जाती है: दबे को चालू कह देना
+            // ज़्यादा-से-ज़्यादा एक अतिरिक्त उपाय कराता है, जबकि चालू को दबा कह
+            // देना असली मुसीबत को अनदेखा करा देता है।
             $protector = '';
-            if ($status === 'दबा हुआ') {
+            if ($carriers !== [] && !$allDormant && !$anyBad) {
                 foreach ($carriers as $hi => $pp) {
                     if (($pp['verdict'] ?? '') === 'शुभ') { $protector = $hi; break; }
                 }
+                if ($protector === '') {
+                    // कोई साफ़ शुभ नहीं — तब सबसे ज़्यादा क्षमता वाला जागा ग्रह ही
+                    // कवच है। सोए ग्रह किसी को नहीं रोकते।
+                    $rank = ['प्रबल' => 3, 'मध्यम' => 2, 'कमज़ोर' => 1, 'शून्य' => 0];
+                    $best = 0;
+                    foreach ($carriers as $hi => $pp) {
+                        if (($pp['verdict'] ?? '') === 'निष्क्रिय') { continue; }
+                        $k = $rank[(string) ($pp['kshamata'] ?? 'मध्यम')] ?? 2;
+                        if ($k > $best) { $best = $k; $protector = $hi; }
+                    }
+                }
             }
+            $status = $allDormant ? 'सुप्त' : (($anyBad || $protector === '') ? 'चालू' : 'दबा हुआ');
             // तीव्रता — चरण 9 को कई ऋणों में क्रम लगाना है, उसी के लिए
             $sev = count($corrob) >= 2 ? 'तीव्र' : (count($corrob) === 1 ? 'मध्यम' : 'हल्का');
             if ($status === 'सुप्त') { $sev = 'हल्का'; }
@@ -732,17 +769,33 @@ final class LalKitabProcess
                     'reason' => 'नोट कर लिया गया — पहला उपाय पूरा होने के बाद इसकी बारी'];
             }
         }
+        // कौन-सा सवाल बाक़ी है, यह नाम लेकर बताया जाता है — "कुछ जानकारी चाहिए"
+        // पढ़कर कोई वापस जाकर नहीं भरता, "संतान है?" पढ़कर भर देता है।
+        $missing = [];
+        foreach (self::NATIVE_FIELDS as $nk => $nf) {
+            $nv = (string) ($native[$nk] ?? '');
+            if ($nv === '' || $nv === 'अज्ञात') { $missing[] = $nf['q']; }
+        }
+        // किस-किस उपाय को हालत के कारण रोका गया — यह भी दिखता है, वरना पढ़ने वाले
+        // को लगता है कि उसके ग्रह के लिए कोई उपाय है ही नहीं।
+        $gateAll = [];
+        foreach ($cands as $c) {
+            foreach ((array) ($c['gate_notes'] ?? []) as $gn) { $gateAll[] = (string) $gn; }
+        }
+
         return [
             'issued'    => $issued,
             'held'      => $held,
             'excluded'  => array_values(array_filter($cands, static fn ($c) => $c['excluded'])),
             'protectors'=> $protectors,
-            'native_ok' => self::nativeComplete($native),
-            'note'      => self::nativeComplete($native)
+            'gate_notes'=> array_values(array_unique($gateAll)),
+            'missing'   => $missing,
+            'native_ok' => $missing === [],
+            'note'      => $missing === []
                 ? ''
-                : 'उपाय पूरी तरह तय करने के लिए कुछ पारिवारिक जानकारी चाहिए (पिता/माता जीवित हैं या नहीं, '
-                  . 'वैवाहिक स्थिति आदि) — क्योंकि कई उपाय इन हालात पर उलट जाते हैं। तब तक नीचे दिए '
-                  . 'उपाय सामान्य व सुरक्षित हैं।',
+                : 'उपाय पूरी तरह तय करने के लिए इतना और बताना होगा — ' . implode(' · ', $missing)
+                  . '। कई उपाय इन्हीं हालात पर उलट जाते हैं, इसलिए हालत मालूम न होने पर वैसा उपाय '
+                  . 'रोक दिया जाता है। तब तक नीचे दिए उपाय सामान्य व सुरक्षित हैं।',
         ];
     }
 
@@ -760,14 +813,29 @@ final class LalKitabProcess
      */
     private static function nativeGate(array $upay, array $native): array
     {
-        $father = (string) ($native['father_living'] ?? '');
-        $mother = (string) ($native['mother_living'] ?? '');
-        $marry  = (string) ($native['marital_status'] ?? '');
+        $v = static fn (string $k): string => (string) ($native[$k] ?? '');
+        $father = $v('father_living');
+        $mother = $v('mother_living');
+        $marry  = $v('marital_status');
+        $child  = $v('children');
+        $eldest = $v('eldest');
+        $home   = $v('own_home');
+
         $kept = $notes = [];
         foreach ($upay as $t) {
             $needsFather = mb_strpos($t, 'पिता') !== false || mb_strpos($t, 'बुज़ुर्ग') !== false;
             $needsMother = mb_strpos($t, 'माता') !== false || mb_strpos($t, 'माँ') !== false;
             $needsWife   = mb_strpos($t, 'पत्नी') !== false || mb_strpos($t, 'स्त्री') !== false;
+            // घर से जुड़ा उपाय = मकान का ढाँचा छूने वाला। किराये के मकान की नींव
+            // नहीं खोदी जा सकती, छत नहीं बदली जा सकती, फ़र्श कच्चा नहीं किया जा
+            // सकता — और मकान-मालिक की इजाज़त माँगना उपाय का हिस्सा नहीं है।
+            $needsHome = preg_match('/मकान|भवन|घर की|घर के|घर में|चारदीवारी|दहलीज|रोशनदान/u', $t) === 1
+                && preg_match('/नींव|फ़र्श|फर्श|दीवार|छत|दबा|तह-ज़मीन|बनाकर|गिरा/u', $t) === 1;
+            // अपनी औलाद से जुड़ा उपाय — दूसरों के बच्चों को कुछ बाँटने वाला उपाय
+            // इसमें नहीं आता, वह सबके लिए एक-सा है।
+            $needsChild  = preg_match('/औलाद|संतान|निःसंतान/u', $t) === 1;
+            $needsElder  = preg_match('/बड़े भाई|बड़ा भाई|बड़े भाइयों/u', $t) === 1;
+
             if ($needsFather && $father === '') {
                 $notes[] = 'पिता से जुड़ा एक उपाय रोका गया — पहले बताएँ कि पिता जीवित हैं या नहीं।';
                 continue;
@@ -784,6 +852,27 @@ final class LalKitabProcess
                 $notes[] = 'पत्नी से जुड़ा उपाय आपकी स्थिति में लागू नहीं — हटा दिया गया।';
                 continue;
             }
+            if ($needsHome && $home === '') {
+                $notes[] = 'मकान का ढाँचा छूने वाला एक उपाय रोका गया — बताएँ कि घर अपना है या किराये का।';
+                continue;
+            }
+            if ($needsHome && $home === 'किराये का') {
+                $notes[] = 'मकान की नींव/छत/फ़र्श वाला उपाय किराये के घर में नहीं हो सकता — हटा दिया गया। '
+                    . 'अपना घर होने पर यह दोबारा आएगा।';
+                continue;
+            }
+            if ($needsChild && $child === '') {
+                $notes[] = 'औलाद से जुड़ा एक उपाय रोका गया — बताएँ कि संतान है या नहीं।';
+                continue;
+            }
+            if ($needsElder && $eldest === '') {
+                $notes[] = 'बड़े भाई से जुड़ा एक उपाय रोका गया — बताएँ कि आप भाई-बहनों में सबसे बड़े हैं या नहीं।';
+                continue;
+            }
+            if ($needsElder && $eldest === 'हाँ') {
+                $notes[] = 'बड़े भाई की सेवा वाला उपाय आप पर लागू नहीं (आप ही सबसे बड़े हैं) — हटा दिया गया।';
+                continue;
+            }
             $kept[] = $t;
         }
         return [$kept, array_values(array_unique($notes))];
@@ -792,7 +881,7 @@ final class LalKitabProcess
     /** @param array<string,mixed> $native */
     private static function nativeComplete(array $native): bool
     {
-        foreach (['father_living', 'mother_living', 'marital_status'] as $k) {
+        foreach (array_keys(self::NATIVE_FIELDS) as $k) {
             if (!isset($native[$k]) || $native[$k] === '' || $native[$k] === 'अज्ञात') { return false; }
         }
         return true;
@@ -823,9 +912,18 @@ final class LalKitabProcess
         // उपाय अपनी कठिनाई से **नाम** के मिलान पर जुड़ता है, क्रम-संख्या से नहीं।
         // क्रम-संख्या से जोड़ने पर राहु की कठिनाई के नीचे गुरु का उपाय छप जाता है —
         // और पढ़ने वाला यह ग़लती तुरंत पकड़ लेता है।
-        $issued = (array) ($upaay['issued'] ?? []);
+        //
+        // और जिस कठिनाई का उपाय इस बार जारी नहीं हुआ, उसके नीचे **वजह** लिखी जाती
+        // है। एक-दो उपाय की सीमा जान-बूझकर है (आठ उपायों की सूची दूसरे हफ़्ते छूट
+        // जाती है), इसलिए तीसरा उपाय ठूँस देना हल नहीं। पर बिना कुछ कहे छोड़ देना
+        // उससे भी बुरा है: पढ़ने वाले को "आपके ऊपर पितृ-ऋण चालू है" पढ़ाकर आगे
+        // ख़ाली जगह दिखाना उसे बेबस छोड़ना है। इसलिए तीन में से एक बात हमेशा
+        // रहती है — उपाय, या कतार में होने की सूचना, या रुकने का कारण।
+        $issued   = (array) ($upaay['issued'] ?? []);
+        $heldList = (array) ($upaay['held'] ?? []);
+        $excluded = (array) ($upaay['excluded'] ?? []);
         foreach ($issues as $i => $row) {
-            $line = '';
+            $line = $hold = '';
             $want = trim((string) ($row['planet'] ?? ''));
             foreach ($issued as $u) {
                 if ($want !== '' && (string) $u['planet'] === $want) {
@@ -836,7 +934,29 @@ final class LalKitabProcess
                     break;
                 }
             }
+            if ($line === '' && $want !== '') {
+                foreach ($heldList as $hd) {
+                    if ((string) ($hd['planet'] ?? '') === $want) {
+                        $hold = 'इसका उपाय कतार में है — ' . (string) ($hd['reason'] ?? '')
+                            . '। एक साथ कई उपाय शुरू करने से कोई पूरा नहीं होता।';
+                        break;
+                    }
+                }
+                if ($hold === '') {
+                    foreach ($excluded as $ex) {
+                        if ((string) ($ex['planet'] ?? '') === $want || (string) ($ex['target'] ?? '') === $want) {
+                            $hold = 'इसका उपाय अभी रोका गया है — ' . (string) ($ex['reason'] ?? '') . '।';
+                            break;
+                        }
+                    }
+                }
+                if ($hold === '') {
+                    $hold = 'इस बात का उपाय इस बार जारी नहीं हुआ — पहले ऊपर दिया उपाय पूरा करें, '
+                        . 'उसके बाद इसकी बारी आती है।';
+                }
+            }
             $issues[$i]['upay_inline'] = $line;
+            $issues[$i]['hold_reason'] = $hold;
         }
 
         $d = (array) (($lk['active']['dasha']) ?? []);
@@ -849,7 +969,22 @@ final class LalKitabProcess
             }
         }
 
+        // मना-शब्दों की जाँच अपने गढ़े वाक्यों पर। ये शब्द इस वक़्त कहीं नहीं हैं —
+        // पर एक भी वाक्य बदलते ही चुपचाप घुस सकते हैं, और तब कोई पकड़ने वाला नहीं
+        // होता। इसलिए जो अपना लिखा है उसी पर लगातार पहरा। पुस्तक का मूल पाठ (उपाय,
+        // वर्जित नियम) इसमें नहीं आता — वह जैसा है वैसा ही रहता है, बदलना उसे
+        // झुठलाना होगा।
+        $apneVakya = [$temperament['line'], $samay];
+        foreach (array_merge($strengths, $issues) as $row) {
+            $apneVakya[] = (string) ($row['line'] ?? '');
+        }
+        $wordWarn = [];
+        foreach ($apneVakya as $vk) {
+            if ($vk !== '' && self::hasForbidden($vk)) { $wordWarn[] = $vk; }
+        }
+
         return [
+            'word_warn'  => $wordWarn,
             'intro'      => 'यह लाल किताब के अनुसार आपकी कुंडली का पढ़ाव है। इसमें आपकी मज़बूती, '
                 . 'ध्यान देने की बातें, अभी का समय और करने योग्य उपाय दिए गए हैं।',
             'mizaj'      => $temperament['line'],

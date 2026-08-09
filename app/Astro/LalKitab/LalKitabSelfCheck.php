@@ -30,6 +30,10 @@ final class LalKitabSelfCheck
         ['07-07-2001', '14:45', '19.0760', '72.8777'],
         ['15-06-1985', '00:00', '28.6139', '77.2090'],
         ['20-03-1962', '18:20', '28.6139', '77.2090'],
+        // इसकी चालू दशा का शासक इस समय निष्क्रिय है — U3 का "ठहराव" वाला आधा
+        // हिस्सा इसी कुंडली से परखा जाता है। आयु बढ़ने पर शासक बदल जाएगा; तब
+        // U3-COV लाल होकर बता देगा कि नई तारीख़ चुननी है (देखें वहीं की टिप्पणी)।
+        ['03-04-2003', '06:40', '28.6139', '77.2090'],
     ];
 
     /**
@@ -92,14 +96,40 @@ final class LalKitabSelfCheck
         // (पूरे पन्ने पर "ठहराव" डेटा-बैंक के पाठ में भी आता है — इसलिए जाँच सिर्फ़
         //  दशा-पट्टी के ⏸ चिह्न पर, जो केवल period_type=ठहराव पर निकलता है।)
         $add('U3', 'निष्क्रिय शासक की दशा "ठहराव" है, "मंदा" नहीं', static function () use ($pages): bool {
+            // पहले यह जाँच पन्ने पर ⏸ ढूँढ़ती थी। दिक़्क़त यह थी कि जिन छह कुंडलियों
+            // पर जाँच चलती है उनमें से किसी की चालू दशा का शासक अभी निष्क्रिय नहीं
+            // है — यानी जाँच हरी तो रहती थी, पर जिस नियम की रखवाली करती है उसे कभी
+            // छूती ही नहीं थी। अब वह नियम सीधे परखा जाता है: दशा-पट्टी शासक का दर्जा
+            // ख़ुद छापती है, इसलिए दोनों तरफ़ से मिलान होता है — निष्क्रिय हो तो ठहराव
+            // वाक्य होना ही चाहिए, और न हो तो होना ही नहीं चाहिए।
+            $seen = 0;
             foreach ($pages as $h) {
-                if (mb_strpos($h, '⏸') !== false && mb_strpos($h, 'बिना ख़ास हलचल') === false) { return false; }
+                if (!preg_match('/<div class="lk-active">(.*?)<div class="lk-moderow">/su', $h, $m)) { continue; }
+                $strip = $m[1];
+                if (mb_strpos($strip, 'लाल किताब दशा') === false) { continue; }
+                if (!preg_match('/<span class="lk-pill"[^>]*>([^<]+)<\/span>/u', $strip, $pm)) { return false; }
+                $seen++;
+                $verdict = trim($pm[1]);
+                $thahrav = mb_strpos($strip, 'बिना ख़ास हलचल') !== false;
+                if ($verdict === 'निष्क्रिय' && !$thahrav) { return false; }
+                if ($verdict !== 'निष्क्रिय' && $thahrav) { return false; }
             }
-            return true;
+            return $seen > 0;   // एक भी दशा-पट्टी न मिले तो जाँच बेकार है
         });
 
-        // पूरा तंत्र लाल किताब की व्याकरण पर चलता है; साढ़ेसाती इकलौता अपवाद है।
-        // लेबल के बिना वह लाल किताब का सिद्धांत लगती है, जो वह नहीं है।
+        // U3 दोनों तरफ़ से मिलान करता है, पर "निष्क्रिय → ठहराव" वाला आधा हिस्सा तभी
+        // चलता है जब किसी कुंडली का चालू शासक सचमुच निष्क्रिय हो। आयु हर साल बढ़ती
+        // है, इसलिए यह अपने-आप छूट सकता है — और तब U3 हरा रहकर भी कुछ नहीं परख
+        // रहा होगा। यह जाँच ठीक वही चुप्पी पकड़ती है।
+        $add('U3-COV', 'कोई एक कुंडली निष्क्रिय-शासक वाली दशा दिखाती है (U3 खाली न चले)', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (!preg_match('/<div class="lk-active">(.*?)<div class="lk-moderow">/su', $h, $m)) { continue; }
+                if (mb_strpos($m[1], 'लाल किताब दशा') === false) { continue; }
+                if (preg_match('/<span class="lk-pill"[^>]*>निष्क्रिय<\/span>/u', $m[1])) { return true; }
+            }
+            return false;   // CHARTS में एक नई जन्म-तारीख़ चुनें जिसका चालू शासक निष्क्रिय हो
+        });
+
         $add('U4', 'हर पन्ने पर "वैदिक आधार पर" लेबल मौजूद', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'वैदिक आधार पर') === false) { return false; } }
             return true;
@@ -225,6 +255,62 @@ final class LalKitabSelfCheck
                 if (substr_count($h, '<optgroup label=') < 8) { return false; }
             }
             return true;
+        });
+
+        // X2 — रक्षक को छेड़ने वाला उपाय। यह इस पूरी परत की सबसे महँगी चूक है:
+        // कवच हटते ही दबा हुआ ऋण सामने आता है, और वह भी उपाय शुरू करने के कुछ
+        // हफ़्तों बाद — यानी आदमी सुधार की उम्मीद में उपाय करता है और बदले में
+        // मुसीबत पाता है। इसलिए यह सिर्फ़ इंजन के भरोसे नहीं छोड़ा जाता।
+        $add('X2', 'कोई जारी उपाय किसी रक्षक ग्रह को शांत नहीं कर रहा', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (!preg_match('/data-lk-protectors="([^"]*)"/u', $h, $pm)) { continue; }
+                $prot = array_values(array_filter(explode('|', html_entity_decode($pm[1], ENT_QUOTES, 'UTF-8'))));
+                if ($prot === []) { continue; }
+                preg_match_all('/data-lk-upay="([^"]*)" data-dir="([^"]*)"/u', $h, $um, PREG_SET_ORDER);
+                foreach ($um as $u) {
+                    $target = html_entity_decode($u[1], ENT_QUOTES, 'UTF-8');
+                    $dir    = html_entity_decode($u[2], ENT_QUOTES, 'UTF-8');
+                    if ($dir === 'शांति' && in_array($target, $prot, true)) { return false; }
+                }
+            }
+            return true;
+        });
+
+        // Y1 — बिना स्रोत का वाक्य ज्योतिष नहीं, भराव है। हर ग्राहक-बात किसी
+        // तकनीकी नतीजे से निकली होनी चाहिए, और वह नतीजा नाम से दर्ज हो।
+        $add('Y1', 'निचोड़ की हर बात अपने तकनीकी स्रोत से जुड़ी है', static function () use ($pages): bool {
+            $seen = 0;
+            foreach ($pages as $h) {
+                preg_match_all('/data-lk-point="[^"]*" data-src="([^"]*)"/u', $h, $m);
+                foreach ($m[1] as $src) {
+                    $seen++;
+                    if (trim(html_entity_decode($src, ENT_QUOTES, 'UTF-8')) === '') { return false; }
+                }
+            }
+            return $seen > 0;
+        });
+
+        // Y2/Y3 — मना शब्द। इंजन के अपने गढ़े वाक्यों पर पहरा; यह पट्टी दिखते ही
+        // जाँच लाल। (पुस्तक का मूल पाठ इसमें नहीं आता।)
+        $add('Y2', 'इंजन के अपने वाक्यों में कोई मना-शब्द नहीं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'मना-शब्द मिला') !== false) { return false; }
+            }
+            return true;
+        });
+
+        // Y4 — हर कठिनाई का उपाय उसी अनुच्छेद में। जो आदमी तीन पन्ने मुसीबत पढ़कर
+        // उपाय तक पहुँचता है, वे तीन पन्ने डर में बिता चुका होता है।
+        $add('Y4', 'हर कठिनाई के साथ उसी जगह उसका उपाय या रुकने की वजह', static function () use ($pages): bool {
+            $seen = 0;
+            foreach ($pages as $h) {
+                preg_match_all('/<div data-lk-point="कठिनाई".*?<\/div>\s*<\/div>/su', $h, $m);
+                foreach ($m[0] as $blk) {
+                    $seen++;
+                    if (mb_strpos($blk, '🛠 उपाय') === false && mb_strpos($blk, '🔒') === false) { return false; }
+                }
+            }
+            return $seen > 0;
         });
 
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {

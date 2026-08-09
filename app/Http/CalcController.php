@@ -350,11 +350,11 @@ final class CalcController
                     // निचोड़ की 3-5 बातें, 1-2 उपाय, और सरल हिंदी का ग्राहक-पन्ना।
                     // विफल हो तो पूरी रिपोर्ट फिर भी जाती है, बस निचोड़ के बिना।
                     try {
-                        $native = [
-                            'father_living'  => (string) ($_GET['father_living'] ?? ''),
-                            'mother_living'  => (string) ($_GET['mother_living'] ?? ''),
-                            'marital_status' => (string) ($_GET['marital_status'] ?? ''),
-                        ];
+                        $native = [];
+                        foreach (\AutoBusiness\Astro\LalKitab\LalKitabProcess::NATIVE_FIELDS as $nk => $_nq) {
+                            $nv = $_GET[$nk] ?? '';
+                            $native[$nk] = is_string($nv) ? $nv : '';
+                        }
                         $lkOut['process'] = \AutoBusiness\Astro\LalKitab\LalKitabProcess::run($lkOut, $native);
                     } catch (\Throwable $pe) {
                         error_log('Lal Kitab process layer failed: ' . $pe->getMessage()

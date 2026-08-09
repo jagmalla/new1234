@@ -46,11 +46,11 @@
             <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
     </div>
 
-    <?php /* पारिवारिक स्थिति के तीन सवाल अब लाल किताब पन्ने के सिरे पर पूछे जाते हैं
+    <?php /* जातक की स्थिति के छह सवाल अब लाल किताब पन्ने के सिरे पर पूछे जाते हैं
              (देखें _lalkitab.php) — वहीं वे काम के हैं, क्योंकि उपाय पढ़ने से ठीक
              पहले भरे जाने चाहिए। यहाँ सिर्फ़ छिपे खाने रखे हैं ताकि दोबारा गणना
              करने पर पहले से भरा जवाब खोए नहीं। */ ?>
-    <?php foreach (['father_living', 'mother_living', 'marital_status'] as $nk): ?>
+    <?php foreach (array_keys(\AutoBusiness\Astro\LalKitab\LalKitabProcess::NATIVE_FIELDS) as $nk): ?>
         <?php $nv = $_GET[$nk] ?? ''; if (!is_string($nv) || $nv === '') { continue; } ?>
         <input type="hidden" name="<?= $h($nk) ?>" value="<?= $h($nv) ?>">
     <?php endforeach; ?>
