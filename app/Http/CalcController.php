@@ -340,6 +340,14 @@ final class CalcController
                     // that stays on the Vedic side. Only the Sade-Sati/Dhaiya state
                     // is passed through, since the bank carries its own remedies.
                     $lkActive = [
+                        // असली जन्म-वर्ष — इसके बिना इंजन को "चालू वर्ष − आयु" से
+                        // अंदाज़ा लगाना पड़ता है, और जिसका जन्मदिन इस साल आया नहीं,
+                        // उसका जन्म-वर्ष एक साल आगे निकल आता है। छह-साल के दौर पर
+                        // एक साल की चूक भी मायने रखती है।
+                        'birth_year' => (static function () use ($date) {
+                            try { [$by] = self::parseDate($date); return (int) $by; }
+                            catch (\Throwable $e) { return null; }
+                        })(),
                         'sadesati' => (is_array($sadeSati) && !empty($sadeSati['active'])) ? [
                             'kind'  => (string) ($sadeSati['kind'] ?? ''),
                             'phase' => $sadeSati['phase'] ?? null,

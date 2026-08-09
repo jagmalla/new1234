@@ -3981,6 +3981,26 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       // Lal Kitab वर्ष कुंडली — wire the age selector + lazily fetch the annual
       // chart/prediction the first time the view is opened.
       if (key === 'varsh' && window.ABLalVarsh) { window.ABLalVarsh.init(); window.ABLalVarsh.ensureFirst(); }
+      // आयु के आगे सन् दिखाना — वर्ष-कुंडली चुनते समय सबसे पहला सवाल यही होता है
+      // कि यह कौन-सा साल है।
+      if (key === 'varsh') {
+        var ay = document.getElementById('lkv-age');
+        var yb = document.getElementById('lkv-year');
+        if (ay && yb && !yb._bound) {
+          yb._bound = true;
+          var by = parseInt(yb.getAttribute('data-birth-year'), 10);
+          var sync = function () {
+            var a = parseInt(ay.value, 10);
+            yb.textContent = (by > 0 && a > 0) ? ('= सन् ' + (by + a)) : '';
+          };
+          ay.addEventListener('input', sync);
+          ay.addEventListener('change', sync);
+          document.querySelectorAll('#sec-lalkitab .lkv-step').forEach(function (b) {
+            b.addEventListener('click', function () { setTimeout(sync, 0); });
+          });
+          sync();
+        }
+      }
       applyLkFilters();
     }
 

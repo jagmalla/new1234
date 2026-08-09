@@ -519,6 +519,38 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // "समय" वाले अनुभाग में सन् होना ही चाहिए। आयु में लिखा दौर पढ़ने वाले से
+        // हर बार जोड़-घटा कराता है, और जो हिसाब हर बार ख़ुद करना पड़े वह किया नहीं
+        // जाता — यानी टाइमलाइन होते हुए भी किसी को पता नहीं चलता कि कब।
+        $add('TM-1', 'आयु-दशा टाइमलाइन हर दौर पर सन् भी बताती है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="agecycle">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="ayu">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                // नौ दौर का पहिया — हर एक पर सन् की पट्टी
+                if (substr_count($seg, 'सन् ') < 9) { return false; }
+                if (mb_strpos($seg, 'अगला बदलाव') === false) { return false; }
+            }
+            return true;
+        });
+
+        // बीते और आगे वाले दौर के उपाय आज के काम की तरह न दिखें — वरना आदमी एक साथ
+        // कई उपाय शुरू कर बैठता है, और वही अनुशासन टूटता है जिस पर निचोड़ टिका है।
+        $add('TM-2', 'बीते व आगामी दौर के उपाय आज के काम की तरह नहीं दिखते', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="agecycle">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="ayu">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                if (mb_strpos($seg, 'बीत चुका') !== false
+                    && mb_strpos($seg, 'अब करने की बात नहीं') === false) { return false; }
+                if (mb_strpos($seg, '>आगे<') !== false
+                    && mb_strpos($seg, 'अभी शुरू न करें') === false) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

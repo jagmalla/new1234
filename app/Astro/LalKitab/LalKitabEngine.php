@@ -97,6 +97,12 @@ final class LalKitabEngine
             return ['ok' => false, 'error' => 'चार्ट उपलब्ध नहीं'];
         }
 
+        // जन्म-वर्ष — नियंत्रक से असली मिलता है; न मिले तो आयु से अंदाज़ा (तब वह
+        // उनके लिए एक साल आगे निकलता है जिनका जन्मदिन इस साल आया नहीं)।
+        $birthYear = isset($active['birth_year']) && $active['birth_year'] !== null
+            ? (int) $active['birth_year']
+            : ($age !== null ? (int) date('Y') - $age : null);
+
         $lagnaSign = (int) ($chart['ascendant']['sign_index'] ?? 0);
         $moonSign  = (int) ($chart['planets']['Moon']['sign_index'] ?? 0);
 
@@ -151,7 +157,7 @@ final class LalKitabEngine
         self::markMasnuiSources($planets, $masnui);
         self::scorePlanets($planets, $supt, $yutiDosha, $active, $age, $masnui);
         $priority  = self::priorityReadings($planets);
-        $activeNow = self::activeReadings($house, $planets, $active, $age);
+        $activeNow = self::activeReadings($house, $planets, $active, $age, $birthYear);
         $yoga      = self::yogaReadings($house);
         $inter     = self::interEffects($house, $yoga, $yutiDosha);
         // situation-based findings (computed once, reused by the remedy plan)
@@ -173,7 +179,7 @@ final class LalKitabEngine
             'teva_kisam'  => self::tevaKisamReadings($house, $occupants),
             'karak_rishtedar' => LalKitabData::section('karak_rishtedar'),
             'general'     => self::generalOverview($planets),
-            'age_cycle'   => self::ageCycle($occupants, $planets, $age),
+            'age_cycle'   => self::ageCycle($occupants, $planets, $age, $birthYear),
             'active'      => $activeNow,
             'priority'    => $priority,
             'yuti_dosha'  => $yutiDosha,
@@ -201,6 +207,9 @@ final class LalKitabEngine
             'drishti'     => self::drishtiReadings($house, $occupants),
             'reference'   => self::referenceReadings($age),
             'age'         => $age,
+            // जन्म-वर्ष — ताकि हर पन्ना आयु को सन् में बदल सके। (चालू वर्ष व आयु
+            // से निकाला जाता है; वही तरीक़ा जो दशा की समाप्ति-तिथि में चलता है।)
+            'birth_year'  => $birthYear,
         ];
     }
 
@@ -1259,7 +1268,7 @@ final class LalKitabEngine
      * @param array<int,list<string>> $occupants  house => planet-en list
      * @param list<array<string,mixed>> $planets  planetReadings output
      */
-    private static function ageCycle(array $occupants, array $planets, ?int $age): array
+    private static function ageCycle(array $occupants, array $planets, ?int $age, ?int $birthYear = null): array
     {
         $gc = LalKitabData::section('grah_chakra');
         $sg = LalKitabData::section('supt_grah');
@@ -1280,7 +1289,7 @@ final class LalKitabEngine
         //    चन्द्र→शुक्र→मंगल→बुध). Fixed and universal, starts at birth, repeats
         //    every 35 years. See LalKitabDasha for why grah_chakra's प्रभाव-वर्ष
         //    are NOT used for timing (the sheet's copy of this cycle is corrupt).
-        $dashaRow = static function (array $d) use ($pByEn, $toneOf, $effShort): array {
+        $dashaRow = static function (array $d) use ($pByEn, $toneOf, $effShort, $age, $birthYear): array {
             $en = $d['planet'];
             $pr = $pByEn[$en] ?? [];
             $verdict = (string) ($pr['verdict'] ?? 'मध्यम');
@@ -1290,6 +1299,17 @@ final class LalKitabEngine
                 'planet'    => $en,
                 'from'      => $d['from'],
                 'to'        => $d['to'],
+                // ── सन् ──
+                // यह अनुभाग का नाम ही "समय" है, पर इसमें कोई सन् नहीं आता था —
+                // सब कुछ आयु में। पढ़ने वाले को हर पंक्ति पर मन में जोड़-घटा करनी
+                // पड़ती थी, और जो हिसाब हर बार ख़ुद करना पड़े वह प्रायः किया ही नहीं
+                // जाता। आयु व चालू वर्ष दोनों मालूम हैं, इसलिए सन् निकाला जा सकता है।
+                'from_year' => ($birthYear !== null && $d['from'] !== null)
+                    ? $birthYear + (int) $d['from'] : null,
+                'to_year'   => ($birthYear !== null && ($d['to'] ?? null) !== null)
+                    ? $birthYear + (int) $d['to'] : null,
+                'when'      => ($age !== null && $d['from'] !== null)
+                    ? ((int) $d['to'] < $age ? 'बीता' : ((int) $d['from'] > $age ? 'आगे' : 'अभी')) : '',
                 'years'     => $d['years'],
                 'cycle'     => $d['cycle'] ?? null,
                 'active'    => !empty($d['active']),
@@ -1983,7 +2003,7 @@ final class LalKitabEngine
      * @param list<array<string,mixed>> $planets
      * @return array<string,mixed>
      */
-    private static function activeReadings(array $house, array $planets, array $active, ?int $age): array
+    private static function activeReadings(array $house, array $planets, array $active, ?int $age, ?int $birthYear = null): array
     {
         $byKey = [];
         foreach ($planets as $p) { $byKey[$p['planet']] = $p; }
@@ -2034,9 +2054,8 @@ final class LalKitabEngine
                 // समाप्ति — आयु और (जन्म-वर्ष ज्ञात हो तो) अनुमानित सन् दोनों।
                 // अंत-तिथि के साथ कठिन दौर सँभाला जा सकता है; बिना अंत के वही दौर डर बन जाता है।
                 $endAge = $d['to'] ?? null;
-                $curYear = (int) date('Y');
                 $dasha['ends_at_age'] = $endAge;
-                $dasha['ends_year'] = $endAge !== null ? $curYear + max(0, (int) $endAge - $age) : null;
+                $dasha['ends_year'] = ($endAge !== null && $birthYear !== null) ? $birthYear + (int) $endAge : null;
                 $dasha['ends_hi'] = $endAge !== null
                     ? 'आयु ' . $endAge . ' वर्ष तक' . ($dasha['ends_year'] !== null ? ' (लगभग सन् ' . $dasha['ends_year'] . ')' : '')
                     : '';

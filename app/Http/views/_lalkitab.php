@@ -1646,6 +1646,12 @@ function lkNativeGo(el) {
           <div class="lk-card" style="border-color:#f59e0b;background:#fffbeb">
             <div class="lk-card-h" style="font-size:1rem">▶ अभी चल रही दशा — <span style="color:<?= $tcol($dn['tone']) ?>"><?= $h((string) $dn['hi']) ?></span>
               <span class="lk-pill" style="background:#eef2ff;color:#3730a3">आयु <?= (int) $dn['from'] ?>–<?= (int) $dn['to'] ?> वर्ष</span>
+              <?php /* सन् के बिना यह पन्ना "समय" का नहीं रह जाता — पढ़ने वाले को हर
+                       पंक्ति पर मन में जोड़-घटा करनी पड़ती है, और वह प्रायः की नहीं
+                       जाती। इसीलिए हर जगह आयु के साथ सन् भी। */ ?>
+              <?php if (!empty($dn['from_year'])): ?>
+                <span class="lk-pill" style="background:#fff;border:1px solid #c7d2fe;color:#3730a3">सन् <?= (int) $dn['from_year'] ?>–<?= (int) $dn['to_year'] ?></span>
+              <?php endif; ?>
               <?php if ($dn['house_ord'] !== ''): ?><span class="lk-pill" style="background:#f1f5f9;color:#475569"><?= $h((string) $dn['house_ord']) ?> भाव में</span><?php endif; ?>
               <span class="lk-pill" style="<?= $dn['verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($dn['verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $dn['verdict']) ?></span>
               <?php if (!empty($dn['asleep'])): ?><span class="lk-pill" style="background:#f1f5f9;color:#64748b">😴 सुप्त</span><?php endif; ?>
@@ -1665,6 +1671,29 @@ function lkNativeGo(el) {
           </div>
         <?php endif; ?>
 
+        <?php /* "अगला बदलाव कब" — टाइमलाइन का सबसे काम का एक वाक्य, जो कहीं था
+                 ही नहीं। आदमी यही जानना चाहता है: यह दौर कब तक, और उसके बाद क्या। */ ?>
+        <?php
+          $nextD = null;
+          foreach (($AC['dasha_cycle'] ?? []) as $pd) {
+              if ((string) ($pd['when'] ?? '') === 'आगे') { $nextD = $pd; break; }
+          }
+        ?>
+        <?php if ($dn !== null && $nextD !== null): ?>
+          <div class="lk-card" style="border-color:#c7d2fe;background:#eef2ff">
+            <div class="lk-card-h" style="color:#3730a3">⏭ अगला बदलाव</div>
+            <div class="lk-txt" style="color:#3730a3">
+              <b><?= $h((string) $dn['hi']) ?></b> का दौर
+              <?php if (!empty($dn['to_year'])): ?><b>सन् <?= (int) $dn['to_year'] ?></b> तक<?php endif; ?>
+              (आयु <?= (int) $dn['to'] ?>) — <?= (int) $dn['remaining'] ?> वर्ष शेष।
+              उसके बाद <b><?= $h((string) $nextD['hi']) ?></b> का दौर शुरू होगा
+              <?php if (!empty($nextD['from_year'])): ?>(सन् <?= (int) $nextD['from_year'] ?> से)<?php endif; ?>,
+              जो <?= $h((string) $nextD['verdict']) ?> है।
+              <div style="font-size:.8rem;margin-top:3px">इसी वजह से उपाय अभी वाले दौर का किया जाता है — आगे वाले का उसका समय आने पर।</div>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <!-- ==== वर्तमान 35-वर्षीय चक्र ==== -->
         <h3 class="lk-h" style="font-size:.9rem;margin-top:12px">🎡 वर्तमान 35-वर्षीय चक्र — पूरा पहिया</h3>
         <div class="lk-txt" style="margin-bottom:7px;color:#64748b">क्रम स्थिर है: शनि → राहु → केतु → गुरु → सूर्य → चन्द्र → शुक्र → मंगल → बुध (6·6·3·6·2·1·3·6·2 = 35 वर्ष)</div>
@@ -1674,14 +1703,32 @@ function lkNativeGo(el) {
               <span style="width:9px;height:9px;border-radius:50%;background:<?= $pc ?>"></span>
               <b style="font-size:.88rem;color:<?= $pc ?>"><?= $h((string) $pd['hi']) ?> दशा</b>
               <span class="lk-pill" style="background:#fff;border:1px solid #e2e8f0;color:#334155">आयु <?= (int) $pd['from'] ?>–<?= (int) $pd['to'] ?> (<?= (int) $pd['years'] ?> वर्ष)</span>
+              <?php if (!empty($pd['from_year'])): ?>
+                <span class="lk-pill" style="background:#fff;border:1px solid #c7d2fe;color:#3730a3">सन् <?= (int) $pd['from_year'] ?>–<?= (int) $pd['to_year'] ?></span>
+              <?php endif; ?>
+              <?php $wn = (string) ($pd['when'] ?? ''); if ($wn === 'बीता'): ?>
+                <span class="lk-pill" style="background:#f1f5f9;color:#64748b">बीत चुका</span>
+              <?php elseif ($wn === 'आगे'): ?>
+                <span class="lk-pill" style="background:#eff6ff;color:#1e40af">आगे</span>
+              <?php endif; ?>
               <?php if ($pd['house_ord'] !== ''): ?><span class="lk-pill" style="background:#fff;border:1px solid #e2e8f0;color:#475569"><?= $h((string) $pd['house_ord']) ?> भाव</span><?php endif; ?>
               <span class="lk-pill" style="<?= $pd['verdict'] === 'शुभ' ? 'background:#dcfce7;color:#166534' : ($pd['verdict'] === 'अशुभ' ? 'background:#fee2e2;color:#991b1b' : 'background:#fef9c3;color:#854d0e') ?>"><?= $h((string) $pd['verdict']) ?></span>
               <?php if (!empty($pd['asleep'])): ?><span class="lk-pill" style="background:#f1f5f9;color:#64748b">😴 सुप्त</span><?php endif; ?>
               <?php if ($pd['active']): ?><span class="lk-pill" style="background:#fde68a;color:#92400e">▶ अभी</span><?php endif; ?>
             </div>
             <div class="lk-txt" style="margin-top:4px;line-height:1.55">📖 <?= $h((string) $pd['pred']) ?></div>
-            <?php if (!empty($pd['remedies'])): ?>
-              <div style="margin-top:5px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:4px 8px;font-size:.78rem;line-height:1.5"><span style="color:#92400e;font-weight:700">🪔 उपाय:</span> <?= $h(implode(' · ', $pd['remedies'])) ?></div>
+            <?php /* आगे वाले दौर का उपाय आज शुरू करना उस अनुशासन के ख़िलाफ़ है जिस पर
+                     निचोड़ टिका है (एक बार में एक-दो उपाय)। इसलिए उसे साफ़ "उस समय के
+                     लिए" कहकर दिया जाता है, आज के काम की तरह नहीं। */ ?>
+            <?php if (!empty($pd['remedies'])):
+                  $wn2 = (string) ($pd['when'] ?? '');
+                  $note = $wn2 === 'आगे' ? ' (उसी दौर के लिए — अभी शुरू न करें)'
+                        : ($wn2 === 'बीता' ? ' (यह दौर बीत चुका — अब करने की बात नहीं)' : '');
+                  $dim  = $note !== ''; ?>
+              <div style="margin-top:5px;background:<?= $dim ? '#f8fafc' : '#fffbeb' ?>;border:1px solid <?= $dim ? '#e2e8f0' : '#fde68a' ?>;border-radius:6px;padding:4px 8px;font-size:.78rem;line-height:1.5">
+                <span style="color:<?= $dim ? '#64748b' : '#92400e' ?>;font-weight:700">🪔 उपाय<?= $note ?>:</span>
+                <?= $h(implode(' · ', $pd['remedies'])) ?>
+              </div>
             <?php endif; ?>
           </div>
         <?php endforeach; ?>
@@ -1846,6 +1893,10 @@ function lkNativeGo(el) {
               <button type="button" id="lkv-prev" class="lkv-step" aria-label="पिछला वर्ष" style="width:32px;height:32px;border:1px solid #cbd5e1;border-radius:7px;background:#f8fafc;font-size:1.1rem;font-weight:700;cursor:pointer">−</button>
               <input type="number" id="lkv-age" min="1" max="96" value="<?= $lkAge > 0 ? $lkAge : 1 ?>" style="width:74px;border:1px solid #cbd5e1;border-radius:7px;padding:6px 8px;text-align:center;font-weight:700">
               <button type="button" id="lkv-next" class="lkv-step" aria-label="अगला वर्ष" style="width:32px;height:32px;border:1px solid #cbd5e1;border-radius:7px;background:#f8fafc;font-size:1.1rem;font-weight:700;cursor:pointer">+</button>
+              <?php /* आयु के साथ सन् — "आयु 45" सुनकर कोई नहीं जानता कि वह कौन-सा
+                       साल है, और जो हिसाब हर बार ख़ुद करना पड़े वह किया नहीं जाता। */ ?>
+              <span id="lkv-year" data-birth-year="<?= (int) ($lk['birth_year'] ?? 0) ?>"
+                    style="font-size:.82rem;color:#3730a3;font-weight:700;white-space:nowrap"></span>
             </span>
           </label>
           <button type="button" id="lkv-show" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer">वर्ष कुंडली देखें</button>
