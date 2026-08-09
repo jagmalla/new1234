@@ -124,6 +124,10 @@ final class LalKitabProcess
         // एक बात को मुख्य कहती है और उपाय किसी और का देती है।
         $upaay       = self::remedySequence($planets, $rin, $native, $lk, $core);
         $client      = self::clientDoc($temperament, $core, $upaay, $lk, $native);
+        // हर ग्रह का अपना निचोड़ — विस्तृत पन्नों के लिए। वहाँ अब तक सब तथ्य तो थे
+        // पर कोई उन्हें मिलाकर एक वाक्य नहीं कहता था, इसलिए एक ही कार्ड "मृत —
+        // कारकत्व अनुपस्थित" और "लाभ मिलेगा" दोनों कह देता था।
+        $briefs      = self::planetBriefs($planets, $upaay, $lk);
 
         return [
             'ok'          => true,
@@ -140,6 +144,7 @@ final class LalKitabProcess
             'rin'         => $rin,
             'upaay'       => $upaay,
             'client'      => $client,
+            'briefs'      => $briefs,
         ];
     }
 
@@ -927,6 +932,162 @@ final class LalKitabProcess
     // ─────────────────────────────────────────────────────────────
     // चरण 10 — ग्राहक का पन्ना
     // ─────────────────────────────────────────────────────────────
+
+    /**
+     * हर ग्रह का अपना निचोड़ — "अभी क्या मानें"।
+     *
+     * विस्तृत पन्नों की असली दिक़्क़त जानकारी की कमी नहीं थी, उसका न मिलाया जाना
+     * था। एक ही कार्ड पर एक साथ छपता था: *मृत ग्रह — कारकत्व अनुपस्थित मानें* और
+     * *इन क्षेत्रों में उन्नति व लाभ मिलेगा*। दोनों वाक्य अपनी-अपनी जगह ठीक थे —
+     * एक अवस्था का, दूसरा दिशा का — पर पढ़ने वाले के लिए यह कुछ नहीं कहता। वह
+     * यही समझता है कि गणना भरोसे लायक़ नहीं।
+     *
+     * यहाँ वही मेल किया जाता है, उसी क्रम में जिसमें ज्योतिषी करता है:
+     *   1. ग्रह जाग रहा है या नहीं — क्योंकि सोए ग्रह का नेक/बद बेमानी है।
+     *   2. जाग रहा है तो कितने ज़ोर से (क्षमता) — दिशा से अलग धुरी।
+     *   3. किन मामलों में — कारक क्षेत्र नाम से, "अनुकूल फल" जैसे भराव से नहीं।
+     *   4. अब क्या करना है — दिशा, निशाना, और यह कि उपाय अभी जारी है, कतार में
+     *      है, या रोका गया — वही जवाब जो निचोड़ देता है, ताकि दोनों पन्ने एक ही
+     *      बात कहें।
+     *
+     * @param list<array<string,mixed>> $planets
+     * @param array<string,mixed> $upaay
+     * @return array<string,array<string,mixed>>
+     */
+    private static function planetBriefs(array $planets, array $upaay, array $lk): array
+    {
+        $age    = $lk['age'] ?? null;
+        $issued = (array) ($upaay['issued'] ?? []);
+        $held   = (array) ($upaay['held'] ?? []);
+        $excl   = (array) ($upaay['excluded'] ?? []);
+        $dashaHi = (string) (($lk['active']['dasha']['hi']) ?? '');
+
+        $kshamataHi = [
+            'प्रबल'  => 'यह ग्रह अभी ज़ोर से बोल रहा है — इसका जो भी फल है, तेज़ मिलेगा।',
+            'मध्यम'  => 'इसकी ताक़त सामान्य है — फल मिलेगा पर धीरे।',
+            'कमज़ोर' => 'यह कमज़ोर है — इसका फल हल्का रहेगा, चाहे अच्छा हो या बुरा।',
+            'शून्य'  => 'अभी इसकी कोई ताक़त काम नहीं कर रही।',
+        ];
+
+        $out = [];
+        foreach ($planets as $p) {
+            $hi     = (string) ($p['hi'] ?? '');
+            if ($hi === '') { continue; }
+            $ord    = (string) ($p['house_ord'] ?? '');
+            $verd   = (string) ($p['verdict'] ?? 'मध्यम');
+            $ksh    = (string) ($p['kshamata'] ?? 'मध्यम');
+            $impair = trim((string) ($p['impair'] ?? ''));
+            $wake   = (array) ($p['wake'] ?? []);
+            $areaList = array_values(array_filter(array_map('strval', (array) ($p['areas_hi'] ?? []))));
+            $areas  = implode(' · ', array_slice($areaList, 0, 3));
+            $wakeAge = $wake['wake_age'] ?? null;
+            $awake   = !empty($wake['awake']);
+            $asleep  = !empty($wake['asleep']);
+
+            // ---- 1. अभी की हालत, एक वाक्य में ----
+            $areaTxt = $areas !== '' ? $areas : 'इसके अपने मामले';
+            $mein    = $areas !== '' ? $areas . ' — इनमें' : 'इसके मामलों में';
+            $shart   = trim((string) ($wake['condition'] ?? ''));
+            if ($verd === 'निष्क्रिय') {
+                $state = 'रुका हुआ';
+                $line  = $hi . ' अभी काम नहीं कर रहा। ' . $mein . ' सालों से कुछ आगे नहीं बढ़ रहा होगा। '
+                    . 'यह बुरा फल नहीं है, रुका हुआ फल है — इसका इलाज शांति नहीं, जगाना है।';
+            } elseif ($asleep && $awake) {
+                // यहीं दो उलटे वाक्य साथ छपते थे: "कारकत्व अनुपस्थित मानें" और
+                // "लाभ मिलेगा"। पर उलटी तरफ़ झुककर "जाग चुका है" कह देना भी उतना ही
+                // ग़लत होगा — इंजन के पास सिर्फ़ यह ख़बर है कि जागने की **उम्र** निकल
+                // चुकी है। किताब जागने को एक घटना से बाँधती है (सरकारी काम, सन्तान
+                // का जन्म…), और वह घटना हुई या नहीं, यह कुंडली नहीं बता सकती —
+                // जातक बता सकता है। इसलिए वाक्य शर्त के साथ रखा जाता है।
+                $state = 'जाग चुका';
+                $line  = $hi . ' जन्म से ' . ($impair !== '' ? $impair : 'सोया') . ' है, पर जागने की उम्र'
+                    . ($wakeAge !== null ? ' (' . (int) $wakeAge . ' वर्ष)' : '') . ' निकल चुकी है। '
+                    . ($shart !== ''
+                        ? 'किताब इसे एक घटना से बाँधती है — ' . $shart . '। वह हो चुकी हो तो ' . $mein
+                          . ' फल अब खुलता है; न हुई हो तो ग्रह अब भी सोया ही मानें।'
+                        : $mein . ' फल अब खुलने लगता है — देर से, पर मिलता है।');
+            } elseif ($asleep) {
+                $state = 'सोया';
+                $baaki = ($wakeAge !== null && is_int($age)) ? max(0, (int) $wakeAge - $age) : null;
+                $line  = $hi . ' अभी ' . ($impair !== '' ? $impair : 'सोया') . ' है — ' . $mein
+                    . ' अभी कुछ आगे नहीं बढ़ रहा।'
+                    . ($baaki !== null && $baaki > 0
+                        ? ' अपने-आप आयु ' . (int) $wakeAge . ' पर जागने का समय आता है — अभी ' . $baaki . ' वर्ष बाक़ी।'
+                        : ($wakeAge !== null ? ' अपने-आप जागने की उम्र ' . (int) $wakeAge . ' वर्ष के आसपास है।' : ''));
+            } else {
+                $state = 'चालू';
+                $kya = $verd === 'अशुभ' ? 'यहाँ दिक़्क़त आती रहेगी'
+                    : ($verd === 'शुभ' ? 'यहाँ काम बनता चलेगा' : 'कुछ बातें ठीक, कुछ में अड़चन');
+                $line = $hi . ' ' . $ord . ' भाव में ' . $verd . ' है। ' . $mein . ' ' . $kya . '।';
+            }
+
+            // ---- 2. किसने सुलाया, चाबी किसके पास ----
+            $kaun = [];
+            if ($asleep && !$awake) {
+                if (trim((string) ($wake['cause_hi'] ?? '')) !== '') {
+                    $kaun['sulane_wala'] = (string) $wake['cause_hi'];
+                }
+                if (trim((string) ($wake['agent_hi'] ?? '')) !== '') {
+                    $kaun['chaabi'] = (string) $wake['agent_hi'];
+                }
+                if (trim((string) ($wake['condition'] ?? '')) !== '') {
+                    $kaun['shart'] = (string) $wake['condition'];
+                }
+            }
+
+            // ---- 3. अब क्या करना है — वही जवाब जो निचोड़ देता है ----
+            $act = ['status' => 'ज़रूरत नहीं', 'text' => '', 'dir' => '', 'target' => '', 'why' => ''];
+            foreach ($issued as $u) {
+                if ((string) ($u['planet'] ?? '') === $hi) {
+                    $act = ['status' => 'जारी', 'text' => (string) ($u['upay'][0] ?? ''),
+                        'dir' => (string) ($u['direction'] ?? ''), 'target' => (string) ($u['target'] ?? ''),
+                        'why' => (string) ($u['target_note'] ?? '')];
+                    break;
+                }
+            }
+            if ($act['status'] === 'ज़रूरत नहीं') {
+                foreach ($held as $hd) {
+                    if ((string) ($hd['planet'] ?? '') === $hi) {
+                        $act = ['status' => 'कतार में', 'text' => '',
+                            'dir' => (string) ($hd['direction'] ?? ''), 'target' => '',
+                            'why' => 'पहला उपाय पूरा होने के बाद इसकी बारी — एक साथ कई उपाय शुरू करने से कोई पूरा नहीं होता'];
+                        break;
+                    }
+                }
+            }
+            if ($act['status'] === 'ज़रूरत नहीं') {
+                foreach ($excl as $ex) {
+                    if ((string) ($ex['planet'] ?? '') === $hi || (string) ($ex['target'] ?? '') === $hi) {
+                        $act = ['status' => 'रोका गया', 'text' => '', 'dir' => '',
+                            'target' => (string) ($ex['target'] ?? ''), 'why' => (string) ($ex['reason'] ?? '')];
+                        break;
+                    }
+                }
+            }
+            if ($act['status'] === 'ज़रूरत नहीं' && $verd !== 'अशुभ' && $verd !== 'निष्क्रिय') {
+                $act['why'] = 'यह ग्रह इस समय दिक़्क़त नहीं दे रहा — इसका अलग उपाय ज़रूरी नहीं।';
+            } elseif ($act['status'] === 'ज़रूरत नहीं') {
+                $act['why'] = 'इस बार के एक-दो उपायों में यह नहीं आया — ऊपर वाला पूरा होने पर दोबारा देखें।';
+            }
+
+            $out[$hi] = [
+                'hi'        => $hi,
+                'house_ord' => $ord,
+                'state'     => $state,
+                'line'      => $line,
+                'verdict'   => $verd,
+                'kshamata'  => $ksh,
+                'kshamata_hi' => $kshamataHi[$ksh] ?? '',
+                'areas'     => $areas,
+                'kaun'      => $kaun,
+                'action'    => $act,
+                // बैठक का विरोध मिटाया नहीं जाता — शर्त बनकर साथ चलता है
+                'qualifier' => trim((string) ($p['seat_conflict'] ?? '')),
+                'in_dasha'  => $dashaHi !== '' && $dashaHi === $hi,
+            ];
+        }
+        return $out;
+    }
 
     /**
      * नौ चरणों का सही विश्लेषण बेकार है अगर दसवाँ उसे ऐसी भाषा में दे जो पढ़ने

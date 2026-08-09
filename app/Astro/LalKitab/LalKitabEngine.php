@@ -540,6 +540,11 @@ final class LalKitabEngine
                 'out_hits'  => $outHits,
                 'notes_applied' => $notesApplied,
                 'notes_ref' => $notesRef,
+                // पढ़ने लायक़ जीवन-क्षेत्र। `karak_bhav` सिर्फ़ भाव-अंक हैं ("2, 5, 9, 11"),
+                // और उन्हें वाक्य में रख देने से "अब 2, 5, 9, 11 में फल खुलता है"
+                // जैसी पंक्ति बनती थी — जो कुछ कहती ही नहीं। नाम पहले से गिने जा
+                // रहे थे, बस बाहर नहीं आ रहे थे।
+                'areas_hi'  => $areas,
                 'pred_head' => $predHead,      // plain-language "क्या होगा" headline
                 'pred_effects' => $predEffects, // concrete applied-note effects
                 'need_remedy' => $needRemedy,

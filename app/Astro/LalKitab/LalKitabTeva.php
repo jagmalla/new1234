@@ -180,7 +180,11 @@ final class LalKitabTeva
         // A planet that casts no aspect at all (mostly 7–12) cannot be सोया/गूंगा,
         // but can still be बहरा / अंधा / मृत / लंगड़ा.
         $gunga = $castsAspect && !$bol && $neighboursEmpty;
-        $behra = !$sunna;
+        // "कोई भरा भाव इसे नहीं देखता" — एकतरफ़ा, आगे-को-चलने वाली दृष्टि में यह
+        // असाधारण हालत नहीं, आम हालत है। ढीली कसौटी पर यही अकेला बहरेपन के लिए
+        // काफ़ी है; सख़्त कसौटी पर ग्रह का साथी भी कोई न हो, तभी — क्योंकि जिसके
+        // साथ कोई बैठा है उस तक बात पहुँचने का एक रास्ता तो खुला ही है।
+        $behra = !$sunna && (LalKitabSettings::get('apang_kasauti') !== 'sakht' || !$mate);
         $soya  = $castsAspect && !$bol;
 
         // most-severe first; सोया (owner-confirmed, actionable) outranks a plain बहरा

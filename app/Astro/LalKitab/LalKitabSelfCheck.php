@@ -349,6 +349,41 @@ final class LalKitabSelfCheck
             return $seen > 0;
         });
 
+        // हर ग्रह-कार्ड पर "अभी क्या मानें" — यही वह पट्टी है जो अवस्था, ताक़त और
+        // उपाय को मिलाकर एक वाक्य कहती है। इसके बिना वही पुरानी हालत लौट आती है
+        // जिसमें एक ही कार्ड "मृत — कारकत्व अनुपस्थित" और "लाभ मिलेगा" दोनों कहता था।
+        $add('BR-1', 'हर ग्रह-कार्ड पर उसका अपना निचोड़ मौजूद है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                $i = mb_strpos($h, '<div class="lk-view" data-lk="planet">');
+                $j = mb_strpos($h, '<div class="lk-view" data-lk="house">');
+                if ($i === false || $j === false || $j <= $i) { return false; }
+                $seg = mb_substr($h, $i, $j - $i);
+                // नौ ग्रह, नौ पट्टियाँ
+                if (substr_count($seg, 'अभी क्या मानें') < 9) { return false; }
+            }
+            return true;
+        });
+
+        // सोया-अवस्था का ब्योरा भूतकाल में तभी कहा जाए जब जागने की उम्र निकल चुकी
+        // हो — और तब "कब जागेगा" भविष्य में नहीं पूछा जाना चाहिए। 45 साल के आदमी
+        // को "22 वर्ष के उपरान्त जागेगा" दिखाना सादा ग़लती है।
+        $add('BR-2', 'जागने की उम्र निकल चुकी हो तो वह भूतकाल में कही जाती है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'जागने की उम्र निकल चुकी') !== false) {
+                    if (mb_strpos($h, 'जातक से पूछकर ही तय होगा') === false) { return false; }
+                }
+            }
+            return true;
+        });
+
+        // ग्रह-अंतर्संबंध पन्ना कभी ख़ाली न रहे — युति/दृष्टि/टक्कर हर कुंडली में होती हैं।
+        $add('BR-3', 'ग्रह-अंतर्संबंध पन्ने पर इस कुंडली के असली रिश्ते दिखते हैं', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'इस कुंडली के असली रिश्ते') === false) { return false; }
+            }
+            return true;
+        });
+
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {
             foreach ($pages as $h) { if (mb_strpos($h, 'बाँधती नहीं') === false) { return false; } }
             return true;

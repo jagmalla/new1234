@@ -54,6 +54,65 @@ $pill = static function (string $txt, string $kind) use ($h): string {
     $st = $map[$txt] ?? 'background:#f1f5f9;color:#475569';
     return '<span class="lk-pill" style="' . $st . '">' . $h($txt) . '</span>';
 };
+/**
+ * एक ग्रह का निचोड़ — "अभी क्या मानें"।
+ *
+ * विस्तृत पन्नों पर तथ्य पहले भी सब थे; कमी यह थी कि कोई उन्हें मिलाकर एक वाक्य
+ * नहीं कहता था। इसलिए एक ही कार्ड "मृत — कारकत्व अनुपस्थित मानें" और "लाभ
+ * मिलेगा" दोनों कह देता था, और पढ़ने वाला यही समझता था कि गणना भरोसे लायक़ नहीं।
+ * यह पट्टी हर कार्ड के सिरे पर वही मेल दिखाती है, और उपाय वही बताती है जो निचोड़
+ * ने तय किया — ताकि दोनों पन्ने कभी दो बातें न कहें।
+ */
+$briefBox = static function (?array $b) use ($h): string {
+    if (!is_array($b) || trim((string) ($b['line'] ?? '')) === '') { return ''; }
+    $tone = [
+        'रुका हुआ' => ['#f8fafc', '#cbd5e1', '#334155', '⏸'],
+        'सोया'     => ['#f8fafc', '#cbd5e1', '#334155', '😴'],
+        'जाग चुका' => ['#eff6ff', '#bfdbfe', '#1e3a8a', '🌅'],
+        'चालू'     => ['#f0fdf4', '#bbf7d0', '#14532d', '⚡'],
+    ][$b['state']] ?? ['#f8fafc', '#e2e8f0', '#334155', '•'];
+    if (($b['state'] ?? '') === 'चालू' && ($b['verdict'] ?? '') === 'अशुभ') {
+        $tone = ['#fef2f2', '#fecaca', '#7f1d1d', '⚠️'];
+    }
+    [$bg, $bd, $fg, $ic] = $tone;
+    $o  = '<div style="background:' . $bg . ';border:1px solid ' . $bd . ';border-radius:10px;padding:9px 12px;margin:2px 0 9px">';
+    $o .= '<div style="font-weight:800;font-size:.8rem;color:' . $fg . ';margin-bottom:3px">'
+        . $ic . ' अभी क्या मानें'
+        . ($b['in_dasha'] ? ' <span class="lk-pill" style="background:#dc2626;color:#fff">🔥 इसी की दशा चल रही है</span>' : '')
+        . '</div>';
+    $o .= '<div style="font-size:.85rem;line-height:1.65;color:' . $fg . '">' . $h((string) $b['line']) . '</div>';
+    if (trim((string) ($b['kshamata_hi'] ?? '')) !== '') {
+        $o .= '<div style="font-size:.8rem;margin-top:3px;color:' . $fg . '">💪 ' . $h((string) $b['kshamata_hi']) . '</div>';
+    }
+    $kaun = (array) ($b['kaun'] ?? []);
+    if ($kaun !== []) {
+        $bits = [];
+        if (!empty($kaun['sulane_wala'])) { $bits[] = 'सुलाने वाला: <b>' . $h((string) $kaun['sulane_wala']) . '</b>'; }
+        if (!empty($kaun['chaabi']))      { $bits[] = 'जगाने की चाबी: <b>' . $h((string) $kaun['chaabi']) . '</b>'; }
+        if (!empty($kaun['shart']))       { $bits[] = 'शर्त: ' . $h((string) $kaun['shart']); }
+        $o .= '<div style="font-size:.8rem;margin-top:3px;color:' . $fg . '">🔑 ' . implode(' · ', $bits) . '</div>';
+    }
+    if (trim((string) ($b['qualifier'] ?? '')) !== '') {
+        $o .= '<div style="font-size:.78rem;margin-top:3px;color:#92400e">⚖ ' . $h((string) $b['qualifier'])
+            . ' <span style="color:#94a3b8">(दोनों बातें सच हैं — औसत नहीं निकाला गया)</span></div>';
+    }
+    $a = (array) ($b['action'] ?? []);
+    $st = (string) ($a['status'] ?? '');
+    $sty = ['जारी' => ['#166534', '🛠'], 'कतार में' => ['#92400e', '🔒'],
+            'रोका गया' => ['#7f1d1d', '🚫'], 'ज़रूरत नहीं' => ['#475569', '✔']][$st] ?? ['#475569', '•'];
+    $txt = trim((string) ($a['text'] ?? ''));
+    $why = trim((string) ($a['why'] ?? ''));
+    $dir = trim((string) ($a['dir'] ?? ''));
+    $tgt = trim((string) ($a['target'] ?? ''));
+    $o .= '<div style="margin-top:6px;padding-top:5px;border-top:1px dashed ' . $bd . ';font-size:.82rem;color:' . $sty[0] . '">';
+    $o .= '<b>' . $sty[1] . ' अब क्या करें — ' . $h($st) . '</b>';
+    if ($dir !== '') { $o .= ' <span class="lk-pill" style="background:#fff;color:' . $sty[0] . ';border:1px solid ' . $bd . '">दिशा: ' . $h($dir) . '</span>'; }
+    if ($tgt !== '' && $tgt !== (string) $b['hi']) { $o .= ' <span class="lk-pill" style="background:#fff;color:' . $sty[0] . ';border:1px solid ' . $bd . '">निशाना: ' . $h($tgt) . '</span>'; }
+    if ($txt !== '') { $o .= '<div style="margin-top:2px">' . $h($txt) . '</div>'; }
+    if ($why !== '') { $o .= '<div style="margin-top:2px;font-size:.78rem">' . $h($why) . '</div>'; }
+    $o .= '</div></div>';
+    return $o;
+};
 /** render a remedy (उपाय) block under a problem. */
 $remBlock = static function (array $items, string $title = 'उपाय / टोटके') use ($h): string {
     $items = array_values(array_filter($items, static fn ($x) => trim((string) $x) !== ''));
@@ -684,6 +743,9 @@ function lkNativeGo(el) {
         <?php endforeach; ?>
       </div>
 
+      <?php /* प्रक्रिया-परत के प्रति-ग्रह निचोड़ — तीनों ग्रह-पन्ने इन्हीं से बोलते हैं,
+               इसलिए वे और निचोड़-पन्ना कभी दो अलग बातें नहीं कहते। */
+            $LKB = (array) (($lk['process']['briefs']) ?? []); ?>
       <!-- ===== PLANET PREDICTION ===== -->
       <div class="lk-view" data-lk="planet">
         <h3 class="lk-h">ग्रह फल एवं उपाय (Planet-wise)</h3>
@@ -704,6 +766,10 @@ function lkNativeGo(el) {
               ?><?= $scorePill((int) ($p['score'] ?? 0)) ?>
               <?= $srcTag('भाव-आधारित (टेवा)') ?>
             </div>
+            <?php /* निचोड़ पहले, ब्योरा बाद में — पढ़ने वाला ऊपर से नीचे पढ़ता है, और
+                     जो सबसे ऊपर है उसी को फ़ैसला मानता है। नीचे का तकनीकी ब्योरा
+                     वैसा ही रहता है, वह ज्योतिषी के लिए है। */ ?>
+            <?= $briefBox($LKB[(string) $p['hi']] ?? null) ?>
             <?php if (!empty($p['reasons']) && ($p['score'] ?? 0) > 0): ?>
               <div class="lk-reason">प्राथमिकता-कारण: <?= $h(implode(' · ', $p['reasons'])) ?></div>
             <?php endif; ?>
@@ -1656,8 +1722,65 @@ function lkNativeGo(el) {
       <div class="lk-view" data-lk="inter">
         <h3 class="lk-h">ग्रह अंतर्संबंध — कौन ग्रह किसको प्रभावित कर रहा है</h3>
         <div class="lk-txt" style="margin-bottom:9px">लाल किताब में ग्रह एक-दूसरे का फल बदलते हैं। नीचे इस कुंडली के लागू सूत्रों से बना प्रभाव-नक्शा है — <span style="color:#166534">हरा = शुभ प्रभाव</span>, <span style="color:#991b1b">लाल = अशुभ प्रभाव</span>।</div>
+        <?php /* ══════ असली रिश्ते, सिर्फ़ नामी सूत्र नहीं ══════
+             पहले यह पन्ना केवल नाम-दर्ज सूत्रों की तालिका दिखाता था, इसलिए
+             ज़्यादातर कुंडलियों पर लगभग ख़ाली रहता था — जबकि ग्रहों के बीच का असली
+             लेन-देन (एक कमरे में बैठना, एकतरफ़ा दृष्टि, टक्कर) पहले से गिना जा
+             चुका होता है। वही यहाँ खोलकर रखा जाता है, नुक़सान पहुँचाने वाले रिश्ते
+             पहले। हर पंक्ति के आगे लिखा है कि इसका मतलब क्या है, और जहाँ इसी रिश्ते
+             ने ग्रह का फ़ैसला बदला वहाँ वह भी दर्ज है — यही "कौन किसको" का जवाब है। */ ?>
+        <?php
+          $edges = [];
+          foreach ((array) ($lk['planets'] ?? []) as $pi) {
+              $me = (string) $pi['hi'];
+              foreach ((array) ($pi['mates'] ?? []) as $mt) {
+                  $rel = (string) ($mt['rel'] ?? 'सम');
+                  $edges[] = [
+                      'rank' => $rel === 'शत्रु' ? 0 : ($rel === 'मित्र' ? 2 : 3),
+                      'kind' => 'युति', 'from' => (string) $mt['hi'], 'to' => $me,
+                      'tone' => $rel === 'शत्रु' ? 'neg' : ($rel === 'मित्र' ? 'pos' : 'mix'),
+                      'tag'  => $rel . ' — एक ही भाव में',
+                      'what' => $rel === 'शत्रु'
+                          ? $mt['hi'] . ' और ' . $me . ' एक ही कमरे में शत्रु की तरह बैठे हैं — दोनों के मामले आपस में उलझते हैं।'
+                          : ($rel === 'मित्र'
+                              ? $mt['hi'] . ' साथ बैठकर ' . $me . ' का काम आसान करता है।'
+                              : $mt['hi'] . ' और ' . $me . ' साथ हैं, पर एक-दूसरे को न बढ़ाते हैं न घटाते।'),
+                  ];
+              }
+              foreach ((array) ($pi['in_hits'] ?? []) as $ih) {
+                  $kind = (string) ($ih['kind'] ?? '');
+                  $from = implode(', ', (array) ($ih['planets_hi'] ?? []));
+                  if ($from === '') { continue; }
+                  $edges[] = [
+                      'rank' => $kind === 'टकराव' ? 1 : 4,
+                      'kind' => $kind, 'from' => $from, 'to' => $me,
+                      'tone' => $kind === 'टकराव' ? 'neg' : ($kind === 'सहायता' ? 'pos' : 'mix'),
+                      'tag'  => $kind . ' — ' . \AutoBusiness\Astro\LalKitab\LalKitabData::houseOrdinalHi((int) $ih['house']) . ' भाव से'
+                          . (!empty($ih['weak']) ? ' (मारने वाला ख़ुद सोया — चोट आधी)' : ''),
+                      'what' => $kind === 'टकराव'
+                          ? $from . ' की मार ' . $me . ' पर पड़ती है — ' . $me . ' के मामले इसी से बिगड़ते हैं।'
+                          : $from . ' की नज़र ' . $me . ' पर है — असर दूर से पड़ता है, सीधा नहीं।',
+                  ];
+              }
+          }
+          usort($edges, static fn ($a, $b) => [$a['rank'], $a['to']] <=> [$b['rank'], $b['to']]);
+        ?>
+        <?php if ($edges !== []): ?>
+          <div class="lk-card" style="border-color:#c7d2fe;background:#eef2ff">
+            <div class="lk-card-h" style="color:#3730a3">🕸 इस कुंडली के असली रिश्ते (<?= count($edges) ?>) <?= $srcTag('युति · एकतरफ़ा दृष्टि · टक्कर') ?></div>
+            <div class="lk-note" style="margin-bottom:5px">नुक़सान पहुँचाने वाले रिश्ते पहले। ऊपर के दो-तीन ही असल में मायने रखते हैं।</div>
+            <?php foreach ($edges as $e): $tc = $e['tone'] === 'pos' ? '#166534' : ($e['tone'] === 'neg' ? '#991b1b' : '#854d0e'); ?>
+              <div class="lk-txt" style="margin:3px 0;padding-left:10px;border-left:3px solid <?= $tc ?>">
+                <b style="color:<?= $tc ?>"><?= $h((string) $e['from']) ?> → <?= $h((string) $e['to']) ?></b>
+                <span class="lk-pill" style="background:#fff;color:<?= $tc ?>;border:1px solid <?= $tc ?>33"><?= $h((string) $e['tag']) ?></span>
+                <div style="font-size:.83rem;color:#334155"><?= $h((string) $e['what']) ?></div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+
         <?php if (empty($lk['inter'])): ?>
-          <div class="lk-card"><div class="lk-txt">इस कुंडली में ग्रहों के बीच कोई विशेष प्रभाव-सूत्र लागू नहीं होता।</div></div>
+          <div class="lk-card"><div class="lk-txt">नाम-दर्ज विशेष सूत्रों में से इस कुंडली पर कोई लागू नहीं होता — ऊपर वाले रिश्ते ही चल रहे हैं।</div></div>
         <?php else: foreach ($lk['inter'] as $I): ?>
           <div class="lk-card">
             <div class="lk-card-h"><?= $h((string) $I['hi']) ?></div>
@@ -1713,14 +1836,51 @@ function lkNativeGo(el) {
         <?php if (empty($lk['supt'])): ?>
           <div class="lk-card good"><div class="lk-txt">✅ कोई ग्रह सोया/अपंग नहीं — सभी ग्रह अपना फल दे रहे हैं।</div></div>
         <?php endif; ?>
-        <?php foreach ($lk['supt'] as $s): ?>
+        <?php /* ══════ कितने ग्रह अपंग हैं, यह ख़ुद एक ख़बर है ══════
+             एकतरफ़ा व आगे-को-चलने वाली दृष्टि में "कोई भरा भाव इसे नहीं देखता"
+             असाधारण हालत नहीं, आम हालत है — इसीलिए आधे से ज़्यादा ग्रह प्रायः किसी
+             न किसी अवस्था में निकल आते हैं। जब नौ में से सात पर एक ही भारी लेबल
+             लगा हो, तो लेबल कुछ बताता नहीं, सिर्फ़ डराता है। इसलिए ऊपर ही साफ़ लिख
+             दिया जाता है कि इस कुंडली में यह कितना आम है, और कसौटी बदलने का रास्ता
+             भी बता दिया जाता है। */ ?>
+        <?php $suptN = count((array) ($lk['supt'] ?? [])); $totalP = count((array) ($lk['planets'] ?? [])) ?: 9;
+              $kasauti = (string) (($lk['process']['niyam']['apang_kasauti']) ?? 'dheeli'); ?>
+        <?php if ($suptN > 0): ?>
+          <div class="lk-note" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:8px 11px;margin-bottom:9px">
+            इस कुंडली में <b><?= (int) $suptN ?></b> / <?= (int) $totalP ?> ग्रह किसी न किसी अवस्था में हैं।
+            <?php if ($suptN >= 5): ?>
+              इतना होना असामान्य नहीं है — लाल किताब की दृष्टि एकतरफ़ा है, इसलिए ज़्यादातर ग्रहों को
+              कोई नहीं देखता। <b>इसे आफ़त न पढ़ें</b>; नीचे वही ग्रह पहले देखें जिनकी दशा चल रही है या
+              जिनका उपाय ऊपर निचोड़ में आया है।
+              <?php if ($kasauti !== 'sakht'): ?>
+                <br><span style="color:#92400e">चाहें तो सेटिंग में <b>अपंग अवस्था की कसौटी = सख़्त</b> करके देखें —
+                तब वही ग्रह अपंग गिने जाते हैं जिनका कोई साथी भी नहीं।</span>
+              <?php endif; ?>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
+        <?php foreach ($lk['supt'] as $s): $bS = $LKB[(string) $s['hi']] ?? null; ?>
           <div class="lk-card bad" data-app="1">
             <div class="lk-card-h">
               <?= $h((string) $s['hi']) ?> — <?= $h((string) $s['house_ord']) ?> भाव में
               <span class="lk-pill" style="background:#fee2e2;color:#991b1b">😴 <?= $h((string) $s['state']) ?></span>
               <?php if (($s['darja'] ?? '') !== 'final'): ?><span class="lk-pill" style="background:#fef3c7;color:#92400e">अनुमानित</span><?php endif; ?>
             </div>
-            <div class="lk-txt"><b>📢 फल:</b> <?= $h((string) $s['phal']) ?></div>
+            <?php /* पहले यहाँ सिर्फ़ अवस्था का जड़ा हुआ पाठ छपता था — वही वाक्य पाँच
+                     ग्रहों पर ज्यों का त्यों, "सबसे दुर्लभ श्रेणी" एक ही पन्ने पर दो
+                     बार। निचोड़ इसकी जगह इस कुंडली की बात कहता है: जागा या नहीं,
+                     किसने सुलाया, चाबी किसके पास, और अब करना क्या है। */ ?>
+            <?= $briefBox($bS) ?>
+            <?php /* यह पाठ पुस्तक का है, इसलिए बदला नहीं जाता। पर उसमें कुछ अवस्थाओं
+                     को "सबसे दुर्लभ" कहा गया है, और वही पंक्ति एक ही पन्ने पर दो बार
+                     छप सकती है — तब वह ख़ुद अपना खंडन करती है। इसलिए जहाँ अवस्था
+                     दोहराई गई हो, वहीं गिनती लिख दी जाती है। */ ?>
+            <?php $sameState = 0; foreach ((array) ($lk['supt'] ?? []) as $s2) { if (($s2['state'] ?? '') === ($s['state'] ?? '')) { $sameState++; } } ?>
+            <div class="lk-txt" style="font-size:.8rem;color:#64748b"><b>अवस्था का सामान्य अर्थ:</b> <?= $h((string) $s['phal']) ?>
+              <?php if ($sameState > 1): ?>
+                <span style="color:#92400e">(इस कुंडली में <?= (int) $sameState ?> ग्रह इसी अवस्था में हैं — इसलिए इसे "दुर्लभ" न पढ़ें।)</span>
+              <?php endif; ?>
+            </div>
             <?php if (!empty($s['empty_aspected'])): ?>
               <div class="lk-reason">यह जिन खाली भावों को देखता है:
                 <?php foreach ($s['empty_aspected'] as $ea): ?>
@@ -1728,7 +1888,19 @@ function lkNativeGo(el) {
                 <?php endforeach; ?>
               </div>
             <?php endif; ?>
-            <?php if (trim((string) $s['jagega']) !== ''): ?><div class="lk-sub"><b>अपने-आप कब जागेगा:</b> <?= $h((string) $s['aayu']) ?> — <?= $h((string) $s['jagega']) ?></div><?php endif; ?>
+            <?php /* "22 वर्ष के उपरान्त जागेगा" 45 साल के आदमी को दिखाना ग़लत है —
+                     वह उम्र निकल चुकी है। उम्र निकल चुकी हो तो सवाल भविष्य का नहीं,
+                     अतीत का है: वह घटना हुई थी या नहीं। */ ?>
+            <?php if (trim((string) $s['jagega']) !== ''):
+                  $wA = $bS['kaun'] ?? null; $gone = ($bS['state'] ?? '') === 'जाग चुका'; ?>
+              <div class="lk-sub">
+                <b><?= $gone ? 'जागने की उम्र निकल चुकी:' : 'अपने-आप कब जागेगा:' ?></b>
+                <?= $h((string) $s['aayu']) ?> — <?= $h((string) $s['jagega']) ?>
+                <?php if ($gone): ?>
+                  <span style="color:#1e3a8a">→ यह बात हो चुकी है या नहीं, यह जातक से पूछकर ही तय होगा।</span>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
             <?= $remBlock($s['upay'] ?? [], $s['state'] . ' — उपाय') ?>
           </div>
         <?php endforeach; ?>
