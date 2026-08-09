@@ -178,7 +178,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         .btn-sindoor { background: var(--sindoor); color: #fff; font-weight: 600; font-size: .9rem;
             padding: 6px 16px; min-height: 44px; border-radius: 6px; display: inline-flex; align-items: center; }
         .btn-sindoor:hover { filter: brightness(1.1); }
-        /* Hamburger menu button — hidden on desktop, shown ≤1099px (see media query). */
+        /* Hamburger menu button — hidden on desktop, shown ≤1279px (see media query). */
         #menu-btn { display: none; align-items: center; gap: 8px; background: #2A3742;
             color: #F7F3EA; border: 1px solid #3B4854; border-radius: 8px; font-weight: 700;
             font-size: .9rem; padding: 8px 14px; min-height: 44px; cursor: pointer; }
@@ -756,7 +756,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         @media (prefers-reduced-motion: reduce) {
             #chart-panel, #pred-panel { transition: none; }
         }
-        @media (min-width: 1100px) {
+        @media (min-width: 1280px) {
             .pred-expanded #chart-panel { display: none; }
             .pred-expanded #pred-panel { grid-column: 2 / 4; }
             /* Reading mode: bigger copy; card lists flow in two columns, and the
@@ -780,10 +780,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         /* Cards nested in the prediction panel: flatter, token-bordered. */
         #pred-scroll > div, #pred-scroll .pred-view > div { box-shadow: none; border: 1px solid var(--line);
             border-radius: 8px; margin-bottom: 12px; }
-        /* ≤1099px (tablet + phone): the side menu becomes a slide-in drawer opened
+        /* ≤1279px (tablet + phone): the side menu becomes a slide-in drawer opened
            by the ☰ Menu button; panels stack full-width. The drawer keeps the full
            vertical menu with expandable sub-items (unlike the old chip bar). */
-        @media (max-width: 1099px) {
+        @media (max-width: 1279px) {
             .l2-grid { display: block; }
             #menu-btn { display: inline-flex; }
             .l2-menu {
@@ -809,16 +809,40 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             .l2-picker .l2-select { flex: 0 1 auto; width: auto; max-width: 100%; min-width: 0;
                 font-size: .86rem; padding: 6px 26px 6px 10px; min-height: 36px; }
         }
-        @media (min-width: 1100px) { #menu-overlay { display: none !important; } }
+        @media (min-width: 1280px) { #menu-overlay { display: none !important; } }
+
+        /* ---- Desktop rail: collapse the side menu to icons ----
+           The menu is useful but it is not what the client came to look at. Collapsed,
+           it gives ~150px back to the chart and the reading — on a laptop that is the
+           difference between a chart you squint at and one you can read. */
+        #menu-collapse { display: none; align-items: center; gap: 6px; width: 100%;
+            padding: 7px 10px; margin-bottom: 4px; border: 0; border-bottom: 1px solid var(--line);
+            background: transparent; color: var(--ink-soft); font-size: .74rem; font-weight: 700;
+            cursor: pointer; white-space: nowrap; }
+        #menu-collapse:hover { background: var(--sindoor-soft); color: var(--sindoor); }
+        #menu-collapse .mc-ic { font-size: .95rem; line-height: 1; }
+        @media (min-width: 1280px) { #menu-collapse { display: flex; } }
+        body.menu-rail .l2-grid { grid-template-columns: 54px minmax(0, 50fr) minmax(0, 40fr); }
+        /* Labels are bare text nodes inside the buttons, so they cannot be selected
+           on their own — zeroing the button's font-size hides them and the icon is
+           restored to full size. Tooltips carry the name (JS sets title=). */
+        body.menu-rail #side-menu button,
+        body.menu-rail #side-menu .l2-mi-link { font-size: 0; text-align: center; padding: 9px 4px; }
+        body.menu-rail #side-menu .l2-ic { font-size: 1.05rem; width: auto; margin: 0; }
+        body.menu-rail #side-menu .l2-sub,
+        body.menu-rail #side-menu .l2-caret,
+        body.menu-rail #menu-collapse .mc-tx { display: none; }
+        body.menu-rail #menu-collapse { justify-content: center; padding: 7px 2px; }
+        body.menu-rail #menu-collapse .mc-ic { font-size: 1rem; }
         @media (prefers-reduced-motion: reduce) { .l2-menu { transition: none; } }
 
         /* Short button labels (New / Save) are shown on phones only. */
         .btn-lbl-short { display: none; }
-        /* ---- Tablet + phone (≤1099px) top bar: keep only the controls on ONE
+        /* ---- Tablet + phone (≤1279px) top bar: keep only the controls on ONE
            compact row. Hide the brand title, the "under testing" banner and the
            name/date/place text so the header doesn't eat the working screen.
-           (≤1099px is also where the side menu becomes the ☰ drawer.) */
-        @media (max-width: 1099px) {
+           (≤1279px is also where the side menu becomes the ☰ drawer.) */
+        @media (max-width: 1279px) {
             .topbar .brand { display: none; }
             .test-banner { display: none; }
             .topbar .meta > span { display: none; }        /* name / date / place */
@@ -1192,6 +1216,14 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
         <!-- Side menu -->
         <nav id="side-menu" class="l2-menu l2-card" aria-label="Sections">
+            <!-- Desktop-only rail toggle. Collapsed, the menu keeps only its icons
+                 so the chart and the reading get the width back; expanded, it is the
+                 full list again. The choice is remembered. On tablet/phone this is
+                 hidden — there the whole menu is already the ☰ drawer. -->
+            <button type="button" id="menu-collapse" aria-expanded="true"
+                    aria-controls="side-menu" title="मेन्यू छोटा करें">
+                <span class="mc-ic" aria-hidden="true">«</span><span class="mc-tx">मेन्यू छोटा करें</span>
+            </button>
             <div class="l2-mi">
                 <button type="button" data-sec="profile"><span class="l2-ic">👤</span>New / Profile</button>
             </div>
@@ -4348,6 +4380,65 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     });
   });
 
+  // ---- साइड-मेन्यू को पट्टी (rail) बनाना — सिर्फ़ लैपटॉप/डेस्कटॉप पर ----
+  // मेन्यू काम का है, पर ग्राहक उसे देखने नहीं आया। समेटने पर कुंडली और फल को
+  // लगभग 150px वापस मिल जाते हैं — लैपटॉप पर यही फ़र्क़ है आँख गड़ाकर देखने और
+  // आराम से पढ़ने के बीच। टैबलेट/फ़ोन पर यह बटन दिखता ही नहीं; वहाँ पूरा मेन्यू
+  // पहले से ☰ वाला दराज़ है।
+  (function () {
+    var btn = document.getElementById('menu-collapse');
+    var nav = document.getElementById('side-menu');
+    if (!btn || !nav) { return; }
+
+    // समेटी हालत में नाम नहीं दिखते, इसलिए हर पंक्ति का नाम tooltip में रख देते
+    // हैं — वरना पट्टी सिर्फ़ चिह्नों की पहेली बन जाती।
+    nav.querySelectorAll('button[data-sec], .l2-mi-link').forEach(function (el) {
+      // चिह्न tooltip में दोबारा नहीं चाहिए — वह सामने दिख ही रहा है।
+      var t = '';
+      el.childNodes.forEach(function (n2) {
+        if (n2.nodeType === 3) { t += n2.textContent; }
+        else if (n2.nodeType === 1 && !n2.classList.contains('l2-ic') && !n2.classList.contains('l2-caret')) {
+          t += n2.textContent;
+        }
+      });
+      t = t.replace(/\s+/g, ' ').trim();
+      if (t && !el.getAttribute('title')) { el.setAttribute('title', t); }
+    });
+
+    var apply = function (railed) {
+      document.body.classList.toggle('menu-rail', railed);
+      btn.setAttribute('aria-expanded', railed ? 'false' : 'true');
+      var ic = btn.querySelector('.mc-ic');
+      var tx = btn.querySelector('.mc-tx');
+      if (ic) { ic.textContent = railed ? '»' : '«'; }
+      if (tx) { tx.textContent = 'मेन्यू छोटा करें'; }
+      btn.setAttribute('title', railed ? 'मेन्यू खोलें' : 'मेन्यू छोटा करें');
+      // चौड़ाई बदली है — जो चित्र अपनी जगह नापकर बनते हैं उन्हें दोबारा नपवाओ।
+      setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 220);
+    };
+
+    var saved = null;
+    try { saved = window.localStorage.getItem('ab_menu_rail'); } catch (e) { /* निजी विंडो */ }
+    apply(saved === '1');
+
+    btn.addEventListener('click', function () {
+      var next = !document.body.classList.contains('menu-rail');
+      apply(next);
+      try { window.localStorage.setItem('ab_menu_rail', next ? '1' : '0'); } catch (e) { /* निजी विंडो */ }
+    });
+
+    // समेटी पट्टी में उप-मेन्यू खुल नहीं सकता; ऐसे किसी आइटम पर क्लिक हो तो पहले
+    // मेन्यू खोल देते हैं, वरना क्लिक बेअसर लगता है।
+    nav.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button[data-sec]') : null;
+      if (!b || !document.body.classList.contains('menu-rail')) { return; }
+      if (b.parentElement && b.parentElement.querySelector('.l2-sub')) {
+        apply(false);
+        try { window.localStorage.setItem('ab_menu_rail', '0'); } catch (err) { /* निजी विंडो */ }
+      }
+    });
+  })();
+
   // Landing on a named section: ?sec=lalkitab&lkview=nichod re-opens the same
   // page the user was reading before a reload. The Lal Kitab family-status strip
   // is a GET form, so without this a single answer would drop the reader back on
@@ -4420,7 +4511,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     // a sub-menu, which stays open so its just-revealed sub-items are tappable.
     menu.querySelectorAll('button, a').forEach(function (el) {
       el.addEventListener('click', function () {
-        if (!window.matchMedia('(max-width: 1099px)').matches) { return; }
+        if (!window.matchMedia('(max-width: 1279px)').matches) { return; }
         var mi = el.closest('.l2-mi');
         var isParentWithSub = mi && el === mi.querySelector(':scope > button') && !!mi.querySelector('.l2-sub');
         if (!isParentWithSub) { close(); }
@@ -4446,7 +4537,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     var pp = document.getElementById('pred-panel');
     var frame = document.getElementById('chart-frame');
     if (!cp || !pp) { return; }
-    if (!window.matchMedia('(min-width: 1100px)').matches) {
+    if (!window.matchMedia('(min-width: 1280px)').matches) {
       cp.style.height = ''; pp.style.height = '';
       return;
     }
@@ -4861,7 +4952,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.classList.contains('hidden')) { close(); } });
     try {
-        var small = window.matchMedia('(max-width: 1099px)').matches;
+        var small = window.matchMedia('(max-width: 1279px)').matches;
         var seen = sessionStorage.getItem('ab_startup_notice_seen');
         if (small && !seen) {
             sessionStorage.setItem('ab_startup_notice_seen', '1');   // set immediately → once per session
