@@ -4277,6 +4277,30 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     });
   });
 
+  // Landing on a named section: ?sec=lalkitab&lkview=nichod re-opens the same
+  // page the user was reading before a reload. The Lal Kitab family-status strip
+  // is a GET form, so without this a single answer would drop the reader back on
+  // the Birth Chart. We click the real menu button so every side-effect the
+  // normal click does (active state, carets, build*, view select) still runs.
+  (function () {
+    var q = new URLSearchParams(window.location.search);
+    var sec = q.get('sec');
+    if (!sec) { return; }
+    var btn = document.querySelector('#side-menu [data-sec="' + sec.replace(/[^a-z]/gi, '') + '"]');
+    if (!btn) { return; }
+    btn.click();
+    var lkv = q.get('lkview');
+    if (sec === 'lalkitab' && lkv) {
+      var sel = document.getElementById('lk-select');
+      if (sel && sel.querySelector('option[value="' + lkv.replace(/[^a-z_]/gi, '') + '"]')) {
+        sel.value = lkv;
+        sel.dispatchEvent(new Event('change'));
+      }
+    }
+    var strip = document.getElementById('lk-native-form');
+    if (strip) { strip.scrollIntoView({ block: 'start' }); }
+  })();
+
   // Overview tiles are shortcuts: Name/DOB/Place → New/Profile (edit); Lagna/
   // Moon/Sun → Birth (D1) chart; Current Dasha → Dasha; Yoga → Yoga prediction.
   // Each just clicks the matching side-menu button so all state/scroll logic is

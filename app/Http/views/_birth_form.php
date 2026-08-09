@@ -46,36 +46,14 @@
             <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
     </div>
 
-    <?php /* लाल किताब के कई उपाय जातक की पारिवारिक हालत पर उलट जाते हैं — कोई
-             उपाय पिता के जीवित रहते वही काम नहीं करता जो बाद में करता है। इसलिए
-             ये तीन सवाल: बिना इनके उपाय-परत सामान्य व सुरक्षित उपाय ही देती है
-             और रिपोर्ट में खुद बता देती है कि पूरा फ़ैसला अभी बाक़ी है। */ ?>
-    <details class="mt-3 border border-amber-200 rounded bg-amber-50" id="b-native">
-        <summary class="text-sm font-semibold px-3 py-2 cursor-pointer text-amber-900">
-            👪 लाल किताब उपाय हेतु (वैकल्पिक) — पारिवारिक स्थिति
-        </summary>
-        <div class="grid gap-2 px-3 pb-3 text-sm" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
-            <label class="flex flex-col gap-1"><span class="text-gray-600">पिता जीवित हैं?</span>
-                <select name="father_living" class="border rounded px-2 py-1">
-                    <option value="">— अज्ञात —</option>
-                    <option value="हाँ" <?= (($_GET['father_living'] ?? '') === 'हाँ') ? 'selected' : '' ?>>हाँ</option>
-                    <option value="नहीं" <?= (($_GET['father_living'] ?? '') === 'नहीं') ? 'selected' : '' ?>>नहीं</option>
-                </select></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-600">माता जीवित हैं?</span>
-                <select name="mother_living" class="border rounded px-2 py-1">
-                    <option value="">— अज्ञात —</option>
-                    <option value="हाँ" <?= (($_GET['mother_living'] ?? '') === 'हाँ') ? 'selected' : '' ?>>हाँ</option>
-                    <option value="नहीं" <?= (($_GET['mother_living'] ?? '') === 'नहीं') ? 'selected' : '' ?>>नहीं</option>
-                </select></label>
-            <label class="flex flex-col gap-1"><span class="text-gray-600">वैवाहिक स्थिति</span>
-                <select name="marital_status" class="border rounded px-2 py-1">
-                    <option value="">— अज्ञात —</option>
-                    <option value="विवाहित" <?= (($_GET['marital_status'] ?? '') === 'विवाहित') ? 'selected' : '' ?>>विवाहित</option>
-                    <option value="अविवाहित" <?= (($_GET['marital_status'] ?? '') === 'अविवाहित') ? 'selected' : '' ?>>अविवाहित</option>
-                </select></label>
-        </div>
-        <p class="text-xs text-amber-800 px-3 pb-3">इन्हें भरने पर उपाय आपकी हालत के अनुसार छाँटे जाते हैं। खाली छोड़ने पर भी रिपोर्ट पूरी बनती है — बस उपाय सामान्य रहते हैं।</p>
-    </details>
+    <?php /* पारिवारिक स्थिति के तीन सवाल अब लाल किताब पन्ने के सिरे पर पूछे जाते हैं
+             (देखें _lalkitab.php) — वहीं वे काम के हैं, क्योंकि उपाय पढ़ने से ठीक
+             पहले भरे जाने चाहिए। यहाँ सिर्फ़ छिपे खाने रखे हैं ताकि दोबारा गणना
+             करने पर पहले से भरा जवाब खोए नहीं। */ ?>
+    <?php foreach (['father_living', 'mother_living', 'marital_status'] as $nk): ?>
+        <?php $nv = $_GET[$nk] ?? ''; if (!is_string($nv) || $nv === '') { continue; } ?>
+        <input type="hidden" name="<?= $h($nk) ?>" value="<?= $h($nv) ?>">
+    <?php endforeach; ?>
 
     <div class="flex flex-wrap items-center justify-between gap-3 mt-3">
         <button type="button" id="b-adv-toggle" class="text-sm text-blue-700 font-semibold border border-blue-200 rounded px-3 py-2 hover:bg-blue-50" aria-expanded="false" aria-controls="b-advanced">⚙ Advanced options (Ayanamsa · Lat/Lon · Timezone)</button>

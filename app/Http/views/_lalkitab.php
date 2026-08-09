@@ -131,6 +131,60 @@ $scorePill = static function (int $score): string {
     पहले जन्म विवरण भरकर <b>Calculate</b> करें।
   </div>
 <?php else: ?>
+
+<?php /* ══════ 👪 पारिवारिक स्थिति — लाल किताब पन्ने के सिरे पर ══════
+     यह जन्म-फ़ॉर्म से यहाँ लाया गया है, क्योंकि इसका काम सिर्फ़ लाल किताब से है
+     (वैदिक पक्ष इसे नहीं माँगता) — और उपाय पढ़ने से *पहले* भरा जाना चाहिए।
+     कई लाल किताब उपाय पिता/माता के जीवित होने या न होने पर अपना असर उलट देते
+     हैं; इसलिए हालत अज्ञात हो तो वैसा उपाय रोक दिया जाता है, अंदाज़ा नहीं
+     लगाया जाता। बदलते ही पन्ना दोबारा गणना करता है।
+     मौजूदा सब पैरामीटर hidden में साथ जाते हैं ताकि कुंडली वही रहे। */ ?>
+<form method="get" action="" id="lk-native-form"
+      style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:9px 13px;margin-bottom:12px">
+  <?php foreach ($_GET as $gk => $gv):
+        if (in_array($gk, ['father_living', 'mother_living', 'marital_status', 'sec', 'lkview'], true) || is_array($gv)) { continue; } ?>
+    <input type="hidden" name="<?= $h((string) $gk) ?>" value="<?= $h((string) $gv) ?>">
+  <?php endforeach; ?>
+  <?php /* पन्ना दोबारा लोड होने पर सेक्शन JS से चुना जाता है — इसलिए लौटने का पता
+           साथ भेजते हैं, वरना जवाब भरते ही उपयोगकर्ता जन्म-कुंडली पर जा गिरता। */ ?>
+  <input type="hidden" name="sec" value="lalkitab">
+  <input type="hidden" name="lkview" id="lk-native-view" value="<?= $h((string) ($_GET['lkview'] ?? 'nichod')) ?>">
+  <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+    <div style="font-weight:800;font-size:.87rem;color:#78350f;white-space:nowrap">👪 उपाय हेतु पारिवारिक स्थिति</div>
+    <label style="font-size:.8rem;color:#78350f">पिता जीवित?
+      <select name="father_living" onchange="lkNativeGo(this)" style="border:1px solid #fcd34d;border-radius:6px;padding:2px 6px;font-size:.8rem">
+        <option value="">— अज्ञात —</option>
+        <option value="हाँ"  <?= (($_GET['father_living'] ?? '') === 'हाँ')  ? 'selected' : '' ?>>हाँ</option>
+        <option value="नहीं" <?= (($_GET['father_living'] ?? '') === 'नहीं') ? 'selected' : '' ?>>नहीं</option>
+      </select></label>
+    <label style="font-size:.8rem;color:#78350f">माता जीवित?
+      <select name="mother_living" onchange="lkNativeGo(this)" style="border:1px solid #fcd34d;border-radius:6px;padding:2px 6px;font-size:.8rem">
+        <option value="">— अज्ञात —</option>
+        <option value="हाँ"  <?= (($_GET['mother_living'] ?? '') === 'हाँ')  ? 'selected' : '' ?>>हाँ</option>
+        <option value="नहीं" <?= (($_GET['mother_living'] ?? '') === 'नहीं') ? 'selected' : '' ?>>नहीं</option>
+      </select></label>
+    <label style="font-size:.8rem;color:#78350f">वैवाहिक स्थिति
+      <select name="marital_status" onchange="lkNativeGo(this)" style="border:1px solid #fcd34d;border-radius:6px;padding:2px 6px;font-size:.8rem">
+        <option value="">— अज्ञात —</option>
+        <option value="विवाहित"   <?= (($_GET['marital_status'] ?? '') === 'विवाहित')   ? 'selected' : '' ?>>विवाहित</option>
+        <option value="अविवाहित" <?= (($_GET['marital_status'] ?? '') === 'अविवाहित') ? 'selected' : '' ?>>अविवाहित</option>
+      </select></label>
+    <?php $nOk = ($_GET['father_living'] ?? '') !== '' && ($_GET['mother_living'] ?? '') !== '' && ($_GET['marital_status'] ?? '') !== ''; ?>
+    <span style="font-size:.76rem;color:<?= $nOk ? '#166534' : '#92400e' ?>">
+      <?= $nOk ? '✅ उपाय आपकी हालत के अनुसार छाँटे जा रहे हैं' : 'भरने पर उपाय आपकी हालत के अनुसार छँटेंगे — खाली छोड़ने पर भी रिपोर्ट पूरी बनती है।' ?>
+    </span>
+  </div>
+</form>
+<script>
+/* जो पढ़ाई अभी खुली है वही लौटने पर खुले — इसलिए मौजूदा दृश्य साथ भेजते हैं। */
+function lkNativeGo(el) {
+  var sel = document.getElementById('lk-select');
+  var box = document.getElementById('lk-native-view');
+  if (sel && box && sel.value) { box.value = sel.value; }
+  el.form.submit();
+}
+</script>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start lk-sec-grid">
 
   <!-- LEFT: Lal Kitab (fixed-Aries) chart -->
