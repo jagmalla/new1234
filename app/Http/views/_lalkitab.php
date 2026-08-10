@@ -256,7 +256,9 @@ $scorePill = static function (int $score): string {
   /* Varsh inner layout: annual chart (left) + prediction (right), like Varshaphal. */
   #sec-lalkitab .lkv-main{display:grid;grid-template-columns:1fr;gap:14px;align-items:start;margin-top:6px}
   @media(min-width:980px){#sec-lalkitab.lk-wide .lkv-main{grid-template-columns:minmax(320px,400px) minmax(0,1fr)}}
-  #sec-lalkitab .lkv-main>#lkv-body{min-width:0}
+  #sec-lalkitab .lkv-main>.lkv-right{display:flex;flex-direction:column;gap:10px;min-width:0}
+  #sec-lalkitab #lkv-head-slot:empty{display:none}
+  #sec-lalkitab #lkv-head-slot>#lk-head{margin:0}
   /* बाएँ खाने के तीनों चित्र एक के नीचे एक; चित्र खाने की पूरी चौड़ाई लें ताकि
      दोनों वर्ष-कुंडलियाँ एक ही नाप पर पढ़ी जाएँ। */
   #sec-lalkitab .lkv-charts{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -264,7 +266,7 @@ $scorePill = static function (int $score): string {
   /* फल का खाना अपने भीतर सरके — चित्र ऊपर टिके रहें। छोटी स्क्रीन पर यह बंधन
      हटा दिया जाता है, वहाँ पूरा पन्ना ही एक धारा में पढ़ा जाता है। */
   @media(min-width:980px){
-    #sec-lalkitab.lk-wide .lkv-main>#lkv-body{max-height:78vh;overflow-y:auto;padding-right:6px}
+    #sec-lalkitab.lk-wide .lkv-main #lkv-body{max-height:74vh;overflow-y:auto;padding-right:6px}
     #sec-lalkitab.lk-wide .lkv-charts{position:sticky;top:8px}
   }
 </style>
@@ -366,6 +368,15 @@ function lkNativeGo(el) {
 
   <!-- RIGHT: category predictions -->
   <div class="bg-white rounded-lg shadow p-4 flex flex-col">
+
+    <?php /* साझा शीर्ष-पट्टी — "अभी सक्रिय", पढ़ने का ढंग, नियमों की सेटिंग,
+             श्रेणी-चुनाव और विषय-खोज। बाक़ी सब पन्नों पर यह फल वाले खाने के ऊपर
+             बैठती है। वर्ष-कुंडली का पन्ना पूरी चौड़ाई लेता है, इसलिए वहाँ यह
+             पट्टी सारे पन्ने पर फैल जाती थी और ऊपर की "वर्ष चुनें" पट्टी को नीचे
+             धकेल देती थी। अब यह एक ही गाँठ में बँधी है और वर्ष-कुंडली खुलते ही
+             फल वाले खाने में चली जाती है (JS: showLkView) — बाक़ी पन्नों पर
+             अपनी जगह लौट आती है। */ ?>
+    <div id="lk-head">
 
     <?php $act = $lk['active'] ?? []; ?>
     <?php if (!empty($act['dasha']) || !empty($act['sadesati']) || !empty($act['year_eff']) || !empty($act['year_bad'])): ?>
@@ -526,6 +537,7 @@ function lkNativeGo(el) {
       <button type="button" class="lk-chip" data-topic="विदेश">✈ विदेश</button>
     </div>
     </div><!-- /#lk-detail-bar -->
+    </div><!-- /#lk-head -->
 
     <div class="lk-scroll">
 
@@ -2109,8 +2121,13 @@ function lkNativeGo(el) {
               <div class="lk-sub" style="margin-top:6px;color:#64748b;font-size:.76rem">जन्म की स्थिर-मेष लाल किताब कुंडली — वर्ष-कुंडली से तुलना के लिए।</div>
             </div>
           </div>
-          <!-- server-rendered prediction/remedy/do-dont fragment -->
-          <div id="lkv-body" class="lk-scroll"></div>
+          <div class="lkv-right">
+            <?php /* साझा शीर्ष-पट्टी यहाँ आ बैठती है — बाक़ी लाल किताब पन्नों की
+                     तरह, फल के ठीक ऊपर। */ ?>
+            <div id="lkv-head-slot"></div>
+            <!-- server-rendered prediction/remedy/do-dont fragment -->
+            <div id="lkv-body" class="lk-scroll"></div>
+          </div>
         </div>
       </div>
 

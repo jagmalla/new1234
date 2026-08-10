@@ -209,24 +209,36 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             .nbar-items { flex-wrap: nowrap; }
             .nbar-title { position: sticky; left: 0; }
         }
-        .ov-tiles { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; }
-        @media (max-width: 1200px) { .ov-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (max-width: 699px) { .ov-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        .ov-tile { background: var(--ov-bg, #fff); border: 1px solid var(--line);
-            border-left: 5px solid var(--ov-acc, var(--sindoor)); border-radius: 12px;
-            box-shadow: 0 2px 7px rgba(38,34,28,.10); padding: 9px 14px; min-width: 0;
-            transition: transform .12s ease, box-shadow .12s ease; }
-        .ov-tile:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(38,34,28,.16); }
+        /* ऊपर की पट्टी — भीतर वाली nbar पट्टी जैसी: एक लकीर, छोटे चिह्न-गोले।
+           वर्ग-नाम वही रहे (.ov-tiles / .ov-tile / .ov-label / .ov-value / .ov-sub)
+           ताकि क्लिक वाला JS और जाँचें बिना छुए चलती रहें — बदला सिर्फ़ रूप है। */
+        .ov-tiles { display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+            background: linear-gradient(180deg, #ffffff, #f7f8fb);
+            border: 1px solid var(--line, #e5e7eb); border-left: 4px solid var(--sindoor);
+            border-radius: 12px; padding: 8px 12px; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+        .ov-tile { display: inline-flex; align-items: center; gap: 7px; min-width: 0;
+            background: #fff; border: 1px solid #eceef2; border-radius: 999px;
+            padding: 4px 12px 4px 10px; transition: background .12s ease, border-color .12s ease; }
         .ov-tile[data-nav] { cursor: pointer; }
+        .ov-tile[data-nav]:hover { background: var(--ov-bg, #f8fafc); border-color: var(--ov-acc, #cbd5e1); }
         .ov-tile[data-nav]:focus-visible { outline: 2px solid var(--ov-acc, var(--sindoor)); outline-offset: 2px; }
-        .ov-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .6px; font-weight: 800;
-            color: var(--ov-acc, var(--ink-soft)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ov-value { font-size: 1.32rem; font-weight: 800; color: var(--ov-acc, var(--ink)); line-height: 1.22;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ov-sub { font-size: .76rem; font-weight: 600; color: var(--ink-soft);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        @media (max-width: 480px) { .ov-value { font-size: 1.14rem; } }
-        /* Per-tile accent + soft tinted background (Name·DOB·Place·Lagna·Moon·Sun·Dasha·Yoga). */
+        .ov-ic { font-size: .92rem; line-height: 1; flex: none; }
+        .ov-kv { display: inline-flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+        .ov-label { font-size: .62rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+            color: var(--ov-acc, #94a3b8); white-space: nowrap; }
+        .ov-vrow { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
+        .ov-value { font-size: .84rem; font-weight: 800; color: #1f2937;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 22ch; }
+        .ov-sub { font-size: .71rem; font-weight: 600; color: #9ca3af;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 20ch; }
+        /* फ़ोन/टैबलेट पर पट्टी टूटकर ऊँची न हो — एक लकीर में बग़ल को सरकती है,
+           ठीक वैसे ही जैसे भीतर वाली पट्टी। */
+        @media (max-width: 900px) {
+            .ov-tiles { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .ov-tile { flex: none; }
+        }
+        /* हर ख़ाने का अपना रंग — अब वह लेबल व छूने पर दिखता है (नाम·जन्म·स्थान·लग्न·
+           राशि·लाल किताब दशा·दशा·योग)। */
         .ov-tile:nth-child(1) { --ov-acc:#475569; --ov-bg:#f1f5f9; }
         .ov-tile:nth-child(2) { --ov-acc:#0f766e; --ov-bg:#ecfdf5; }
         .ov-tile:nth-child(3) { --ov-acc:#b45309; --ov-bg:#fdf6e9; }
@@ -1167,68 +1179,63 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         $ovPrat  = (string) ($dashaNow['pratyantar']['lord'] ?? '');
     ?>
     <?php $ovSun = (string) ($chart['planets']['Sun']['sign'] ?? ''); ?>
+    <?php
+    /* ══════ ऊपर की पट्टी — वही रूप जो पन्नों के भीतर वाली पट्टी का है ══════
+       पहले यहाँ आठ बड़े कार्ड थे: हर एक में तीन पंक्तियाँ और डेढ़ गुना बड़े अक्षर,
+       जो मिलकर पन्ने का ऊपरी हिस्सा खा जाते थे और कुंडली नीचे धकेल देते थे। पन्नों
+       के भीतर वाली पट्टी (nbar) वही जानकारी एक लकीर में, छोटे चिह्न-गोलों में
+       दिखाती है — कम जगह, ज़्यादा साफ़। अब ऊपर की पट्टी भी वैसी ही है।
+
+       बदला सिर्फ़ रूप है: वही आठ ख़ाने, वही आँकड़े (उपशीर्षक सहित), और वही
+       `data-nav` कड़ियाँ — इसलिए क्लिक करने पर पहले की तरह वही पन्ना खुलता है। */
+    $ovChip = static function (string $icon, string $label, string $value, string $sub,
+                               string $nav, string $title) use ($h): string {
+        return '<div class="ov-tile" data-nav="' . $h($nav) . '" role="button" tabindex="0" title="' . $h($title) . '">'
+            . '<span class="ov-ic" aria-hidden="true">' . $icon . '</span>'
+            . '<span class="ov-kv">'
+            . '<span class="ov-label">' . $h($label) . '</span>'
+            // उपशीर्षक तभी, जब वह मुख्य मान से अलग हो। स्थान का नाम न भरा हो तो
+            // ऊपर भी अक्षांश-देशांतर आता है और नीचे भी — वही बात दो बार।
+            . '<span class="ov-vrow"><b class="ov-value">' . ($value !== '' ? $h($value) : '—') . '</b>'
+            . ($sub !== '' && trim($sub) !== trim($value) ? '<span class="ov-sub">' . $h($sub) . '</span>' : '')
+            . '</span></span></div>';
+    };
+    $lkTop = null;
+    $lkAc  = $view['lalkitab']['age_cycle']['dasha_now'] ?? null;
+    if (is_array($lkAc) && trim((string) ($lkAc['hi'] ?? '')) !== '') { $lkTop = $lkAc; }
+    $lkSub = '';
+    if ($lkTop) {
+        $lkSub = 'आयु ' . (int) $lkTop['from'] . '–' . (int) $lkTop['to']
+            . (!empty($lkTop['from_year']) ? ' · सन् ' . (int) $lkTop['from_year'] . '–' . (int) $lkTop['to_year'] : '');
+    }
+    // कुंडली में कुल सक्रिय योग (एकीकृत फलदीपिका पहचान)
+    $ovPY = $view['phala_yoga'] ?? null;
+    $ovYActive = (int) ($ovPY['detected_count'] ?? 0);
+    $ovYSum = $ovPY['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
+    $ovYSub = $ovYActive > 0
+        ? ((int) ($ovYSum['shubh'] ?? 0) . ' शुभ · ' . (int) ($ovYSum['ashubh'] ?? 0) . ' अशुभ'
+            . (($ovYSum['mishrit'] ?? 0) ? ' · ' . (int) $ovYSum['mishrit'] . ' मिश्र' : ''))
+        : 'कोई सक्रिय योग नहीं';
+    $ovEdit = 'संपादित करें — New / Profile';
+    ?>
     <div id="ov-strip" class="ov-tiles">
-        <div class="ov-tile" data-nav="profile" role="button" tabindex="0" title="संपादित करें — New / Profile">
-            <div class="ov-label">Name</div>
-            <div class="ov-value"><?= $in['name'] !== '' ? $h($in['name']) : '—' ?></div>
-            <div class="ov-sub"><?= $in['gender'] !== '' ? $h($in['gender']) : '&nbsp;' ?></div>
-        </div>
-        <div class="ov-tile" data-nav="profile" role="button" tabindex="0" title="संपादित करें — New / Profile">
-            <div class="ov-label">DOB / Time</div>
-            <div class="ov-value"><?= $h($in['date']) ?></div>
-            <div class="ov-sub"><?= $h($in['time']) ?></div>
-        </div>
-        <div class="ov-tile" data-nav="profile" role="button" tabindex="0" title="संपादित करें — New / Profile">
-            <div class="ov-label">Birth Place</div>
-            <div class="ov-value" title="<?= $h($pobTop) ?>"><?= $h($pobTop) ?></div>
-            <div class="ov-sub"><?= $h($in['latIn']) ?>, <?= $h($in['lonIn']) ?></div>
-        </div>
-        <div class="ov-tile" data-nav="chart" role="button" tabindex="0" title="जन्म कुंडली (D1) देखें">
-            <div class="ov-label">Lagna (Asc)</div>
-            <div class="ov-value"><?= $h($rashiHi[$ovLagna] ?? $ovLagna) ?></div>
-            <div class="ov-sub"><?= $h($ovLagna) ?> · <?= $h((string) ($chart['ascendant']['formatted'] ?? '')) ?></div>
-        </div>
-        <div class="ov-tile" data-nav="chart" role="button" tabindex="0" title="जन्म कुंडली (D1) देखें">
-            <div class="ov-label">Moon Sign (राशि)</div>
-            <div class="ov-value"><?= $h($rashiHi[$ovMoon] ?? $ovMoon) ?></div>
-            <div class="ov-sub">चंद्र राशि · <?= $h($ovMoon) ?></div>
-        </div>
+        <?= $ovChip('👤', 'Name', $in['name'], $in['gender'], 'profile', $ovEdit) ?>
+        <?= $ovChip('📅', 'DOB / Time', $in['date'], $in['time'], 'profile', $ovEdit) ?>
+        <?= $ovChip('📍', 'Birth Place', $pobTop, $in['latIn'] . ', ' . $in['lonIn'], 'profile', $ovEdit) ?>
+        <?= $ovChip('↗️', 'Lagna (Asc)', ($rashiHi[$ovLagna] ?? $ovLagna),
+                $ovLagna . ' · ' . (string) ($chart['ascendant']['formatted'] ?? ''), 'chart', 'जन्म कुंडली (D1) देखें') ?>
+        <?= $ovChip('🌙', 'Moon Sign (राशि)', ($rashiHi[$ovMoon] ?? $ovMoon),
+                'चंद्र राशि · ' . $ovMoon, 'chart', 'जन्म कुंडली (D1) देखें') ?>
         <?php /* सूर्य-राशि की टाइल हटाकर लाल किताब दशा — वह जानकारी D1 पन्ने पर
                  पहले से है, जबकि लाल किताब दशा कहीं ऊपर नहीं दिखती थी और वही इस
                  तंत्र का चालू समय बताती है। */ ?>
-        <?php
-            $lkTop = null;
-            $lkAc  = $view['lalkitab']['age_cycle']['dasha_now'] ?? null;
-            if (is_array($lkAc) && trim((string) ($lkAc['hi'] ?? '')) !== '') { $lkTop = $lkAc; }
-        ?>
-        <div class="ov-tile" data-nav="lalkitab" role="button" tabindex="0" title="लाल किताब दशा देखें">
-            <div class="ov-label">लाल किताब दशा</div>
-            <div class="ov-value"><?= $lkTop ? $h((string) $lkTop['hi']) : '—' ?></div>
-            <div class="ov-sub">
-                <?php if ($lkTop): ?>
-                    आयु <?= (int) $lkTop['from'] ?>–<?= (int) $lkTop['to'] ?><?php
-                        if (!empty($lkTop['from_year'])): ?> · सन् <?= (int) $lkTop['from_year'] ?>–<?= (int) $lkTop['to_year'] ?><?php endif; ?>
-                <?php else: ?>&nbsp;<?php endif; ?>
-            </div>
-        </div>
-        <div class="ov-tile" data-nav="dasha" role="button" tabindex="0" title="दशा देखें">
-            <div class="ov-label">Current Dasha</div>
-            <div class="ov-value acc-dasha"><?= $h(($grahaHi[$ovMaha] ?? $ovMaha) . ($ovAntar !== '' ? ' – ' . ($grahaHi[$ovAntar] ?? $ovAntar) : '')) ?></div>
-            <div class="ov-sub"><?= $ovPrat !== '' ? 'प्रत्यंतर: ' . $h($grahaHi[$ovPrat] ?? $ovPrat) : '&nbsp;' ?></div>
-        </div>
-        <?php
-            // Total ACTIVE yogas in the kundali (unified Phaladeepika detection).
-            $ovPY = $view['phala_yoga'] ?? null;
-            $ovYActive = (int) ($ovPY['detected_count'] ?? 0);
-            $ovYSum = $ovPY['active_summary'] ?? ['shubh' => 0, 'ashubh' => 0, 'mishrit' => 0];
-        ?>
-        <div class="ov-tile" data-nav="yoga" role="button" tabindex="0" title="योग फलादेश देखें">
-            <div class="ov-label">Yoga (योग)</div>
-            <div class="ov-value acc-yoga"><?= $ovYActive > 0 ? $ovYActive . ' सक्रिय योग' : '—' ?></div>
-            <div class="ov-sub"><?= $ovYActive > 0
-                ? $h((int) ($ovYSum['shubh'] ?? 0) . ' शुभ · ' . (int) ($ovYSum['ashubh'] ?? 0) . ' अशुभ' . (($ovYSum['mishrit'] ?? 0) ? ' · ' . (int) $ovYSum['mishrit'] . ' मिश्र' : ''))
-                : 'कोई सक्रिय योग नहीं' ?></div>
-        </div>
+        <?= $ovChip('📕', 'लाल किताब दशा', $lkTop ? (string) $lkTop['hi'] : '', $lkSub,
+                'lalkitab', 'लाल किताब दशा देखें') ?>
+        <?= $ovChip('⏳', 'Current Dasha',
+                ($grahaHi[$ovMaha] ?? $ovMaha) . ($ovAntar !== '' ? ' – ' . ($grahaHi[$ovAntar] ?? $ovAntar) : ''),
+                $ovPrat !== '' ? 'प्रत्यंतर: ' . ($grahaHi[$ovPrat] ?? $ovPrat) : '', 'dasha', 'दशा देखें') ?>
+        <?= $ovChip('✨', 'Yoga (योग)', $ovYActive > 0 ? $ovYActive . ' सक्रिय योग' : '', $ovYSub,
+                'yoga', 'योग फलादेश देखें') ?>
     </div>
     <?php endif; ?>
 
@@ -4368,6 +4375,23 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       // chart is re-shown inside the view for reference).
       var secLk = document.getElementById('sec-lalkitab');
       if (secLk) { secLk.classList.toggle('lk-wide', key === 'varsh'); }
+      // साझा शीर्ष-पट्टी (अभी सक्रिय · ढंग · नियम · श्रेणी-चुनाव · विषय-खोज) —
+      // वर्ष-कुंडली पूरी चौड़ाई लेती है, इसलिए वहाँ यह पट्टी सारे पन्ने पर फैलकर
+      // ऊपर की "वर्ष चुनें" पट्टी को नीचे धकेल देती थी। वहाँ वह फल वाले खाने में
+      // चली जाती है — बाक़ी पन्नों की तरह, फल के ठीक ऊपर — और पन्ना बदलते ही
+      // अपनी असली जगह लौट आती है। गाँठ की नक़ल नहीं बनती, वही गाँठ खिसकती है,
+      // इसलिए उसके बटन-चुनाव के सारे handler जुड़े रहते हैं।
+      (function () {
+        var head = document.getElementById('lk-head');
+        var slot = document.getElementById('lkv-head-slot');
+        if (!head || !slot) { return; }
+        if (!head._home) { head._home = document.createComment('lk-head'); head.parentNode.insertBefore(head._home, head); }
+        if (key === 'varsh') {
+          if (head.parentNode !== slot) { slot.appendChild(head); }
+        } else if (head._home.parentNode && head.parentNode !== head._home.parentNode) {
+          head._home.parentNode.insertBefore(head, head._home);
+        }
+      })();
       // Lal Kitab वर्ष कुंडली — wire the age selector + lazily fetch the annual
       // chart/prediction the first time the view is opened.
       if (key === 'varsh' && window.ABLalVarsh) { window.ABLalVarsh.init(); window.ABLalVarsh.ensureFirst(); }

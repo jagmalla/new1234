@@ -723,8 +723,12 @@ final class LalKitabSelfCheck
         // की टाइल हटाई गई (वह जानकारी D1 पन्ने पर पहले से है)।
         $add('TOP-1', 'ऊपर की टाइल व D1 के नीचे लाल किताब दशा सन् सहित दिखती है', static function () use ($pages): bool {
             foreach ($pages as $h) {
-                if (mb_strpos($h, '<div class="ov-label">Sun Sign</div>') !== false) { return false; }
-                if (mb_strpos($h, '<div class="ov-label">लाल किताब दशा</div>') === false) { return false; }
+                // लेबल किस tag में छपा है, यह जाँच की चिंता नहीं — बात यह है कि
+                // सूर्य-राशि वाला ख़ाना न हो और लाल किताब दशा वाला हो। पहले यह
+                // जाँच `<div ...>` से बँधी थी, इसलिए पट्टी का रूप बदलते ही वह
+                // बिना किसी असली गड़बड़ के लाल हो जाती।
+                if (preg_match('/class="ov-label">\s*Sun Sign\s*</u', $h)) { return false; }
+                if (!preg_match('/class="ov-label">\s*लाल किताब दशा\s*</u', $h)) { return false; }
                 if (mb_strpos($h, '📕 लाल किताब दशा:') === false) { return false; }
                 // दोनों जगह सन् भी हो — आयु अकेली कुछ नहीं बताती
                 if (!preg_match('/लाल किताब दशा.{0,400}सन् \d{4}/su', $h)) { return false; }
@@ -817,6 +821,23 @@ final class LalKitabSelfCheck
 
         // लाल किताब का वर्ष-कुंडली पन्ना — बाएँ दोनों वर्ष-कुंडलियाँ (लाल किताब व
         // वैदिक, मुंथा सहित) एक के नीचे एक, दाएँ सिर्फ़ फल और वह अपने भीतर सरकता।
+        // साझा शीर्ष-पट्टी एक ही गाँठ में बँधी हो और वर्ष-कुंडली के फल वाले खाने
+        // में उसके लिए जगह हो — तभी वह वहाँ खिसक सकती है (JS: showLkView)।
+        $add('LKV-2', 'साझा शीर्ष-पट्टी एक गाँठ में है और वर्ष-पन्ने पर उसकी जगह बनी है', static function () use ($pages): bool {
+            foreach ($pages as $h) {
+                if (mb_strpos($h, 'id="lk-head"') === false) { return false; }
+                if (mb_strpos($h, 'id="lkv-head-slot"') === false) { return false; }
+                // पट्टी के चारों हिस्से उसी गाँठ के भीतर हों
+                if (!preg_match('/id="lk-head"(.*?)<!-- \/#lk-head -->/su', $h, $m)) { return false; }
+                foreach (['lk-moderow', 'id="lk-niyam"', 'id="lk-select"', 'lk-search-row'] as $part) {
+                    if (mb_strpos($m[1], $part) === false) { return false; }
+                }
+                // और वह जगह फल वाले खाने में हो, चित्रों वाले में नहीं
+                if (!preg_match('/<div class="lkv-right">\s*(?:<\?php.*?\?>\s*)?.{0,400}id="lkv-head-slot"/su', $h)) { return false; }
+            }
+            return true;
+        });
+
         $add('LKV-1', 'वर्ष-कुंडली पन्ने पर दोनों वर्ष-कुंडलियाँ बाएँ, फल दाएँ', static function () use ($pages): bool {
             foreach ($pages as $h) {
                 if (!preg_match('/<div class="lkv-charts">(.*?)<\/div>\s*<!-- server-rendered/su', $h, $m)) {
