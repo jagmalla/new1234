@@ -968,6 +968,47 @@ final class CalcController
      * from the birth params, then returns transits for the requested instant and
      * place. Read-only, AdminGuard-gated like show().
      */
+    /**
+     * स्थान-खोज — तंत्र के अपने कोश से, बिना इंटरनेट के।
+     *
+     * पहले यह काम ब्राउज़र सीधे Open-Meteo की ऑनलाइन सेवा से कराता था, यानी
+     * बिना नेट (localhost पर) जन्म-स्थान चुना ही नहीं जा सकता था और उसके बिना
+     * कोई गणना शुरू नहीं होती। अब कोश {@see CityGazetteer} में है।
+     *
+     * यह पन्ना जान-बूझकर AdminGuard के पीछे है — बाक़ी calc endpoints की तरह।
+     */
+    public function citySearchJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json; charset=utf-8');
+        $q = trim((string) ($_GET['q'] ?? ''));
+        $limit = max(1, min(20, (int) ($_GET['limit'] ?? 8)));
+        try {
+            // lat/lon दिए हों तो उल्टा सवाल — "यह जगह कौन-सी है"
+            if (isset($_GET['lat'], $_GET['lon']) && $q === '') {
+                $one = \AutoBusiness\Astro\Geo\CityGazetteer::nearest(
+                    (float) $_GET['lat'], (float) $_GET['lon']
+                );
+                echo json_encode([
+                    'ok' => true, 'offline' => true,
+                    'count' => $one === null ? 0 : 1,
+                    'results' => $one === null ? [] : [$one],
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+            $rows = \AutoBusiness\Astro\Geo\CityGazetteer::search($q, $limit);
+            echo json_encode([
+                'ok'      => true,
+                'offline' => true,   // ब्राउज़र इसी से जानता है कि जवाब अपने कोश से आया
+                'count'   => count($rows),
+                'results' => $rows,
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'स्थान-खोज विफल'], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
     public function gocharJson(): void
     {
         AdminGuard::require();

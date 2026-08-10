@@ -253,6 +253,16 @@
 
     // Default to the viewer's IP location — city, state, country + lat/lon/tz —
     // and the current date/time, then compute (no permission prompt).
+    //
+    // यह इकलौता काम है जो अपने कोश से नहीं हो सकता: IP से शहर बताने के लिए कोई
+    // बाहरी सेवा ही चाहिए। इसलिए बिना इंटरनेट यह पूछा ही नहीं जाता — पन्ना जन्म
+    // वाले स्थान पर टिककर सीधे गणना कर देता है। पहले यह अनुरोध नेट न होने पर भी
+    // जाता था और timeout तक गोचर रुका रहता था।
+    if (navigator.onLine === false) {
+      status.textContent = '';
+      fetchGochar();
+      return;
+    }
     status.textContent = 'locating…';
     fetch('https://ipapi.co/json/')
       .then(function (r) { return r.json(); })

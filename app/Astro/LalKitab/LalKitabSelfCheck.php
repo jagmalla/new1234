@@ -859,6 +859,40 @@ final class LalKitabSelfCheck
             return true;
         });
 
+        // स्थान-कोश — बिना इंटरनेट भी जन्म-स्थान मिलना चाहिए। यह जाँच वही रास्ता
+        // चलती है जो ब्राउज़र चलता है (अपना endpoint), इसलिए कोश की फ़ाइल न चढ़े
+        // या रास्ता टूटे तो यहीं पकड़ा जाए — वरना पता तब चलता जब कोई ग्राहक
+        // अपना शहर खोज न पाता।
+        $add('GEO-1', 'स्थान-कोश तंत्र के भीतर से जवाब देता है (नेट के बिना)', static function () use ($base): bool {
+            $ask = static function (string $qs) use ($base): ?array {
+                $raw = self::fetch($base . '/calc/citySearch?' . $qs);
+                if ($raw === null) { return null; }
+                $j = json_decode($raw, true);
+                return is_array($j) && !empty($j['ok']) ? $j : null;
+            };
+            // नाम से — पहला नतीजा वही नगर, निर्देशांक व समय-मंडल सहित
+            $want = [
+                'moga'     => ['Moga', 'India', 30.8, 75.1, 'Asia/Kolkata'],
+                'ludhiana' => ['Ludhiana', 'India', 30.9, 75.8, 'Asia/Kolkata'],
+                'toronto'  => ['Toronto', 'Canada', 43.7, -79.4, 'America/Toronto'],
+            ];
+            foreach ($want as $q => [$name, $country, $lat, $lon, $tz]) {
+                $j = $ask('q=' . rawurlencode($q));
+                if ($j === null || empty($j['results'][0])) { return false; }
+                $r = $j['results'][0];
+                if ((string) $r['name'] !== $name || (string) $r['country'] !== $country) { return false; }
+                if (abs((float) $r['lat'] - $lat) > 0.5 || abs((float) $r['lon'] - $lon) > 0.5) { return false; }
+                if ((string) $r['tz'] !== $tz) { return false; }
+            }
+            // पुराना नाम भी चले — लोग प्रमाणपत्र वाला नाम लिखते हैं
+            $j = $ask('q=bombay');
+            if ($j === null || (string) ($j['results'][0]['name'] ?? '') !== 'Mumbai') { return false; }
+            // और निर्देशांक से नाम (उल्टी खोज) — यह भी अपने कोश से हो
+            $j = $ask('lat=30.8038&lon=75.1494');
+            if ($j === null || (string) ($j['results'][0]['name'] ?? '') !== 'Moga') { return false; }
+            return !empty($j['offline']);
+        });
+
         // गोचर पन्ने के दोनों चार्ट-खानों में घुमाने का चुनाव। गोचर पढ़ते समय
         // ज्योतिषी चन्द्र या किसी और भाव को पहले घर पर लाकर देखता है; यह सुविधा
         // अब तक सिर्फ़ जन्म-कुंडली वाले पैनल पर थी।

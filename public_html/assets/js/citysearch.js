@@ -1,10 +1,19 @@
 /* Auto Business — city search (reusable component).
  *
- * Type-ahead place search backed by the Open-Meteo geocoding API (keyless,
- * CORS-enabled, worldwide). As the user types a city it shows matching
+ * Type-ahead place search over the system's OWN gazetteer (1,48,038 towns,
+ * shipped with the app: app/Astro/Geo/cities.tsv.gz, searched by
+ * `GET calc/citySearch`). As the user types a city it shows matching
  * "City, State/Region, Country" results; selecting one fills the latitude,
  * longitude and timezone fields so the chart/gochar is computed for that exact
- * place. Replaces the small embedded gazetteer.
+ * place.
+ *
+ * OFFLINE FIRST. The search used to go straight to the Open-Meteo geocoding
+ * API, which meant that with no internet — on localhost, or wherever the net
+ * does not reach — a birth place could not be picked at all, and without
+ * coordinates no calculation starts. The local gazetteer is now the primary
+ * source; Open-Meteo is only consulted when the local one finds nothing AND
+ * the browser reports itself online, so a rare hamlet still resolves when a
+ * connection happens to be there.
  *
  * TIMEZONE / DST: the offset written into the tz field is resolved for the
  * *entered birth date* (not "today"), so a summer birth gets the daylight
@@ -146,26 +155,58 @@
       if (opts.onSelect) opts.onSelect(r);
     }
 
+    function draw(list, note) {
+      if (!list.length) {
+        results.innerHTML = '<div class="px-3 py-2 text-sm text-gray-400">कोई स्थान नहीं मिला / No matches</div>';
+        results.style.display = 'block';
+        return;
+      }
+      results.innerHTML = '';
+      list.forEach(function (r) {
+        var item = document.createElement('div');
+        item.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50';
+        item.textContent = labelOf(r);
+        item.addEventListener('mousedown', function (e) { e.preventDefault(); fill(r); hide(); });
+        results.appendChild(item);
+      });
+      if (note) {
+        var n = document.createElement('div');
+        n.className = 'px-3 py-1 text-xs text-gray-400 border-t';
+        n.textContent = note;
+        results.appendChild(n);
+      }
+      results.style.display = 'block';
+    }
+
+    // ऑनलाइन सेवा का जवाब अपने कोश जैसा बना दो, ताकि आगे का काम एक ही रहे।
+    function fromOpenMeteo(d) {
+      return ((d && d.results) || []).map(function (r) {
+        return { name: r.name, admin1: r.admin1, country: r.country,
+                 latitude: r.latitude, longitude: r.longitude, timezone: r.timezone };
+      });
+    }
+
     var run = debounce(function () {
       var q = input.value.trim();
       if (q.length < 2) { hide(); return; }
-      fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json')
+      // पहले अपना कोश — यही बिना इंटरनेट भी चलता है
+      fetch('/calc/citySearch?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          var list = (d && d.results) || [];
-          if (!list.length) { results.innerHTML = '<div class="px-3 py-2 text-sm text-gray-400">No matches</div>'; results.style.display = 'block'; return; }
-          results.innerHTML = '';
-          list.forEach(function (r) {
-            var item = document.createElement('div');
-            item.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50';
-            item.textContent = labelOf(r);
-            item.addEventListener('mousedown', function (e) { e.preventDefault(); fill(r); hide(); });
-            results.appendChild(item);
+          var list = ((d && d.results) || []).map(function (r) {
+            return { name: r.name, admin1: r.admin, country: r.country,
+                     latitude: r.lat, longitude: r.lon, timezone: r.tz };
           });
-          results.style.display = 'block';
+          if (list.length) { draw(list); return; }
+          // कोश में न मिला — तभी बाहर पूछो, और तभी जब नेट है
+          if (navigator.onLine === false) { draw([]); return; }
+          return fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json')
+            .then(function (r) { return r.json(); })
+            .then(function (od) { draw(fromOpenMeteo(od), 'ऑनलाइन खोज से'); })
+            .catch(function () { draw([]); });
         })
         .catch(function () { hide(); });
-    }, 300);
+    }, 260);
 
     input.addEventListener('input', run);
     input.addEventListener('focus', function () { if (results.innerHTML) results.style.display = 'block'; });

@@ -30,6 +30,10 @@ try {
             (new CalcController())->show();
             break;
 
+        case 'GET calc/citySearch':
+            (new CalcController())->citySearchJson();
+            break;
+
         case 'GET calc/gochar':
             (new CalcController())->gocharJson();
             break;

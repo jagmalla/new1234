@@ -3506,11 +3506,12 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     if (!el || (el.getAttribute('data-place') || '').trim()) { return; }
     var b = window.AB_BIRTH || {};
     if (b.lat == null || b.lon == null) { return; }
-    fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + b.lat + '&longitude=' + b.lon + '&localityLanguage=en')
+    // अपने कोश से — बिना इंटरनेट भी नाम आ जाए (पहले यह bigdatacloud से पूछता था)
+    fetch('/calc/citySearch?lat=' + b.lat + '&lon=' + b.lon, { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        var parts = [d.city || d.locality, d.principalSubdivision, d.countryName].filter(Boolean);
-        if (parts.length) { el.textContent = parts.join(', '); }
+        var one = (d && d.results && d.results[0]) || null;
+        if (one && one.label) { el.textContent = one.label; }
       })
       .catch(function () { /* keep the lat/lon fallback */ });
   })();
