@@ -7,13 +7,16 @@
  * longitude and timezone fields so the chart/gochar is computed for that exact
  * place.
  *
- * OFFLINE FIRST. The search used to go straight to the Open-Meteo geocoding
- * API, which meant that with no internet — on localhost, or wherever the net
- * does not reach — a birth place could not be picked at all, and without
- * coordinates no calculation starts. The local gazetteer is now the primary
- * source; Open-Meteo is only consulted when the local one finds nothing AND
- * the browser reports itself online, so a rare hamlet still resolves when a
- * connection happens to be there.
+ * ONLINE WHEN THERE IS A NET, LOCAL WHEN THERE IS NOT. The search used to go
+ * straight to the Open-Meteo geocoding API, which meant that with no internet
+ * — on localhost, or wherever the net does not reach — a birth place could not
+ * be picked at all, and without coordinates no calculation starts.
+ *
+ * So: with a connection the Open-Meteo search runs first and behaves exactly
+ * as it always did (its worldwide reach is wider than any file we can ship).
+ * Without one — or if the service does not answer, or returns nothing — the
+ * bundled gazetteer takes over, so picking a place never dead-ends. A line
+ * under the list names the source, so a shorter list has a visible reason.
  *
  * TIMEZONE / DST: the offset written into the tz field is resolved for the
  * *entered birth date* (not "today"), so a summer birth gets the daylight
@@ -186,26 +189,46 @@
       });
     }
 
-    var run = debounce(function () {
-      var q = input.value.trim();
-      if (q.length < 2) { hide(); return; }
-      // पहले अपना कोश — यही बिना इंटरनेट भी चलता है
-      fetch('/calc/citySearch?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
+    // अपने कोश से खोज — यही बिना इंटरनेट चलती है
+    function localSearch(q) {
+      return fetch('/calc/citySearch?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          var list = ((d && d.results) || []).map(function (r) {
+          return ((d && d.results) || []).map(function (r) {
             return { name: r.name, admin1: r.admin, country: r.country,
                      latitude: r.lat, longitude: r.lon, timezone: r.tz };
           });
-          if (list.length) { draw(list); return; }
-          // कोश में न मिला — तभी बाहर पूछो, और तभी जब नेट है
-          if (navigator.onLine === false) { draw([]); return; }
-          return fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json')
-            .then(function (r) { return r.json(); })
-            .then(function (od) { draw(fromOpenMeteo(od), 'ऑनलाइन खोज से'); })
-            .catch(function () { draw([]); });
+        });
+    }
+
+    // ── क्रम: नेट हो तो पहले ऑनलाइन (पहले जैसी पूरी पहुँच), वरना अपना कोश ──
+    // दुनिया भर के हर गाँव-क़स्बे तक पहुँच ऑनलाइन सेवा की ज़्यादा है, इसलिए नेट
+    // रहते वह पहले पूछी जाती है और बर्ताव बिल्कुल पहले जैसा रहता है। नेट न हो —
+    // या सेवा जवाब न दे, या कुछ न मिले — तो तंत्र का अपना कोश उठ खड़ा होता है,
+    // इसलिए स्थान चुनना कभी रुकता नहीं। नीचे की पंक्ति बता देती है कि यह सूची
+    // किस स्रोत से बनी है, ताकि कम नतीजे दिखें तो कारण साफ़ रहे।
+    var run = debounce(function () {
+      var q = input.value.trim();
+      if (q.length < 2) { hide(); return; }
+      var offline = navigator.onLine === false;
+      if (offline) {
+        localSearch(q).then(function (list) { draw(list, 'तंत्र के अपने कोश से (ऑफ़लाइन)'); })
+                      .catch(function () { hide(); });
+        return;
+      }
+      fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=8&language=en&format=json')
+        .then(function (r) { return r.json(); })
+        .then(function (od) {
+          var list = fromOpenMeteo(od);
+          if (list.length) { draw(list); return; }        // पहले जैसा — कोई पंक्ति नहीं
+          // ऑनलाइन कुछ न मिला — अपना कोश आज़माओ
+          return localSearch(q).then(function (l) { draw(l, l.length ? 'तंत्र के अपने कोश से' : ''); });
         })
-        .catch(function () { hide(); });
+        .catch(function () {
+          // सेवा तक पहुँच ही न बनी (नेट गिरा, या सेवा बंद) — कोश से काम चलाओ
+          localSearch(q).then(function (list) { draw(list, 'तंत्र के अपने कोश से (ऑनलाइन सेवा नहीं मिली)'); })
+                        .catch(function () { hide(); });
+        });
     }, 260);
 
     input.addEventListener('input', run);

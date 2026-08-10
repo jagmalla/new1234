@@ -100,6 +100,7 @@ browser JS (public_html/assets/js/*.js) draws charts, lazy-loads panels,
 | `GET calc/dashaPhala` | `dashaPhalaJson` | dasha text for a maha/antar pair |
 | `GET calc/dashaEngine` | `dashaEngineJson` | computed dasha analysis |
 | `GET calc/muhuratScan` | `muhuratScanJson` | scan a date range for auspicious days |
+| `GET calc/citySearch` | `citySearchJson` | place search / reverse lookup from the bundled gazetteer |
 | `POST calc/translate` | `translateJson` | on-demand translation |
 | `GET calc/ping` | `ping` | health/keepalive |
 | `GET milan` | `MilanController::show` | Kundali Milan page |
@@ -133,6 +134,7 @@ app/
   Astro/
     Time/             JulianDay
     Ephemeris/        provider interface + Swiss + pure-PHP analytic
+    Geo/              CityGazetteer + cities.tsv.gz (148,038 towns, offline place search)
     Calc/             chart, vargas, dashas, the four bala systems, drishti
     Phala/            28 Vedic prediction engines + their DB repositories
     Gochar/           16 transit / Sade-Sati / timeline classes
@@ -188,6 +190,15 @@ timezone offset) and Julian Day, plus formatting helpers (`toDmy`).
   identical either way; only precision differs.
 - Rahu/Ketu default to the **true (osculating) node**, matching Parashara's Light.
   `NODE_TYPE=mean` in `.env` switches to the mean node.
+
+**`Astro\Geo\CityGazetteer`** — the bundled place gazetteer: 148,038 towns with
+state, country, coordinates and IANA timezone in `app/Astro/Geo/cities.tsv.gz`
+(outside the webroot), searched by `GET calc/citySearch` and also able to name a
+place from coordinates. The place box asks Open-Meteo first when the browser is
+online — the same worldwide reach it always had — and falls back to this file
+when there is no connection, the service does not answer, or it returns nothing,
+so a birth place can always be picked. Old names (Bombay, Calcutta, Bangalore…)
+and missing accents resolve. Data credits are in the class docblock.
 
 **`Astro\Calc\CalculationEngine::computeChart($jd, $lat, $lon)`** is the single
 source of truth. It returns sidereal longitudes, sign, degree-in-sign, house,
