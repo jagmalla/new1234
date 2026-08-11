@@ -212,13 +212,32 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         /* ऊपर की पट्टी — भीतर वाली nbar पट्टी जैसी: एक लकीर, छोटे चिह्न-गोले।
            वर्ग-नाम वही रहे (.ov-tiles / .ov-tile / .ov-label / .ov-value / .ov-sub)
            ताकि क्लिक वाला JS और जाँचें बिना छुए चलती रहें — बदला सिर्फ़ रूप है। */
-        .ov-tiles { display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+        /* एक ही लकीर — कभी टूटती नहीं। चौड़ाई कम पड़े तो पट्टी बग़ल को सरकती है,
+           दूसरी पंक्ति में नहीं गिरती; पहले आठ ख़ाने दो पंक्तियों में बँट जाते थे
+           और पन्ने का सिरा दुगना ऊँचा हो जाता था।
+
+           पट्टी पन्ने की 1400px वाली सीमा से बाहर निकलकर खिड़की की पूरी चौड़ाई
+           लेती है। आठ ख़ानों को लगभग 1650px चाहिए; सीमा के भीतर वे या तो कट
+           जाते (पढ़ने लायक़ नहीं बचता) या दूसरी पंक्ति में गिर जाते। चौड़े पर्दे
+           पर वह जगह वैसे भी ख़ाली पड़ी थी। नीचे का सारा पन्ना 1400px पर ही रहता
+           है — सिर्फ़ यह पट्टी बाहर आती है। */
+        .ov-tiles { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap;
+            width: auto; margin-inline: calc(50% - 50vw + 10px);
+            overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
             background: linear-gradient(180deg, #ffffff, #f7f8fb);
             border: 1px solid var(--line, #e5e7eb); border-left: 4px solid var(--sindoor);
-            border-radius: 12px; padding: 8px 12px; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
-        .ov-tile { display: inline-flex; align-items: center; gap: 7px; min-width: 0;
+            border-radius: 12px; padding: 7px 10px; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+        .ov-tiles::-webkit-scrollbar { height: 6px; }
+        .ov-tiles::-webkit-scrollbar-thumb { background: #dcdfe4; border-radius: 6px; }
+        /* ख़ाने सिकुड़ते नहीं — सिकोड़ने पर हर मान "मि… Ge…" बनकर पढ़ने लायक़ नहीं
+           बचता था। जगह कम पड़े तो नीचे वाला fitOverviewStrip() सबसे कम ज़रूरी
+           उपशीर्षक (पहले लिप्यंतरण, फिर योग का ब्योरा…) छिपाता है; उतने से भी बात
+           न बने तो पट्टी बग़ल को सरकती है। पूरा पाठ हर हाल में छूने पर (title)
+           मिलता है। */
+        .ov-tile { display: inline-flex; align-items: center; gap: 5px; min-width: 0; flex: none;
             background: #fff; border: 1px solid #eceef2; border-radius: 999px;
-            padding: 4px 12px 4px 10px; transition: background .12s ease, border-color .12s ease; }
+            padding: 4px 9px 4px 7px; transition: background .12s ease, border-color .12s ease; }
         .ov-tile[data-nav] { cursor: pointer; }
         .ov-tile[data-nav]:hover { background: var(--ov-bg, #f8fafc); border-color: var(--ov-acc, #cbd5e1); }
         .ov-tile[data-nav]:focus-visible { outline: 2px solid var(--ov-acc, var(--sindoor)); outline-offset: 2px; }
@@ -227,16 +246,13 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         .ov-label { font-size: .62rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
             color: var(--ov-acc, #94a3b8); white-space: nowrap; }
         .ov-vrow { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
-        .ov-value { font-size: .84rem; font-weight: 800; color: #1f2937;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 22ch; }
-        .ov-sub { font-size: .71rem; font-weight: 600; color: #9ca3af;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 20ch; }
-        /* फ़ोन/टैबलेट पर पट्टी टूटकर ऊँची न हो — एक लकीर में बग़ल को सरकती है,
-           ठीक वैसे ही जैसे भीतर वाली पट्टी। */
-        @media (max-width: 900px) {
-            .ov-tiles { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .ov-tile { flex: none; }
-        }
+        .ov-value { font-size: .82rem; font-weight: 800; color: #1f2937;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .ov-sub { font-size: .7rem; font-weight: 600; color: #9ca3af;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+        .ov-vrow > .ov-sub:empty { display: none; }
+        /* जगह कम पड़ने पर छिपाया गया उपशीर्षक — पाठ ख़ाने के title में रहता है। */
+        .ov-sub.ov-sub-off { display: none; }
         /* हर ख़ाने का अपना रंग — अब वह लेबल व छूने पर दिखता है (नाम·जन्म·स्थान·लग्न·
            राशि·लाल किताब दशा·दशा·योग)। */
         .ov-tile:nth-child(1) { --ov-acc:#475569; --ov-bg:#f1f5f9; }
@@ -1188,26 +1204,33 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
        बदला सिर्फ़ रूप है: वही आठ ख़ाने, वही आँकड़े (उपशीर्षक सहित), और वही
        `data-nav` कड़ियाँ — इसलिए क्लिक करने पर पहले की तरह वही पन्ना खुलता है। */
+    /* $drop = उपशीर्षक हटाने का क्रम (छोटा अंक = पहले हटेगा)। पट्टी को एक ही
+       लकीर में रहना है; पर्दा छोटा हो तो fitOverviewStrip() इसी क्रम से उतने ही
+       उपशीर्षक छिपाता है जितने से बात बन जाए — पहले लिप्यंतरण (Gemini/Aquarius),
+       जो हिन्दी नाम के बग़ल में कुछ नया नहीं कहते; सबसे अंत में जन्म-समय, जो
+       कुंडली की जड़ है। हटाया हुआ पाठ ख़ाने के title में ज्यों का त्यों रहता है। */
     $ovChip = static function (string $icon, string $label, string $value, string $sub,
-                               string $nav, string $title) use ($h): string {
-        return '<div class="ov-tile" data-nav="' . $h($nav) . '" role="button" tabindex="0" title="' . $h($title) . '">'
+                               string $nav, string $title, int $drop = 5) use ($h): string {
+        $full = trim($label . ': ' . ($value !== '' ? $value : '—') . ($sub !== '' && $sub !== $value ? ' · ' . $sub : ''));
+        return '<div class="ov-tile" data-nav="' . $h($nav) . '" role="button" tabindex="0"'
+            . ' title="' . $h($full . ' — ' . $title) . '">'
             . '<span class="ov-ic" aria-hidden="true">' . $icon . '</span>'
             . '<span class="ov-kv">'
             . '<span class="ov-label">' . $h($label) . '</span>'
             // उपशीर्षक तभी, जब वह मुख्य मान से अलग हो। स्थान का नाम न भरा हो तो
             // ऊपर भी अक्षांश-देशांतर आता है और नीचे भी — वही बात दो बार।
             . '<span class="ov-vrow"><b class="ov-value">' . ($value !== '' ? $h($value) : '—') . '</b>'
-            . ($sub !== '' && trim($sub) !== trim($value) ? '<span class="ov-sub">' . $h($sub) . '</span>' : '')
+            . ($sub !== '' && trim($sub) !== trim($value)
+                ? '<span class="ov-sub" data-drop="' . $drop . '">' . $h($sub) . '</span>' : '')
             . '</span></span></div>';
     };
     $lkTop = null;
     $lkAc  = $view['lalkitab']['age_cycle']['dasha_now'] ?? null;
     if (is_array($lkAc) && trim((string) ($lkAc['hi'] ?? '')) !== '') { $lkTop = $lkAc; }
-    $lkSub = '';
-    if ($lkTop) {
-        $lkSub = 'आयु ' . (int) $lkTop['from'] . '–' . (int) $lkTop['to']
-            . (!empty($lkTop['from_year']) ? ' · सन् ' . (int) $lkTop['from_year'] . '–' . (int) $lkTop['to_year'] : '');
-    }
+    // उपशीर्षक में सिर्फ़ सन् — आयु की गिनती नीचे दशा-पन्ने पर पूरी मिलती है, और
+    // ऊपर की पट्टी को एक ही लकीर में रहना है।
+    $lkSub = ($lkTop && !empty($lkTop['from_year']))
+        ? (int) $lkTop['from_year'] . '–' . (int) $lkTop['to_year'] : '';
     // कुंडली में कुल सक्रिय योग (एकीकृत फलदीपिका पहचान)
     $ovPY = $view['phala_yoga'] ?? null;
     $ovYActive = (int) ($ovPY['detected_count'] ?? 0);
@@ -1217,25 +1240,31 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             . (($ovYSum['mishrit'] ?? 0) ? ' · ' . (int) $ovYSum['mishrit'] . ' मिश्र' : ''))
         : 'कोई सक्रिय योग नहीं';
     $ovEdit = 'संपादित करें — New / Profile';
+    /* ── उपशीर्षकों की छँटाई ──
+       जो बात ख़ाने का लेबल पहले ही कह चुका है, वह मान में दोहराई नहीं जाती:
+       "योग" लेबल में है इसलिए मान से हटा; "चंद्र राशि" लेबल में है इसलिए हटा;
+       जन्म-स्थान के नीचे अक्षांश-देशांतर और लग्न के नीचे अंश — दोनों नीचे के
+       पन्नों पर पूरे मिलते हैं और ऊपर सिर्फ़ लकीर लंबी करते थे। पट्टी को एक ही
+       लकीर में रहना है, इसलिए हर अक्षर का हिसाब देना पड़ता है। */
     ?>
     <div id="ov-strip" class="ov-tiles">
-        <?= $ovChip('👤', 'Name', $in['name'], $in['gender'], 'profile', $ovEdit) ?>
-        <?= $ovChip('📅', 'DOB / Time', $in['date'], $in['time'], 'profile', $ovEdit) ?>
-        <?= $ovChip('📍', 'Birth Place', $pobTop, $in['latIn'] . ', ' . $in['lonIn'], 'profile', $ovEdit) ?>
+        <?= $ovChip('👤', 'Name', $in['name'], $in['gender'], 'profile', $ovEdit, 4) ?>
+        <?= $ovChip('📅', 'DOB / Time', $in['date'], $in['time'], 'profile', $ovEdit, 6) ?>
+        <?= $ovChip('📍', 'Birth Place', $pobTop, '', 'profile', $ovEdit) ?>
         <?= $ovChip('↗️', 'Lagna (Asc)', ($rashiHi[$ovLagna] ?? $ovLagna),
-                $ovLagna . ' · ' . (string) ($chart['ascendant']['formatted'] ?? ''), 'chart', 'जन्म कुंडली (D1) देखें') ?>
+                $ovLagna, 'chart', 'जन्म कुंडली (D1) देखें', 1) ?>
         <?= $ovChip('🌙', 'Moon Sign (राशि)', ($rashiHi[$ovMoon] ?? $ovMoon),
-                'चंद्र राशि · ' . $ovMoon, 'chart', 'जन्म कुंडली (D1) देखें') ?>
+                $ovMoon, 'chart', 'जन्म कुंडली (D1) देखें', 1) ?>
         <?php /* सूर्य-राशि की टाइल हटाकर लाल किताब दशा — वह जानकारी D1 पन्ने पर
                  पहले से है, जबकि लाल किताब दशा कहीं ऊपर नहीं दिखती थी और वही इस
                  तंत्र का चालू समय बताती है। */ ?>
         <?= $ovChip('📕', 'लाल किताब दशा', $lkTop ? (string) $lkTop['hi'] : '', $lkSub,
-                'lalkitab', 'लाल किताब दशा देखें') ?>
+                'lalkitab', 'लाल किताब दशा देखें', 3) ?>
         <?= $ovChip('⏳', 'Current Dasha',
                 ($grahaHi[$ovMaha] ?? $ovMaha) . ($ovAntar !== '' ? ' – ' . ($grahaHi[$ovAntar] ?? $ovAntar) : ''),
-                $ovPrat !== '' ? 'प्रत्यंतर: ' . ($grahaHi[$ovPrat] ?? $ovPrat) : '', 'dasha', 'दशा देखें') ?>
-        <?= $ovChip('✨', 'Yoga (योग)', $ovYActive > 0 ? $ovYActive . ' सक्रिय योग' : '', $ovYSub,
-                'yoga', 'योग फलादेश देखें') ?>
+                $ovPrat !== '' ? 'प्रत्यंतर: ' . ($grahaHi[$ovPrat] ?? $ovPrat) : '', 'dasha', 'दशा देखें', 5) ?>
+        <?= $ovChip('✨', 'Yoga (योग)', $ovYActive > 0 ? $ovYActive . ' सक्रिय' : '', $ovYSub,
+                'yoga', 'योग फलादेश देखें', 2) ?>
     </div>
     <?php endif; ?>
 
@@ -4675,7 +4704,14 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     // Hide the top overview strip (Name/DOB/Lagna/… tiles) on New / Profile and
     // Custom Screen — those pages don't want the summary header.
     var ov = document.getElementById('ov-strip');
-    if (ov) { ov.classList.toggle('hidden', key === 'profile' || key === 'custom'); }
+    if (ov) {
+      ov.classList.toggle('hidden', key === 'profile' || key === 'custom');
+      // Let the one-line fit pass re-measure once the strip is visible again —
+      // measuring while display:none reads 0 and would drop every sub-value.
+      if (!ov.classList.contains('hidden')) {
+        window.dispatchEvent(new CustomEvent('ab:section'));
+      }
+    }
     var cp = document.getElementById('chart-panel');
     var pp = document.getElementById('pred-panel');
     if (cp) cp.classList.toggle('hidden', !homeMode);
@@ -5045,6 +5081,39 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       tile.addEventListener('click', go);
       tile.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
+  })();
+
+  // ---- Top overview strip: keep it on ONE line ----
+  // The eight chips want ~1600px. A 1400px laptop is short by about 200px, and
+  // the two ways CSS alone can answer that are both bad: wrapping makes the
+  // strip two rows tall (what it used to do), and shrinking turns every value
+  // into "मि… Ge…" (tried, unreadable). So we drop whole sub-values instead,
+  // cheapest first, and only as many as the shortfall actually needs:
+  //   1 transliteration (Gemini/Aquarius — the Hindi name says it already)
+  //   2 yoga breakdown   3 Lal Kitab years   4 gender   5 pratyantar   6 birth time
+  // Every dropped string stays in the chip's title, and on a phone — where no
+  // eight chips fit on one line at any setting — the strip still scrolls sideways.
+  (function () {
+    var strip = document.getElementById('ov-strip');
+    if (!strip) { return; }
+    var subs = Array.prototype.slice.call(strip.querySelectorAll('.ov-sub[data-drop]'))
+      .sort(function (a, b) { return (+a.getAttribute('data-drop')) - (+b.getAttribute('data-drop')); });
+    if (!subs.length) { return; }
+    function fit() {
+      if (strip.classList.contains('hidden') || !strip.clientWidth) { return; }
+      subs.forEach(function (s) { s.classList.remove('ov-sub-off'); });
+      for (var i = 0; i < subs.length && strip.scrollWidth > strip.clientWidth + 1; i++) {
+        subs[i].classList.add('ov-sub-off');
+      }
+    }
+    fit();
+    var t = null;
+    window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(fit, 120); });
+    // Fonts land after first paint and change every measurement above.
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }
+    // The strip is hidden on New/Profile and Custom Screen; measuring while
+    // display:none gives 0 and would drop everything, so re-fit on the way back.
+    window.addEventListener('ab:section', fit);
   })();
 
   // ---- Mobile / tablet menu drawer (☰ Menu button) ----
