@@ -154,29 +154,49 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
         /* ---- Top bar (sticky) ---- */
         .topbar { position: sticky; top: 0; z-index: 50; background: var(--header-bg); color: #F7F3EA; }
-        .topbar-inner { max-width: 1400px; margin: 0 auto; padding: 10px 16px;
-            display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
-        .topbar .brand { font-family: 'Martel', serif; font-weight: 800; font-size: 1.25rem; line-height: 1.3; }
+        /* One row, never two. The meta group (name · date · place · language ·
+           Save · New) used to drop onto a second line whenever brand + banner +
+           meta were together wider than 1400px — the empty gap to the right of
+           the banner was exactly the room it should have used. nowrap keeps it on
+           line one; when width runs short the NAME yields first (ellipsis), then
+           the place, then the banner — the buttons and language never move. */
+        /* The header is a global bar, so it may use the whole window width — like
+           the overview strip below it — instead of the 1400px body cap. On a wide
+           monitor that alone is enough room for brand + banner + all of meta on
+           one line; the body underneath stays centred at 1400px. */
+        .topbar-inner { max-width: none; margin: 0 auto; padding: 10px 14px;
+            display: flex; align-items: center; gap: 10px 12px; flex-wrap: nowrap; }
+        .topbar .brand { font-family: 'Martel', serif; font-weight: 800; font-size: 1.25rem;
+            line-height: 1.3; flex: 0 0 auto; white-space: nowrap; }
         /* "Under testing" banner in the top-bar gap — high contrast, prominent. */
         /* "Under testing" banner — compact: exactly two lines (nowrap on each,
            split by <br>), sized to content so it no longer hogs the top bar. */
-        .test-banner { flex: 0 1 auto; text-align: center; font-size: .72rem; font-weight: 800;
-            color: #FFD84D; line-height: 1.3; min-width: 0; max-width: 360px; white-space: nowrap;
+        /* Protected from shrinking — the testing notice must stay readable; if the
+           row runs short the name and place give way instead, never this. */
+        .test-banner { flex: 0 0 auto; text-align: center; font-size: .68rem; font-weight: 800;
+            color: #FFD84D; line-height: 1.3; min-width: 0; max-width: 400px; white-space: nowrap;
             letter-spacing: .01em; text-shadow: 0 1px 2px rgba(0,0,0,.45); padding: 3px 12px;
             border-radius: 8px; background: rgba(255,216,77,.12); border: 1px solid rgba(255,216,77,.35); }
         .test-banner a { color: #FFFFFF; text-decoration: underline; font-weight: 800; }
-        .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 8px 16px;
-            flex-wrap: nowrap; font-size: .85rem; color: #C9C2B4; min-width: 0; }
+        .topbar .meta { margin-left: auto; display: flex; align-items: center; gap: 6px 10px;
+            flex-wrap: nowrap; font-size: .8rem; color: #C9C2B4; min-width: 0; }
         .topbar .meta > span { white-space: nowrap; flex: 0 0 auto; }
-        /* Long chart names must not push the meta onto a second line — truncate
-           with an ellipsis instead of wrapping. */
-        .topbar .meta > span:first-child { flex: 0 1 auto; min-width: 0; max-width: 24ch;
+        /* When the row runs short, the PLACE gives way first (it is repeated in
+           the overview strip just below, so nothing is lost), and only after that
+           does the NAME truncate — so an ordinary name stays whole on a laptop and
+           just a long one shows "half name". The date, language and the two
+           buttons keep their full width, so the controls never move or wrap. */
+        .topbar .meta > span:first-child { flex: 0 1 auto; min-width: 3ch; max-width: 30ch;
             overflow: hidden; text-overflow: ellipsis; }
+        .topbar .meta > span:nth-child(3) { flex: 0 100 auto; min-width: 0;
+            overflow: hidden; text-overflow: ellipsis; }
+        .topbar .meta > select, .topbar .meta > button { flex: 0 0 auto; }
         .topbar .meta b { color: #FFFFFF; font-weight: 600; }
         .topbar select { background: #2A3742; color: #F7F3EA; border: 1px solid #3B4854;
             padding: 6px 10px; min-height: 44px; font-size: .85rem; }
         .btn-sindoor { background: var(--sindoor); color: #fff; font-weight: 600; font-size: .9rem;
-            padding: 6px 16px; min-height: 44px; border-radius: 6px; display: inline-flex; align-items: center; }
+            padding: 6px 13px; min-height: 44px; border-radius: 6px; display: inline-flex; align-items: center;
+            white-space: nowrap; flex: 0 0 auto; }
         .btn-sindoor:hover { filter: brightness(1.1); }
         /* Hamburger menu button — hidden on desktop, shown ≤1279px (see media query). */
         #menu-btn { display: none; align-items: center; gap: 8px; background: #2A3742;
