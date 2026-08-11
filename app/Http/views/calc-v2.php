@@ -1030,6 +1030,9 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         /* Reduce wasted space at the top of the Custom Screen: no overview tiles,
            a compact banner, and minimal padding above the panel grid. */
         body.cs-mode #ov-strip { display: none !important; }
+        /* The dev-note footer is not part of the workspace — hiding it lets the
+           2-big + 3-small default grid sit fully within one screen. */
+        body.cs-mode #page-foot { display: none !important; }
         body.cs-mode main.l2-wrap { padding-top: 6px; }
         body.cs-mode #sec-home { margin-top: 0 !important; }   /* drop the space-y-4 gap */
         body.cs-mode .cs-bar { margin-top: 0; margin-bottom: 8px; }
@@ -2916,7 +2919,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     </div><!-- /sec-home grid -->
     <?php endif; ?>
 
-    <p class="text-xs text-gray-400">Auto Business — Calculation Engine test page. For arc-second accuracy set SWETEST_PATH (Swiss Ephemeris).</p>
+    <p id="page-foot" class="text-xs text-gray-400">Auto Business — Calculation Engine test page. For arc-second accuracy set SWETEST_PATH (Swiss Ephemeris).</p>
 </main>
 
 <?php if ($chart !== null): ?>
@@ -5243,7 +5246,26 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
   (function () {
     var grid = document.getElementById('custom-grid');
     if (!grid) { return; }
-    var START_SLOTS = 6;
+    // Default layout: 2 big boxes on the first row, 3 small on the second — all
+    // five sized in viewport units so the whole set fits on one screen without
+    // scrolling. ~150px is reserved above the grid (top bar + the one-line
+    // Custom-Screen bar + paddings + the row gap). Each width is cut well below
+    // its exact share (50% / 33.3%) so the flex gap AND a possible scrollbar
+    // never push a box onto a new row — a few px narrower is invisible, a wrap
+    // is not.
+    var CS_RESERVE = 172;
+    function defaultSizes() {
+      var avail = '(100vh - ' + CS_RESERVE + 'px)';
+      var bigH = 'calc(' + avail + ' * 0.60)';
+      var smallH = 'calc(' + avail + ' * 0.40)';
+      return [
+        { w: 'calc(50% - 18px)',       h: bigH },
+        { w: 'calc(50% - 18px)',       h: bigH },
+        { w: 'calc(33.333% - 18px)',   h: smallH },
+        { w: 'calc(33.333% - 18px)',   h: smallH },
+        { w: 'calc(33.333% - 18px)',   h: smallH }
+      ];
+    }
 
     // Groups (display order in the picker + in-panel dropdown).
     var GROUPS = [
@@ -5352,15 +5374,22 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       body.appendChild(clone);
     }
 
-    function emptySlot(slot) {
+    function emptySlot(slot, size) {
       slot.className = 'cs-slot cs-empty';
-      slot.removeAttribute('data-key'); slot.style.width = ''; slot.style.height = '';
+      slot.removeAttribute('data-key');
+      // A default slot carries a size (2 big + 3 small, page-fitting); a slot
+      // added later with "+ Panel", or one just emptied, has none.
+      if (size && (size.w || size.h)) {
+        slot.style.width = size.w || ''; slot.style.height = size.h || ''; slot.style.flex = '0 0 auto';
+      } else {
+        slot.style.width = ''; slot.style.height = ''; slot.style.flex = '';
+      }
       slot.innerHTML = '<div style="text-align:center"><div class="cs-plus">+</div><div class="cs-plus-lbl">Add panel</div></div>';
       slot.onclick = function () { openPicker(slot); };
     }
     function fillSlot(slot, key, size) {
       slot.className = 'cs-slot'; slot.onclick = null; slot.innerHTML = '';
-      if (size && size.w) { slot.style.width = size.w; }
+      if (size && size.w) { slot.style.width = size.w; slot.style.flex = '0 0 auto'; }
       if (size && size.h) { slot.style.height = size.h; }
       var head = document.createElement('div'); head.className = 'cs-head';
       var sel = document.createElement('select'); sel.className = 'cs-sel';
@@ -5443,7 +5472,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
           else { emptySlot(s); }
         });
       } else {
-        for (var i = 0; i < START_SLOTS; i++) { emptySlot(newSlot()); }
+        defaultSizes().forEach(function (sz) { emptySlot(newSlot(), sz); });
       }
     }
     var add = document.getElementById('cs-add'); if (add) { add.addEventListener('click', function () { emptySlot(newSlot()); saveLayout(); }); }
