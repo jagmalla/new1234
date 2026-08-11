@@ -1034,10 +1034,15 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         body.cs-mode #sec-home { margin-top: 0 !important; }   /* drop the space-y-4 gap */
         body.cs-mode .cs-bar { margin-top: 0; margin-bottom: 8px; }
         body.cs-mode .test-banner { font-size: .68rem; line-height: 1.25; padding: 3px 10px; }
-        .cs-bar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 12px; }
-        .cs-title { font-size: 1.15rem; font-weight: 800; color: var(--ink); }
-        .cs-title-hi { color: var(--ink-soft); font-weight: 600; font-size: .95rem; }
-        .cs-hint { font-size: .82rem; color: var(--ink-soft); }
+        /* One line only, so the panels below get the space. The title and the two
+           buttons keep full width; the hint in the middle truncates with an
+           ellipsis first if the row is short (its full text stays in the title). */
+        .cs-bar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: nowrap;
+            margin-bottom: 12px; min-width: 0; }
+        .cs-title { font-size: 1.15rem; font-weight: 800; color: var(--ink); white-space: nowrap; flex: 0 0 auto; }
+        .cs-hint { font-size: .82rem; color: var(--ink-soft); white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+        .cs-toolbtn { flex: 0 0 auto; }
         .cs-toolbtn { border: 1px solid var(--line); background: var(--card); color: var(--ink);
             font-weight: 700; font-size: .82rem; padding: 7px 12px; border-radius: 8px; }
         .cs-toolbtn:hover { background: var(--sindoor-soft); border-color: var(--sindoor); color: var(--sindoor); }
@@ -2217,8 +2222,8 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         <!-- ============ CUSTOM SCREEN (full-width, user-arranged panels) ======= -->
         <div id="sec-custom" class="l2-section l2-full hidden">
             <div class="cs-bar">
-                <span class="cs-title">Custom Screen <span class="cs-title-hi">— अपनी स्क्रीन</span></span>
-                <span class="cs-hint">Press <b>+</b> to add a chart / prediction (D1, Gochar, Varshaphal, Dasha, Shadbala…). <b>Drag the bottom-right corner</b> to resize any panel. Logged-in users' layout is remembered.</span>
+                <span class="cs-title">Custom Screen</span>
+                <span class="cs-hint">Press <b>+</b> to add a chart / prediction. <b>Drag the bottom-right corner</b> to resize any panel.</span>
                 <span style="margin-left:auto"></span>
                 <button type="button" id="cs-add" class="cs-toolbtn">+ Panel</button>
                 <button type="button" id="cs-reset" class="cs-toolbtn">Reset</button>
