@@ -2208,7 +2208,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             <!-- आज का मुहूर्त — शुभता संकेत-पट्टी (profile) -->
             <?php $pmu = $view['today_muhurat'] ?? null; if ($pmu !== null && !empty($pmu['ok'])):
                 $pmuScore = \AutoBusiness\Astro\Muhurat\Auspiciousness::score((string) $pmu['tone'], $pmu['dosha'] ?? []); ?>
-            <div class="bg-white rounded-lg shadow p-4">
+            <div id="today-muhurat-card" class="bg-white rounded-lg shadow p-4">
                 <div class="font-semibold text-gray-700 mb-1">🎯 आज का मुहूर्त — पंचांग-शुद्धि</div>
                 <div class="text-sm" style="font-weight:600;color:#374151"><?= $h((string) $pmu['verdict']) ?></div>
                 <?= \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml($pmuScore, (string) $pmu['grade']) ?>
@@ -5271,8 +5271,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     var GROUPS = [
       { id: 'chart', label: '📊 Charts / कुंडली' },
       { id: 'd1',    label: '📜 D1 Birth-Chart Predictions / जन्म-कुंडली फल' },
+      { id: 'lk',    label: '📕 Lal Kitab / लाल किताब' },
       { id: 'vp',    label: '🎯 Varshaphal Predictions / वर्षफल' },
       { id: 'go',    label: '🌌 Gochar Predictions / गोचर फल' },
+      { id: 'muh',   label: '🕉️ Muhurat / मुहूर्त' },
       { id: 'dasha', label: '⏳ Dasha / दशा' },
       { id: 'bala',  label: '💪 Bala / बल' },
       { id: 'other', label: '✨ Other / अन्य' }
@@ -5298,6 +5300,25 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       { g:'vp', key:'vp_bhava',   label:'Bhava-Phal (भाव-फल)', kind:'clone', sel:'#vp-pred-bhava' },
       { g:'vp', key:'vp_dasha',   label:'Dasha-Phal (दशा-फल)', kind:'clone', sel:'#vp-pred-dasha' },
       { g:'go', key:'go_phal',    label:'Gochar Phal (गोचर फल)', kind:'clone', sel:'#gochar-phal', needs:'Gochar' },
+      // Lal Kitab — every server-rendered .lk-view is clonable as a panel.
+      { g:'lk', key:'lk_nichod',   label:'निचोड़ (सारांश)',            kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="nichod"]' },
+      { g:'lk', key:'lk_planet',   label:'ग्रह फल',                     kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="planet"]' },
+      { g:'lk', key:'lk_house',    label:'भाव फल',                      kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="house"]' },
+      { g:'lk', key:'lk_karak',    label:'कारक फल',                     kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="karak"]' },
+      { g:'lk', key:'lk_yoga',     label:'संबंध-जाल (योग·टक्कर·दृष्टि)', kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="yoga"]' },
+      { g:'lk', key:'lk_shrap',    label:'ऋण · श्राप · दोष',            kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="shrap"]' },
+      { g:'lk', key:'lk_sadesati', label:'साढ़ेसाती',                    kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="sadesati"]' },
+      { g:'lk', key:'lk_manglik',  label:'मांगलिक',                     kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="manglik"]' },
+      { g:'lk', key:'lk_agecycle', label:'समय (आयु-दशा · वर्ष)',        kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="agecycle"]' },
+      { g:'lk', key:'lk_ayu',      label:'आयु योग',                     kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="ayu"]' },
+      { g:'lk', key:'lk_health',   label:'स्वास्थ्य',                    kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="health"]' },
+      { g:'lk', key:'lk_bhavan',   label:'भवन / मकान',                  kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="bhavan"]' },
+      { g:'lk', key:'lk_varsh',    label:'वर्ष कुंडली (लाल किताब)',      kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="varsh"]' },
+      { g:'lk', key:'lk_compare',  label:'तुलना (वैदिक ↔ लाल किताब)',    kind:'clone', sel:'#sec-lalkitab .lk-view[data-lk="compare"]' },
+      // Muhurat — today's panchang-shuddhi is a static card; the full category-wise
+      // finder is a live, date-driven page, so it opens rather than clones.
+      { g:'muh', key:'muh_today', label:'आज का मुहूर्त (पंचांग-शुद्धि)', kind:'clone', sel:'#today-muhurat-card' },
+      { g:'muh', key:'muh_open',  label:'मुहूर्त — श्रेणी-वार शुभ समय',  kind:'goto',  sec:'muhurat' },
       { g:'dasha', key:'vimshottari', label:'Vimshottari Dasha', kind:'dasha', data:'AB_DASHA' },
       { g:'dasha', key:'mudda',       label:'Mudda Dasha',       kind:'dasha', data:'AB_MUDDA' },
       { g:'bala', key:'shadbala',   label:'Shadbala',        kind:'clone', sel:'.bal-tab[data-bal="shad"]' },
@@ -5357,6 +5378,18 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
           '<div style="font-weight:700;margin:6px 0 4px">' + p.label + '</div>' +
           '<div style="font-size:.82rem;color:#64748b;margin-bottom:12px">दो कुंडलियों का मिलान एक अलग पेज पर खुलता है।</div>' +
           '<a href="' + p.url + '" class="ab-btn" style="text-decoration:none;display:inline-block">खोलें / Open</a></div>';
+        return;
+      }
+      // A live page (date/time driven) that cannot be a static snapshot — the
+      // button leaves the Custom Screen and opens that section full-page.
+      if (p.kind === 'goto') {
+        body.innerHTML = '<div style="text-align:center;padding:26px 14px">' +
+          '<div style="font-size:2rem">🕉️</div>' +
+          '<div style="font-weight:700;margin:6px 0 4px">' + p.label + '</div>' +
+          '<div style="font-size:.82rem;color:#64748b;margin-bottom:12px">यह पन्ना तिथि/समय बदलकर चलता है (श्रेणी-वार शुभ समय), इसलिए यह पूरे पन्ने पर खुलता है।</div>' +
+          '<button type="button" class="ab-btn cs-goto-btn">खोलें / Open</button></div>';
+        var gb = body.querySelector('.cs-goto-btn');
+        if (gb) { gb.addEventListener('click', function () { var m = document.querySelector('[data-sec="' + p.sec + '"]'); if (m) { m.click(); } }); }
         return;
       }
       var src = document.querySelector(p.sel);
