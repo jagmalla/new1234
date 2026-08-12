@@ -102,10 +102,15 @@
       var box;
       try { box = sp.getBBox(); } catch (e) { continue; }
       if (!box || !(box.width > 0)) { continue; }   // not laid out → keep fallback
-      var padX = 0.5, padY = 0.6;
+      // A solid block that fills the full height of the AV/BB band (≈4.4 units,
+      // the band is 5) and hugs the score's width — not a thin box around the
+      // glyphs. Centred on the glyph's vertical middle so it sits square in the
+      // band; the same text transform keeps rotated (left/right) bands upright.
+      var padX = 0.7, bandH = 4.4;
+      var cy = box.y + box.height / 2;
       var rect = el('rect', {
-        x: box.x - padX, y: box.y - padY,
-        width: box.width + 2 * padX, height: box.height + 2 * padY,
+        x: box.x - padX, y: cy - bandH / 2,
+        width: box.width + 2 * padX, height: bandH,
         rx: 0.7, fill: bg
       });
       var tf = textEl.getAttribute('transform');   // rotated (left/right) bands
