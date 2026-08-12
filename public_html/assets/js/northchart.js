@@ -64,9 +64,56 @@
     return e;
   }
 
-  var AV_COLOR = '#1d4ed8';  // Ashtakavarga (bindus)
-  var BB_COLOR = '#15803d';  // Bhava Bala (virupas)
+  var AV_COLOR = '#1d4ed8';  // Ashtakavarga (bindus)  — fallback text colour
+  var BB_COLOR = '#15803d';  // Bhava Bala (virupas)   — fallback text colour
   var ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+
+  // Strength → chip colours (red/yellow/green) with a contrasting font colour.
+  // AV (Ashtakavarga bindus): Low 0–24, Medium 25–28, High 29–56.
+  function avColors(av) {
+    av = Number(av);
+    if (!isFinite(av)) { return null; }
+    if (av <= 24) { return { bg: '#FF4C4C', fg: '#FFFFFF' }; }
+    if (av <= 28) { return { bg: '#FFD700', fg: '#000000' }; }
+    return { bg: '#4CAF50', fg: '#FFFFFF' };
+  }
+  // BB (Bhava Bala virupas): Low <360, Medium 360–510, High >510.
+  function bbColors(bb) {
+    bb = Number(bb);
+    if (!isFinite(bb)) { return null; }
+    if (bb < 360) { return { bg: '#FF4C4C', fg: '#FFFFFF' }; }
+    if (bb <= 510) { return { bg: '#FFD700', fg: '#000000' }; }
+    return { bg: '#4CAF50', fg: '#FFFFFF' };
+  }
+
+  // After the SVG is in the DOM, draw a snug rounded rect behind every AV / BB
+  // chip (measuring the tspan so the box hugs the text and never bleeds into the
+  // chart), then switch the chip's font to its contrasting colour. Measuring
+  // needs layout, so this runs post-append; if a chip cannot be measured (chart
+  // not laid out yet) it is left in its readable fallback colour, no box.
+  function paintAvBbChips(svg) {
+    var spans = svg.querySelectorAll('tspan.ab-chip');
+    for (var i = 0; i < spans.length; i++) {
+      var sp = spans[i];
+      var bg = sp.getAttribute('data-bg'), fg = sp.getAttribute('data-fg');
+      if (!bg) { continue; }
+      var textEl = sp.parentNode;              // the <text> the tspan lives in
+      if (!textEl || !textEl.parentNode) { continue; }
+      var box;
+      try { box = sp.getBBox(); } catch (e) { continue; }
+      if (!box || !(box.width > 0)) { continue; }   // not laid out → keep fallback
+      var padX = 0.5, padY = 0.6;
+      var rect = el('rect', {
+        x: box.x - padX, y: box.y - padY,
+        width: box.width + 2 * padX, height: box.height + 2 * padY,
+        rx: 0.7, fill: bg
+      });
+      var tf = textEl.getAttribute('transform');   // rotated (left/right) bands
+      if (tf) { rect.setAttribute('transform', tf); }
+      textEl.parentNode.insertBefore(rect, textEl);   // draw behind the text
+      if (fg) { sp.setAttribute('fill', fg); }        // now safe to use contrast
+    }
+  }
 
   // Edge + segment-centre per house (3 segments/edge at 16.5/50/83.5).
   // side: t=top, b=bottom, l=left (rotate -90), r=right (rotate 90).
@@ -109,6 +156,14 @@
       var t = el('text', {x:p[0], y:p[1], 'text-anchor':'middle', 'font-size':fontSize, 'font-weight':'700'});
       if (p[2]) { t.setAttribute('transform', 'rotate(' + p[2] + ',' + p[0] + ',' + p[1] + ')'); }
       t.span = function (txt, fill) { var s = el('tspan', {fill:fill}); s.textContent = txt; t.appendChild(s); };
+      // A "chip" span: drawn now in a readable fallback colour, but tagged so
+      // paintAvBbChips() can put a coloured box behind it and switch to the
+      // contrasting font once the text has been measured in the DOM.
+      t.chip = function (txt, chip, fallbackFill) {
+        var s = el('tspan', {fill: fallbackFill, 'class': 'ab-chip'});
+        if (chip) { s.setAttribute('data-bg', chip.bg); s.setAttribute('data-fg', chip.fg); }
+        s.textContent = txt; t.appendChild(s);
+      };
       return t;
     }
 
@@ -116,13 +171,16 @@
       var v = ring[hh] || ring[String(hh)];
       if (!v) { continue; }
 
-      // AV/BB (outer band).
+      // AV/BB (outer band). The AV and BB scores each get their own colour chip
+      // (red/yellow/green by strength) drawn behind them after layout; the house
+      // roman and the separator stay on the plain band. Format kept as "AV:score"
+      // and "BB:score".
       var a = placed(bandPos(hh, 7.5), 2.5);
       var bb = (v.bb_virupa != null) ? Math.round(v.bb_virupa) : v.bb;
       a.span(ROMAN[hh] + '=', '#111827');
-      a.span('AV:' + v.av, AV_COLOR);
+      a.chip('AV:' + v.av, avColors(v.av), AV_COLOR);
       a.span(', ', '#111827');
-      a.span('BB:' + bb, BB_COLOR);
+      a.chip('BB:' + bb, bbColors(bb), BB_COLOR);
       svg.appendChild(a);
 
       // Drishti (inner band): "Dr: " + colour-coded aspecting planets, styled to
@@ -264,6 +322,9 @@
     svg.classList.add('ab-chart-svg');
     if (opts.title) { svg.setAttribute('data-chart-title', opts.title); }
     container.appendChild(svg);
+    // AV/BB colour chips need the text measured, so paint them once the SVG is
+    // in the DOM. Only present when the outer ring was drawn.
+    if (ring) { paintAvBbChips(svg); }
   }
 
   function renderAll(vargas, houses) {
