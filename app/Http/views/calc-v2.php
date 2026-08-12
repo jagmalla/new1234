@@ -97,7 +97,11 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- initial-scale 1 = normal size; minimum-scale 0.6 lets a touch-screen user
+         pinch OUT to 60% (40% smaller) so an over-large chart fits — with plain
+         width=device-width the browser blocks pinch-out below 100% (only pinch-in
+         worked). No maximum-scale, so pinch-in still zooms freely. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.6, user-scalable=yes">
     <title>Analysis of Karma — Auto Business</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -331,20 +335,6 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             background: var(--card); color: var(--ink); }
         #birth-form .bg-blue-600 { background: var(--sindoor) !important; min-height: 44px; }
         .chart-frame { width: 100%; margin: 0 auto; }
-        /* Chart zoom — shrink the chart on tablets/phones where 100% is too tall.
-           The frame width is scaled (SVG is width:100% height:auto, so the whole
-           chart follows), 60%–100% in 10% steps, and the choice is remembered. */
-        .chart-zoom { display: flex; align-items: center; justify-content: center; gap: 8px;
-            margin: 2px 0 8px; }
-        .chart-zoom .cz-lbl { font-size: .72rem; font-weight: 700; color: var(--ink-soft);
-            text-transform: uppercase; letter-spacing: .03em; }
-        .cz-btn { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
-            background: var(--card); color: var(--sindoor); font-size: 1.2rem; font-weight: 800;
-            line-height: 1; display: inline-flex; align-items: center; justify-content: center;
-            cursor: pointer; padding: 0; }
-        .cz-btn:hover { border-color: var(--sindoor); background: var(--sindoor-soft); }
-        .cz-btn:disabled { opacity: .38; cursor: default; }
-        .cz-val { font-size: .82rem; font-weight: 800; color: var(--ink); min-width: 46px; text-align: center; }
         /* All dropdowns get an obvious "select me" look: accent border, tinted
            background and a visible caret — plus a leading label (see .pick-tag). */
         .l2-select, .pred-inline-select, .dp-select {
@@ -1483,12 +1473,6 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
                 <span style="color:#1d4ed8"><b>AV:</b> Ashtakavarga</span> ·
                 <span style="color:#15803d"><b>BB:</b> Bhav Bala</span> ·
                 <span><b>Dr:</b> Drishti</span>
-            </div>
-            <div class="chart-zoom" role="group" aria-label="चार्ट ज़ूम / Chart zoom">
-                <span class="cz-lbl">ज़ूम</span>
-                <button type="button" id="chart-zoom-out" class="cz-btn" aria-label="छोटा करें / Zoom out" title="छोटा करें">−</button>
-                <span id="chart-zoom-val" class="cz-val" aria-live="polite">100%</span>
-                <button type="button" id="chart-zoom-in" class="cz-btn" aria-label="बड़ा करें / Zoom in" title="बड़ा करें">+</button>
             </div>
             <div id="chart-frame" class="chart-frame"></div>
 
@@ -3886,32 +3870,6 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       setPanelHeights();
     });
   }
-
-  // ---- Chart zoom (− / +) — shrink an over-large chart on tablets & phones ----
-  // The frame width is scaled (the SVG is width:100% height:auto, so the whole
-  // chart follows), between 60% and 100% in 10% steps. The choice is remembered
-  // and survives chart / rotate changes (renderNorth only replaces the SVG, not
-  // the frame's inline width).
-  (function () {
-    var frame = document.getElementById('chart-frame');
-    var out = document.getElementById('chart-zoom-out');
-    var inn = document.getElementById('chart-zoom-in');
-    var val = document.getElementById('chart-zoom-val');
-    if (!frame || !out || !inn || !val) { return; }
-    var MIN = 60, MAX = 100, STEP = 10, z = 100;
-    try { var s = parseInt(localStorage.getItem('ab_chart_zoom'), 10); if (s >= MIN && s <= MAX) { z = s; } } catch (e) {}
-    function apply() {
-      frame.style.width = z + '%';
-      val.textContent = z + '%';
-      out.disabled = z <= MIN;
-      inn.disabled = z >= MAX;
-      try { localStorage.setItem('ab_chart_zoom', String(z)); } catch (e) {}
-      if (typeof setPanelHeights === 'function') { setPanelHeights(); }
-    }
-    out.addEventListener('click', function () { z = Math.max(MIN, z - STEP); apply(); });
-    inn.addEventListener('click', function () { z = Math.min(MAX, z + STEP); apply(); });
-    apply();
-  })();
 
   // Prediction selector: swap which prediction layer shows in the scroll area.
   var predSel = document.getElementById('pred-select');

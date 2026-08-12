@@ -33,7 +33,8 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
 <html lang="hi">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- minimum-scale 0.6 lets touch-screen users pinch OUT to 60% (see calc-v2). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.6, user-scalable=yes">
     <title>कुंडली मिलान — Analysis of Karma</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Martel:wght@800&family=Mukta:wght@400;500;700&display=swap" rel="stylesheet">
