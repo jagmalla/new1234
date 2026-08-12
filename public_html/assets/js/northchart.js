@@ -91,17 +91,24 @@
   // chart), then switch the chip's font to its contrasting colour. Measuring
   // needs layout, so this runs post-append; if a chip cannot be measured (chart
   // not laid out yet) it is left in its readable fallback colour, no box.
-  function paintAvBbChips(svg) {
+  function paintAvBbChips(svg, tries) {
+    if (!svg || (svg.isConnected === false)) { return; }   // re-rendered away
+    tries = tries || 0;
     var spans = svg.querySelectorAll('tspan.ab-chip');
+    var pending = 0;
     for (var i = 0; i < spans.length; i++) {
       var sp = spans[i];
+      if (sp.getAttribute('data-painted')) { continue; }    // already done
       var bg = sp.getAttribute('data-bg'), fg = sp.getAttribute('data-fg');
-      if (!bg) { continue; }
+      if (!bg) { sp.setAttribute('data-painted', '1'); continue; }
       var textEl = sp.parentNode;              // the <text> the tspan lives in
       if (!textEl || !textEl.parentNode) { continue; }
       var box;
-      try { box = sp.getBBox(); } catch (e) { continue; }
-      if (!box || !(box.width > 0)) { continue; }   // not laid out → keep fallback
+      try { box = sp.getBBox(); } catch (e) { box = null; }
+      // The chart may not be laid out yet on the first frame (grid still sizing,
+      // web font not settled) — getBBox then reports width 0. Don't give up:
+      // count it as pending and retry on the next frame until it measures.
+      if (!box || !(box.width > 0)) { pending++; continue; }
       // A solid block that fills the full height of the AV/BB band (≈4.4 units,
       // the band is 5) and hugs the score's width — not a thin box around the
       // glyphs. Centred on the glyph's vertical middle so it sits square in the
@@ -117,6 +124,12 @@
       if (tf) { rect.setAttribute('transform', tf); }
       textEl.parentNode.insertBefore(rect, textEl);   // draw behind the text
       if (fg) { sp.setAttribute('fill', fg); }        // now safe to use contrast
+      sp.setAttribute('data-painted', '1');
+    }
+    if (pending && tries < 40) {                        // ~ up to a few seconds
+      var again = function () { paintAvBbChips(svg, tries + 1); };
+      if (window.requestAnimationFrame) { window.requestAnimationFrame(again); }
+      else { setTimeout(again, 32); }
     }
   }
 
@@ -328,8 +341,15 @@
     if (opts.title) { svg.setAttribute('data-chart-title', opts.title); }
     container.appendChild(svg);
     // AV/BB colour chips need the text measured, so paint them once the SVG is
-    // in the DOM. Only present when the outer ring was drawn.
-    if (ring) { paintAvBbChips(svg); }
+    // in the DOM. The painter retries per frame until the chart is laid out, and
+    // we ask again after web fonts settle — so the boxes appear even if the chart
+    // is measured before layout / font load on the very first paint.
+    if (ring) {
+      paintAvBbChips(svg);
+      if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+        document.fonts.ready.then(function () { paintAvBbChips(svg); });
+      }
+    }
   }
 
   function renderAll(vargas, houses) {
