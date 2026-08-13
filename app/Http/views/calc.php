@@ -125,7 +125,7 @@ $lordHouses = static function (string $planet) use ($lordSigns, $ascSignIdx): st
             <label class="flex flex-col gap-1"><span class="text-gray-500">Timezone (east +)</span>
                 <input id="b-tz" name="tz" value="<?= $h($in['tzIn']) ?>" class="border rounded px-2 py-1"></label>
             <div class="flex items-end">
-                <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold w-full">Calculate</button>
+                <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold w-full">Create Chart</button>
             </div>
         </div>
         <p class="text-xs text-gray-500 mt-2">Search any city worldwide to fill lat/lon/timezone, or type lat/lon directly (also accept DMS, e.g. 30N48'00). Timezone is the place's offset on the birth date.</p>

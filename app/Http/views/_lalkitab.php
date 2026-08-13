@@ -274,7 +274,7 @@ $scorePill = static function (int $score): string {
 <?php if (!$ok): ?>
   <div class="bg-white rounded-lg shadow p-6 text-center text-gray-500">
     लाल किताब गणना उपलब्ध नहीं है<?= !empty($lk['error']) ? ' — ' . $h((string) $lk['error']) : '' ?>।
-    पहले जन्म विवरण भरकर <b>Calculate</b> करें।
+    पहले जन्म विवरण भरकर <b>Create Chart</b> दबाएँ।
   </div>
 <?php else: ?>
 

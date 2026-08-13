@@ -57,10 +57,14 @@
 
     <div class="flex flex-wrap items-center justify-between gap-3 mt-3">
         <button type="button" id="b-adv-toggle" class="text-sm text-blue-700 font-semibold border border-blue-200 rounded px-3 py-2 hover:bg-blue-50" aria-expanded="false" aria-controls="b-advanced">⚙ Advanced options (Ayanamsa · Lat/Lon · Timezone)</button>
+        <?php /* क्रम: पहले "Create Chart" (यही फ़ॉर्म भेजता है), फिर सहेजना, फिर
+                 सहेजे हुए खोलना — तीनों अब भरे रंग के, इसलिए "Open Saved Charts"
+                 अब फीका डिब्बा नहीं लगता। तीनों का रंग अलग है ताकि एक-दूसरे से
+                 भ्रम न हो: बनाना = सिन्दूरी, सहेजना = हरा-नीला, खोलना = नीला। */ ?>
         <div class="flex flex-wrap items-center gap-2">
-            <button type="button" data-ab-open class="text-sm font-semibold border border-gray-300 rounded px-3 py-2 hover:bg-gray-50" title="अपने सहेजे गए चार्ट खोलें">📂 Open Saved Charts</button>
+            <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold">Create Chart</button>
             <button type="button" data-ab-save class="text-sm font-semibold text-white rounded px-3 py-2" style="background:#0f766e" title="इस चार्ट को सहेजें">💾 Save Chart</button>
-            <button class="bg-blue-600 text-white rounded px-4 py-2 font-semibold">Calculate</button>
+            <button type="button" data-ab-open class="text-sm font-semibold text-white rounded px-3 py-2" style="background:#1d4ed8" title="अपने सहेजे गए चार्ट खोलें">📂 Open Saved Charts</button>
         </div>
     </div>
     <p class="text-xs text-gray-500 mt-2">Search any city worldwide to fill lat/lon/timezone automatically. To type lat/lon or timezone by hand (also DMS, e.g. 30N48'00), open <b>Advanced options</b>. Timezone is the place's offset on the birth date.</p>
