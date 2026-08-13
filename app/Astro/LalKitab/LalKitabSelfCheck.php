@@ -996,7 +996,14 @@ final class LalKitabSelfCheck
             if (!preg_match('/id="mdf_from"[^>]*value="(\d{2}-\d{2}-\d{4})"/u', $milanRaw, $mf)) { return false; }
             if (!preg_match('/id="mdf_to"[^>]*value="(\d{2}-\d{2}-\d{4})"/u', $milanRaw, $mt)) { return false; }
             if ($mf[1] !== date('d-m-Y')) { return false; }
-            if ($mt[1] === $mf[1] || strtotime(str_replace('-', '/', $mt[1])) <= time()) { return false; }
+            // तिथि d-m-Y है, इसलिए उसे उसी साँचे से पढ़ो। पहले यहाँ हाइफ़न को
+            // स्लैश में बदलकर strtotime() को दिया जाता था — और स्लैश वाली तिथि
+            // को PHP अमेरिकी m/d/Y मानता है: "13-02-2027" → "13/02/2027" = महीना
+            // 13 = अमान्य (हर महीने की 13 से 31 तारीख़ को जाँच झूठा फ़ेल देती थी),
+            // और "05-02-2027" चुपचाप 2 मई पढ़ी जाती थी। यानी जाँच वह परख ही नहीं
+            // रही थी जिसका दावा करती है।
+            $toDt = \DateTime::createFromFormat('d-m-Y H:i:s', $mt[1] . ' 12:00:00');
+            if ($mt[1] === $mf[1] || $toDt === false || $toDt->getTimestamp() <= time()) { return false; }
             foreach ([1, 3, 6, 12] as $mn) {
                 if (mb_strpos($milanRaw, 'data-months="' . $mn . '"') === false) { return false; }
             }

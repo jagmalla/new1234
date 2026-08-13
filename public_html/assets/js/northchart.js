@@ -86,51 +86,68 @@
     return { bg: '#4CAF50', fg: '#FFFFFF' };
   }
 
-  // After the SVG is in the DOM, draw a snug rounded rect behind every AV / BB
-  // chip (measuring the tspan so the box hugs the text and never bleeds into the
-  // chart), then switch the chip's font to its contrasting colour. Measuring
-  // needs layout, so this runs post-append; if a chip cannot be measured (chart
-  // not laid out yet) it is left in its readable fallback colour, no box.
-  function paintAvBbChips(svg, tries) {
-    if (!svg || (svg.isConnected === false)) { return; }   // re-rendered away
-    tries = tries || 0;
-    var spans = svg.querySelectorAll('tspan.ab-chip');
-    var pending = 0;
-    for (var i = 0; i < spans.length; i++) {
-      var sp = spans[i];
-      if (sp.getAttribute('data-painted')) { continue; }    // already done
-      var bg = sp.getAttribute('data-bg'), fg = sp.getAttribute('data-fg');
-      if (!bg) { sp.setAttribute('data-painted', '1'); continue; }
-      var textEl = sp.parentNode;              // the <text> the tspan lives in
-      if (!textEl || !textEl.parentNode) { continue; }
-      var box;
-      try { box = sp.getBBox(); } catch (e) { box = null; }
-      // The chart may not be laid out yet on the first frame (grid still sizing,
-      // web font not settled) — getBBox then reports width 0. Don't give up:
-      // count it as pending and retry on the next frame until it measures.
-      if (!box || !(box.width > 0)) { pending++; continue; }
-      // A solid block that fills the full height of the AV/BB band (≈4.4 units,
-      // the band is 5) and hugs the score's width — not a thin box around the
-      // glyphs. Centred on the glyph's vertical middle so it sits square in the
-      // band; the same text transform keeps rotated (left/right) bands upright.
-      var padX = 0.7, bandH = 4.4;
-      var cy = box.y + box.height / 2;
-      var rect = el('rect', {
-        x: box.x - padX, y: cy - bandH / 2,
-        width: box.width + 2 * padX, height: bandH,
-        rx: 0.7, fill: bg
-      });
-      var tf = textEl.getAttribute('transform');   // rotated (left/right) bands
-      if (tf) { rect.setAttribute('transform', tf); }
-      textEl.parentNode.insertBefore(rect, textEl);   // draw behind the text
-      if (fg) { sp.setAttribute('fill', fg); }        // now safe to use contrast
-      sp.setAttribute('data-painted', '1');
+  // Per-character advance widths (em) for the band's bold sans font.
+  //
+  // The AV/BB band is laid out from these numbers rather than measured with
+  // getBBox(). Measuring was the wrong tool twice over: a getBBox() read forces
+  // a synchronous layout of the whole (2 MB+) page — ~7ms each here — and it
+  // returns 0 while the chart is still being laid out, so the colour blocks were
+  // silently skipped on first paint and only appeared after something forced a
+  // re-render. Computing the widths costs nothing and works even when the chart
+  // is off-screen or hidden.
+  //
+  // The numbers are the average of the bold sans fonts these pages actually get
+  // (Arial/Helvetica, Roboto on Android, SF on iOS). They do not have to be
+  // exact: every run is pinned with textLength (below), so the block and the
+  // text always agree, whatever font the device really uses.
+  var CHAR_EM = { d: 0.58, I: 0.30, ':': 0.33, ',': 0.30, '=': 0.62, ' ': 0.28, other: 0.71 };
+  function runWidth(s, F) {
+    var w = 0;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      if (c >= '0' && c <= '9') { w += CHAR_EM.d; }
+      else if (CHAR_EM[c] != null) { w += CHAR_EM[c]; }
+      else { w += CHAR_EM.other; }            // A B V X …
     }
-    if (pending && tries < 40) {                        // ~ up to a few seconds
-      var again = function () { paintAvBbChips(svg, tries + 1); };
-      if (window.requestAnimationFrame) { window.requestAnimationFrame(again); }
-      else { setTimeout(again, 32); }
+    return w * F;
+  }
+
+  // One AV/BB band label: [ roman= ][ AV chip ][ , ][ BB chip ], centred on the
+  // band segment, each chip sitting on a solid colour block that fills the band
+  // height. Blocks are drawn first so the text always reads on top of them.
+  function bandLabel(svg, hh, mid, F, segs) {
+    var p = bandPos(hh, mid);
+    var BAND_H = 4.4;                   // the band is 5 units — leave a hairline
+    var PAD_X = 0.55;
+    var widths = [], total = 0, i;
+    for (i = 0; i < segs.length; i++) { widths[i] = runWidth(segs[i].txt, F); total += widths[i]; }
+    var x0 = p[0] - total / 2;
+    var tf = p[2] ? 'rotate(' + p[2] + ',' + p[0] + ',' + p[1] + ')' : null;
+
+    var runX = x0;
+    for (i = 0; i < segs.length; i++) {
+      if (segs[i].chip) {
+        var r = el('rect', { x: runX - PAD_X, y: p[1] - BAND_H / 2,
+          width: widths[i] + 2 * PAD_X, height: BAND_H, rx: 0.7, fill: segs[i].chip.bg });
+        if (tf) { r.setAttribute('transform', tf); }   // rotated left/right bands
+        svg.appendChild(r);
+      }
+      runX += widths[i];
     }
+    // Baseline sits 0.35em below the band's centre line so the digits look
+    // vertically centred inside their block.
+    var t = el('text', { x: x0, y: p[1] + 0.35 * F, 'text-anchor': 'start',
+      'font-size': F, 'font-weight': '700' });
+    if (tf) { t.setAttribute('transform', tf); }
+    runX = x0;
+    for (i = 0; i < segs.length; i++) {
+      var sp = el('tspan', { x: runX, fill: segs[i].chip ? segs[i].chip.fg : segs[i].fill,
+        textLength: widths[i], lengthAdjust: 'spacingAndGlyphs' });
+      sp.textContent = segs[i].txt;
+      t.appendChild(sp);
+      runX += widths[i];
+    }
+    svg.appendChild(t);
   }
 
   // Edge + segment-centre per house (3 segments/edge at 16.5/50/83.5).
@@ -174,14 +191,6 @@
       var t = el('text', {x:p[0], y:p[1], 'text-anchor':'middle', 'font-size':fontSize, 'font-weight':'700'});
       if (p[2]) { t.setAttribute('transform', 'rotate(' + p[2] + ',' + p[0] + ',' + p[1] + ')'); }
       t.span = function (txt, fill) { var s = el('tspan', {fill:fill}); s.textContent = txt; t.appendChild(s); };
-      // A "chip" span: drawn now in a readable fallback colour, but tagged so
-      // paintAvBbChips() can put a coloured box behind it and switch to the
-      // contrasting font once the text has been measured in the DOM.
-      t.chip = function (txt, chip, fallbackFill) {
-        var s = el('tspan', {fill: fallbackFill, 'class': 'ab-chip'});
-        if (chip) { s.setAttribute('data-bg', chip.bg); s.setAttribute('data-fg', chip.fg); }
-        s.textContent = txt; t.appendChild(s);
-      };
       return t;
     }
 
@@ -189,17 +198,17 @@
       var v = ring[hh] || ring[String(hh)];
       if (!v) { continue; }
 
-      // AV/BB (outer band). The AV and BB scores each get their own colour chip
-      // (red/yellow/green by strength) drawn behind them after layout; the house
-      // roman and the separator stay on the plain band. Format kept as "AV:score"
-      // and "BB:score".
-      var a = placed(bandPos(hh, 7.5), 2.5);
+      // AV/BB (outer band). The AV and BB scores each sit on their own colour
+      // block (red/yellow/green by strength); the house roman and the separator
+      // stay on the plain band. Format kept as "AV:score" and "BB:score".
       var bb = (v.bb_virupa != null) ? Math.round(v.bb_virupa) : v.bb;
-      a.span(ROMAN[hh] + '=', '#111827');
-      a.chip('AV:' + v.av, avColors(v.av), AV_COLOR);
-      a.span(', ', '#111827');
-      a.chip('BB:' + bb, bbColors(bb), BB_COLOR);
-      svg.appendChild(a);
+      var avC = avColors(v.av), bbC = bbColors(bb);
+      bandLabel(svg, hh, 7.5, 2.5, [
+        { txt: ROMAN[hh] + '=', fill: '#111827' },
+        avC ? { txt: 'AV:' + v.av, chip: avC } : { txt: 'AV:' + v.av, fill: AV_COLOR },
+        { txt: ', ', fill: '#111827' },
+        bbC ? { txt: 'BB:' + bb, chip: bbC } : { txt: 'BB:' + bb, fill: BB_COLOR }
+      ]);
 
       // Drishti (inner band): "Dr: " + colour-coded aspecting planets, styled to
       // match the AV/BB band (same font size 2.5 and weight 700).
@@ -340,16 +349,6 @@
     svg.classList.add('ab-chart-svg');
     if (opts.title) { svg.setAttribute('data-chart-title', opts.title); }
     container.appendChild(svg);
-    // AV/BB colour chips need the text measured, so paint them once the SVG is
-    // in the DOM. The painter retries per frame until the chart is laid out, and
-    // we ask again after web fonts settle — so the boxes appear even if the chart
-    // is measured before layout / font load on the very first paint.
-    if (ring) {
-      paintAvBbChips(svg);
-      if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
-        document.fonts.ready.then(function () { paintAvBbChips(svg); });
-      }
-    }
   }
 
   function renderAll(vargas, houses) {
