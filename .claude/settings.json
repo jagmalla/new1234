@@ -1,0 +1,43 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(php -l:*)",
+      "Bash(php tests/:*)",
+      "Bash(php -r:*)",
+      "Bash(php -v)",
+      "Bash(curl -s:*)",
+      "Bash(curl -sf:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git show:*)",
+      "Bash(zip:*)",
+      "Bash(unzip -l:*)",
+      "Bash(node -c:*)",
+      "Bash(node --check:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Read(//home/user/new1234/**)",
+      "Grep",
+      "Glob"
+    ]
+  }
+}
