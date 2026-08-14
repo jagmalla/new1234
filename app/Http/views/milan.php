@@ -33,8 +33,7 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
 <html lang="hi">
 <head>
     <meta charset="utf-8">
-    <!-- minimum-scale 0.6 lets touch-screen users pinch OUT to 60% (see calc-v2). -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.6, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>कुंडली मिलान — Analysis of Karma</title>
     <?php /* अपनी नक़ल हो तो वही, वरना इंटरनेट वाली — देखें calc-v2.php का वही खंड। */ ?>
     <?php if (is_file(dirname(__DIR__, 3) . '/public_html/assets/vendor/fonts.css')): ?>

@@ -97,11 +97,14 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <!-- initial-scale 1 = normal size; minimum-scale 0.6 lets a touch-screen user
-         pinch OUT to 60% (40% smaller) so an over-large chart fits — with plain
-         width=device-width the browser blocks pinch-out below 100% (only pinch-in
-         worked). No maximum-scale, so pinch-in still zooms freely. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.6, user-scalable=yes">
+    <?php /* पहले यहाँ minimum-scale=0.6 डालकर सोचा था कि उँगली से पन्ना छोटा हो
+             सकेगा — वह काम नहीं करता, यह नापकर देखा गया। ब्राउज़र उतना ही पीछे
+             जाने देता है जितने में पन्ने की चौड़ाई पर्दे में समा जाए; हमारा पन्ना
+             कभी बग़ल में नहीं फैलता, इसलिए वह सीमा 100% ही है और minimum-scale
+             उसे नीचे नहीं ले जा सकता। उल्टे, जिन पन्नों की सामग्री चौड़ी होती है
+             वहाँ वह ज़ूम-आउट को 0.6 पर रोक देता। इसलिए मूल पंक्ति वापस।
+             कुंडली को उँगली से छोटा करने का असली उपाय नीचे है (chart pinch)। */ ?>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Analysis of Karma — Auto Business</title>
     <?php
     /* ── दो सज्जा-फ़ाइलें: पहले अपनी, न मिलें तो इंटरनेट वाली ──
@@ -357,6 +360,12 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             background: var(--card); color: var(--ink); }
         #birth-form .bg-blue-600 { background: var(--sindoor) !important; min-height: 44px; }
         .chart-frame { width: 100%; margin: 0 auto; }
+        /* दो उँगली का इशारा हम तक पहुँचे, पर एक उँगली से पन्ना पहले जैसा
+           ऊपर-नीचे खिसकता रहे — इसीलिए pan-y (pinch-zoom नहीं)।
+           सिर्फ़ कुंडली पर, पूरे पटल पर नहीं: कुंडली पर उँगली रखकर इशारा करें तो
+           कुंडली छोटी/बड़ी होती है, और कुंडली के बग़ल में करें तो ब्राउज़र का अपना
+           ज़ूम पहले जैसा चलता है — दोनों बचे रहते हैं। */
+        #chart-frame svg { touch-action: pan-y; }
         /* All dropdowns get an obvious "select me" look: accent border, tinted
            background and a visible caret — plus a leading label (see .pick-tag). */
         .l2-select, .pred-inline-select, .dp-select {
@@ -3892,6 +3901,65 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       setPanelHeights();
     });
   }
+
+  // ---- दो उँगली से कुंडली छोटी/बड़ी करना (touch screens) --------------------
+  // ब्राउज़र अपने आप पन्ने को 100% से नीचे नहीं ले जाता: वह उतना ही पीछे जाने
+  // देता है जितने में सामग्री की चौड़ाई पर्दे में आ जाए, और यह पन्ना कभी बग़ल में
+  // नहीं फैलता। इसलिए "उँगली से बड़ा" तो चलता था, "छोटा" कभी नहीं — कोई
+  // viewport सेटिंग इसे नहीं बदल सकती (नापकर देखा)। सो छोटा/बड़ा करना कुंडली पर
+  // ख़ुद सँभाला जाता है: चौखटे की चौड़ाई घटती-बढ़ती है (SVG width:100% height:auto
+  // है, इसलिए पूरी कुंडली उसी अनुपात में चलती है)।
+  //
+  // बँटवारा साफ़ रखा गया है: कुंडली पूरे आकार में हो और उँगलियाँ फैलें, तो हम कुछ
+  // नहीं करते — ब्राउज़र का अपना ज़ूम पहले जैसा चलता है (वह मालिक को पसंद है)।
+  // उँगलियाँ पास आएँ, या कुंडली पहले से छोटी हो, तो हम सँभालते हैं।
+  (function () {
+    var frame = document.getElementById('chart-frame');
+    // इशारा सुनने वाला खाना वह है जो सिकुड़ता नहीं (पूरा कुंडली-पटल), न कि चौखटा
+    // ख़ुद — वरना कुंडली छोटी करने के बाद उँगलियाँ उसके बाहर पड़तीं और उसे दोबारा
+    // बड़ा करना नामुमकिन हो जाता। यही पहली बार परखने पर पकड़ा गया।
+    var zone = document.getElementById('chart-panel') || (frame && frame.parentNode);
+    if (!frame || !zone || !('ontouchstart' in window)) { return; }
+    var MIN = 40, MAX = 100;              // प्रतिशत में चौखटे की चौड़ाई
+    var zoom = MAX, startDist = 0, startZoom = MAX, active = false;
+
+    try { var s = parseFloat(localStorage.getItem('ab_chart_pinch')); if (s >= MIN && s <= MAX) { zoom = s; } } catch (e) {}
+    function apply() {
+      frame.style.width = zoom + '%';
+      if (typeof setPanelHeights === 'function') { setPanelHeights(); }
+    }
+    if (zoom !== MAX) { apply(); }        // पिछली बार का आकार याद रहता है
+
+    function dist(t) {
+      var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    zone.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 2) { return; }
+      startDist = dist(e.touches); startZoom = zoom; active = false;
+    }, { passive: true });
+
+    zone.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 2 || !startDist) { return; }
+      var ratio = dist(e.touches) / startDist;
+      // पहली हरकत पर तय: यह हमारा काम है या ब्राउज़र का?
+      if (!active) {
+        if (Math.abs(ratio - 1) < 0.02) { return; }        // अभी कुछ तय नहीं
+        var pinchingOut = ratio < 1;
+        if (!pinchingOut && startZoom >= MAX) { return; }   // बड़ा करना ब्राउज़र का
+        active = true;
+      }
+      e.preventDefault();                                   // इशारा हमने लिया
+      zoom = Math.max(MIN, Math.min(MAX, startZoom * ratio));
+      apply();
+    }, { passive: false });
+
+    zone.addEventListener('touchend', function (e) {
+      if (e.touches.length > 0) { return; }
+      startDist = 0; active = false;
+      try { localStorage.setItem('ab_chart_pinch', String(Math.round(zoom))); } catch (er) {}
+    }, { passive: true });
+  })();
 
   // Prediction selector: swap which prediction layer shows in the scroll area.
   var predSel = document.getElementById('pred-select');
