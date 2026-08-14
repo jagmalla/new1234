@@ -103,10 +103,32 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
          worked). No maximum-scale, so pinch-in still zooms freely. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.6, user-scalable=yes">
     <title>Analysis of Karma — Auto Business</title>
+    <?php
+    /* ── दो सज्जा-फ़ाइलें: पहले अपनी, न मिलें तो इंटरनेट वाली ──
+       Tailwind और अक्षर (Mukta/Martel) अब तक हर बार इंटरनेट से आते थे, इसलिए बिना
+       नेट के पन्ना बिना सज्जा का खुलता था। अब PHP डिस्क पर देखता है: अपनी नक़ल
+       मौजूद है तो वही परोसी जाती है (पूरा तंत्र बिना नेट चलता है), नहीं है तो
+       पहले जैसी CDN वाली कड़ी — इसलिए जिस सर्वर पर ये फ़ाइलें नहीं हैं, वहाँ कुछ
+       नहीं बदलता। अक्षर तो साथ ही आते हैं; tailwind.js एक बार उतारनी पड़ती है
+       (देखें docs/OFFLINE_SETUP.md)। */
+    $pub    = dirname(__DIR__, 3) . '/public_html';
+    $twLocal   = is_file($pub . '/assets/vendor/tailwind.js');
+    $fontLocal = is_file($pub . '/assets/vendor/fonts.css');
+    ?>
+    <?php /* $asset सहायक इस फ़ाइल में बहुत नीचे बनता है, इसलिए यहाँ सीधे
+             Asset::url() — वही ?v=<mtime> वाला कैश-तोड़ू पता देता है। */ ?>
+    <?php if ($twLocal): ?>
+    <script src="<?= $h(\AutoBusiness\Core\Asset::url('/assets/vendor/tailwind.js')) ?>"></script>
+    <?php else: ?>
     <script src="https://cdn.tailwindcss.com"></script>
+    <?php endif; ?>
+    <?php if ($fontLocal): ?>
+    <link href="<?= $h(\AutoBusiness\Core\Asset::url('/assets/vendor/fonts.css')) ?>" rel="stylesheet">
+    <?php else: ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Martel:wght@800&family=Mukta:wght@400;500;700&display=swap" rel="stylesheet">
+    <?php endif; ?>
     <style>
         /* === Global readability: larger, device-responsive base font size ===
            Root font-size scales every rem/em-based text (Tailwind utilities +

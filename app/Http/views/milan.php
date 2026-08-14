@@ -36,8 +36,13 @@ $num = static fn(float $x): string => rtrim(rtrim(number_format($x, 1), '0'), '.
     <!-- minimum-scale 0.6 lets touch-screen users pinch OUT to 60% (see calc-v2). -->
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.6, user-scalable=yes">
     <title>कुंडली मिलान — Analysis of Karma</title>
+    <?php /* अपनी नक़ल हो तो वही, वरना इंटरनेट वाली — देखें calc-v2.php का वही खंड। */ ?>
+    <?php if (is_file(dirname(__DIR__, 3) . '/public_html/assets/vendor/fonts.css')): ?>
+    <link href="<?= $h($asset('/assets/vendor/fonts.css')) ?>" rel="stylesheet">
+    <?php else: ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Martel:wght@800&family=Mukta:wght@400;500;700&display=swap" rel="stylesheet">
+    <?php endif; ?>
     <style>
         /* === Global readability: larger, device-responsive base font size ===
            Root font-size scales every rem/em-based text up fluidly on all
