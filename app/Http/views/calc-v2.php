@@ -3804,43 +3804,19 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
   function pkHouseName(h){ return 'भाव ' + h; }
 
   // ---- नियम सूची (यहाँ और नियम जोड़ें) ----
+  // ── प्रश्न-कुंडली के नियम — यहाँ एक-एक करके जोड़ें ──
+  // हर नियम: { id, tone:'shubh'|'ashubh'|'note', test:function(c){…}, text:function(c){…} }
+  // test सच हो तो उसका text फल में छपता है। संदर्भ c में (सब प्रश्न-लग्न से नापे हुए):
+  //   c.asc(लग्न-राशि 0-11) · c.llKey(लग्नेश) · c.llHouse · c.llRetro · c.llCombust ·
+  //   c.moonHouse · c.moonSign · c.waxing · c.moonNak · c.inLagna[] · c.in7th[] ·
+  //   c.benInKendra · c.malInKendra · c.isBen(ग्रह) · c.houseOf(ग्रह) · c.T(सब ग्रह)।
   var PRASHAN_RULES = [
-    { id:'ben-lagna', tone:'shubh',
-      test:function(c){ return c.inLagna.some(function(k){ return c.isBen(k); }); },
-      text:function(c){ return 'लग्न में शुभ ग्रह ('+ c.inLagna.filter(c.isBen).map(pkHi).join(', ') +') — प्रश्न का आरम्भ अनुकूल, कार्य सहज बढ़ेगा।'; } },
-    { id:'mal-lagna', tone:'ashubh',
-      test:function(c){ return c.inLagna.length && c.inLagna.every(function(k){ return !c.isBen(k); }); },
-      text:function(c){ return 'लग्न में पाप ग्रह ('+ c.inLagna.map(pkHi).join(', ') +') — आरम्भ में बाधा; धैर्य व उपाय से आगे बढ़ें।'; } },
-    { id:'ll-good', tone:'shubh',
-      test:function(c){ return PK_KENDRA[c.llHouse] || PK_TRIKONA[c.llHouse]; },
-      text:function(c){ return 'लग्नेश '+ pkHi(c.llKey) +' '+ pkHouseName(c.llHouse) +' (केंद्र/त्रिकोण) में — प्रश्न को बल, कार्य सधेगा।'; } },
-    { id:'ll-dust', tone:'ashubh',
-      test:function(c){ return PK_DUST[c.llHouse]; },
-      text:function(c){ return 'लग्नेश '+ pkHi(c.llKey) +' दुःस्थान ('+ pkHouseName(c.llHouse) +') में — कार्य में विघ्न/देरी सम्भव।'; } },
-    { id:'ll-weak', tone:'note',
-      test:function(c){ return c.llRetro || c.llCombust; },
-      text:function(c){ return 'लग्नेश '+ (c.llCombust ? 'अस्त' : '') + (c.llRetro ? (c.llCombust?' व ':'') + 'वक्री' : '') +' — उत्तर में अनिश्चितता; निर्णय दोबारा जाँचें।'; } },
-    { id:'moon-good', tone:'shubh',
-      test:function(c){ return PK_KENDRA[c.moonHouse] || PK_TRIKONA[c.moonHouse]; },
-      text:function(c){ return 'चन्द्र '+ pkHouseName(c.moonHouse) +' (केंद्र/त्रिकोण) में — मन स्थिर, कार्य गति पकड़ेगा।'; } },
-    { id:'moon-dust', tone:'ashubh',
-      test:function(c){ return PK_DUST[c.moonHouse]; },
-      text:function(c){ return 'चन्द्र दुःस्थान ('+ pkHouseName(c.moonHouse) +') में — मन चिंतित/अस्थिर; शीघ्र निर्णय से बचें।'; } },
     { id:'moon-wax', tone:'shubh',
       test:function(c){ return c.waxing; },
       text:function(){ return 'शुक्ल-पक्ष का बढ़ता चन्द्र — वृद्धि व "हाँ" की ओर झुकाव।'; } },
     { id:'moon-wane', tone:'ashubh',
       test:function(c){ return !c.waxing; },
-      text:function(){ return 'कृष्ण-पक्ष का घटता चन्द्र — क्षय/विलम्ब की ओर; नया शुभ कार्य टालें।'; } },
-    { id:'kendra-ben', tone:'shubh',
-      test:function(c){ return c.benInKendra > c.malInKendra; },
-      text:function(c){ return 'केंद्रों में शुभ ग्रह अधिक ('+ c.benInKendra +' शुभ / '+ c.malInKendra +' पाप) — कार्य की नींव मज़बूत।'; } },
-    { id:'kendra-mal', tone:'ashubh',
-      test:function(c){ return c.malInKendra > c.benInKendra; },
-      text:function(c){ return 'केंद्रों में पाप ग्रह अधिक ('+ c.malInKendra +' पाप / '+ c.benInKendra +' शुभ) — बाधाओं से सावधान रहें।'; } },
-    { id:'mal-7', tone:'note',
-      test:function(c){ return c.in7th.some(function(k){ return !c.isBen(k); }); },
-      text:function(c){ return 'सप्तम भाव में पाप ग्रह ('+ c.in7th.filter(function(k){return !c.isBen(k);}).map(pkHi).join(', ') +') — सामने वाले/विरोधी पक्ष से सतर्क रहें।'; } }
+      text:function(){ return 'कृष्ण-पक्ष का घटता चन्द्र — क्षय/विलम्ब की ओर; नया शुभ कार्य टालें।'; } }
   ];
   function pkHi(k){ return PK_PL_HI[k] || k; }
 
@@ -3852,8 +3828,10 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
     var T = g.transits, asc = g.ascendant.sign_index;
     var llKey = PK_LORD[asc];
+    // भाव हमेशा प्रश्न-लग्न (इसी क्षण की लग्न) से नापे जाते हैं। गोचर डेटा का
+    // house_from_lagna जन्म-लग्न से नापा जाता है — प्रश्न-कुंडली के लिए वह ग़लत
+    // था, इसी से भाव (और उन पर बने नियम) ग़लत आ रहे थे। अब सीधे इसी क्षण की लग्न से।
     function houseOf(pl){
-      if (pl && pl.house_from_lagna) { return pl.house_from_lagna; }
       if (pl && typeof pl.sign_index === 'number') { return ((pl.sign_index - asc + 12) % 12) + 1; }
       return 0;
     }
@@ -3866,7 +3844,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       llRetro: !!(T[llKey] && T[llKey].retro), llCombust: !!(T[llKey] && T[llKey].combust),
       moonHouse:houseOf(moon), moonSign:moon.sign_index, waxing:waxing,
       moonNak: moon.nakshatra ? moon.nakshatra.name : '',
-      inLagna:[], in7th:[], benInKendra:0, malInKendra:0, isBen:isBen };
+      inLagna:[], in7th:[], benInKendra:0, malInKendra:0, isBen:isBen, houseOf:houseOf, T:T };
     Object.keys(T).forEach(function(k){
       var h = houseOf(T[k]);
       if (h === 1) { c.inLagna.push(k); }
@@ -3875,13 +3853,6 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     });
 
     var fired = PRASHAN_RULES.filter(function(r){ try { return r.test(c); } catch(e){ return false; } });
-    var sh = fired.filter(function(r){ return r.tone==='shubh'; });
-    var as = fired.filter(function(r){ return r.tone==='ashubh'; });
-    var nt = fired.filter(function(r){ return r.tone==='note'; });
-
-    var lean = sh.length > as.length ? ['अनुकूल','#15803d','#ecfdf5']
-             : as.length > sh.length ? ['प्रतिकूल','#b91c1c','#fef2f2']
-             : ['मिश्रित','#b45309','#fffbeb'];
     var m = window.AB_GOCHAR_META;
     var when = m ? [m.date, m.time, m.place].filter(Boolean).join(' · ') : '';
 
@@ -3898,25 +3869,16 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       + '<div style="font-weight:800;font-size:1.02rem;color:#7c2d12;margin-bottom:2px">🔮 प्रश्न कुंडली — फल</div>'
       + (when ? '<div style="font-size:.76rem;color:#64748b;margin-bottom:8px">प्रश्न का क्षण: '+when+'</div>' : '')
       + '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:.88rem;line-height:1.7">'
-      +   '<b>प्रश्न-लग्न:</b> '+PK_SIGN_HI[asc]+' <span style="color:#64748b">(लग्नेश '+pkHi(llKey)+', '+pkHouseName(c.llHouse)+')</span><br>'
-      +   '<b>चन्द्र:</b> '+(c.moonSign!=null?PK_SIGN_HI[c.moonSign]:'—')+' · '+pkHouseName(c.moonHouse)
-      +     (c.moonNak?' · नक्षत्र '+c.moonNak:'')+' · '+(waxing?'शुक्ल-पक्ष (बढ़ता)':'कृष्ण-पक्ष (घटता)')+'<br>'
-      +   '<b>केंद्रों में:</b> '+c.benInKendra+' शुभ, '+c.malInKendra+' पाप ग्रह'
-      + '</div>'
-      + '<div style="font-weight:800;font-size:.9rem;color:'+lean[0+1]+';background:'+lean[2]+';border:1px solid '+lean[1]
-      +   ';border-radius:8px;padding:6px 10px;margin-bottom:6px">प्रश्न का झुकाव: '+lean[0]
-      +   ' <span style="font-weight:600;color:#475569">('+sh.length+' शुभ · '+as.length+' प्रतिकूल · '+nt.length+' सावधानी)</span></div>';
+      +   '<b>प्रश्न-लग्न:</b> '+PK_SIGN_HI[asc]+'<br>'
+      +   '<b>चन्द्र:</b> '+(c.moonSign!=null?PK_SIGN_HI[c.moonSign]:'—')
+      +     (c.moonNak?' · नक्षत्र '+c.moonNak:'')+' · '+(waxing?'शुक्ल-पक्ष (बढ़ता)':'कृष्ण-पक्ष (घटता)')
+      + '</div>';
 
-    if (!fired.length) {
-      html += '<div style="font-size:.9rem;color:#64748b;padding:6px 2px">इस क्षण की कुंडली पर अभी कोई स्पष्ट नियम लागू नहीं हुआ।</div>';
-    } else {
-      sh.forEach(function(r){ html += card(r); });
-      as.forEach(function(r){ html += card(r); });
-      nt.forEach(function(r){ html += card(r); });
-    }
+    fired.forEach(function(r){ html += card(r); });
+
     html += '<div style="font-size:.74rem;color:#94a3b8;margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:6px">'
       + 'नोट: प्रश्न कुंडली उसी पल की है जब प्रश्न पूछा गया — ऊपर तिथि/समय/स्थान वही रखें। '
-      + 'यह प्रारम्भिक नियम-संग्रह है; और नियम जोड़े जा रहे हैं।</div>';
+      + 'नियम एक-एक करके जोड़े जा रहे हैं।</div>';
 
     box.innerHTML = html;
   }
