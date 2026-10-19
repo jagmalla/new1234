@@ -1436,6 +1436,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             <div class="l2-mi">
                 <button type="button" data-sec="gochar"><span class="l2-ic">🔭</span>Gochar (Transit)</button>
                 <div class="l2-sub">
+                    <button type="button" data-sec="gochar" data-gp-pred="prashan" data-target="card-gocharpair">Prashan Kundali</button>
                     <button type="button" data-sec="gochar" data-target="card-gocharcalc">Gochar Calculation</button>
                     <button type="button" data-sec="gochar" data-target="yt-card">12-Month Timeline</button>
                 </div>
@@ -2546,6 +2547,15 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         <!-- Prediction content blocks — JS moves these singleton nodes into the
              prediction slots above (swapped when both slots pick the same one). -->
         <div id="gp-pred-src" class="hidden">
+            <div id="gpblock-prashan" data-pred="prashan">
+                <div id="prashan-phal" class="prashan-wrap">
+                    <div class="gochar-pred-soon">
+                        <div class="gps-icon">🔮</div>
+                        <div class="gps-title">प्रश्न कुंडली तैयार हो रही है…</div>
+                        <div class="gps-sub">ऊपर तिथि/समय/स्थान वही रखें जब प्रश्न पूछा गया — उसी क्षण की कुंडली से प्रश्न का फल नीचे दिखेगा।</div>
+                    </div>
+                </div>
+            </div>
             <div id="gpblock-phal" data-pred="phal">
                 <div id="gochar-phal">
                     <div class="gochar-pred-soon">
@@ -3702,7 +3712,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
   // one in both panes swaps them). Charts scale to fit, predictions scroll.
   var GP_ABBR = { Sun:'Su', Moon:'Mo', Mars:'Ma', Mercury:'Me', Jupiter:'Ju', Venus:'Ve', Saturn:'Sa', Rahu:'Ra', Ketu:'Ke' };
   var gpChartState = { c1: 'gochar', c2: 'D1' };
-  var gpPredState  = { p1: 'phal',   p2: 'upcoming' };
+  var gpPredState  = { p1: 'prashan', p2: 'phal' };
 
   function gpChartCatalog() {
     var out = [], V = window.AB_VARGAS || {};
@@ -3716,7 +3726,8 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
   }
   function gpPredCatalog() {
     return [
-      { key: 'phal',     label: '🔮 Gochar Phal (गोचर फल)' },
+      { key: 'prashan',  label: '🔮 Prashn Kundali (प्रश्न कुंडली)' },
+      { key: 'phal',     label: '🌠 Gochar Phal (गोचर फल)' },
       { key: 'upcoming', label: '📅 Upcoming Gochar / Transit (आगामी गोचर)' }
     ];
   }
@@ -3772,7 +3783,144 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
   // Live transit updated (date/place changed) — refresh any chart slot on gochar.
   function gpRefreshTransit() {
     ['c1', 'c2'].forEach(function (s) { if (gpChartState[s] === 'gochar') { gpApplyChart(s); } });
+    renderPrashan();   // प्रश्न-कुंडली भी उसी क्षण की है — तिथि/स्थान बदलते ही बदले
   }
+
+  // ===================================================================
+  // प्रश्न कुंडली (Prashan / Horary) — उसी क्षण की गोचर-कुंडली को प्रश्न-कुंडली
+  // की तरह पढ़ा जाता है (जिस पल प्रश्न पूछा गया = ऊपर चुनी हुई तिथि/समय/स्थान)।
+  // आधार window.AB_GOCHAR से आता है (लग्न + हर ग्रह का भाव/नक्षत्र/वक्री/अस्त)।
+  //
+  // नियम जोड़ना आसान रखा गया है: नीचे PRASHAN_RULES सूची में एक वस्तु और जोड़ दें —
+  // { id, tone:'shubh'|'ashubh'|'note', test:function(c){…}, text:function(c){…} }
+  // test सच होने पर उसका text फल में छप जाता है। यही एकमात्र नया भाग है;
+  // बाक़ी गोचर पन्ना ज्यों का त्यों है।
+  // ===================================================================
+  var PK_SIGN_HI = ['मेष','वृषभ','मिथुन','कर्क','सिंह','कन्या','तुला','वृश्चिक','धनु','मकर','कुंभ','मीन'];
+  var PK_LORD    = ['Mars','Venus','Mercury','Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Saturn','Jupiter'];
+  var PK_PL_HI   = { Sun:'सूर्य', Moon:'चन्द्र', Mercury:'बुध', Venus:'शुक्र', Mars:'मंगल', Jupiter:'गुरु', Saturn:'शनि', Rahu:'राहु', Ketu:'केतु' };
+  var PK_KENDRA  = {1:1,4:1,7:1,10:1}, PK_TRIKONA = {1:1,5:1,9:1}, PK_DUST = {6:1,8:1,12:1};
+  var PK_BEN     = { Jupiter:1, Venus:1, Mercury:1 };   // + शुक्ल-पक्ष का चन्द्र
+  function pkHouseName(h){ return 'भाव ' + h; }
+
+  // ---- नियम सूची (यहाँ और नियम जोड़ें) ----
+  var PRASHAN_RULES = [
+    { id:'ben-lagna', tone:'shubh',
+      test:function(c){ return c.inLagna.some(function(k){ return c.isBen(k); }); },
+      text:function(c){ return 'लग्न में शुभ ग्रह ('+ c.inLagna.filter(c.isBen).map(pkHi).join(', ') +') — प्रश्न का आरम्भ अनुकूल, कार्य सहज बढ़ेगा।'; } },
+    { id:'mal-lagna', tone:'ashubh',
+      test:function(c){ return c.inLagna.length && c.inLagna.every(function(k){ return !c.isBen(k); }); },
+      text:function(c){ return 'लग्न में पाप ग्रह ('+ c.inLagna.map(pkHi).join(', ') +') — आरम्भ में बाधा; धैर्य व उपाय से आगे बढ़ें।'; } },
+    { id:'ll-good', tone:'shubh',
+      test:function(c){ return PK_KENDRA[c.llHouse] || PK_TRIKONA[c.llHouse]; },
+      text:function(c){ return 'लग्नेश '+ pkHi(c.llKey) +' '+ pkHouseName(c.llHouse) +' (केंद्र/त्रिकोण) में — प्रश्न को बल, कार्य सधेगा।'; } },
+    { id:'ll-dust', tone:'ashubh',
+      test:function(c){ return PK_DUST[c.llHouse]; },
+      text:function(c){ return 'लग्नेश '+ pkHi(c.llKey) +' दुःस्थान ('+ pkHouseName(c.llHouse) +') में — कार्य में विघ्न/देरी सम्भव।'; } },
+    { id:'ll-weak', tone:'note',
+      test:function(c){ return c.llRetro || c.llCombust; },
+      text:function(c){ return 'लग्नेश '+ (c.llCombust ? 'अस्त' : '') + (c.llRetro ? (c.llCombust?' व ':'') + 'वक्री' : '') +' — उत्तर में अनिश्चितता; निर्णय दोबारा जाँचें।'; } },
+    { id:'moon-good', tone:'shubh',
+      test:function(c){ return PK_KENDRA[c.moonHouse] || PK_TRIKONA[c.moonHouse]; },
+      text:function(c){ return 'चन्द्र '+ pkHouseName(c.moonHouse) +' (केंद्र/त्रिकोण) में — मन स्थिर, कार्य गति पकड़ेगा।'; } },
+    { id:'moon-dust', tone:'ashubh',
+      test:function(c){ return PK_DUST[c.moonHouse]; },
+      text:function(c){ return 'चन्द्र दुःस्थान ('+ pkHouseName(c.moonHouse) +') में — मन चिंतित/अस्थिर; शीघ्र निर्णय से बचें।'; } },
+    { id:'moon-wax', tone:'shubh',
+      test:function(c){ return c.waxing; },
+      text:function(){ return 'शुक्ल-पक्ष का बढ़ता चन्द्र — वृद्धि व "हाँ" की ओर झुकाव।'; } },
+    { id:'moon-wane', tone:'ashubh',
+      test:function(c){ return !c.waxing; },
+      text:function(){ return 'कृष्ण-पक्ष का घटता चन्द्र — क्षय/विलम्ब की ओर; नया शुभ कार्य टालें।'; } },
+    { id:'kendra-ben', tone:'shubh',
+      test:function(c){ return c.benInKendra > c.malInKendra; },
+      text:function(c){ return 'केंद्रों में शुभ ग्रह अधिक ('+ c.benInKendra +' शुभ / '+ c.malInKendra +' पाप) — कार्य की नींव मज़बूत।'; } },
+    { id:'kendra-mal', tone:'ashubh',
+      test:function(c){ return c.malInKendra > c.benInKendra; },
+      text:function(c){ return 'केंद्रों में पाप ग्रह अधिक ('+ c.malInKendra +' पाप / '+ c.benInKendra +' शुभ) — बाधाओं से सावधान रहें।'; } },
+    { id:'mal-7', tone:'note',
+      test:function(c){ return c.in7th.some(function(k){ return !c.isBen(k); }); },
+      text:function(c){ return 'सप्तम भाव में पाप ग्रह ('+ c.in7th.filter(function(k){return !c.isBen(k);}).map(pkHi).join(', ') +') — सामने वाले/विरोधी पक्ष से सतर्क रहें।'; } }
+  ];
+  function pkHi(k){ return PK_PL_HI[k] || k; }
+
+  function renderPrashan() {
+    var box = document.getElementById('prashan-phal');
+    if (!box) { return; }
+    var g = window.AB_GOCHAR || {};
+    if (!g.transits || !g.ascendant) { return; }   // अभी गणना नहीं — "तैयार हो रही है" रहने दो
+
+    var T = g.transits, asc = g.ascendant.sign_index;
+    var llKey = PK_LORD[asc];
+    function houseOf(pl){
+      if (pl && pl.house_from_lagna) { return pl.house_from_lagna; }
+      if (pl && typeof pl.sign_index === 'number') { return ((pl.sign_index - asc + 12) % 12) + 1; }
+      return 0;
+    }
+    var moon = T.Moon || {}, sun = T.Sun || {};
+    var elong = ((((moon.sidereal_lon||0) - (sun.sidereal_lon||0)) % 360) + 360) % 360;
+    var waxing = elong <= 180;
+    function isBen(k){ if (k === 'Moon') { return waxing; } return !!PK_BEN[k]; }
+
+    var c = { asc:asc, llKey:llKey, llHouse:houseOf(T[llKey]),
+      llRetro: !!(T[llKey] && T[llKey].retro), llCombust: !!(T[llKey] && T[llKey].combust),
+      moonHouse:houseOf(moon), moonSign:moon.sign_index, waxing:waxing,
+      moonNak: moon.nakshatra ? moon.nakshatra.name : '',
+      inLagna:[], in7th:[], benInKendra:0, malInKendra:0, isBen:isBen };
+    Object.keys(T).forEach(function(k){
+      var h = houseOf(T[k]);
+      if (h === 1) { c.inLagna.push(k); }
+      if (h === 7) { c.in7th.push(k); }
+      if (PK_KENDRA[h]) { if (isBen(k)) { c.benInKendra++; } else { c.malInKendra++; } }
+    });
+
+    var fired = PRASHAN_RULES.filter(function(r){ try { return r.test(c); } catch(e){ return false; } });
+    var sh = fired.filter(function(r){ return r.tone==='shubh'; });
+    var as = fired.filter(function(r){ return r.tone==='ashubh'; });
+    var nt = fired.filter(function(r){ return r.tone==='note'; });
+
+    var lean = sh.length > as.length ? ['अनुकूल','#15803d','#ecfdf5']
+             : as.length > sh.length ? ['प्रतिकूल','#b91c1c','#fef2f2']
+             : ['मिश्रित','#b45309','#fffbeb'];
+    var m = window.AB_GOCHAR_META;
+    var when = m ? [m.date, m.time, m.place].filter(Boolean).join(' · ') : '';
+
+    function card(r){
+      var col = r.tone==='shubh' ? ['#15803d','#ecfdf5','#bbf7d0']
+              : r.tone==='ashubh' ? ['#b91c1c','#fef2f2','#fecaca']
+              : ['#b45309','#fffbeb','#fde68a'];
+      return '<div style="border:1px solid '+col[2]+';background:'+col[1]+';border-left:4px solid '+col[0]
+        +';border-radius:8px;padding:7px 10px;margin:6px 0;font-size:.9rem;line-height:1.5">'
+        + (r.tone==='shubh'?'✅ ':r.tone==='ashubh'?'⚠️ ':'• ') + r.text(c) + '</div>';
+    }
+
+    var html = ''
+      + '<div style="font-weight:800;font-size:1.02rem;color:#7c2d12;margin-bottom:2px">🔮 प्रश्न कुंडली — फल</div>'
+      + (when ? '<div style="font-size:.76rem;color:#64748b;margin-bottom:8px">प्रश्न का क्षण: '+when+'</div>' : '')
+      + '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:.88rem;line-height:1.7">'
+      +   '<b>प्रश्न-लग्न:</b> '+PK_SIGN_HI[asc]+' <span style="color:#64748b">(लग्नेश '+pkHi(llKey)+', '+pkHouseName(c.llHouse)+')</span><br>'
+      +   '<b>चन्द्र:</b> '+(c.moonSign!=null?PK_SIGN_HI[c.moonSign]:'—')+' · '+pkHouseName(c.moonHouse)
+      +     (c.moonNak?' · नक्षत्र '+c.moonNak:'')+' · '+(waxing?'शुक्ल-पक्ष (बढ़ता)':'कृष्ण-पक्ष (घटता)')+'<br>'
+      +   '<b>केंद्रों में:</b> '+c.benInKendra+' शुभ, '+c.malInKendra+' पाप ग्रह'
+      + '</div>'
+      + '<div style="font-weight:800;font-size:.9rem;color:'+lean[0+1]+';background:'+lean[2]+';border:1px solid '+lean[1]
+      +   ';border-radius:8px;padding:6px 10px;margin-bottom:6px">प्रश्न का झुकाव: '+lean[0]
+      +   ' <span style="font-weight:600;color:#475569">('+sh.length+' शुभ · '+as.length+' प्रतिकूल · '+nt.length+' सावधानी)</span></div>';
+
+    if (!fired.length) {
+      html += '<div style="font-size:.9rem;color:#64748b;padding:6px 2px">इस क्षण की कुंडली पर अभी कोई स्पष्ट नियम लागू नहीं हुआ।</div>';
+    } else {
+      sh.forEach(function(r){ html += card(r); });
+      as.forEach(function(r){ html += card(r); });
+      nt.forEach(function(r){ html += card(r); });
+    }
+    html += '<div style="font-size:.74rem;color:#94a3b8;margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:6px">'
+      + 'नोट: प्रश्न कुंडली उसी पल की है जब प्रश्न पूछा गया — ऊपर तिथि/समय/स्थान वही रखें। '
+      + 'यह प्रारम्भिक नियम-संग्रह है; और नियम जोड़े जा रहे हैं।</div>';
+
+    box.innerHTML = html;
+  }
+
 
   // Move the prediction blocks into their slots per gpPredState.
   function gpPlacePred() {
@@ -3781,6 +3929,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       var block = document.querySelector('[data-pred="' + gpPredState[slotId] + '"]');
       if (body && block && block.parentNode !== body) { body.appendChild(block); }
     });
+    renderPrashan();
   }
   function gpSetPred(slotId, key) {
     var other = slotId === 'p1' ? 'p2' : 'p1';
@@ -4938,6 +5087,9 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         var lkSel = document.getElementById('lk-select');
         if (lkSel) { lkSel.value = lkView; lkSel.dispatchEvent(new Event('change')); }
       }
+      // Gochar sub-item “Prashan Kundali” → show that prediction in the top pane.
+      var gpPred = btn.getAttribute('data-gp-pred');
+      if (gpPred && typeof gpSetPred === 'function') { gpSetPred('p1', gpPred); }
       if (tgt) {
         var el = document.getElementById(tgt);
         if (el) {
