@@ -3025,6 +3025,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
 <script src="<?= $h($asset('/assets/js/datefmt.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/prashan.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/chartzoom.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
@@ -3786,101 +3787,14 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     renderPrashan();   // प्रश्न-कुंडली भी उसी क्षण की है — तिथि/स्थान बदलते ही बदले
   }
 
-  // ===================================================================
-  // प्रश्न कुंडली (Prashan / Horary) — उसी क्षण की गोचर-कुंडली को प्रश्न-कुंडली
-  // की तरह पढ़ा जाता है (जिस पल प्रश्न पूछा गया = ऊपर चुनी हुई तिथि/समय/स्थान)।
-  // आधार window.AB_GOCHAR से आता है (लग्न + हर ग्रह का भाव/नक्षत्र/वक्री/अस्त)।
-  //
-  // नियम जोड़ना आसान रखा गया है: नीचे PRASHAN_RULES सूची में एक वस्तु और जोड़ दें —
-  // { id, tone:'shubh'|'ashubh'|'note', test:function(c){…}, text:function(c){…} }
-  // test सच होने पर उसका text फल में छप जाता है। यही एकमात्र नया भाग है;
-  // बाक़ी गोचर पन्ना ज्यों का त्यों है।
-  // ===================================================================
-  var PK_SIGN_HI = ['मेष','वृषभ','मिथुन','कर्क','सिंह','कन्या','तुला','वृश्चिक','धनु','मकर','कुंभ','मीन'];
-  var PK_LORD    = ['Mars','Venus','Mercury','Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Saturn','Jupiter'];
-  var PK_PL_HI   = { Sun:'सूर्य', Moon:'चन्द्र', Mercury:'बुध', Venus:'शुक्र', Mars:'मंगल', Jupiter:'गुरु', Saturn:'शनि', Rahu:'राहु', Ketu:'केतु' };
-  var PK_KENDRA  = {1:1,4:1,7:1,10:1}, PK_TRIKONA = {1:1,5:1,9:1}, PK_DUST = {6:1,8:1,12:1};
-  var PK_BEN     = { Jupiter:1, Venus:1, Mercury:1 };   // + शुक्ल-पक्ष का चन्द्र
-  function pkHouseName(h){ return 'भाव ' + h; }
-
-  // ---- नियम सूची (यहाँ और नियम जोड़ें) ----
-  // ── प्रश्न-कुंडली के नियम — यहाँ एक-एक करके जोड़ें ──
-  // हर नियम: { id, tone:'shubh'|'ashubh'|'note', test:function(c){…}, text:function(c){…} }
-  // test सच हो तो उसका text फल में छपता है। संदर्भ c में (सब प्रश्न-लग्न से नापे हुए):
-  //   c.asc(लग्न-राशि 0-11) · c.llKey(लग्नेश) · c.llHouse · c.llRetro · c.llCombust ·
-  //   c.moonHouse · c.moonSign · c.waxing · c.moonNak · c.inLagna[] · c.in7th[] ·
-  //   c.benInKendra · c.malInKendra · c.isBen(ग्रह) · c.houseOf(ग्रह) · c.T(सब ग्रह)।
-  var PRASHAN_RULES = [
-    { id:'moon-wax', tone:'shubh',
-      test:function(c){ return c.waxing; },
-      text:function(){ return 'शुक्ल-पक्ष का बढ़ता चन्द्र — वृद्धि व "हाँ" की ओर झुकाव।'; } },
-    { id:'moon-wane', tone:'ashubh',
-      test:function(c){ return !c.waxing; },
-      text:function(){ return 'कृष्ण-पक्ष का घटता चन्द्र — क्षय/विलम्ब की ओर; नया शुभ कार्य टालें।'; } }
-  ];
-  function pkHi(k){ return PK_PL_HI[k] || k; }
-
+  // प्रश्न कुंडली (Prashan) — पूरा ताजिक इंजन public_html/assets/js/prashan.js में है;
+  // यहाँ बस उसे बुलाते हैं। आधार उसी क्षण की गोचर-कुंडली (window.AB_GOCHAR) है,
+  // इसलिए तिथि/समय/स्थान बदलते ही फल अपने-आप बदल जाता है।
   function renderPrashan() {
     var box = document.getElementById('prashan-phal');
-    if (!box) { return; }
-    var g = window.AB_GOCHAR || {};
-    if (!g.transits || !g.ascendant) { return; }   // अभी गणना नहीं — "तैयार हो रही है" रहने दो
-
-    var T = g.transits, asc = g.ascendant.sign_index;
-    var llKey = PK_LORD[asc];
-    // भाव हमेशा प्रश्न-लग्न (इसी क्षण की लग्न) से नापे जाते हैं। गोचर डेटा का
-    // house_from_lagna जन्म-लग्न से नापा जाता है — प्रश्न-कुंडली के लिए वह ग़लत
-    // था, इसी से भाव (और उन पर बने नियम) ग़लत आ रहे थे। अब सीधे इसी क्षण की लग्न से।
-    function houseOf(pl){
-      if (pl && typeof pl.sign_index === 'number') { return ((pl.sign_index - asc + 12) % 12) + 1; }
-      return 0;
+    if (box && window.ABPrashan) {
+      window.ABPrashan.render(box, window.AB_GOCHAR || {}, window.AB_GOCHAR_META || null);
     }
-    var moon = T.Moon || {}, sun = T.Sun || {};
-    var elong = ((((moon.sidereal_lon||0) - (sun.sidereal_lon||0)) % 360) + 360) % 360;
-    var waxing = elong <= 180;
-    function isBen(k){ if (k === 'Moon') { return waxing; } return !!PK_BEN[k]; }
-
-    var c = { asc:asc, llKey:llKey, llHouse:houseOf(T[llKey]),
-      llRetro: !!(T[llKey] && T[llKey].retro), llCombust: !!(T[llKey] && T[llKey].combust),
-      moonHouse:houseOf(moon), moonSign:moon.sign_index, waxing:waxing,
-      moonNak: moon.nakshatra ? moon.nakshatra.name : '',
-      inLagna:[], in7th:[], benInKendra:0, malInKendra:0, isBen:isBen, houseOf:houseOf, T:T };
-    Object.keys(T).forEach(function(k){
-      var h = houseOf(T[k]);
-      if (h === 1) { c.inLagna.push(k); }
-      if (h === 7) { c.in7th.push(k); }
-      if (PK_KENDRA[h]) { if (isBen(k)) { c.benInKendra++; } else { c.malInKendra++; } }
-    });
-
-    var fired = PRASHAN_RULES.filter(function(r){ try { return r.test(c); } catch(e){ return false; } });
-    var m = window.AB_GOCHAR_META;
-    var when = m ? [m.date, m.time, m.place].filter(Boolean).join(' · ') : '';
-
-    function card(r){
-      var col = r.tone==='shubh' ? ['#15803d','#ecfdf5','#bbf7d0']
-              : r.tone==='ashubh' ? ['#b91c1c','#fef2f2','#fecaca']
-              : ['#b45309','#fffbeb','#fde68a'];
-      return '<div style="border:1px solid '+col[2]+';background:'+col[1]+';border-left:4px solid '+col[0]
-        +';border-radius:8px;padding:7px 10px;margin:6px 0;font-size:.9rem;line-height:1.5">'
-        + (r.tone==='shubh'?'✅ ':r.tone==='ashubh'?'⚠️ ':'• ') + r.text(c) + '</div>';
-    }
-
-    var html = ''
-      + '<div style="font-weight:800;font-size:1.02rem;color:#7c2d12;margin-bottom:2px">🔮 प्रश्न कुंडली — फल</div>'
-      + (when ? '<div style="font-size:.76rem;color:#64748b;margin-bottom:8px">प्रश्न का क्षण: '+when+'</div>' : '')
-      + '<div style="border:1px solid #e5e7eb;background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:.88rem;line-height:1.7">'
-      +   '<b>प्रश्न-लग्न:</b> '+PK_SIGN_HI[asc]+'<br>'
-      +   '<b>चन्द्र:</b> '+(c.moonSign!=null?PK_SIGN_HI[c.moonSign]:'—')
-      +     (c.moonNak?' · नक्षत्र '+c.moonNak:'')+' · '+(waxing?'शुक्ल-पक्ष (बढ़ता)':'कृष्ण-पक्ष (घटता)')
-      + '</div>';
-
-    fired.forEach(function(r){ html += card(r); });
-
-    html += '<div style="font-size:.74rem;color:#94a3b8;margin-top:10px;border-top:1px dashed #e5e7eb;padding-top:6px">'
-      + 'नोट: प्रश्न कुंडली उसी पल की है जब प्रश्न पूछा गया — ऊपर तिथि/समय/स्थान वही रखें। '
-      + 'नियम एक-एक करके जोड़े जा रहे हैं।</div>';
-
-    box.innerHTML = html;
   }
 
 
