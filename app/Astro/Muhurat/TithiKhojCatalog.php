@@ -18,8 +18,9 @@ final class TithiKhojCatalog
      * पन्ने के लिए: श्रेणियाँ → कार्य (ID, नाम, विकल्प-कूट), और विकल्पों की परिभाषा।
      *
      * @return array{cats: list<array{key: string, emoji: string, label: string,
-     *   subs: list<array{key: string, label: string, opts: list<string>}>}>,
-     *   options: array<string, array{label: string, choices: array<string, string>}>}
+     *   subs: list<array{key: string, label: string, opts: list<string>, who: list<array>, x: list<string>}>}>,
+     *   options: array<string, array{label: string, choices: array<string, string>}>,
+     *   extras: array<string, array{type: string, label: string, help: string}>, akshar: list<array>}
      */
     public static function forView(): array
     {
@@ -28,16 +29,23 @@ final class TithiKhojCatalog
             $cats[$n] = ['key' => (string) $n, 'emoji' => $c['emoji'], 'label' => $c['name'], 'subs' => []];
         }
         foreach (KaryaNiyamData::TASKS as $id => $t) {
+            $prof = KaryaVyakti::profile((string) $id);
             $cats[$t['c']]['subs'][] = [
                 'key' => (string) $id,
                 'label' => $t['name'],
                 'opts' => array_values(KaryaNiyamVidhi::rule((string) $id)['options'] ?? []),
+                'who' => $prof['who'],   // ③ किसके लिए — व्यक्ति-खाने (भूमिका, लेबल, आवश्यकता)
+                'x' => $prof['x'],       // स्थिति के अतिरिक्त प्रश्न
             ];
         }
         $opts = [];
         foreach (KaryaNiyamVidhi::OPTIONS as $k => [$label, $choices]) {
             $opts[$k] = ['label' => $label, 'choices' => $choices];
         }
-        return ['cats' => array_values($cats), 'options' => $opts];
+        $extras = [];
+        foreach (KaryaVyakti::EXTRAS as $k => [$type, $label, $help]) { $extras[$k] = ['type' => $type, 'label' => $label, 'help' => $help]; }
+        $akshar = [];
+        foreach (KaryaVyakti::AKSHAR as $n => $four) { $akshar[] = ['n' => $n, 'name' => PanchangNiyamData::NAK[$n]['name'], 'a' => $four]; }
+        return ['cats' => array_values($cats), 'options' => $opts, 'extras' => $extras, 'akshar' => $akshar];
     }
 }

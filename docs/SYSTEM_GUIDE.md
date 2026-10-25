@@ -545,16 +545,52 @@ decide. Abujh days relax panchang-shuddhi but not month bans or combustion.
 **The page:** *मुख्य श्रेणी* (12) → *कार्य* (87); any options for that task; the
 book's rules for it (fold-out); period tabs 1/3/6 months/1 year or typed dates
 (📅 opens the device calendar); **कार्य-स्थान** (worldwide city search — the
-place's own sunrise and time zone are used); and **👤 व्यक्तिगत बल** (chandra/tara
-bal etc. from the open chart). Results: counts, a list of good days with their
+place's own sunrise and time zone are used); and step **③ किसके लिए मुहूर्त**.
+
+**③ किसके लिए मुहूर्त (`KaryaVyakti`)** — the person boxes change with the task:
+
+| Situation | Tasks | Boxes |
+|---|---|---|
+| Couple | 1.10 सगाई, 1.11 विवाह | वर (Boy) + कन्या (Girl); the open chart fills its side by gender; ☑ ज्येष्ठ संतान each; गुण-मिलान shown |
+| Gauna | 1.12 | वधू + वर (optional) + विवाह की तिथि |
+| Garbhadhan | 1.01 | पत्नी + पति (optional) + ऋतु-आरम्भ तिथि |
+| Pregnant mother | 1.02 | माता + LMP + choice पुंसवन / सीमन्त / गोद भराई |
+| Child | 1.03–1.09 | शिशु — DOB required (age rules); gender; मुंडन: ☑ ज्येष्ठ संतान, ☑ माता गर्भवती; जनेऊ: वर्ण |
+| None | 1.13 | मृत्यु की तिथि-समय (optional) — पंचक/त्रिपुष्कर, अस्थि-संचय days |
+| One person | all others | named for the task (गृहस्वामी, यजमान, यात्री, रोगी …); 5.01/5.08/11.03 + optional दूसरा पक्ष |
+
+Each box can be filled four ways: the open chart, birth details (with city search
+or a saved chart — the same saved list as the birth-chart and Milan pages), the
+**first letter of the name** (108 नाम-अक्षर → naam rashi and nakshatra, when the
+birth time is unknown), or "not checked". A live line under each box (from
+`calc/karyaWho`) confirms the person: राशि, नक्षत्र-चरण, लग्न, नाम-अक्षर, age, and task
+notes (नामकरण letter, साढ़ेसाती for शनि शांति, कालसर्प for its shanti, the gem's
+lordship for the lagna). People are remembered per open kundali, so one client's
+bride or child is never carried into another client's search.
+
+Rules by role: every person — चंद्र बल, तारा बल, जन्म नक्षत्र/मास where barred,
+muhurat lagna not 8th from their janma rashi/lagna; **कन्या** गुरु बल and **वर** सूर्य
+बल (4/8/12 → at most मध्यम, remedy named; own/exalted planet relieves it); बटुक का
+गुरु बल; ज्येष्ठ संतान in ज्येष्ठ मास; the child age rules (नामकरण 11/12th day —
+tithi/vaar relaxed that day; निष्क्रमण 4th month; अन्नप्राशन boy even / girl odd
+month; मुंडन odd year; कर्णवेध 12/16th day, 6–8th month, 3/5th year; विद्यारम्भ 5th
+year; जनेऊ by वर्ण from conception, Manu 2.36–38); pregnancy month; ऋतु nights
+4–16 (not 11/13); गौना odd year after marriage; क्षौर not on the birthday; घात चक्र
+(मत) for travel, court and surgery; वाम रवि from the main-door direction (गृह प्रवेश);
+the operated organ's sign (surgery). Results list who was checked and the period's
+main obstacles — why days were अशुभ, and what personal/situation reason kept days
+at मध्यम. Results: counts, a list of good days with their
 best time window, lagna, nakshatra and tithi (best first, or by date), a coloured
 calendar, the full table, and on each day **🔎 पूरा विवरण** — the complete
 rule-by-rule checklist at the best moment.
 
-Self-checks **TK-1** (12 categories, all 87 tasks with rules and options), **TK-2**
-(a full year is scanned; some, not all, days are good; every good day has a
-window), **TK-3** (the rule-book's own worked example gives the book's answer) and
-**TK-4** (चातुर्मास blocks a wedding but not a land purchase) guard it.
+Self-checks **TK-1** (12 categories, all 87 tasks with rules, options and person
+profiles), **TK-2** (a full year is scanned; some, not all, days are good; every
+good day has a window), **TK-3** (the rule-book's own worked example gives the
+book's answer), **TK-4** (चातुर्मास blocks a wedding but not a land purchase),
+**TK-5** (अन्नप्राशन only in a boy's even / a girl's odd months) and **TK-6** (bride's
+गुरु बल and groom's सूर्य बल judged separately; both first-born → ज्येष्ठ मास barred)
+guard it.
 
 ---
 
@@ -641,7 +677,9 @@ LalKitabMilan · LalKitabData · LalKitabSettings · LalKitabSelfCheck.
   Khoj / कार्य-मुहूर्त जाँच (§14.1): KaryaNiyamData, PanchangNiyamData,
   KaryaNiyamVidhi (rules) · SunTimes, KaryaKaal (the day's exact panchang and dosha
   windows) · KaryaNirnay (judges a moment) · KaryaTithiKhoj (scans a period, checks
-  one moment) · TithiKhojCatalog (the dropdown lists).
+  one moment) · KaryaVyakti (who the muhurat is for — profiles, persons from birth
+  details or name letter, ghat chakra, organ signs, गुण-मिलान summary) ·
+  TithiKhojCatalog (the dropdown lists).
 - **Milan/** — GunaMilan + MilanRepository (§13).
 
 ### 17.5 Support (`Core/`, `Geo/`)
@@ -676,6 +714,7 @@ onto it via `.htaccess`).
 | `calc/karyaScan` | Tithi Khoj: scan up to 400 days for one of the 87 tasks (`task`, `from`, `to`, place `lat/lon/tz/zone`, options `o_*`, optional `personal` + birth) — good days with time windows. |
 | `calc/karyaCheck` | Check one moment (`date`, `time`) for a task — the full rule-by-rule checklist (Tithi Khoj detail, कार्य-मुहूर्त जाँच). |
 | `calc/karyaInfo` | A task's rules from the rule-book (for the fold-out). |
+| `calc/karyaWho` | Step ③: summary of the people entered for a task (राशि, नक्षत्र-चरण, लग्न, नाम-अक्षर, age, notes), गुण-मिलान for वर-कन्या, missing boxes, death notes. Person params `<role>_m/_d/_t/_lat/_lon/_tz/_g/_n/_k/_f`, situation params `x_*` — the same on karyaScan / karyaCheck. |
 | `calc/translate` | Translate the prediction text (language switch). |
 | `calc/ping` | Health check. |
 | `milan` | The Kundali Milan page. |
@@ -741,7 +780,7 @@ their own chart; the muhurat and varshaphal readings follow it on their own
 
 ## 21. Quality control
 
-A self-check harness (`LalKitabSelfCheck`, **66 checks**) fetches real pages over
+A self-check harness (`LalKitabSelfCheck`, **68 checks**) fetches real pages over
 HTTP and asserts against the rendered HTML — run from the command line
 (`php tests/lalkitab_process_check.php`) or the browser (`/lk-selfcheck.php`).
 Every new rule gets a check, and every check is "negative-tested" (the fault is

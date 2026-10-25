@@ -42,6 +42,7 @@ final class KaryaTithiKhoj
         foreach ($map as $from => $to) { if (isset($v[$from])) { $t[$to] = $v[$from]; } }
         $per = $v['personal'] ?? [];
         $t['tribal'] = !empty($per['tribal']);
+        $t['tribalSoft'] = !empty($per['tribal_soft']);
         $t['guruBal'] = !empty($per['guru_bal']);
         $t['taraMitra'] = !empty($per['tara_mitra']);
         if (in_array($id, ['5.03', '6.01'], true)) { $t['diwaliOk'] = true; }
@@ -144,35 +145,36 @@ final class KaryaTithiKhoj
         return $out;
     }
 
-    // ───────────────────────── जन्म-कुंडली (व्यक्तिगत बल) ─────────────────────────
+    // ───────────────────────── व्यक्ति ─────────────────────────
 
-    /** @return array{moonSign:int, nak:int, ascSign:int, am:int, gender:string, birthJd:float}|null */
+    /** पुराना एक-व्यक्ति रूप (खुली कुंडली) — अब {@see KaryaVyakti::fromBirth}। */
     public static function natal(CalculationEngine $eng, array $b): ?array
     {
-        if (empty($b['date']) || !preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', (string) $b['date'], $dm)) { return null; }
-        [$hh, $mm] = array_map('intval', explode(':', (string) ($b['time'] ?? '12:00')) + [0, 0]);
-        $tz = (float) ($b['tz'] ?? 5.5);
-        $jd = JulianDay::fromGregorian((int) $dm[1], (int) $dm[2], (int) $dm[3], $hh, $mm, 0.0, $tz);
-        $lat = (float) ($b['lat'] ?? 28.61); $lon = (float) ($b['lon'] ?? 77.21);
-        $p = $eng->siderealPositions($jd);
-        $moon = $p['Moon']['lon'];
-        // जन्म का अमान्त मास — पिछली अमावस्या पर सूर्य की राशि से
-        $el = KaryaKaal::norm($moon - $p['Sun']['lon']);
-        $nm = $jd - $el / 12.19;
-        for ($i = 0; $i < 6; $i++) {
-            $q = $eng->siderealPositions($nm);
-            $nm -= KaryaKaal::wrap180($q['Moon']['lon'] - $q['Sun']['lon']) / 12.19;
+        return KaryaVyakti::fromBirth($eng, $b);
+    }
+
+    /** उत्तर के लिए — किन व्यक्तियों का बल देखा गया, गुण-मिलान, अधूरे खाने, मृत्यु-टिप्पणी। */
+    private static function whoOut(CalculationEngine $eng, string $id, array $who): array
+    {
+        $now = 2440587.5 + time() / 86400.0;
+        $out = ['persons' => array_map(static fn (array $P): array => KaryaVyakti::summary($eng, $P, $id, $now), $who['persons'] ?? []),
+            'missing' => $who['missing'] ?? []];
+        if (in_array($id, ['1.10', '1.11'], true)) { $out['milan'] = KaryaVyakti::milan($who['persons'] ?? []); }
+        if (isset($who['extra']['death'])) { $out['death'] = KaryaVyakti::deathNotes($eng, $who['extra']['death']); }
+        return $out;
+    }
+
+    /** "कन्या: गुरु बल हीन (8वाँ)" → "कन्या: गुरु बल हीन (8वाँ)"; "नक्षत्र वर्जित: रोहिणी" → "नक्षत्र वर्जित" */
+    private static function reasonKey(string $lb): string
+    {
+        $shorts = array_column(KaryaVyakti::ROLES, 1);
+        foreach (array_merge($shorts, ['वधू', 'स्वामी', 'पहला पक्ष']) as $sh) {
+            if (str_starts_with($lb, $sh . ': ')) {
+                $rest = substr($lb, strlen($sh) + 2);
+                return $sh . ': ' . explode(':', $rest)[0];
+            }
         }
-        $sunAtNm = (int) floor($eng->siderealPositions($nm)['Sun']['lon'] / 30.0) % 12;
-        $g = strtolower((string) ($b['gender'] ?? ''));
-        return [
-            'moonSign' => (int) floor($moon / 30.0) % 12,
-            'nak' => min(27, (int) floor($moon / KaryaKaal::NAK) + 1),
-            'ascSign' => (int) floor($eng->ascendantSidereal($jd, $lat, $lon) / 30.0) % 12,
-            'am' => ($sunAtNm + 1) % 12,
-            'gender' => str_starts_with($g, 'f') ? 'f' : (str_starts_with($g, 'm') ? 'm' : ''),
-            'birthJd' => $jd,
-        ];
+        return explode(':', $lb)[0];
     }
 
     // ───────────────────────── खोज ─────────────────────────
@@ -181,7 +183,7 @@ final class KaryaTithiKhoj
      * @param array{0:int,1:int,2:int} $from [Y, M, D]
      * @param array{lat: float, lon: float, tz: float, zone: ?string} $place
      */
-    public static function scan(CalculationEngine $eng, string $id, array $from, array $to, array $place, array $opts, ?array $natal, bool $personal): array
+    public static function scan(CalculationEngine $eng, string $id, array $from, array $to, array $place, array $opts, array $who = []): array
     {
         $t = self::prepare($id, $opts);
         if ($t === null) { return ['ok' => false, 'error' => 'अज्ञात कार्य।']; }
@@ -198,27 +200,42 @@ final class KaryaTithiKhoj
 
         $rows = [];
         $count = ['शुभ' => 0, 'मध्यम' => 0, 'अशुभ' => 0];
+        $obs = [];   // अवधि की मुख्य बाधाएँ — कारण => [दिन, प्रकार]
         for ($i = 0; $i < $days; $i++) {
             $dt = $a->modify('+' . $i . ' days');
             $day = $kk->day((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'), $need);
-            $row = self::judgeDay($kk, $t, $day, $natal, $personal, $opts);
+            $row = self::judgeDay($kk, $t, $day, $who, $opts);
             $count[$row['grade']]++;
+            foreach ($row['grade'] === 'अशुभ' ? $row['_block'] : ($row['grade'] === 'मध्यम' ? $row['_cap'] : []) as $k) {
+                $obs[$k] = [($obs[$k][0] ?? 0) + 1, $row['grade'] === 'अशुभ' ? 'bad' : 'cap'];
+            }
+            unset($row['_block'], $row['_cap']);
             $rows[] = $row;
+        }
+        uasort($obs, static fn ($x, $y) => $y[0] <=> $x[0]);
+        // अशुभ दिनों के मुख्य कारण (4) और मध्यम रहने के कारण — व्यक्ति/स्थिति के (3)
+        $obsOut = [];
+        foreach (['bad' => 4, 'cap' => 3] as $kind => $lim) {
+            foreach ($obs as $k => [$n, $kk2]) {
+                if ($kk2 !== $kind) { continue; }
+                $obsOut[] = ['t' => (string) $k, 'n' => $n, 'k' => $kind];
+                if (--$lim === 0) { break; }
+            }
         }
         return [
             'ok' => true, 'task' => $id, 'task_name' => KaryaNiyamData::TASKS[$id]['name'],
-            'rows' => $rows, 'count' => $count,
+            'rows' => $rows, 'count' => $count, 'obstacles' => $obsOut,
             'capped' => $total > $days, 'total' => $total, 'scanned' => $days, 'max_days' => self::MAX_DAYS,
             'place' => ['lat' => $place['lat'], 'lon' => $place['lon'], 'tz' => $tz0, 'zone' => $zone?->getName()],
-            'personal' => $natal !== null && $personal,
-        ];
+            'personal' => ($who['persons'] ?? []) !== [],
+        ] + self::whoOut($eng, $id, $who);
     }
 
     /** एक दिन — टुकड़ों पर निर्णय → समय-खिड़कियाँ → दिन का दर्जा। */
-    private static function judgeDay(KaryaKaal $kk, array $t, array $day, ?array $natal, bool $personal, array $opts, bool $keepSegs = false): array
+    private static function judgeDay(KaryaKaal $kk, array $t, array $day, array $who, array $opts, bool $keepSegs = false): array
     {
         $fest = self::festivals($kk, $day);
-        $ctx = ['fest' => $fest, 'eclipses' => $kk->eclipses(), 'natal' => $natal, 'personal' => $personal, 'opts' => $opts];
+        $ctx = ['fest' => $fest, 'eclipses' => $kk->eclipses(), 'persons' => $who['persons'] ?? [], 'extra' => $who['extra'] ?? [], 'opts' => $opts];
         $segs = [];
         foreach ($day['segs'] as [$a, $b]) {
             $f = $kk->facts($day, ($a + $b) / 2.0);
@@ -240,7 +257,7 @@ final class KaryaTithiKhoj
             }
             if ($j['hard'] || $j['grade'] === 'अशुभ') {
                 foreach ($j['hard'] ? $j['bad'] : ['अंक कम: ' . implode(', ', array_slice($j['warn'], 0, 2))] as $lb) {
-                    $key = explode(':', $lb)[0];
+                    $key = self::reasonKey($lb);
                     $badDur[$key] = ($badDur[$key] ?? 0) + ($b - $a);
                 }
             }
@@ -256,14 +273,14 @@ final class KaryaTithiKhoj
                 // बल/सावधानी उसी सबसे अच्छे क्षण के — जिसका अंक दिखता है और जिस पर "पूरा विवरण" जाँचता है
                 if ($j['score'] > $cur['peakScore'] || ($j['score'] === $cur['peakScore'] && $b - $a > $cur['peakLen'])) {
                     $cur['peakScore'] = $j['score']; $cur['peak'] = ($a + $b) / 2; $cur['peakLen'] = $b - $a;
-                    $cur['good'] = $j['good']; $cur['warn'] = $j['warn'];
+                    $cur['good'] = $j['good']; $cur['warn'] = $j['warn']; $cur['cap'] = $j['cap'];
                 }
                 continue;
             }
             if ($cur !== null) { $wins[] = $cur; }
             $cur = $ok ? ['a' => $a, 'b' => $b, 'grade' => $j['grade'], 'max' => $j['score'], 'min' => $j['score'], 'rank' => $j['raw'],
                 'lagna' => [$f['ascSign'] => true], 'nak' => [$f['nak'] => true], 'tithi' => [$f['tithi'] => true],
-                'good' => $j['good'], 'warn' => $j['warn'],
+                'good' => $j['good'], 'warn' => $j['warn'], 'cap' => $j['cap'],
                 'peakScore' => $j['score'], 'peak' => ($a + $b) / 2, 'peakLen' => $b - $a, 'abujh' => $j['abujh']] : null;
         }
         if ($cur !== null) { $wins[] = $cur; }
@@ -308,6 +325,8 @@ final class KaryaTithiKhoj
             'reason' => $reason, 'windows' => $outWins,
             'fest' => array_values($fest), 'abujh' => $top['abujh'] ?? null,
             'sunrise' => $fmt($day['rise']), 'sunset' => $fmt($day['set']),
+            '_block' => $top === null ? array_slice(array_keys($badDur), 0, 2) : [],
+            '_cap' => $top !== null && $grade === 'मध्यम' ? array_map([self::class, 'reasonKey'], $top['cap'] ?? []) : [],
         ] + ($keepSegs ? ['_segs' => $segs, '_ctx' => $ctx, 'tithi' => $panch['tithi'], 'nak' => $panch['nak']] : []);
     }
 
@@ -336,7 +355,7 @@ final class KaryaTithiKhoj
      * एक तिथि (और वैकल्पिक समय) की पूरी जाँच — हर नियम की पंक्ति, उस दिन की
      * शुभ खिड़कियाँ, पंचांग व दिन के काल। समय न हो तो दिन की सबसे अच्छी खिड़की।
      */
-    public static function check(CalculationEngine $eng, string $id, array $date, ?array $hm, array $place, array $opts, ?array $natal, bool $personal): array
+    public static function check(CalculationEngine $eng, string $id, array $date, ?array $hm, array $place, array $opts, array $who = []): array
     {
         $t = self::prepare($id, $opts);
         if ($t === null) { return ['ok' => false, 'error' => 'अज्ञात कार्य।']; }
@@ -356,7 +375,7 @@ final class KaryaTithiKhoj
                 $day = $kk->day((int) $p->format('Y'), (int) $p->format('n'), (int) $p->format('j'), $need);
             }
         }
-        $row = self::judgeDay($kk, $t, $day, $natal, $personal, $opts, true);
+        $row = self::judgeDay($kk, $t, $day, $who, $opts, true);
         if ($at === null) {
             $at = $row['windows'][0]['peak_jd'] ?? ($day['rise'] + 1.0 / 24.0);
         }
@@ -371,7 +390,7 @@ final class KaryaTithiKhoj
         };
         $panch = self::panchSummary($kk, $day);
         $m = $f['maas'];
-        unset($row['_segs'], $row['_ctx']);
+        unset($row['_segs'], $row['_ctx'], $row['_block'], $row['_cap']);
         return [
             'ok' => true, 'task' => $id, 'task_name' => KaryaNiyamData::TASKS[$id]['name'],
             'date' => $day['date'], 'weekday' => P::VAAR[$day['vaar']]['name'],
@@ -392,8 +411,8 @@ final class KaryaTithiKhoj
             ],
             'info' => self::taskInfo($id),
             'place' => ['lat' => $place['lat'], 'lon' => $place['lon'], 'tz' => $tz],
-            'personal' => $natal !== null && $personal,
-        ];
+            'personal' => ($who['persons'] ?? []) !== [],
+        ] + self::whoOut($eng, $id, $who);
     }
 
     // ───────────────────────── नियम-पत्र ─────────────────────────

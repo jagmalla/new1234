@@ -143,31 +143,31 @@ final class KaryaNiyamVidhi
         '1.01' => [
             'time' => 'night', 'varjit' => ['sankranti_day', 'pitru', 'janma_nak'], 'nak' => ['bad' => [1]],
             'lagna' => self::LS_STD + ['bhav' => [5]],
-            'note' => 'ऋतुकाल की 4थी से 16वीं रात्रि (11वीं व 13वीं वर्जित) — यह गिनती व्यक्तिगत है, सॉफ़्टवेयर नहीं जानता। चंद्र-बल स्त्री की जन्म राशि से देखें।',
+            'note' => 'ऋतुकाल की 4थी से 16वीं रात्रि (11वीं व 13वीं वर्जित) — ③ में मासिक धर्म आरम्भ की तिथि भरें तो यह भी जँचती है। चंद्र-तारा बल पत्नी की जन्म राशि से (पति का भी, यदि भरा)।',
         ],
         // सीमन्त हेतु पुरुष-वार; लोक में सोम-बुध-शुक्र भी; शुक्ल श्रेष्ठ; पूर्वाह्न
         '1.02' => [
             'paksha' => 'shukla_pref', 'time' => 'purvahna', 'vaar_madhyam' => [2, 4, 6],
-            'lagna' => self::LS_STD,
-            'note' => 'पुंसवन 2रे-3रे मास, सीमन्त 6ठे/8वें मास, लोक-रीति गोद भराई 7वें मास। चंद्र-ताराबल गर्भिणी की राशि से।',
+            'lagna' => self::LS_STD, 'options' => ['garbh'],
+            'note' => 'पुंसवन 2रे-3रे मास, सीमन्त 6ठे/8वें मास, लोक-रीति गोद भराई 7वें मास — ③ में LMP भरें तो गर्भ-मास जँचता है। चंद्र-ताराबल गर्भिणी की राशि से।',
         ],
         // रविवार मध्यम; 11/12वाँ दिन; पूर्वार्ध; अमावस्या/संक्रान्ति/ग्रहण
         '1.03' => [
             'time' => 'purvahna', 'vaar_madhyam' => [1], 'varjit' => ['sankranti_day'],
             'lagna' => self::LS_STD + ['svabhav' => ['sthir', 'dvi']],
-            'birth_days' => [11, 12, 13, 16, 19, 22],
-            'note' => 'नियत 11वें/12वें दिन (सूतक-समाप्ति बाद) तिथि-वार विचार शिथिल। नाम का प्रथम अक्षर जन्म-नक्षत्र के चरण-अक्षर से।',
+            'age' => 'namkaran',
+            'note' => 'नियत 11वें/12वें दिन (सूतक-समाप्ति बाद) तिथि-वार विचार शिथिल। नाम का प्रथम अक्षर जन्म-नक्षत्र के चरण-अक्षर से (③ में शिशु का विवरण भरने पर दिखता है)।',
         ],
         // 4था मास; पूर्वाह्न; दिशाशूल की दिशा में प्रथम निकास नहीं
         '1.04' => [
-            'time' => 'purvahna', 'lagna' => self::LS_STD, 'options' => ['dir'],
+            'time' => 'purvahna', 'lagna' => self::LS_STD, 'options' => ['dir'], 'age' => 'nishkraman',
             'note' => 'जन्म से 4था मास (सूर्य-दर्शन 12वें दिन/3रे मास)। प्रथम निकास प्रायः देव-मंदिर दर्शन हेतु।',
         ],
         // सम मास (बालक) / विषम (बालिका); 10वाँ व 8वाँ रिक्त; M6
         '1.05' => [
             'time' => 'purvahna', 'varjit' => self::M6,
             'lagna' => self::LS_STD + ['empty' => [10]],
-            'birth_months' => ['m' => [6, 8, 10, 12], 'f' => [5, 7, 9, 11]],
+            'age' => 'annaprashan',
         ],
         // 1/3/5 वर्ष; उत्तरायण; माघ फाल्गुन वैशाख ज्येष्ठ (चैत्र मत); शुक्ल; M6; जन्म मास/नक्षत्र
         '1.06' => [
@@ -175,7 +175,7 @@ final class KaryaNiyamVidhi
             'maas' => ['months' => [10, 11, 1, 2], 'months_madhyam' => [0], 'uttarayan' => 'pref'],
             'varjit' => self::M6, 'soft' => ['janma_maas', 'janma_nak'],
             'lagna' => self::LS_STD,
-            'birth_years' => [1, 3, 5, 7],
+            'age' => 'mundan', 'jyeshtha' => 'single',
             'note' => 'ज्येष्ठ संतान का ज्येष्ठ मास में मुंडन वर्जित। माता 5 मास से अधिक गर्भवती हो तो (5 वर्ष से छोटे बालक हेतु) वर्जित। कुलदेवी/तीर्थ पर कुल-परंपरा अनुसार।',
         ],
         // कार्तिक पौष चैत्र फाल्गुन; शुक्ल; चातुर्मास, जन्म मास, अस्त; लग्न में गुरु/शुक्र
@@ -183,14 +183,14 @@ final class KaryaNiyamVidhi
             'paksha' => 'shukla_pref',
             'maas' => ['months' => [7, 0, 11], 'months_madhyam' => [9]],
             'varjit' => ['chaturmas', 'asta'], 'soft' => ['janma_maas'],
-            'lagna' => self::LS_STD + ['benefic_lagna' => ['Jupiter', 'Venus']],
+            'lagna' => self::LS_STD + ['benefic_lagna' => ['Jupiter', 'Venus']], 'age' => 'karnavedh',
             'note' => 'बालक का पहले दायाँ, बालिका का पहले बायाँ कान। पौष मास मु.चि. में शुभ, लोक में खरमास से वर्जित (मतभेद)।',
         ],
         // बुध गुरु शुक्र श्रेष्ठ, रवि-सोम मध्यम; उत्तरायण; गुरु-बुध अस्त, खरमास, अधिक
         '1.08' => [
             'time' => 'purvahna', 'vaar_madhyam' => [1, 2], 'maas' => ['uttarayan' => 'pref'],
             'varjit' => ['guru_asta', 'budh_asta', 'kharmas', 'adhik'],
-            'lagna' => self::LS_STD + ['bhav' => [5, 4]],
+            'lagna' => self::LS_STD + ['bhav' => [5, 4]], 'age' => 'vidyarambh',
             'abujh' => ['vasant5', 'vijaya10', 'akshaya3', 'gurupurnima'],
         ],
         // गलग्रह; षष्ठी मध्यम; सोम मध्यम; उत्तरायण (माघ–आषाढ़); शुक्ल; M6; गुरु बल
@@ -199,14 +199,14 @@ final class KaryaNiyamVidhi
             'maas' => ['months' => [10, 11, 0, 1, 2, 3], 'hard' => true, 'uttarayan' => 'hard'],
             'varjit' => self::M6,
             'lagna' => self::LS_STD + ['benefic_kendra' => 'Jupiter'],
-            'personal' => ['guru_bal' => true],
+            'personal' => ['guru_bal' => true], 'age' => 'upanayan', 'options' => ['varna'],
             'abujh' => ['vasant5', 'akshaya3'],
-            'note' => 'ब्राह्मण 8वाँ, क्षत्रिय 11वाँ, वैश्य 12वाँ वर्ष (गर्भ से)। गुरु बल न हो तो गुरु-शांति कर संस्कार (परंपरा)।',
+            'note' => 'ब्राह्मण 8वाँ, क्षत्रिय 11वाँ, वैश्य 12वाँ वर्ष (गर्भ से) — काम्य 5/6/8वाँ; सीमा 16/22/24। बटुक का गुरु बल (न हो तो गुरु-शांति कर — परंपरा) व सूर्य बल।',
         ],
         // रविवार मध्यम; शुक्ल; चंद्रबल; खरमास/पितृपक्ष (कई परिवार)
         '1.10' => [
             'paksha' => 'shukla_pref', 'vaar_madhyam' => [1], 'varjit' => ['asta'], 'soft' => ['kharmas', 'pitru', 'holashtak'],
-            'lagna' => ['bhav' => [7]],
+            'lagna' => ['bhav' => [7]], 'personal' => ['tribal_soft' => true],
             'abujh' => ['akshaya3', 'devuthani', 'vasant5'],
         ],
         // कृष्ण 1 ग्राह्य; षष्ठी मध्यम; कृष्ण 10 बाद त्याज्य; रवि मध्यम; सूर्य 0,1,2,7,9,10; दशदोष
@@ -219,9 +219,9 @@ final class KaryaNiyamVidhi
             'soft' => ['balvriddha', 'simhastha'],
             'bhadra_strict' => true, 'yoga_good' => [2, 4, 5, 16, 23],
             'lagna' => self::LS_STD + ['empty' => [7], 'bad' => ['Venus' => [6], 'Mars' => [8]], 'bhav' => [7]],
-            'personal' => ['tribal' => true],
+            'personal' => ['tribal' => true], 'jyeshtha' => 'pair',
             'abujh' => ['akshaya3', 'devuthani', 'vasant5', 'phulera2', 'bhadli9', 'vijaya10'],
-            'note' => 'गोधूलि लग्न (सूर्यास्त ±24 मि.) — शुद्ध लग्न न मिले तब। अन्य दशदोष (पात, वेध, एकार्गल, उपग्रह, क्रान्तिसाम्य) पंचांग से। ज्येष्ठ संतान का ज्येष्ठ मास वर्जित। विवाह-लग्न वर-कन्या दोनों की जन्म राशि/लग्न से 8वाँ न हो — यहाँ खुली कुंडली से जाँचा।',
+            'note' => 'गोधूलि लग्न (सूर्यास्त ±24 मि.) — शुद्ध लग्न न मिले तब। अन्य दशदोष (पात, वेध, एकार्गल, उपग्रह, क्रान्तिसाम्य) पंचांग से। त्रिबल व "विवाह-लग्न जन्म राशि/लग्न से 8वाँ न हो" ③ में भरे वर-कन्या दोनों से जाँचे जाते हैं; दोनों ज्येष्ठ संतान हों तो ज्येष्ठ मास वर्जित।',
         ],
         // विवाह के बाद 1/3/5 वर्ष; सूर्य कुम्भ, वृश्चिक, मेष; शुक्ल; प्रतिशुक्र, दिशाशूल
         '1.12' => [
@@ -272,9 +272,9 @@ final class KaryaNiyamVidhi
                 'hard' => true, 'uttarayan' => 'pref'],
             'varjit' => ['kharmas', 'chaturmas', 'adhik', 'asta', 'balvriddha', 'holashtak', 'pitru', 'grahan'],
             'lagna' => self::LS_STD + ['empty' => [4], 'bhav' => [4]],
-            'options' => ['griha'], 'old_naks' => [8, 22, 23, 24],
+            'options' => ['griha', 'dwar'], 'old_naks' => [8, 22, 23, 24],
             'abujh' => ['akshaya3', 'vasant5', 'vijaya10', 'gudi'],
-            'note' => 'वाम रवि (प्रवेश-द्वार की दिशा अनुसार सूर्य बाईं ओर) व कलश-चक्र देखें। सपूर्व/द्वंद्व प्रवेश में मास-नियम शिथिल; किराए के घर हेतु शुभ दिन पर्याप्त।',
+            'note' => 'वाम रवि — मुख्य द्वार की दिशा चुनें तो जँचता है (प्रवेश के समय सूर्य बाईं ओर)। कलश-चक्र अलग से देखें। सपूर्व/द्वंद्व प्रवेश में मास-नियम शिथिल; किराए के घर हेतु शुभ दिन पर्याप्त।',
         ],
         '2.07' => [
             'time' => 'morning', 'agnivas' => true, 'varjit' => [...self::M6, 'panchak'],
@@ -425,13 +425,13 @@ final class KaryaNiyamVidhi
         // शुक्ल प्रतिपदा … वर्जित (कृष्ण 1 ग्राह्य); मध्यम नक्षत्र; दिशाशूल, नक्षत्रशूल, योगिनी, जन्म नक्षत्र
         '8.01' => [
             'travel' => true, 'tithi' => ['ok' => [16]], 'nak_madhyam' => [4, 12, 21, 26, 11, 20, 25, 18, 19, 24],
-            'chogh' => 'char', 'varjit' => ['janma_nak'],
+            'chogh' => 'char', 'varjit' => ['janma_nak'], 'ghat' => true,
             'lagna' => self::LS_STD + ['bhav' => [7, 9]], 'options' => ['dir'],
             'abujh' => ['vijaya10'],
             'note' => 'अनिवार्य यात्रा में दिशाशूल-परिहार (वार अनुसार वस्तु खाकर निकलें) या एक दिन पहले प्रस्थान रख दें।',
         ],
         '8.02' => [
-            'travel' => true, 'chogh' => 'char', 'varjit' => ['janma_nak'],
+            'travel' => true, 'chogh' => 'char', 'varjit' => ['janma_nak'], 'ghat' => true,
             'lagna' => self::LS_STD + ['bhav' => [9, 12]], 'options' => ['dir'], 'moon_char_bonus' => true,
             'note' => 'जलयात्रा (समुद्र) हेतु जल-राशि लग्न व चंद्र बली।',
         ],
@@ -451,7 +451,7 @@ final class KaryaNiyamVidhi
         '9.02' => ['lagna' => ['moon_hard' => true],
             'note' => 'आपातकाल में मुहूर्त-विचार नहीं (आपत्काले न विचारः) — चिकित्सक की सलाह सर्वोपरि।'],
         '9.03' => [
-            'nature' => 'ugra', 'sado' => ['bhadra', 'grahan'], 'varjit' => ['chandrashtam'],
+            'nature' => 'ugra', 'sado' => ['bhadra', 'grahan'], 'varjit' => ['chandrashtam'], 'ghat' => true, 'options' => ['ang'],
             'lagna' => ['eighth_hard' => true, 'moon_bad' => [8]],
             'note' => 'आपातकालीन ऑपरेशन में मुहूर्त न देखें — चिकित्सक की सलाह सर्वोपरि। मंगल बली हो। "चंद्र उस अंग की राशि में न हो" नियम पाश्चात्य मूल का।',
         ],
@@ -478,7 +478,7 @@ final class KaryaNiyamVidhi
             'lagna' => ['eighth_hard' => true, 'bhav' => [10], 'leo_bonus' => true, 'moon_hard' => true],
         ],
         '11.02' => [
-            'nature' => 'ugra', 'sado' => ['rahukaal', 'bhadra_soft'], 'paksha' => 'none',
+            'nature' => 'ugra', 'sado' => ['rahukaal', 'bhadra_soft'], 'paksha' => 'none', 'ghat' => true,
             'lagna' => ['bhav_malefic_good' => [6]],
         ],
         '11.03' => ['lagna' => ['bhav' => [7], 'jup_aspect' => [1, 7]], 'personal' => ['tara_mitra' => true]],
@@ -490,7 +490,7 @@ final class KaryaNiyamVidhi
             'abujh' => ['vasant5', 'akshaya3', 'vijaya10']],
         '12.03' => [
             'nature' => 'daily', 'sado' => 'none', 'time' => 'day_no_sandhya', 'vaar_madhyam' => [5],
-            'varjit' => ['janma_nak', 'pitru'], 'paksha' => 'none', 'lagna' => false,
+            'varjit' => ['janma_nak', 'pitru'], 'paksha' => 'none', 'lagna' => false, 'no_birthday' => true,
             'note' => 'भोजन के बाद, जन्मदिन व यात्रा के दौरान भी वर्जित। राजाज्ञा, यज्ञ-दीक्षा, विवाह, तीर्थ, मृतक-कर्म, संस्कार-मुंडन में मुहूर्त-विचार नहीं।',
         ],
         '12.04' => [
@@ -517,6 +517,14 @@ final class KaryaNiyamVidhi
         'devata' => ['देवता', ['' => 'सामान्य', 'ganesh' => 'गणेश', 'surya' => 'सूर्य', 'durga' => 'दुर्गा / देवी', 'vishnu' => 'विष्णु', 'shiva' => 'शिव', 'hanuman' => 'हनुमान']],
         'graha' => ['यंत्र / ताबीज किस ग्रह का', ['' => 'सामान्य', 'Sun' => 'सूर्य', 'Moon' => 'चंद्र', 'Mars' => 'मंगल', 'Mercury' => 'बुध', 'Jupiter' => 'गुरु', 'Venus' => 'शुक्र', 'Saturn' => 'शनि']],
         'dastavej' => ['दस्तावेज़', ['registry' => 'रजिस्ट्री (क्रय)', 'vasiyat' => 'वसीयत']],
+        'garbh' => ['कौन-सा संस्कार', ['godbharai' => 'गोद भराई (लोक-रीति — 7वाँ मास)', 'pumsavan' => 'पुंसवन (2रा-3रा मास)', 'simanta' => 'सीमन्तोन्नयन (6ठा / 8वाँ मास)']],
+        'dwar' => ['मुख्य द्वार किस दिशा में (वाम रवि)', ['' => '— चुनें (वैकल्पिक) —', 'पूर्व' => 'पूर्वमुखी', 'उत्तर' => 'उत्तरमुखी', 'पश्चिम' => 'पश्चिममुखी', 'दक्षिण' => 'दक्षिणमुखी']],
+        'ang' => ['ऑपरेशन का अंग (चंद्र उसकी राशि में न हो)', ['' => '— चुनें (वैकल्पिक) —', 'sir' => 'सिर, मस्तिष्क, आँख (मेष)',
+            'gala' => 'चेहरा, गला, दाँत, थायरॉइड (वृषभ)', 'bhuja' => 'कंधे, बाँह, हाथ, फेफड़े (मिथुन)', 'chhati' => 'छाती, स्तन, आमाशय (कर्क)',
+            'hriday' => 'हृदय, पीठ, रीढ़ (सिंह)', 'pet' => 'पेट, आँतें, पाचन (कन्या)', 'gurde' => 'गुर्दे, कमर, त्वचा (तुला)',
+            'guhya' => 'जननांग, मूत्राशय (वृश्चिक)', 'jangh' => 'जाँघ, कूल्हा, यकृत (धनु)', 'ghutne' => 'घुटने, हड्डियाँ, जोड़ (मकर)',
+            'pindli' => 'पिंडली, टखने (कुम्भ)', 'pair' => 'पैर, तलवे (मीन)']],
+        'varna' => ['उपनयन की आयु-परंपरा', ['brahmin' => 'ब्राह्मण — गर्भ से 8वाँ वर्ष', 'kshatriya' => 'क्षत्रिय — 11वाँ वर्ष', 'vaishya' => 'वैश्य — 12वाँ वर्ष', 'samanya' => 'आयु-नियम न देखें']],
     ];
 
     /** देवता की निज तिथि (1–30) — इसमें रिक्ता/वर्जित तिथि का दोष नहीं (3.02)। */

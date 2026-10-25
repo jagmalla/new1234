@@ -5,8 +5,11 @@
  * ① कार्य चुनें — मुख्य श्रेणी, फिर कार्य (12 श्रेणियाँ, 87 कार्य — मालिक की
  *    नियम-पुस्तिका से), और कार्य के विकल्प (दिशा, क्रय/विक्रय, नया/पुराना घर …)
  * ② अवधि व स्थान — 1 / 3 / 6 माह / 1 वर्ष, या दोनों तिथियाँ; कार्य-स्थान (लग्न,
- *    सूर्योदय व राहुकाल उसी स्थान से), और व्यक्तिगत चंद्र/तारा बल
- * ③ खोजें — calc/karyaScan: हर दिन की शुभ समय-खिड़कियाँ; किसी दिन का पूरा
+ *    सूर्योदय व राहुकाल उसी स्थान से)
+ * ③ किसके लिए मुहूर्त — कार्य के अनुसार व्यक्ति-खाने (विवाह में वर + कन्या, संस्कार
+ *    में शिशु, गोद भराई में माता, बाक़ी में एक व्यक्ति) और स्थिति के प्रश्न
+ *    (विवाह-तिथि, LMP, ज्येष्ठ संतान …) — KaryaVyakti; सार calc/karyaWho से
+ * खोजें — calc/karyaScan: हर दिन की शुभ समय-खिड़कियाँ; किसी दिन का पूरा
  *    विवरण calc/karyaCheck से। व्यवहार public_html/assets/js/tithikhoj.js में।
  *
  * इन्हीं शैलियों (tk-*) से मुहूर्त फल का "कार्य-मुहूर्त जाँच" पैनल भी बनता है।
@@ -37,6 +40,14 @@ $tkLat = (float) ($meta['lat'] ?? 28.6139);
 $tkLon = (float) ($meta['lon'] ?? 77.2090);
 $tkTz = (float) ($meta['tz'] ?? 5.5);
 $tkName = trim((string) ($in['name'] ?? ''));
+/* खुली कुंडली — ③ के "👤 खुली कुंडली" विकल्प हेतु (लिंग से वर/कन्या का खाना तय होता है) */
+$tkG = mb_strtolower(trim((string) ($in['gender'] ?? '')));
+$tkOpen = trim((string) ($in['date'] ?? '')) === '' ? null : [
+    'name' => $tkName,
+    'gender' => in_array($tkG, ['female', 'f', 'स्त्री', 'कन्या', 'महिला'], true) ? 'f' : (in_array($tkG, ['male', 'm', 'पुरुष'], true) ? 'm' : ''),
+    'date' => (string) $in['date'], 'time' => (string) ($in['time'] ?? ''), 'place' => $tkPlace,
+    'lat' => $tkLat, 'lon' => $tkLon, 'tz' => $tkTz,
+];
 ?>
 <style>
 /* ── तिथि खोज ── अपनी ही शैली, ताकि Tailwind न भी हो (ऑफ़लाइन) तो पन्ना वैसा ही दिखे */
@@ -52,7 +63,7 @@ $tkName = trim((string) ($in['name'] ?? ''));
 .tk-fld{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 150px;position:relative}
 .tk-fld.tk-wide{flex:1 1 230px}
 .tk-fld label{font-size:.74rem;font-weight:700;color:#9a3412}
-.tk-fld select,.tk-fld input[type=text]{width:100%;border:1.5px solid #fdba74;border-radius:8px;padding:8px 10px;font-size:.9rem;font-family:inherit;background:#fff;color:#1f2937;min-width:0}
+.tk-fld select,.tk-fld input[type=text]{box-sizing:border-box;width:100%;border:1.5px solid #fdba74;border-radius:8px;padding:8px 10px;font-size:.9rem;font-family:inherit;background:#fff;color:#1f2937;min-width:0}
 .tk-fld select:disabled{background:#f9fafb;color:#9ca3af;border-color:#e5e7eb}
 .tk-fld select:focus,.tk-fld input:focus{outline:2px solid #fb923c;outline-offset:1px}
 .tk-date{position:relative;display:flex}
@@ -190,6 +201,43 @@ $tkName = trim((string) ($in['name'] ?? ''));
 .tk-pt th{color:#6b7280;font-weight:700;width:34%;white-space:nowrap}
 .tk-mp-pick{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end;margin-bottom:10px}
 .tk-mp-when{font-size:.78rem;color:#6b7280;margin-bottom:8px}
+.tk-mp-who{font-size:.8rem;color:#374151;background:#fffaf5;border:1px solid #fde4cc;border-radius:9px;padding:7px 10px;margin:8px 0;line-height:1.6}
+.tk-mp-who .tk-btn2{margin-left:6px;padding:3px 10px;font-size:.74rem}
+/* ③ किसके लिए मुहूर्त */
+.tk-who{margin-top:12px}
+.tk-who[hidden]{display:none}
+.tk-who-sub{font-size:.78rem;color:#6b7280;margin:-4px 0 10px;line-height:1.55}
+.tk-pbs{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@media (min-width:900px){.tk-pbs.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.tk-pb{background:#fff;border:1.5px solid #fed7aa;border-radius:12px;padding:10px 12px;min-width:0}
+.tk-pb-h{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.92rem;color:#1f2937;margin-bottom:8px}
+.tk-pb-i{font-size:1.15rem}
+.tk-pb-need{font-size:.66rem;font-weight:800;border-radius:999px;padding:1px 8px}
+.tk-pb-need.req{background:#fee2e2;color:#b91c1c}.tk-pb-need.rec{background:#ffedd5;color:#c2410c}.tk-pb-need.opt{background:#f1f5f9;color:#64748b}
+.tk-pbm{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.tk-pbm button{border:1.5px solid #fdba74;border-radius:999px;background:#fff;color:#9a3412;padding:4px 11px;font-size:.77rem;font-weight:700;cursor:pointer;font-family:inherit}
+.tk-pbm button:hover{background:#fff7ed}
+.tk-pbm button.on{background:#ea580c;border-color:#ea580c;color:#fff}
+.tk-pb-open{font-size:.84rem;color:#374151;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:7px 10px}
+.tk-pb-off{font-size:.8rem;color:#94a3b8;font-style:italic}
+.tk-pb .tk-row{margin-bottom:6px}
+.tk-pb .tk-fld{flex:1 1 140px}
+.tk-pb .tk-fld.tk-wide{flex:1 1 220px}
+.tk-pb-saved select{box-sizing:border-box;border:1.5px dashed #fdba74;border-radius:8px;padding:6px 9px;font-size:.8rem;font-family:inherit;background:#fffaf5;color:#9a3412;width:100%}
+.tk-pb-sum:empty{display:none}
+.tk-pb-sum{margin-top:8px;font-size:.8rem;line-height:1.6;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:6px 9px;color:#14532d}
+.tk-pb-sum.miss{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.tk-pb-note{font-size:.76rem;color:#374151;margin-top:3px}
+.tk-xs:empty{display:none}
+.tk-xs{margin-top:10px;padding-top:8px;border-top:1px dashed #fed7aa}
+.tk-xnote:empty{display:none}
+.tk-xnote{font-size:.8rem;color:#854d0e;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:6px 9px;margin-top:6px;line-height:1.55}
+.tk-milan[hidden]{display:none}
+.tk-milan{margin-top:10px;font-size:.82rem;line-height:1.6;background:#fdf2f8;border:1px solid #fbcfe8;border-radius:10px;padding:8px 11px;color:#831843}
+.tk-milan a{color:#9d174d;font-weight:700}
+.tk-who-res{margin-top:6px;font-size:.8rem;color:#374151;line-height:1.7}
+.tk-who-res small{color:#6b7280}
+.tk-obs{margin-top:6px;font-size:.78rem;color:#4b5563;line-height:1.6}
 </style>
 
 <div id="card-tithikhoj" class="tk-card">
@@ -261,10 +309,16 @@ $tkName = trim((string) ($in['name'] ?? ''));
                     <span class="tk-tzn">जहाँ कार्य होगा — लग्न, सूर्योदय व राहुकाल यहीं के। पहले से: जन्म-स्थान।</span>
                 </div>
             </div>
-            <label class="tk-chk"><input type="checkbox" id="tk-personal" checked>
-                <span>👤 <?= $h($tkName !== '' ? $tkName : 'खुली कुंडली') ?> का चंद्र-बल, तारा-बल व जन्म-नक्षत्र भी जाँचें
-                    <span class="tk-tzn">(कार्य किसी और का हो — जैसे बच्चे का — तो उसकी कुंडली खोलें या यह हटा दें)</span></span></label>
         </div>
+    </div>
+
+    <!-- ③ किसके लिए मुहूर्त — खाने कार्य के अनुसार tithikhoj.js बनाता है -->
+    <div class="tk-step tk-who" id="tk-who" hidden>
+        <div class="tk-step-h"><span class="tk-num">3</span><span id="tk-who-h">किसके लिए मुहूर्त?</span></div>
+        <div class="tk-who-sub" id="tk-who-sub"></div>
+        <div class="tk-pbs" id="tk-pbs"></div>
+        <div class="tk-milan" id="tk-milan" hidden></div>
+        <div class="tk-xs" id="tk-xs"></div>
     </div>
 
     <div class="tk-go-row">
@@ -275,4 +329,4 @@ $tkName = trim((string) ($in['name'] ?? ''));
 
 <div id="tk-results" class="tk-results" aria-live="polite"></div>
 
-<script type="application/json" id="tk-data"><?= json_encode($tkView + ['place' => ['label' => $tkPlace, 'lat' => $tkLat, 'lon' => $tkLon, 'tz' => $tkTz]], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+<script type="application/json" id="tk-data"><?= json_encode($tkView + ['place' => ['label' => $tkPlace, 'lat' => $tkLat, 'lon' => $tkLon, 'tz' => $tkTz], 'open' => $tkOpen], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?></script>

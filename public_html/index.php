@@ -54,6 +54,10 @@ try {
             (new CalcController())->karyaInfoJson();
             break;
 
+        case 'GET calc/karyaWho':
+            (new CalcController())->karyaWhoJson();
+            break;
+
         case 'GET calc/ping':
         case 'POST calc/ping':
             (new CalcController())->ping();

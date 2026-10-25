@@ -4,6 +4,7 @@
  * खोज:  GET /calc/karyaScan  — अवधि के हर दिन का दर्जा + शुभ समय-खिड़कियाँ
  * जाँच: GET /calc/karyaCheck — एक तिथि/समय पर हर नियम की पंक्ति (✔ ★ ⚠ ✘ ℹ)
  * नियम: GET /calc/karyaInfo  — कार्य का नियम-पत्र
+ * व्यक्ति: GET /calc/karyaWho — ③ में भरे व्यक्तियों का सार (राशि, नक्षत्र, गुण-मिलान …)
  *
  * दो जगह काम आता है: (1) मुहूर्त › तिथि खोज (ABTithiKhoj.ensure), और
  * (2) मुहूर्त फल की "कार्य-मुहूर्त जाँच" श्रेणी (ABTithiKhoj.mountPhal) — वहाँ
@@ -27,8 +28,13 @@
     ['varjit_kaal', 'वर्जित काल / दोष'], ['yoga_karan', 'योग-करण नियम'], ['apvad', 'अपवाद / विशेष नियम'],
     ['abujh', 'अबूझ / उत्तम पर्व'], ['matbhed', 'मतभेद / स्रोत']];
 
-  var built = false, data = null, seq = 0, last = null, phalSeq = 0;
-  var pref = { c: '', s: '', v: 'list', o: 'score', personal: '1', opts: {}, place: null };
+  var RASHI = ['मेष', 'वृषभ', 'मिथुन', 'कर्क', 'सिंह', 'कन्या', 'तुला', 'वृश्चिक', 'धनु', 'मकर', 'कुम्भ', 'मीन'];
+  var NEED_HI = { req: 'आवश्यक', rec: 'अनुशंसित', opt: 'वैकल्पिक' };
+
+  var built = false, data = null, seq = 0, last = null, phalSeq = 0, whoSeq = 0, whoTimer = null;
+  // who — हर खुली कुंडली के अपने व्यक्ति: कुंडली-कुंजी => { people: भूमिका => विवरण, x: स्थिति के उत्तर, t }
+  // (एक ग्राहक की कन्या/शिशु का विवरण दूसरे ग्राहक की कुंडली खोलने पर अपने-आप न आ जाए)
+  var pref = { c: '', s: '', v: 'list', o: 'score', opts: {}, place: null, who: {} };
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -60,8 +66,9 @@
   function load() {
     try {
       var p = JSON.parse(window.localStorage.getItem(STORE) || '{}');
-      ['c', 's', 'v', 'o', 'personal'].forEach(function (k) { if (typeof p[k] === 'string') { pref[k] = p[k]; } });
+      ['c', 's', 'v', 'o'].forEach(function (k) { if (typeof p[k] === 'string') { pref[k] = p[k]; } });
       if (p.opts && typeof p.opts === 'object') { pref.opts = p.opts; }
+      if (p.who && typeof p.who === 'object') { pref.who = p.who; }
       if (p.place && typeof p.place === 'object' && isFinite(+p.place.lat)) { pref.place = p.place; }
     } catch (e) { /* निजी विंडो — पहले से तय मान ही रहें */ }
     if (pref.v !== 'cal') { pref.v = 'list'; }
@@ -125,15 +132,331 @@
     (sub ? sub.opts : []).forEach(function (k) { q += '&o_' + encodeURIComponent(k) + '=' + encodeURIComponent(values[k] || ''); });
     return q;
   }
-  function birthQuery(on) {
-    var b = window.AB_BIRTH || {};
-    var q = '&personal=' + (on ? '1' : '0') + '&ayanamsa=' + encodeURIComponent(b.ayanamsa || 'lahiri');
-    if (on && b.date) {
-      q += '&bdate=' + encodeURIComponent(b.date) + '&btime=' + encodeURIComponent(b.time || '12:00') +
-        '&blat=' + encodeURIComponent(b.lat) + '&blon=' + encodeURIComponent(b.lon) + '&btz=' + encodeURIComponent(b.tz) +
-        '&gender=' + encodeURIComponent(window.AB_GENDER || '');
+  // ════════════ ③ किसके लिए मुहूर्त — व्यक्ति-खाने ════════════
+  // कार्य की प्रोफ़ाइल (sub.who: भूमिका, लेबल, आवश्यकता) सर्वर से — विवाह में वर + कन्या,
+  // संस्कार में शिशु, गोद भराई में माता, बाक़ी में एक व्यक्ति। हर खाना चार तरह भरता है:
+  // खुली कुंडली · जन्म-विवरण (या सहेजी कुंडली) · नाम-अक्षर (जन्म-समय न पता) · नहीं।
+  function openChart() { var o = getData().open; return o && o.date ? o : null; }
+  function yearsAgo(ddmmyyyy) { var p = parse(ddmmyyyy || ''); return p ? (Date.now() - p.getTime()) / 31556952000 : 99; }
+  function defaultPerson(role) {
+    var o = openChart(), g = o ? o.gender : '';
+    var useOpen = !!o && (role === 'self' || (role === 'var' && g !== 'f') || (role === 'kanya' && g === 'f') ||
+      ((role === 'mother' || role === 'wife') && g === 'f') || (role === 'husband' && g === 'm') ||
+      (role === 'child' && yearsAgo(o.date) < 16));
+    return { mode: useOpen ? 'chart' : 'birth', name: '', gender: '', date: '', time: '', place: '', lat: '', lon: '', tz: '', ak: '', first: false };
+  }
+  function whoStore() {
+    var o = openChart(), k = o ? [o.date, o.time, o.lat, o.lon].join('|') : '-';
+    if (!pref.who || typeof pref.who !== 'object') { pref.who = {}; }
+    var w = pref.who[k];
+    if (!w || typeof w !== 'object') {
+      w = pref.who[k] = { people: {}, x: {}, t: 0 };
+      var keys = Object.keys(pref.who);
+      if (keys.length > 30) {   // सबसे पुरानी 30 से ऊपर वाली कुंडलियों के व्यक्ति हटें
+        keys.sort(function (a, b) { return (pref.who[a].t || 0) - (pref.who[b].t || 0); });
+        delete pref.who[keys[0]];
+      }
     }
-    return q;
+    w.people = w.people || {}; w.x = w.x || {};
+    w.t = Date.now();
+    return w;
+  }
+  function xs() { return whoStore().x; }
+  function person(role) {
+    var P = whoStore().people;
+    var st = P[role];
+    if (!st || typeof st !== 'object') { st = P[role] = defaultPerson(role); }
+    if (st.mode === 'chart' && !openChart()) { st.mode = 'birth'; }
+    return st;
+  }
+  function pid(r, k) { return 'tk-p-' + r + '-' + k; }
+
+  function savedCharts() {
+    var u = window.AB_USER;
+    try {
+      var a = JSON.parse(window.localStorage.getItem('ab_saved_charts_v1__' + (u ? u.id : 'guest')) || '[]');
+      return Array.isArray(a) ? a.slice().sort(function (x, y) { return (y.savedAt || 0) - (x.savedAt || 0); }) : [];
+    } catch (e) { return []; }
+  }
+  function aksharOptions(selv) {
+    var h = '<option value="">— अक्षर चुनें —</option>';
+    (getData().akshar || []).forEach(function (n) {
+      h += '<optgroup label="' + esc(n.n + '. ' + n.name) + '">';
+      n.a.forEach(function (a, i) {
+        var v = n.n + '.' + (i + 1), lon = (n.n - 1) * 40 / 3 + (i + 0.5) * 10 / 3;
+        h += '<option value="' + v + '"' + (selv === v ? ' selected' : '') + '>' + esc(a + ' — ' + n.name + ' ' + (i + 1) + ' · ' + RASHI[Math.floor(lon / 30)]) + '</option>';
+      });
+      h += '</optgroup>';
+    });
+    return h;
+  }
+
+  function whoHead(sub) {
+    var roles = sub.who.map(function (w) { return w.role; });
+    if (!roles.length) { return ['दिवंगत की जानकारी (वैकल्पिक)', 'अंतिम संस्कार में किसी का जन्म-बल नहीं देखा जाता। मृत्यु की तिथि-समय दें तो पंचक/त्रिपुष्कर और अस्थि-संचय के दिन भी जँचते हैं।']; }
+    if (sub.key === '1.12') { return ['वधू (और वर) का विवरण', 'द्विरागमन वधू के चंद्र-तारा बल से; विवाह की तिथि दें तो विषम वर्ष (1/3/5वाँ) का नियम भी जँचता है।']; }
+    if (roles.indexOf('var') >= 0 && roles.indexOf('kanya') >= 0) {
+      return ['वर-कन्या का जन्म-विवरण', sub.key === '1.11'
+        ? 'कन्या का गुरु बल, वर का सूर्य बल, दोनों का चंद्र-तारा बल, जन्म मास/नक्षत्र और "विवाह-लग्न जन्म राशि/लग्न से 8वाँ न हो" — दोनों से जाँचा जाता है; साथ में गुण-मिलान।'
+        : 'दोनों का चंद्र-तारा बल व कन्या का गुरु बल देखा जाता है; साथ में गुण-मिलान।']; }
+    if (roles[0] === 'child') { return ['शिशु का जन्म-विवरण', 'संस्कार का नियत दिन / मास / वर्ष शिशु की आयु से जँचता है — जन्म-तिथि आवश्यक' + (sub.key === '1.05' ? '; अन्नप्राशन में बालक (सम मास) / बालिका (विषम मास) भी चुनें।' : '।')]; }
+    if (roles[0] === 'mother') { return [sub.key === '9.04' ? 'माता (प्रसूता) का विवरण' : 'गर्भवती माता का विवरण', 'चंद्र-तारा बल माता की जन्म राशि से।' + (sub.key === '1.02' ? ' अंतिम मासिक धर्म (LMP) की तिथि दें तो गर्भ का मास भी जँचता है।' : '')]; }
+    if (roles[0] === 'wife') { return ['पति-पत्नी का विवरण', 'चंद्र-तारा बल पत्नी की जन्म राशि से (पति का भी, यदि भरा); ऋतु-तिथि दें तो ऋतुकाल की रात्रियाँ भी जँचती हैं।']; }
+    return ['किसके लिए मुहूर्त?', 'इनका चंद्र बल, तारा बल, जन्म नक्षत्र व "मुहूर्त-लग्न जन्म राशि से 8वाँ न हो" देखा जाएगा। कार्य किसी और का हो तो उसका विवरण भरें।'];
+  }
+
+  function personBody(slot, st) {
+    var r = slot.role, o = openChart();
+    if (st.mode === 'chart' && o) {
+      return '<div class="tk-pb-open">👤 ' + esc((o.name || 'खुली कुंडली') + ' · ' + o.date + (o.time ? ' · ' + o.time : '') + (o.place ? ' · ' + o.place : '')) + '</div>';
+    }
+    if (st.mode === 'off') { return '<div class="tk-pb-off">इनका बल नहीं जाँचा जाएगा।</div>'; }
+    var name = '<div class="tk-fld"><label for="' + pid(r, 'n') + '">नाम</label><input type="text" id="' + pid(r, 'n') + '" data-pf="name" value="' + esc(st.name) + '" autocomplete="off" placeholder="वैकल्पिक"></div>';
+    var gsel = slot.gender !== '' ? '' : '<div class="tk-fld"><label for="' + pid(r, 'g') + '">' + (r === 'child' ? 'बालक / बालिका' : 'लिंग') + '</label><select id="' + pid(r, 'g') + '" data-pf="gender">' +
+      '<option value="">— चुनें —</option><option value="m"' + (st.gender === 'm' ? ' selected' : '') + '>' + (r === 'child' ? 'बालक' : 'पुरुष') + '</option>' +
+      '<option value="f"' + (st.gender === 'f' ? ' selected' : '') + '>' + (r === 'child' ? 'बालिका' : 'स्त्री') + '</option></select></div>';
+    if (st.mode === 'akshar') {
+      return '<div class="tk-row">' + name + gsel + '<div class="tk-fld tk-wide"><label for="' + pid(r, 'k') + '">नाम का पहला अक्षर</label><select id="' + pid(r, 'k') + '" data-pf="ak">' + aksharOptions(st.ak) + '</select></div></div>' +
+        '<div class="tk-tzn">जन्म-समय न पता हो तब — नाम के पहले अक्षर से नक्षत्र-चरण व नाम-राशि। लग्न व आयु वाले नियम तब नहीं जँचते।</div>';
+    }
+    var saved = savedCharts();
+    return '<div class="tk-row">' + name + gsel +
+      '<div class="tk-fld"><label for="' + pid(r, 'd') + '">जन्म तिथि</label><div class="tk-date"><input type="text" id="' + pid(r, 'd') + '" data-pf="date" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" value="' + esc(st.date) + '" autocomplete="off">' +
+        '<span class="tk-pick" title="कैलेंडर से चुनें" aria-hidden="true">📅<input type="date" tabindex="-1" data-for="' + pid(r, 'd') + '"></span></div></div>' +
+      '<div class="tk-fld"><label for="' + pid(r, 't') + '">जन्म समय</label><input type="text" id="' + pid(r, 't') + '" data-pf="time" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="' + esc(st.time) + '" autocomplete="off"></div>' +
+      '<div class="tk-fld tk-wide"><label for="' + pid(r, 'p') + '">जन्म स्थान (शहर खोजें)</label><input type="text" id="' + pid(r, 'p') + '" data-pf="place" value="' + esc(st.place) + '" placeholder="शहर का नाम लिखें…" autocomplete="off">' +
+        '<div class="tk-place-res"></div><input type="hidden" data-pf="lat" value="' + esc(st.lat) + '"><input type="hidden" data-pf="lon" value="' + esc(st.lon) + '"><input type="hidden" data-pf="tz" value="' + esc(st.tz) + '"></div></div>' +
+      (saved.length ? '<div class="tk-pb-saved"><select data-psaved aria-label="सहेजी कुंडली से भरें"><option value="">📂 सहेजी कुंडली से भरें… (' + saved.length + ')</option>' +
+        saved.map(function (c, i) { return '<option value="' + i + '">' + esc((c.name || '—') + ' · ' + (c.date || '') + ' ' + (c.time || '') + (c.place ? ' · ' + c.place : '')) + '</option>'; }).join('') + '</select></div>' : '') +
+      '<div class="tk-tzn">जन्म-समय न पता हो तो खाली छोड़ें (तब लग्न वाले नियम नहीं) या "🔤 नाम-अक्षर" चुनें।</div>';
+  }
+
+  function personBox(slot, sub) {
+    var r = slot.role, st = person(r), o = openChart();
+    var modes = (o ? [['chart', '👤 खुली कुंडली']] : []).concat([['birth', '✍️ जन्म-विवरण'], ['akshar', '🔤 नाम-अक्षर'], ['off', '✖ नहीं']]);
+    var h = '<div class="tk-pb" data-role="' + r + '"><div class="tk-pb-h"><span class="tk-pb-i">' + esc(slot.icon) + '</span><b>' + esc(slot.label) + '</b>' +
+      '<span class="tk-pb-need ' + slot.need + '">' + NEED_HI[slot.need] + '</span></div>' +
+      '<div class="tk-pbm" role="group" aria-label="विवरण कैसे भरें">' + modes.map(function (m) {
+        var on = st.mode === m[0];
+        return '<button type="button" data-pmode="' + m[0] + '"' + (on ? ' class="on"' : '') + ' aria-pressed="' + (on ? 'true' : 'false') + '">' + m[1] + '</button>';
+      }).join('') + '</div><div class="tk-pb-b">' + personBody(slot, st) + '</div>';
+    if ((sub.x || []).indexOf('first') >= 0 && st.mode !== 'off') {
+      h += '<label class="tk-chk"><input type="checkbox" data-pfirst' + (st.first ? ' checked' : '') + '><span>ज्येष्ठ (पहली) संतान ' +
+        '<span class="tk-tzn">— ज्येष्ठ मास में ज्येष्ठ संतान का यह संस्कार वर्जित</span></span></label>';
+    }
+    return h + '<div class="tk-pb-sum" aria-live="polite"></div></div>';
+  }
+
+  function extrasHtml(sub) {
+    var X = getData().extras || {}, xv = xs();
+    var ks = (sub.x || []).filter(function (k) { return k !== 'first' && X[k]; });
+    if (!ks.length) { return ''; }   // ज्येष्ठ संतान खाने के भीतर; और कोई प्रश्न नहीं तो खाली (रेखा भी नहीं)
+    return ks.map(function (k) {
+      var d = X[k], v = xv[k];
+      if (!d) { return ''; }
+      if (d.type === 'check') {
+        return '<label class="tk-chk"><input type="checkbox" data-xk="' + k + '"' + (v ? ' checked' : '') + '><span>' + esc(d.label) + ' <span class="tk-tzn">— ' + esc(d.help) + '</span></span></label>';
+      }
+      var id = 'tk-x-' + k;
+      var h = '<div class="tk-fld"><label for="' + id + '">' + esc(d.label) + '</label><div class="tk-date"><input type="text" id="' + id + '" data-xk="' + k + '" inputmode="numeric" maxlength="10" placeholder="DD-MM-YYYY" value="' + esc(v || '') + '" autocomplete="off">' +
+        '<span class="tk-pick" title="कैलेंडर से चुनें" aria-hidden="true">📅<input type="date" tabindex="-1" data-for="' + id + '"></span></div><span class="tk-tzn">' + esc(d.help) + '</span></div>';
+      if (d.type === 'datetime') {
+        h += '<div class="tk-fld"><label for="' + id + '-t">समय (HH:MM)</label><input type="text" id="' + id + '-t" data-xk="' + k + '_t" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="' + esc(xv[k + '_t'] || '') + '" autocomplete="off"></div>';
+      }
+      return '<div class="tk-row">' + h + '</div>';
+    }).join('') + '<div class="tk-xnote"></div>';
+  }
+
+  // 📅 — डिब्बे के ऊपर रखा पारदर्शी date-input (फ़ोन/iPad का अपना कैलेंडर; कंप्यूटर पर showPicker())
+  function wirePickers(root) {
+    root.querySelectorAll('.tk-pick input[type=date]').forEach(function (di) {
+      if (di._tkp) { return; }
+      di._tkp = true;
+      var txt = $(di.getAttribute('data-for'));
+      if (!txt) { return; }
+      var sync = function () { var p = parse(txt.value); di.value = p ? iso(p) : ''; };
+      di.addEventListener('pointerdown', sync);
+      di.addEventListener('focus', sync);
+      di.addEventListener('click', function () {
+        sync();
+        if (typeof di.showPicker === 'function') { try { di.showPicker(); } catch (e) { /* पहले से खुला */ } }
+      });
+      di.addEventListener('change', function () {
+        if (!di.value) { return; }
+        var p = di.value.split('-');
+        txt.value = p[2] + '-' + p[1] + '-' + p[0];
+        txt.dispatchEvent(new Event('input', { bubbles: true }));
+        txt.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+  }
+
+  function readBox(box) {
+    var st = person(box.getAttribute('data-role'));
+    box.querySelectorAll('[data-pf]').forEach(function (el) { st[el.getAttribute('data-pf')] = el.value; });
+    var fb = box.querySelector('[data-pfirst]');
+    if (fb) { st.first = fb.checked; }
+    save();
+    scheduleWho();
+  }
+
+  function renderWho(sub) {
+    var host = $('tk-who');
+    if (!host) { return; }
+    if (!sub) { host.hidden = true; return; }
+    host.hidden = false;
+    var hd = whoHead(sub);
+    $('tk-who-h').textContent = hd[0];
+    $('tk-who-sub').textContent = hd[1];
+    var pbs = $('tk-pbs');
+    pbs.innerHTML = sub.who.map(function (w) { return personBox(w, sub); }).join('');
+    pbs.classList.toggle('two', sub.who.length > 1);
+    $('tk-xs').innerHTML = extrasHtml(sub);
+    $('tk-milan').hidden = true;
+    pbs.querySelectorAll('.tk-pb').forEach(function (box) {
+      var place = box.querySelector('[data-pf="place"]');
+      if (place && window.ABCitySearch) {
+        window.ABCitySearch.init({
+          input: place, results: box.querySelector('.tk-place-res'),
+          lat: box.querySelector('[data-pf="lat"]'), lon: box.querySelector('[data-pf="lon"]'), tz: box.querySelector('[data-pf="tz"]'),
+          dateInput: box.querySelector('[data-pf="date"]'), timeInput: box.querySelector('[data-pf="time"]'),
+          onSelect: function () { setTimeout(function () { readBox(box); }, 0); }
+        });
+      }
+      if (window.ABDate) {
+        var de = box.querySelector('[data-pf="date"]'), te = box.querySelector('[data-pf="time"]');
+        if (de) { window.ABDate.attach(de, 'date'); }
+        if (te) { window.ABDate.attach(te, 'time'); }
+      }
+    });
+    if (window.ABDate) {
+      $('tk-xs').querySelectorAll('input[type=text][data-xk]').forEach(function (el) { window.ABDate.attach(el, /_t$/.test(el.getAttribute('data-xk')) ? 'time' : 'date'); });
+    }
+    wirePickers(host);
+    refreshWho(sub);
+  }
+
+  function scheduleWho() {
+    clearTimeout(whoTimer);
+    whoTimer = setTimeout(function () { var c = current(); if (c.sub) { refreshWho(c.sub); } }, 450);
+  }
+
+  // व्यक्ति + स्थिति → अनुरोध-मान (karyaScan / karyaCheck / karyaWho — तीनों यही)
+  function whoQuery(sub) {
+    if (!sub) { return ''; }
+    var o = openChart(), q = '', xv = xs();
+    sub.who.forEach(function (slot) {
+      var r = slot.role, st = person(r);
+      var p = function (k, v) { q += '&' + r + '_' + k + '=' + encodeURIComponent(v == null ? '' : v); };
+      if (st.mode === 'chart' && o) {
+        p('m', 'birth'); p('d', o.date); p('t', o.time); p('lat', o.lat); p('lon', o.lon); p('tz', o.tz); p('n', o.name); p('g', o.gender);
+      } else if (st.mode === 'birth') {
+        p('m', 'birth');
+        if (parse(st.date || '')) { p('d', st.date); p('t', st.time); p('lat', st.lat); p('lon', st.lon); p('tz', st.tz); p('n', st.name); p('g', st.gender); }
+      } else if (st.mode === 'akshar') {
+        p('m', st.ak ? 'akshar' : 'birth');
+        if (st.ak) { p('k', st.ak); p('n', st.name); p('g', st.gender); }
+      } else {
+        p('m', 'off');
+      }
+      if (st.first && st.mode !== 'off') { p('f', '1'); }
+    });
+    (sub.x || []).forEach(function (k) {
+      var d = (getData().extras || {})[k];
+      if (!d || k === 'first') { return; }
+      if (d.type === 'check') { if (xv[k]) { q += '&x_' + k + '=1'; } return; }
+      if (parse(xv[k] || '')) {
+        q += '&x_' + k + '=' + encodeURIComponent(xv[k]);
+        if (d.type === 'datetime' && xv[k + '_t']) { q += '&x_' + k + '_t=' + encodeURIComponent(xv[k + '_t']); }
+      }
+    });
+    return q + '&ayanamsa=' + encodeURIComponent((window.AB_BIRTH || {}).ayanamsa || 'lahiri');
+  }
+
+  // "आवश्यक" खाना (शिशु की जन्म-तिथि) खाली हो तो खोज से पहले बता दें
+  function whoProblem(sub) {
+    var bad = null;
+    (sub ? sub.who : []).forEach(function (slot) {
+      var st = person(slot.role);
+      if (bad || slot.need !== 'req' || st.mode === 'off' || st.mode === 'chart') { return; }
+      if (st.mode === 'birth' && !parse(st.date || '')) { bad = '③ में ' + slot.label + ' की जन्म-तिथि भरें — आयु के नियम (नियत दिन/मास/वर्ष) इसी से जँचते हैं। बिना इसके खोजना हो तो "✖ नहीं" चुनें।'; }
+      if (st.mode === 'akshar' && !st.ak) { bad = '③ में ' + slot.label + ' का नाम-अक्षर चुनें।'; }
+    });
+    return bad;
+  }
+
+  function personLine(p) {
+    return esc(p.rashi) + (p.src === 'akshar' ? ' नाम-राशि' : ' राशि') + ' · ' + esc(p.nak + '-' + p.pada) +
+      (p.lagna ? ' · ' + esc(p.lagna) + ' लग्न' : '') + ' · नाम-अक्षर "' + esc(p.akshar) + '"' + (p.age ? ' · आयु ' + esc(p.age) : '');
+  }
+  function milanHtml(m, sub) {
+    if (!m) { return ''; }
+    var h = '💞 <b>गुण-मिलान: ' + m.total + ' / ' + m.max + '</b> — ' + esc(m.text);
+    (m.overrides || []).forEach(function (t) { h += '<br>⚠️ ' + esc(t); });
+    if (m.doshas && m.doshas.length) { h += '<br>⚠️ परिहार रहित: ' + m.doshas.map(esc).join(', '); }
+    if (m.mangal) { h += '<br>🔴 मंगल: ' + esc(m.mangal); }
+    var v = person('var'), k = person('kanya'), o = openChart();
+    var side = function (st, pre) {
+      var src = st.mode === 'chart' ? o : (st.mode === 'birth' && parse(st.date || '') ? st : null);
+      if (!src) { return null; }
+      return pre + '_name=' + encodeURIComponent(src.name || '') + '&' + pre + '_date=' + encodeURIComponent(src.date) + '&' + pre + '_time=' + encodeURIComponent(src.time || '12:00') +
+        '&' + pre + '_lat=' + encodeURIComponent(src.lat || '') + '&' + pre + '_lon=' + encodeURIComponent(src.lon || '') + '&' + pre + '_tz=' + encodeURIComponent(src.tz || '5.5') +
+        '&' + pre + '_place=' + encodeURIComponent(src.place || '');
+    };
+    var a = side(v, 'boy'), b = side(k, 'girl');
+    if (a && b && sub.key !== '1.12') { h += '<br><a href="/milan?' + a + '&' + b + '" target="_blank" rel="noopener">🔗 पूरा कुंडली-मिलान देखें →</a>'; }
+    return h;
+  }
+
+  function paintWho(sub, d) {
+    var by = {};
+    ((d && d.persons) || []).forEach(function (p) { by[p.role] = p; });
+    var miss = (d && d.missing) || [];
+    document.querySelectorAll('#tk-pbs .tk-pb').forEach(function (box) {
+      var r = box.getAttribute('data-role'), st = person(r), sum = box.querySelector('.tk-pb-sum'), p = by[r];
+      sum.classList.remove('miss');
+      if (st.mode === 'off') { sum.innerHTML = ''; return; }
+      if (p) {
+        sum.innerHTML = '✔ ' + personLine(p) + (p.notes || []).map(function (n) { return '<div class="tk-pb-note">💡 ' + esc(n) + '</div>'; }).join('');
+        return;
+      }
+      if (miss.indexOf(r) >= 0 || (st.mode === 'birth' && st.date)) {
+        sum.classList.add('miss');
+        sum.innerHTML = st.mode === 'akshar' ? '⚠ नाम-अक्षर चुनें।' : (st.date && !parse(st.date) ? '⚠ जन्म-तिथि DD-MM-YYYY में लिखें।' : '⚠ जन्म-तिथि भरें (या "🔤 नाम-अक्षर" चुनें) — तब इनका बल जाँचा जाएगा।');
+      } else { sum.innerHTML = ''; }
+    });
+    var mil = $('tk-milan');
+    if (mil) { var mh = milanHtml(d && d.milan, sub); mil.innerHTML = mh; mil.hidden = !mh; }
+    var xn = document.querySelector('#tk-xs .tk-xnote');
+    if (xn) { xn.innerHTML = d && d.death ? '🕯️ ' + d.death.map(esc).join('<br>🕯️ ') : ''; }
+  }
+
+  function refreshWho(sub) {
+    if (!sub) { return; }
+    var my = ++whoSeq;
+    fetch('/calc/karyaWho?task=' + encodeURIComponent(sub.key) + whoQuery(sub) + placeQuery(), { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (my === whoSeq && current().sub === sub) { paintWho(sub, d); } })
+      .catch(function () { /* सार न आए तो खोज फिर भी चलती है */ });
+  }
+
+  // परिणाम/पैनल में — किनका बल देखा गया
+  function whoResHtml(d, sub) {
+    var h = '';
+    if (d.persons && d.persons.length) {
+      h += '<div class="tk-who-res">' + d.persons.map(function (p) {
+        return esc(p.icon + ' ' + p.short + (p.name ? ': ' + p.name : '')) + ' <small>(' + personLine(p) + ')</small>';
+      }).join(' · ') + (d.milan ? ' · 💞 गुण ' + d.milan.total + '/36' : '') + '</div>';
+    } else if (sub && sub.who.length) {
+      h += '<div class="tk-who-res">👤 व्यक्तिगत बल नहीं जाँचा (③ में विवरण नहीं)।</div>';
+    }
+    var miss = (d.missing || []).map(function (r) {
+      var s = sub ? sub.who.filter(function (w) { return w.role === r; })[0] : null;
+      return s ? s.label : r;
+    });
+    if (miss.length) { h += '<div class="tk-warn">⚠️ ' + miss.map(esc).join(', ') + ' का विवरण नहीं दिया — उनसे जुड़े नियम नहीं जाँचे गए (③ में भरें)।</div>'; }
+    if (d.death && d.death.length) { h += '<div class="tk-warn">🕯️ ' + d.death.map(esc).join('<br>🕯️ ') + '</div>'; }
+    return h;
   }
 
   // ── नियम-पत्र ──
@@ -220,6 +543,7 @@
     hint.classList.remove('err');
     pref.opts = pref.opts || {};
     renderOpts($('tk-opts'), cur.sub, pref.opts, save);
+    renderWho(cur.sub);
     if (!cur.sub) {
       go.disabled = true;
       hint.textContent = cur.cat ? 'अब कार्य चुनें' : 'पहले ऊपर कार्य चुनें';
@@ -257,12 +581,13 @@
     if (!t) { bad('अन्तिम तिथि DD-MM-YYYY में भरें।'); return; }
     if (dayNum(t) < dayNum(f)) { bad('अन्तिम तिथि प्रारम्भ तिथि से पहले है।'); return; }
     if (!isFinite(parseFloat($('tk-lat').value))) { bad('कार्य-स्थान चुनें।'); return; }
+    var wp = whoProblem(cur.sub);
+    if (wp) { bad(wp); var wh = $('tk-who'); if (wh) { wh.scrollIntoView({ behavior: 'smooth', block: 'center' }); } return; }
     hint.textContent = '';
     hint.classList.remove('err');
-    var personal = $('tk-personal').checked;
-    var ctx = { cat: cur.cat, sub: cur.sub, from: fmt(f), to: fmt(t), place: $('tk-place').value, personal: personal };
+    var ctx = { cat: cur.cat, sub: cur.sub, from: fmt(f), to: fmt(t), place: $('tk-place').value, who: whoQuery(cur.sub) };
     var url = '/calc/karyaScan?task=' + encodeURIComponent(cur.sub.key) + '&from=' + ctx.from + '&to=' + ctx.to +
-      placeQuery() + optQuery(cur.sub, pref.opts) + birthQuery(personal);
+      placeQuery() + optQuery(cur.sub, pref.opts) + ctx.who;
     var go = $('tk-go'), res = $('tk-results'), my = ++seq;
     go.disabled = true;
     go.textContent = '⏳ खोज रहे…';
@@ -403,7 +728,7 @@
     var wasOpen = !!res.querySelector('.tk-more[open]');
     var h = '<div class="tk-res-h">🔍 परिणाम — ' + esc(ctx.sub.label) + '</div>' +
       '<div class="tk-res-m">' + esc(ctx.cat.emoji + ' ' + ctx.cat.label) + ' · 📅 ' + esc(ctx.from) + ' से ' + esc(ctx.to) +
-      ' · 📍 ' + esc(ctx.place || '') + (d && d.personal ? ' · 👤 व्यक्तिगत बल सहित' : '') + '</div>';
+      ' · 📍 ' + esc(ctx.place || '') + '</div>';
     if (!d || !d.ok) {
       res.innerHTML = '<div class="tk-card">' + h + '<div class="tk-none" style="margin-top:10px">⚠️ ' + esc((d && d.error) || 'तिथि-सीमा जाँचें।') + '</div></div>';
       return;
@@ -414,6 +739,12 @@
       '<span class="tk-pill r">🔴 अशुभ: ' + (c['अशुभ'] || 0) + '</span>' +
       '<span class="tk-pill n">' + (+d.scanned) + ' दिन जाँचे</span></div>';
     h += '<div class="tk-keyl">🟢 <b>शुभ</b> = नियम-पुस्तिका के सभी नियम शुद्ध · 🟡 <b>मध्यम</b> = कोई बड़ा दोष नहीं पर कुछ कमी (जैसे लग्न-शुद्धि अपूर्ण) — ⚠ में लिखी · समय कार्य-स्थान के स्थानीय समय में; (+1) = अगली तारीख़ का भोर (वार सूर्योदय तक वही)।</div>';
+    h += whoResHtml(d, ctx.sub);
+    var ob = d.obstacles || [];
+    var obBad = ob.filter(function (o) { return o.k === 'bad'; }), obCap = ob.filter(function (o) { return o.k === 'cap'; });
+    var obTxt = function (l) { return l.map(function (o) { return esc(o.t) + ' <small>(' + o.n + ' दिन)</small>'; }).join(' · '); };
+    if (obBad.length) { h += '<div class="tk-obs">🔴 <b>अशुभ दिनों के मुख्य कारण:</b> ' + obTxt(obBad) + '</div>'; }
+    if (obCap.length) { h += '<div class="tk-obs">🟡 <b>शुभ न बन पाने के कारण (व्यक्ति/स्थिति):</b> ' + obTxt(obCap) + '</div>'; }
     if (d.capped) { h += '<div class="tk-warn">⚠️ अवधि बड़ी है — पहले ' + (+d.max_days) + ' दिन ही जाँचे गए (कुल ' + (+d.total) + ')। छोटी अवधि चुनें।</div>'; }
     h += '<div class="tk-bar"><div class="tk-seg" role="group" aria-label="दृश्य">' + seg('v', 'list', '📋 शुभ दिन सूची') + seg('v', 'cal', '📆 कैलेंडर') + '</div>' +
       (pref.v === 'list' ? '<div><span class="tk-seg-l">क्रम:</span><div class="tk-seg" role="group" aria-label="क्रम">' +
@@ -434,7 +765,7 @@
     host.innerHTML = '<div class="tk-wait">⏳ हर नियम जाँच रहे…</div>';
     var time = btn.getAttribute('data-tktime') || '';
     var url = '/calc/karyaCheck?task=' + encodeURIComponent(last.ctx.sub.key) + '&date=' + encodeURIComponent(btn.getAttribute('data-tkdetail')) +
-      (time ? '&time=' + encodeURIComponent(time.replace(/\s.*$/, '')) : '') + placeQuery() + optQuery(last.ctx.sub, pref.opts) + birthQuery(last.ctx.personal);
+      (time ? '&time=' + encodeURIComponent(time.replace(/\s.*$/, '')) : '') + placeQuery() + optQuery(last.ctx.sub, pref.opts) + last.ctx.who;
     fetch(url, { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (d) { host.innerHTML = checkHtml(d, false); btn.textContent = '▲ विवरण बंद करें'; })
@@ -464,7 +795,6 @@
     if (findCat(pref.c)) { cat.value = pref.c; }
     fillSubs($('tk-sub'), cat.value, pref.s);
     onTaskChange();
-    $('tk-personal').checked = pref.personal !== '0';
     // पन्ना कल खुला छोड़ा गया हो तो सर्वर की भरी "आज" पुरानी पड़ जाती — इसलिए
     // चालू टैब की तिथियाँ यहीं, इस ब्राउज़र की घड़ी से, दोबारा भरी जाती हैं।
     var on = document.querySelector('#card-tithikhoj .tk-tab.on');
@@ -498,7 +828,47 @@
       onTaskChange();
     });
     $('tk-sub').addEventListener('change', function () { pref.s = $('tk-sub').value; save(); onTaskChange(); });
-    $('tk-personal').addEventListener('change', function () { pref.personal = $('tk-personal').checked ? '1' : '0'; save(); });
+
+    // ③ व्यक्ति-खाने — मोड-बटन, सहेजी कुंडली, हर खाने का बदलाव (खाने बार-बार बनते हैं, इसलिए यहाँ एक बार)
+    var who = $('tk-who');
+    if (who) {
+      who.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-pmode]') : null;
+        if (!b) { return; }
+        var box = b.closest('.tk-pb'), st = person(box.getAttribute('data-role'));
+        if (st.mode !== 'chart' && st.mode !== 'off') { readBox(box); }
+        st.mode = b.getAttribute('data-pmode');
+        save();
+        renderWho(current().sub);
+      });
+      var onField = function (e) {
+        var t = e.target;
+        if (!t || !t.closest) { return; }
+        if (t.hasAttribute('data-psaved')) {
+          var c = savedCharts()[+t.value], box = t.closest('.tk-pb');
+          if (!c || !box) { return; }
+          var st = person(box.getAttribute('data-role')), g = String(c.gender || '').toLowerCase();
+          st.mode = 'birth'; st.name = c.name || ''; st.date = c.date || ''; st.time = c.time || ''; st.place = c.place || '';
+          st.lat = c.lat || ''; st.lon = c.lon || ''; st.tz = c.tz || '';
+          if (g) { st.gender = /^(f|स्त्री|कन्या|महिला)/.test(g) ? 'f' : (/^(m|पुरुष)/.test(g) ? 'm' : st.gender); }
+          save();
+          renderWho(current().sub);
+          return;
+        }
+        if (t.hasAttribute('data-xk')) {
+          xs()[t.getAttribute('data-xk')] = t.type === 'checkbox' ? t.checked : t.value;
+          save();
+          scheduleWho();
+          return;
+        }
+        if (t.hasAttribute('data-pf') || t.hasAttribute('data-pfirst')) {
+          var bx = t.closest('.tk-pb');
+          if (bx) { readBox(bx); }
+        }
+      };
+      who.addEventListener('input', onField);
+      who.addEventListener('change', onField);
+    }
 
     var tabs = document.querySelector('#card-tithikhoj .tk-tabs');
     if (tabs) {
@@ -516,24 +886,8 @@
       el.addEventListener('input', function () { markTab(null); });
       el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { search(); } });
     });
-    // 📅 — डिब्बे के ऊपर रखा पारदर्शी date-input: छूते ही फ़ोन/iPad का अपना
-    // कैलेंडर; कंप्यूटर पर showPicker()। चुनी तिथि DD-MM-YYYY में डिब्बे में।
-    document.querySelectorAll('#card-tithikhoj .tk-pick input[type=date]').forEach(function (di) {
-      var txt = $(di.getAttribute('data-for'));
-      var sync = function () { var p = parse(txt.value); di.value = p ? iso(p) : ''; };
-      di.addEventListener('pointerdown', sync);
-      di.addEventListener('focus', sync);
-      di.addEventListener('click', function () {
-        sync();
-        if (typeof di.showPicker === 'function') { try { di.showPicker(); } catch (e) { /* पहले से खुला */ } }
-      });
-      di.addEventListener('change', function () {
-        if (!di.value) { return; }
-        var p = di.value.split('-');
-        txt.value = p[2] + '-' + p[1] + '-' + p[0];
-        markTab(null);
-      });
-    });
+    // 📅 — अवधि की तिथियों पर भी वही पारदर्शी date-input (चुनते ही कोई टैब चालू नहीं रहता)
+    wirePickers($('card-tithikhoj'));
     $('tk-go').addEventListener('click', search);
     $('tk-results').addEventListener('click', function (e) {
       if (!e.target.closest) { return; }
@@ -546,8 +900,9 @@
     });
   }
 
-  // बाहर से कार्य चुनकर खोज (मुहूर्त फल पैनल का "शुभ तिथियाँ खोजें")
-  function openWith(id, opts) {
+  // बाहर से कार्य चुनकर खोज (मुहूर्त फल पैनल का "शुभ तिथियाँ खोजें"); whoOnly — केवल कार्य
+  // चुनकर ③ (व्यक्ति) तक ले जाएँ ("व्यक्ति बदलें")
+  function openWith(id, opts, whoOnly) {
     ensure();
     var t = findTask(id);
     if (!t) { return; }
@@ -555,6 +910,7 @@
     fillSubs($('tk-sub'), t.cat.key, id);
     pref.c = t.cat.key; pref.s = id; pref.opts = Object.assign({}, opts || {}); save();
     onTaskChange();
+    if (whoOnly) { var w = $('tk-who'); if (w) { w.scrollIntoView({ behavior: 'smooth', block: 'start' }); } return; }
     search();
   }
 
@@ -580,17 +936,19 @@
     var out = phal.host.querySelector('.tk-mp-out');
     if (!s) { out.innerHTML = '<div class="tk-rs">ऊपर से कार्य चुनें — चुनी तिथि/समय/स्थान पर उस कार्य के हर नियम की जाँच यहाँ दिखेगी।</div>'; return; }
     var w = gocharWhen();
-    var on = phal.host.querySelector('.tk-mp-personal').checked;
     phal.host.querySelector('.tk-mp-when').textContent = '🕐 जाँच का क्षण: ' + w.date + ' · ' + w.time + (w.place ? ' · 📍 ' + w.place : '') + ' (ऊपर गोचर-फ़ॉर्म से बदलें)';
     out.innerHTML = '<div class="tk-wait">⏳ जाँच रहे…</div>';
     var my = ++phalSeq;
     var url = '/calc/karyaCheck?task=' + encodeURIComponent(s.key) + '&date=' + encodeURIComponent(w.date) + '&time=' + encodeURIComponent(w.time) +
       '&lat=' + encodeURIComponent(w.lat) + '&lon=' + encodeURIComponent(w.lon) + '&tz=' + encodeURIComponent(w.tz) +
-      optQuery(s, phal.opts) + birthQuery(on);
+      optQuery(s, phal.opts) + whoQuery(s);
     fetch(url, { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (my !== phalSeq) { return; }
+        // किनका बल देखा गया — व्यक्ति तिथि खोज के ③ में ही भरे/बदले जाते हैं (दोनों जगह वही याद रहते हैं)
+        phal.host.querySelector('.tk-mp-who').innerHTML = (d && d.ok ? whoResHtml(d, s) : '') +
+          (s.who.length ? '<button type="button" class="tk-btn2 tk-mp-edit">✏️ व्यक्ति / जन्म-विवरण बदलें</button>' : '');
         out.innerHTML = checkHtml(d, true) +
           '<div style="margin-top:10px"><button type="button" class="tk-btn2 tk-mp-find">🔍 इस कार्य की शुभ तिथियाँ खोजें (तिथि खोज) →</button></div>';
       })
@@ -606,8 +964,7 @@
     host.innerHTML = '<div class="tk-mp-pick"><div class="tk-fld tk-wide"><label>मुख्य श्रेणी</label><select class="tk-mp-cat"><option value="">— चुनें —</option>' + opts + '</select></div>' +
       '<div class="tk-fld tk-wide"><label>कार्य</label><select class="tk-mp-sub" disabled></select></div></div>' +
       '<div class="tk-opts tk-mp-opts"></div>' +
-      '<label class="tk-chk"><input type="checkbox" class="tk-mp-personal"' + (pref.personal !== '0' ? ' checked' : '') + '><span>👤 खुली कुंडली का चंद्र/तारा बल भी</span></label>' +
-      '<div class="tk-mp-when"></div><div class="tk-mp-out"></div>';
+      '<div class="tk-mp-who"></div><div class="tk-mp-when"></div><div class="tk-mp-out"></div>';
     phal = { host: host, catSel: host.querySelector('.tk-mp-cat'), subSel: host.querySelector('.tk-mp-sub'), opts: Object.assign({}, pref.opts || {}) };
     if (findCat(pref.c)) { phal.catSel.value = pref.c; }
     fillSubs(phal.subSel, phal.catSel.value, pref.s);
@@ -617,14 +974,15 @@
     };
     phal.catSel.addEventListener('change', function () { fillSubs(phal.subSel, phal.catSel.value, ''); pref.c = phal.catSel.value; pref.s = ''; save(); redo(); });
     phal.subSel.addEventListener('change', function () { pref.s = phal.subSel.value; save(); redo(); });
-    host.querySelector('.tk-mp-personal').addEventListener('change', phalCheck);
     host.addEventListener('click', function (e) {
-      if (!e.target.closest || !e.target.closest('.tk-mp-find')) { return; }
+      if (!e.target.closest) { return; }
+      var find = e.target.closest('.tk-mp-find'), edit = e.target.closest('.tk-mp-edit');
+      if (!find && !edit) { return; }
       var id = phal.subSel.value;
       var opt = Object.assign({}, phal.opts);
       var btn = document.querySelector('#side-menu [data-sec="muhurat"][data-mview="tithi"]');
       if (btn) { btn.click(); }
-      setTimeout(function () { openWith(id, opt); }, 50);
+      setTimeout(function () { openWith(id, opt, !!edit); }, 50);
     });
     redo();
   }

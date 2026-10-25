@@ -86,6 +86,12 @@ final class LalKitabSelfCheck
         // मुहूर्त › तिथि खोज — वही "1 वर्ष" की माँग, नियम-पुस्तिका वाले स्कैनर पर (विवाह, दिल्ली)
         $tkYear = self::fetch($base . '/calc/karyaScan?task=1.11&lat=28.6139&lon=77.2090&tz=5.5&zone=Asia/Kolkata&from='
             . rawurlencode(date('d-m-Y')) . '&to=' . rawurlencode(date('d-m-Y', strtotime('+1 year'))));
+        // अन्नप्राशन — 01-07-2026 को जन्मे बालक व बालिका (तय अवधि, ताकि परिणाम आज की तिथि पर निर्भर न हो)
+        $tkAnna = [];
+        foreach (['m', 'f'] as $tkG) {
+            $tkAnna[$tkG] = self::fetch($base . '/calc/karyaScan?task=1.05&from=01-11-2026&to=30-06-2027&lat=28.6139&lon=77.2090&tz=5.5&zone=Asia/Kolkata'
+                . '&child_m=birth&child_d=01-07-2026&child_t=10:00&child_lat=28.6139&child_lon=77.2090&child_tz=5.5&child_g=' . $tkG);
+        }
         // एक तय क्षण (चातुर्मास के बीच) पर दो कार्यों की जाँच — विवाह रुके, भूमि-क्रय नहीं
         $tkChk = [];
         foreach (['1.11', '2.01'] as $tkId) {
@@ -1059,7 +1065,22 @@ final class LalKitabSelfCheck
                     $seen[$id] = true;
                 }
             }
-            return count($seen) === 87 && count($tasks) === 87;
+            if (count($seen) !== 87 || count($tasks) !== 87) { return false; }
+            // ③ किसके लिए मुहूर्त — हर कार्य की व्यक्ति-प्रोफ़ाइल: विवाह में वर + कन्या, संस्कारों में
+            // शिशु (आवश्यक), अंतिम संस्कार में कोई नहीं; हर भूमिका व प्रश्न परिभाषित; 108 नाम-अक्षर
+            $roles = \AutoBusiness\Astro\Muhurat\KaryaVyakti::ROLES;
+            $who = [];
+            foreach ($cats as $c) {
+                foreach ($c['subs'] as $s) {
+                    if (!isset($s['who'], $s['x']) || !is_array($s['who'])) { return false; }
+                    foreach ($s['who'] as $w) { if (!isset($roles[$w['role']]) || !in_array($w['need'], ['req', 'rec', 'opt'], true)) { return false; } }
+                    foreach ($s['x'] as $x) { if (!isset($data['extras'][$x])) { return false; } }
+                    $who[$s['key']] = implode(',', array_map(static fn ($w) => $w['role'] . ':' . $w['need'], $s['who']));
+                }
+            }
+            foreach (['1.03', '1.04', '1.05', '1.06', '1.07', '1.08', '1.09'] as $id) { if ($who[$id] !== 'child:req') { return false; } }
+            if ($who['1.11'] !== 'var:rec,kanya:rec' || $who['1.13'] !== '' || $who['2.06'] !== 'self:rec') { return false; }
+            return count($data['akshar'] ?? []) === 27 && count(array_merge(...array_column($data['akshar'], 'a'))) === 108;
         });
 
         // "1 वर्ष" चुनने पर पूरा साल जाँचा जाए (MDF-2 वाली भूल — पहले 120 दिन पर
@@ -1109,6 +1130,60 @@ final class LalKitabSelfCheck
                 if ($c === null || $c['s'] !== $st || ($has !== '' && mb_strpos($c['v'], $has) === false)) { return false; }
             }
             return \AutoBusiness\Astro\Muhurat\KaryaKaal::karanaName(13)[0] === 'वणिज' && $j['hard'] && in_array('आनन्दादि: उत्पात', $j['bad'], true);
+        });
+
+        // अन्नप्राशन — बालक का सम (6/8/10/12) व बालिका का विषम (5/7/9/11) मास: शिशु की आयु से
+        // गिना हर शुभ/मध्यम दिन उसी मास में हो (पहले यह नियम केवल खुली कुंडली से, और ग़लत मास पर
+        // भी केवल −10 अंक — विषम मास वाले दिन भी "शुभ" आ जाते थे)।
+        $add('TK-5', 'अन्नप्राशन: शिशु की जन्म-तिथि से — बालक के केवल सम, बालिका के केवल विषम मास में दिन', static function () use ($tkAnna): bool {
+            $birth = (new \DateTimeImmutable('2026-07-01 10:00', new \DateTimeZone('Asia/Kolkata')))->getTimestamp();
+            foreach (['m' => 0, 'f' => 1] as $g => $parity) {
+                $d = json_decode((string) ($tkAnna[$g] ?? ''), true);
+                if (empty($d['ok']) || ($d['persons'][0]['role'] ?? '') !== 'child' || $d['missing'] !== []) { return false; }
+                $n = 0;
+                foreach ($d['rows'] as $r) {
+                    if ($r['grade'] === 'अशुभ') { continue; }
+                    $at = \DateTimeImmutable::createFromFormat('d-m-Y H:i', $r['date'] . ' ' . $r['windows'][0]['peak'], new \DateTimeZone('Asia/Kolkata'));
+                    if ($r['windows'][0]['next_day'] || str_contains($r['windows'][0]['to'], '(+1)') && $r['windows'][0]['peak'] < $r['windows'][0]['from']) { $at = $at->modify('+1 day'); }
+                    $mo = (int) floor(($at->getTimestamp() - $birth) / 86400 / 30.4375) + 1;
+                    if ($mo < 5 || $mo % 2 !== $parity) { return false; }
+                    $n++;
+                }
+                if ($n < 3) { return false; }
+            }
+            return true;
+        });
+
+        // विवाह — भूमिका के अनुसार बल: कन्या का गुरु 8वाँ (स्वगृही/उच्च नहीं) तो क्षण अधिकतम मध्यम
+        // ("पीली पूजा से ही"), वर का सूर्य अलग से, सूची में किसका बल यह लिखा ("वर: …", "कन्या: …");
+        // दोनों ज्येष्ठ संतान हों तो ज्येष्ठ मास वर्जित, एक हो तो केवल सावधानी।
+        $add('TK-6', 'विवाह: कन्या का गुरु बल / वर का सूर्य बल अलग-अलग, गुरु 8वाँ → मध्यम, दोनों ज्येष्ठ → ज्येष्ठ मास वर्जित', static function (): bool {
+            $eng = new \AutoBusiness\Astro\Calc\CalculationEngine(\AutoBusiness\Astro\Ephemeris\EphemerisFactory::create(), 'lahiri');
+            // 15-12-2026 — गुरु सिंह में (स्वगृही/उच्च नहीं), ताकि 8वाँ गुरु सचमुच "हीन" हो
+            $jd = \AutoBusiness\Astro\Time\JulianDay::fromGregorian(2026, 12, 15, 0, 0, 0.0, 5.5);
+            $kk = new \AutoBusiness\Astro\Muhurat\KaryaKaal($eng, 28.61, 77.21, new \DateTimeZone('Asia/Kolkata'), 5.5, $jd - 1, $jd + 3);
+            $day = $kk->day(2026, 12, 15);
+            $f = $kk->facts($day, $day['rise'] + 0.2);
+            $f['maas'] = ['pm' => 2, 'am' => 1, 'adhik' => false] + $f['maas'];   // ज्येष्ठ (पूर्णिमान्त) — नियम परखने हेतु
+            $jup = $f['signs']['Jupiter'];
+            if (in_array($jup, [3, 8, 11], true)) { return false; }   // परीक्षण-तिथि पर गुरु स्वगृही/उच्च नहीं होना चाहिए
+            $opts = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::cleanOpts('1.11', []);
+            $t = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::prepare('1.11', $opts);
+            $mk = static fn (string $role, string $short, int $moon, bool $first): array => [
+                'role' => $role, 'short' => $short, 'label' => $short, 'icon' => '', 'src' => 'akshar', 'name' => '',
+                'moonSign' => $moon, 'moonLon' => $moon * 30 + 15.0, 'nak' => $f['nak'] % 27 + 1, 'pada' => 1, 'ascSign' => null, 'am' => null,
+                'gender' => $role === 'var' ? 'm' : 'f', 'birthJd' => null, 'birthMd' => null, 'first' => $first, 'lons' => null, '_chart' => null];
+            $kanyaMoon = ($jup - 7 + 12) % 12;            // गुरु कन्या की राशि से 8वाँ
+            $varMoon = ($f['sunSign'] - 2 + 12) % 12;     // सूर्य वर की राशि से 3रा (शुभ)
+            $run = static fn (bool $a, bool $b) => \AutoBusiness\Astro\Muhurat\KaryaNirnay::judge($t, $f, $day,
+                ['fest' => [], 'eclipses' => [], 'persons' => [$mk('var', 'वर', $varMoon, $a), $mk('kanya', 'कन्या', $kanyaMoon, $b)], 'extra' => [], 'opts' => $opts], true);
+            $one = $run(true, false);
+            $both = $run(true, true);
+            $labels = array_column($one['checks'], 'l');
+            if (!in_array('कन्या: गुरु बल हीन', $labels, true) || !in_array('वर: सूर्य बल', $labels, true)) { return false; }
+            if (!in_array('कन्या: गुरु बल हीन (8वाँ)', $one['cap'], true) || (!$one['hard'] && $one['score'] > 79)) { return false; }
+            if (in_array('ज्येष्ठ मास में ज्येष्ठ संतान', $one['bad'], true) || !in_array('ज्येष्ठ मास (एक ज्येष्ठ संतान)', $one['warn'], true)) { return false; }
+            return in_array('ज्येष्ठ मास में ज्येष्ठ संतान', $both['bad'], true) && $both['hard'];
         });
 
         // चातुर्मास (देवशयनी → देवउठनी) विवाह रोकता है, पर भूमि-क्रय जैसे कार्यों को नहीं —

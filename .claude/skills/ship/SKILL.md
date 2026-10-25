@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Deliver a finished change to the astrology app — run the 66-check self-test, scan for credentials, record the decision in Hindi, commit with the required trailers, push with backoff, and hand the owner correctly named update files. Use whenever a change is complete and ready to go out, or when the owner says ship / deliver / give me the file / give me the zip.
+description: Deliver a finished change to the astrology app — run the 68-check self-test, scan for credentials, record the decision in Hindi, commit with the required trailers, push with backoff, and hand the owner correctly named update files. Use whenever a change is complete and ready to go out, or when the owner says ship / deliver / give me the file / give me the zip.
 ---
 
 # Ship a change
@@ -14,7 +14,7 @@ change "looks small".
 ```bash
 php -l <each changed .php file>          # syntax
 node -c <each changed .js file>          # syntax
-php tests/lalkitab_process_check.php     # must print: पास: 66 · फेल: 0
+php tests/lalkitab_process_check.php     # must print: पास: 68 · फेल: 0
 ```
 
 `LK_BASE` is already exported by the session-start hook. If the suite cannot

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace AutoBusiness\Astro\Muhurat;
 
 use AutoBusiness\Astro\Muhurat\PanchangNiyamData as P;
+use AutoBusiness\Astro\Time\JulianDay;
 
 /**
  * ⚖️ एक क्षण पर एक कार्य का मुहूर्त-निर्णय — कार्यपुस्तिका के नियमों से।
@@ -23,9 +24,9 @@ final class KaryaNirnay
 {
     public const SHUBH = 80;
     public const MADHYAM = 60;
-    /** जाँच-शीर्षक जो अकेले कोई दोष/बल नहीं बताते */
     /** पंचांग-अंग शुभ सूची से बाहर — क्षण अधिकतम "मध्यम" */
     private const LIMB_MISS = ['तिथि सामान्य', 'तिथि मध्यम', 'वार सामान्य', 'वार मध्यम', 'नक्षत्र सामान्य', 'नक्षत्र मध्यम'];
+    /** जाँच-शीर्षक जो अकेले कोई दोष/बल नहीं बताते */
     private const BARE = ['मास', 'अयन', 'पक्ष', 'तिथि', 'वार', 'नक्षत्र', 'योग', 'करण', 'लग्न', 'समय', 'चौघड़िया', 'होरा'];
 
     private const NANDA = [1, 6, 11]; private const BHADRA_T = [2, 7, 12]; private const JAYA = [3, 8, 13];
@@ -39,6 +40,11 @@ final class KaryaNirnay
     private const NAK_SHOOL = [18 => 'पूर्व', 25 => 'दक्षिण', 4 => 'पश्चिम', 12 => 'उत्तर'];
 
     public static function signHi(int $s): string { return self::SIGN_HI[(($s % 12) + 12) % 12]; }
+
+    /** हिन्दी क्रमवाचक — 1ला, 2रा, 3रा, 4था, 6ठा, 5वाँ …; तिर्यक (1ले/…वें) व स्त्रीलिंग (1ली/…वीं) */
+    public static function ord(int $n): string { return $n . ([1 => 'ला', 2 => 'रा', 3 => 'रा', 4 => 'था', 6 => 'ठा'][$n] ?? 'वाँ'); }
+    public static function ordO(int $n): string { return $n . ([1 => 'ले', 2 => 'रे', 3 => 'रे', 4 => 'थे', 6 => 'ठे'][$n] ?? 'वें'); }
+    public static function ordF(int $n): string { return $n . ([1 => 'ली', 2 => 'री', 3 => 'री', 4 => 'थी', 6 => 'ठी'][$n] ?? 'वीं'); }
 
     /** सामान्य दोष (सा.दो.) का यह अंग इस कार्य पर लागू है? */
     private static function sado(array $t, string $code): bool
@@ -82,7 +88,16 @@ final class KaryaNirnay
         $varjit = $t['varjit'] ?? [];
         $soft = $t['soft'] ?? [];
         $catSoft = $t['catSoft'] ?? [];
-        $natal = !empty($ctx['personal']) ? ($ctx['natal'] ?? null) : null;
+        $persons = self::persons($ctx);
+        $multi = count($persons) > 1;
+        $X = $ctx['extra'] ?? [];
+        $cap = [];          // व्यक्ति/स्थिति के कारण — इनके रहते क्षण अधिकतम "मध्यम"
+        $fixedDay = false;  // शिशु का नियत दिन (नामकरण 11/12वाँ) — तिथि-वार विचार शिथिल
+        if (($t['age'] ?? '') === 'namkaran') {
+            foreach ($persons as $P) {
+                if ($P['role'] === 'child' && $P['birthJd'] !== null && in_array((int) floor($f['jd'] - $P['birthJd']) + 1, [11, 12], true)) { $fixedDay = true; }
+            }
+        }
 
         // ── अबूझ / पर्व ── (पंचांग-शुद्धि शिथिल, पर मास/अस्त दोष बने रहते हैं)
         $abujh = null;
@@ -235,8 +250,8 @@ final class KaryaNirnay
         $ov = $t['tithi'] ?? [];
         $tlabel = 'तिथि वर्जित: ' . P::TITHI[$tithi]['name'];
         $dev = $t['devataTithi'] ?? [];
-        if ($waive) {
-            $add('तिथि', 'तिथि', $tName . ' — अबूझ दिन, विचार शिथिल', 'info');
+        if ($waive || $fixedDay) {
+            $add('तिथि', 'तिथि', $tName . ($waive ? ' — अबूझ दिन, विचार शिथिल' : ' — नामकरण का नियत दिन, तिथि-विचार शिथिल'), 'info');
         } elseif (in_array($tithi, $dev, true)) {
             $add('तिथि', 'तिथि', $tName . ' — देवता की निज तिथि (रिक्ता दोष नहीं)', 'good', 6);
         } elseif ($tithi === 30 && !empty($t['amavasyaGood'])) {
@@ -271,8 +286,8 @@ final class KaryaNirnay
         if (!$waive && $f['gandantT'] && self::sado($t, 'gandant')) { $add('तिथि', 'तिथि-गण्डान्त', 'पूर्णा-नंदा संधि (±1 घटी)', 'bad'); }
 
         // ═════ 3. वार ═════
-        if ($waive) {
-            $add('वार', 'वार', $vName, 'info');
+        if ($waive || $fixedDay) {
+            $add('वार', 'वार', $vName . ($fixedDay && !$waive ? ' — नियत दिन, वार-विचार शिथिल' : ''), 'info');
         } elseif (in_array($vaar, $t['v+'], true)) {
             $add('वार', 'वार', $vName . ' — शुभ वार', 'ok');
             if (!empty($t['vaarBonus'][$vaar])) { $add('वार', 'वार', $t['vaarBonus'][$vaar], 'good', 5); }
@@ -478,10 +493,13 @@ final class KaryaNirnay
                 if (in_array($h, $asp, true)) { $add('लग्न', 'गुरु-दृष्टि ' . $h . 'वें भाव पर', 'शुभ', 'good', 5); break; }
             }
             if (!empty($t['moonCharBonus']) && in_array($f['moonSign'], [0, 3, 6, 9], true)) { $add('लग्न', 'चंद्र चर राशि में', 'यात्रा हेतु शुभ', 'good', 4); }
-            if ($natal !== null) {
-                $h8a = (($as1 - $natal['moonSign'] + 12) % 12) + 1;
-                $h8b = (($as1 - $natal['ascSign'] + 12) % 12) + 1;
-                if ($h8a === 8 || $h8b === 8) { $add('लग्न', 'लग्न जन्म से 8वाँ', 'मुहूर्त-लग्न जातक की ' . ($h8a === 8 ? 'जन्म राशि' : 'जन्म लग्न') . ' से 8वाँ', 'bad'); }
+            foreach ($persons as $P) {
+                $h8a = (($as1 - $P['moonSign'] + 12) % 12) + 1;
+                $h8b = $P['ascSign'] === null ? 0 : (($as1 - $P['ascSign'] + 12) % 12) + 1;
+                if ($h8a === 8 || $h8b === 8) {
+                    $add('लग्न', ($multi ? $P['short'] . ': ' : '') . 'लग्न जन्म से 8वाँ',
+                        'मुहूर्त-लग्न ' . $P['short'] . ' की ' . ($h8a === 8 ? ($P['src'] === 'akshar' ? 'नाम राशि' : 'जन्म राशि') : 'जन्म लग्न') . ' से 8वाँ', 'bad');
+                }
             }
         }
 
@@ -589,6 +607,18 @@ final class KaryaNirnay
                 if ($dir === 'दक्षिण' && $f['moon'] >= 300.0) { $add('दिशा', 'पंचक में दक्षिण यात्रा', 'पंचक में दक्षिण दिशा वर्जित', 'bad'); }
             }
         }
+        // वाम रवि — गृह-प्रवेश के क्षण सूर्य प्रवेश करने वाले की बाईं ओर (मुख्य द्वार की दिशा से):
+        // पूर्वमुखी द्वार में लग्न से 8–12, उत्तरमुखी 11–3, पश्चिममुखी 2–6, दक्षिणमुखी 5–9 भाव
+        $dwar = (string) ($ctx['opts']['dwar'] ?? '');
+        if ($dwar !== '' && ($t['lagna'] ?? []) !== false) {
+            $sh = (($f['sunSign'] - $f['ascSign'] + 12) % 12) + 1;
+            $okH = ['पूर्व' => [8, 9, 10, 11, 12], 'उत्तर' => [11, 12, 1, 2, 3], 'पश्चिम' => [2, 3, 4, 5, 6], 'दक्षिण' => [5, 6, 7, 8, 9]][$dwar] ?? [];
+            if (in_array($sh, $okH, true)) { $add('दिशा', 'वाम रवि', $dwar . 'मुखी द्वार — सूर्य लग्न से ' . self::ordO($sh) . ' भाव में, प्रवेश के समय बाईं ओर', 'good', 6); }
+            elseif ($okH !== []) {
+                $add('दिशा', 'वाम रवि नहीं', $dwar . 'मुखी द्वार हेतु सूर्य लग्न से ' . $okH[0] . '–' . $okH[4] . ' भाव में चाहिए (अभी ' . self::ord($sh) . ')', 'warn', -8);
+                $cap[] = 'वाम रवि नहीं';
+            }
+        }
         if ($verbose && !$needDir) {
             // पुस्तिका की "मुहूर्त जाँच" की तरह — हर कार्य में सूचना-मात्र (अंक पर असर नहीं)
             $add('दिशा', 'दिशाशूल · योगिनी', P::VAAR[$vaar]['shool'] . ' में दिशाशूल · योगिनी ' . (P::YOGINI[$tithi] ?? '') . ' — यात्रा हो तो इन दिशाओं से बचें', 'info');
@@ -621,64 +651,146 @@ final class KaryaNirnay
             $add('दिशा', 'वास्तु-नाग (राहु-मुख)', 'नाग का सिर ' . $head . ' में — उस दिशा से खुदाई आरम्भ न करें (मत)', 'info');
         }
 
-        // ═════ 10. व्यक्तिगत बल (जन्म कुंडली से) ═════
-        if ($natal !== null && ($t['personalOff'] ?? false) === false) {
-            $ch2 = (($f['moonSign'] - $natal['moonSign'] + 12) % 12) + 1;
-            if ($ch2 === 8) {
-                if (in_array('chandrashtam', $varjit, true) || self::sado($t, 'chandratara')) { $add('व्यक्तिगत', 'चंद्राष्टम', 'जन्म राशि से 8वाँ चंद्र — सर्वाधिक अशुभ', 'bad'); }
-                else { $add('व्यक्तिगत', 'चंद्राष्टम', 'जन्म राशि से 8वाँ चंद्र', 'warn', -15); }
-            } elseif (in_array($ch2, [4, 12], true)) { $add('व्यक्तिगत', 'चंद्र बल हीन', 'जन्म राशि से ' . $ch2 . 'वाँ चंद्र — अशुभ', 'warn', -12); }
-            elseif (in_array($ch2, [2, 5, 9], true) && $pk === 'k') { $add('व्यक्तिगत', 'चंद्र बल', $ch2 . 'वाँ — केवल शुक्ल पक्ष में शुभ', 'warn', -5); }
-            else { $add('व्यक्तिगत', 'चंद्र बल', 'जन्म राशि से ' . $ch2 . 'वाँ चंद्र — शुभ', 'good', 2); }
-            $cnt = (($nak - $natal['nak'] + 27) % 27) + 1;
-            $tara = $cnt % 9 === 0 ? 9 : $cnt % 9;
-            $tr = P::TARA[$tara];
-            if (in_array($tara, [3, 5, 7], true)) {
-                $add('व्यक्तिगत', 'तारा: ' . $tr['name'], $tr['prabhav'] . ($tr['parihar'] !== '—' ? ' — परिहार: ' . $tr['parihar'] : '') . ($pk === 'k' ? ' (कृष्ण पक्ष में तारा बल प्रधान)' : ''), 'warn', $pk === 'k' ? -16 : -12);
-            } elseif ($tara === 1) {
-                $add('व्यक्तिगत', 'जन्म तारा', 'मिश्र — शरीर-पीड़ा का भय', 'warn', -4);
-            } else {
-                $bonus = !empty($t['taraMitra']) && in_array($tara, [8, 9], true) ? 6 : 3;
-                $add('व्यक्तिगत', 'तारा बल', $tr['name'] . ' — ' . $tr['prabhav'], 'good', $bonus);
-            }
-            if ($nak === $natal['nak']) {
-                if (in_array('janma_nak', $varjit, true)) { $add('व्यक्तिगत', 'जन्म नक्षत्र', $nName . ' — इस कार्य में वर्जित', 'bad'); }
-                elseif (in_array('janma_nak', $soft, true)) { $add('व्यक्तिगत', 'जन्म नक्षत्र', $nName . ' (मत)', 'warn', -8); }
-            }
-            if (!$m['adhik'] && $m['am'] === ($natal['am'] ?? -1)) {
-                if (in_array('janma_maas', $varjit, true)) { $add('व्यक्तिगत', 'जन्म मास', self::MAAS_HI[$m['am']] . ' (अमान्त) — वर्जित', 'bad'); }
-                elseif (in_array('janma_maas', $soft, true)) { $add('व्यक्तिगत', 'जन्म मास', self::MAAS_HI[$m['am']] . ' (मत)', 'warn', -8); }
-            }
-            $bal = static function (string $who, int $h, array $okH, array $midH) use ($add): void {
-                if (in_array($h, $okH, true)) { $add('व्यक्तिगत', $who, $h . 'वाँ — शुभ', 'good', 4); }
-                elseif (in_array($h, $midH, true)) { $add('व्यक्तिगत', $who, $h . 'वाँ — मध्यम (पूजा से शुभ)', 'warn', -6); }
-                else { $add('व्यक्तिगत', $who . ' हीन', $h . 'वाँ — अशुभ', 'warn', -14); }
+        // ═════ 10. व्यक्तिगत बल — जिनके लिए मुहूर्त ({@see KaryaVyakti}) ═════
+        // हर व्यक्ति का चंद्र-तारा बल, जन्म नक्षत्र/मास; भूमिका से त्रिबल (कन्या का गुरु,
+        // वर का सूर्य, बटुक का गुरु); शिशु के आयु-नियम; यात्रा/मुकदमा/शल्य में घात चक्र।
+        $firstBorn = [];
+        if (($t['personalOff'] ?? false) === false) {
+            $grahaBal = static function (string $who, string $pl, int $h, int $sg, string $mode, string $remedy) use ($add, &$cap): void {
+                $jup = $pl === 'Jupiter';
+                $nm = $jup ? 'गुरु बल' : 'सूर्य बल';
+                $okH = $jup ? [2, 5, 7, 9, 11] : [3, 6, 10, 11];
+                $midH = $jup ? [1, 3, 6, 10] : [1, 2, 5, 7, 9];
+                if (in_array($h, $okH, true)) { $add('व्यक्तिगत', $who . $nm, self::ord($h) . ' — शुभ', 'good', 4); return; }
+                if (in_array($h, $midH, true)) { $add('व्यक्तिगत', $who . $nm . ' मध्यम', self::ord($h) . ' — ' . $remedy . ' से शुभ', 'warn', -6); return; }
+                if (in_array($sg, $jup ? [3, 8, 11] : [0, 4], true)) {   // स्वगृही/उच्च ग्रह 4/8/12 में भी दोष नहीं देता (मत)
+                    $add('व्यक्तिगत', $who . $nm . ' (स्वगृही/उच्च)', self::ord($h) . ', पर ' . ($jup ? 'गुरु' : 'सूर्य') . ' ' . self::signHi($sg) . ' में — दोष शमित (मत)', 'warn', -8);
+                    return;
+                }
+                if ($mode === 'strict') {
+                    $add('व्यक्तिगत', $who . $nm . ' हीन', self::ord($h) . ' — अशुभ; ' . $remedy . ' करके ही, पूर्ण शुभ नहीं', 'warn', -10);
+                    $cap[] = $who . $nm . ' हीन (' . self::ord($h) . ')';
+                } else {
+                    $add('व्यक्तिगत', $who . $nm . ' हीन', self::ord($h) . ' — अशुभ (' . $remedy . ')', 'warn', -8);
+                }
             };
-            $jupH = (($f['signs']['Jupiter'] - $natal['moonSign'] + 12) % 12) + 1;
-            $sunH = (($f['sunSign'] - $natal['moonSign'] + 12) % 12) + 1;
-            if (!empty($t['tribal'])) {
-                if (($natal['gender'] ?? '') === 'f') { $bal('गुरु बल (कन्या)', $jupH, [2, 5, 7, 9, 11], [1, 3, 6, 10]); }
-                elseif (($natal['gender'] ?? '') === 'm') { $bal('सूर्य बल (वर)', $sunH, [3, 6, 10, 11], [1, 2, 5, 7, 9]); }
+            foreach ($persons as $P) {
+                $who = $multi ? $P['short'] . ': ' : '';
+                $ch2 = (($f['moonSign'] - $P['moonSign'] + 12) % 12) + 1;
+                $rashiW = $P['src'] === 'akshar' ? 'नाम राशि' : 'जन्म राशि';
+                if ($ch2 === 8) {
+                    if (in_array('chandrashtam', $varjit, true) || self::sado($t, 'chandratara')) { $add('व्यक्तिगत', $who . 'चंद्राष्टम', $rashiW . ' से 8वाँ चंद्र — सर्वाधिक अशुभ', 'bad'); }
+                    else { $add('व्यक्तिगत', $who . 'चंद्राष्टम', $rashiW . ' से 8वाँ चंद्र', 'warn', -15); }
+                } elseif (in_array($ch2, [4, 12], true)) { $add('व्यक्तिगत', $who . 'चंद्र बल हीन', $rashiW . ' से ' . self::ord($ch2) . ' चंद्र — अशुभ', 'warn', -12); }
+                elseif (in_array($ch2, [2, 5, 9], true) && $pk === 'k') { $add('व्यक्तिगत', $who . 'चंद्र बल', self::ord($ch2) . ' — केवल शुक्ल पक्ष में शुभ', 'warn', -5); }
+                else { $add('व्यक्तिगत', $who . 'चंद्र बल', $rashiW . ' से ' . self::ord($ch2) . ' चंद्र — शुभ', 'good', 2); }
+                $cnt = (($nak - $P['nak'] + 27) % 27) + 1;
+                $tara = $cnt % 9 === 0 ? 9 : $cnt % 9;
+                $tr = P::TARA[$tara];
+                if (in_array($tara, [3, 5, 7], true)) {
+                    $add('व्यक्तिगत', $who . 'तारा: ' . $tr['name'], $tr['prabhav'] . ($tr['parihar'] !== '—' ? ' — परिहार: ' . $tr['parihar'] : '') . ($pk === 'k' ? ' (कृष्ण पक्ष में तारा बल प्रधान)' : ''), 'warn', $pk === 'k' ? -16 : -12);
+                } elseif ($tara === 1) {
+                    $add('व्यक्तिगत', $who . 'जन्म तारा', 'मिश्र — शरीर-पीड़ा का भय', 'warn', -4);
+                } else {
+                    $bonus = !empty($t['taraMitra']) && in_array($tara, [8, 9], true) ? 6 : 3;
+                    $add('व्यक्तिगत', $who . 'तारा बल', $tr['name'] . ' — ' . $tr['prabhav'], 'good', $bonus);
+                }
+                if ($nak === $P['nak']) {
+                    if (in_array('janma_nak', $varjit, true)) { $add('व्यक्तिगत', $who . 'जन्म नक्षत्र', $nName . ' — इस कार्य में वर्जित', 'bad'); }
+                    elseif (in_array('janma_nak', $soft, true)) { $add('व्यक्तिगत', $who . 'जन्म नक्षत्र', $nName . ' (मत)', 'warn', -8); }
+                }
+                if ($P['am'] !== null && !$m['adhik'] && $m['am'] === $P['am']) {
+                    if (in_array('janma_maas', $varjit, true)) { $add('व्यक्तिगत', $who . 'जन्म मास', self::MAAS_HI[$m['am']] . ' (अमान्त) — वर्जित', 'bad'); }
+                    elseif (in_array('janma_maas', $soft, true)) { $add('व्यक्तिगत', $who . 'जन्म मास', self::MAAS_HI[$m['am']] . ' (मत)', 'warn', -8); }
+                }
+                $jupH = (($f['signs']['Jupiter'] - $P['moonSign'] + 12) % 12) + 1;
+                $sunH = (($f['sunSign'] - $P['moonSign'] + 12) % 12) + 1;
+                if (!empty($t['tribal']) && $P['role'] === 'kanya') { $grahaBal($who, 'Jupiter', $jupH, $f['signs']['Jupiter'], 'strict', 'पीली (गुरु) पूजा'); }
+                if (!empty($t['tribal']) && $P['role'] === 'var') { $grahaBal($who, 'Sun', $sunH, $f['sunSign'], 'strict', 'लाल (सूर्य) पूजा'); }
+                if (!empty($t['tribalSoft']) && $P['role'] === 'kanya') { $grahaBal($who, 'Jupiter', $jupH, $f['signs']['Jupiter'], 'soft', 'गुरु-पूजन'); }
+                if (!empty($t['guruBal']) && $P['role'] === 'child') {
+                    $grahaBal($who, 'Jupiter', $jupH, $f['signs']['Jupiter'], 'strict', 'गुरु-शांति');
+                    $grahaBal($who, 'Sun', $sunH, $f['sunSign'], 'soft', 'सूर्य-अर्घ्य');
+                }
+                if ($P['first']) { $firstBorn[] = $P['short']; }
+                if (!empty($t['no_birthday']) && $P['birthMd'] !== null && $P['birthMd'] === sprintf('%02d-%02d', $day['d'], $day['m'])) {
+                    $add('व्यक्तिगत', $who . 'जन्मदिन', 'जन्मदिन पर यह कार्य वर्जित', 'bad');
+                }
+                if (!empty($t['ghat'])) {
+                    $G = KaryaVyakti::GHAT[$P['moonSign']];
+                    if ($f['moonSign'] === $G['chandra']) { $add('व्यक्तिगत', $who . 'घात चंद्र', 'चंद्र ' . self::signHi($G['chandra']) . ' में — घात चक्र (मत)', 'warn', -10); }
+                    if ($nak === $G['nak']) { $add('व्यक्तिगत', $who . 'घात नक्षत्र', $nName . ' — घात चक्र (मत)', 'warn', -8); }
+                    if ($vaar === $G['vaar']) { $add('व्यक्तिगत', $who . 'घात वार', $vName . ' — घात चक्र (मत)', 'warn', -6); }
+                    if (in_array($tp, $G['tithi'], true)) { $add('व्यक्तिगत', $who . 'घात तिथि', $tName . ' — घात चक्र (मत)', 'warn', -6); }
+                    if (!$m['adhik'] && $m['pm'] === $G['maas']) { $add('व्यक्तिगत', $who . 'घात मास', $maasName . ' — घात चक्र (मत)', 'warn', -4); }
+                    if ($verbose && $f['moonSign'] !== $G['chandra'] && $nak !== $G['nak'] && $vaar !== $G['vaar'] && !in_array($tp, $G['tithi'], true)) {
+                        $add('व्यक्तिगत', $who . 'घात चक्र', 'आज घात चंद्र/नक्षत्र/वार/तिथि नहीं (घात चंद्र: ' . self::signHi($G['chandra']) . ', नक्षत्र: ' . P::NAK[$G['nak']]['name'] . ', वार: ' . P::VAAR[$G['vaar']]['name'] . ')', 'ok');
+                    }
+                }
+                if (!empty($t['age']) && $P['role'] === 'child') { self::ageRule((string) $t['age'], $P, $f, $ctx, $add, $cap, $fixedDay); }
             }
-            if (!empty($t['guruBal'])) { $bal('गुरु बल (बटुक)', $jupH, [2, 5, 7, 9, 11], [1, 3, 6, 10]); }
-            // आयु-आधारित नियत दिन/मास/वर्ष (खुली कुंडली शिशु की हो तब)
-            if (!empty($natal['birthJd'])) {
-                $ageDays = (int) floor($f['jd'] - $natal['birthJd']) + 1;
-                if (!empty($t['birth_days']) && $ageDays > 0 && $ageDays <= 40) {
-                    if (in_array($ageDays, $t['birth_days'], true)) { $add('व्यक्तिगत', 'जन्म से ' . $ageDays . 'वाँ दिन', 'नियत दिन — तिथि-वार विचार शिथिल', 'good', 15); }
-                }
-                $ageMonth = (int) floor(($f['jd'] - $natal['birthJd']) / 30.437) + 1;
-                if (!empty($t['birth_months']) && $ageMonth >= 1 && $ageMonth <= 14) {
-                    $want = $t['birth_months'][$natal['gender'] === 'f' ? 'f' : 'm'] ?? [];
-                    if (in_array($ageMonth, $want, true)) { $add('व्यक्तिगत', $ageMonth . 'वाँ मास', 'विहित मास', 'good', 6); }
-                    else { $add('व्यक्तिगत', $ageMonth . 'वाँ मास', ($natal['gender'] === 'f' ? 'बालिका: विषम' : 'बालक: सम') . ' मास विहित', 'warn', -10); }
-                }
-                $ageYear = (int) floor(($f['jd'] - $natal['birthJd']) / 365.25) + 1;
-                if (!empty($t['birth_years']) && $ageYear <= 8) {
-                    if (in_array($ageYear, $t['birth_years'], true)) { $add('व्यक्तिगत', $ageYear . 'वाँ वर्ष', 'विषम वर्ष — विहित', 'good', 4); }
-                    else { $add('व्यक्तिगत', $ageYear . 'वाँ वर्ष', 'विषम वर्ष (1/3/5) विहित', 'warn', -10); }
-                }
+            // ज्येष्ठ संतान का ज्येष्ठ मास — विवाह में दोनों ज्येष्ठ हों तो वर्जित, एक हो तो सावधानी (मत)
+            if ($firstBorn !== [] && !empty($t['jyeshtha']) && !$m['adhik'] && $m['pm'] === 2) {
+                $txt = implode(' व ', $firstBorn) . ' ज्येष्ठ संतान — ज्येष्ठ मास';
+                if ($t['jyeshtha'] === 'pair' && count($firstBorn) < 2) { $add('व्यक्तिगत', 'ज्येष्ठ मास (एक ज्येष्ठ संतान)', $txt . ' — एक के ज्येष्ठ होने पर सावधानी (मत)', 'warn', -8); }
+                else { $add('व्यक्तिगत', 'ज्येष्ठ मास में ज्येष्ठ संतान', $txt . ' में वर्जित', 'bad'); }
             }
+        }
+        // चंद्र ऑपरेशन वाले अंग की राशि में न हो (9.03 — पाश्चात्य मूल का नियम)
+        $ang = (string) ($ctx['opts']['ang'] ?? '');
+        if ($ang !== '' && isset(KaryaVyakti::ANG_SIGN[$ang])) {
+            $as2 = KaryaVyakti::ANG_SIGN[$ang];
+            if ($f['moonSign'] === $as2) { $add('व्यक्तिगत', 'चंद्र अंग की राशि में', 'चंद्र ' . self::signHi($as2) . ' (उसी अंग की राशि) में — इस अंग का ऑपरेशन टालें (पाश्चात्य मत)', 'warn', -10); $cap[] = 'चंद्र ऑपरेशन वाले अंग की राशि में'; }
+            elseif ($verbose) { $add('व्यक्तिगत', 'अंग-राशि', 'चंद्र ' . self::signHi($f['moonSign']) . ' में — अंग (' . self::signHi($as2) . ') से भिन्न', 'ok'); }
+        }
+
+        // ═════ 10a. स्थिति के उत्तर (विवाह-तिथि, गर्भ-मास, ऋतुकाल, गर्भवती …) ═════
+        $dn = static fn (int $y, int $mo, int $d): int => (int) round(JulianDay::fromGregorian($y, $mo, $d, 12, 0, 0.0, 0.0));
+        $today = $dn($day['y'], $day['m'], $day['d']);
+        if (isset($X['ritu'])) {   // गर्भाधान — ऋतुकाल की रात्रि (दिन के बाद की रात उसी दिन की गिनी जाती है)
+            $k = $today - $dn($X['ritu']['y'], $X['ritu']['m'], $X['ritu']['d']) + 1;
+            if ($k < 1) { $add('व्यक्तिगत', 'ऋतुकाल से पहले', 'दी गई ऋतु-तिथि से पहले', 'bad'); }
+            elseif ($k <= 3) { $add('व्यक्तिगत', 'ऋतु की ' . self::ordF($k) . ' रात्रि', 'प्रथम 3 रात्रियाँ वर्जित', 'bad'); }
+            elseif ($k === 11 || $k === 13) { $add('व्यक्तिगत', 'ऋतु की ' . self::ordF($k) . ' रात्रि', '11वीं व 13वीं रात्रि वर्जित', 'bad'); }
+            elseif ($k > 16) { $add('व्यक्तिगत', 'ऋतुकाल बीता', self::ordF($k) . ' रात्रि — 16 रात्रि का ऋतुकाल समाप्त (अगला चक्र)', 'bad'); }
+            elseif ($k === 4) { $add('व्यक्तिगत', 'ऋतु की 4थी रात्रि', 'पुस्तिका में ग्राह्य; मनु-मत में प्रथम चार निषिद्ध', 'warn', -4); }
+            else { $add('व्यक्तिगत', 'ऋतुकाल की ' . self::ordF($k) . ' रात्रि', 'विहित (4–16, 11वीं-13वीं छोड़कर)', 'good', 6); }
+        }
+        if (isset($X['lmp'])) {   // गोद भराई / पुंसवन / सीमन्त — गर्भ का मास
+            $gm = (int) floor(($f['jd'] - $X['lmp']['jd']) / 30.4375) + 1;
+            $kind = (string) ($ctx['opts']['garbh'] ?? 'godbharai');
+            [$okM, $midM, $kn] = ['pumsavan' => [[2, 3], [], 'पुंसवन'], 'simanta' => [[6, 8], [4], 'सीमन्तोन्नयन'],
+                'godbharai' => [[7], [5, 8, 9], 'गोद भराई (लोक)']][$kind] ?? [[7], [5, 8, 9], 'गोद भराई (लोक)'];
+            if ($gm < 1 || $gm > 10) { $add('व्यक्तिगत', 'गर्भ-मास ' . $gm, 'दी गई LMP से यह तिथि गर्भ-काल में नहीं', 'bad'); }
+            elseif (in_array($gm, $okM, true)) { $add('व्यक्तिगत', 'गर्भ का ' . self::ord($gm) . ' मास', $kn . ' हेतु विहित', 'good', 8); }
+            elseif (in_array($gm, $midM, true)) { $add('व्यक्तिगत', 'गर्भ का ' . self::ord($gm) . ' मास', $kn . ' — मत/लोक-भेद से ग्राह्य (श्रेष्ठ ' . implode('/', $okM) . 'वाँ)', 'warn', -4); $cap[] = 'गर्भ-मास श्रेष्ठ नहीं'; }
+            else { $add('व्यक्तिगत', 'गर्भ-मास अविहित: ' . self::ord($gm) . '', $kn . ' ' . implode('/', $okM) . 'वें मास में', 'bad'); }
+        }
+        if (isset($X['vivah'])) {   // द्विरागमन — विवाह से विषम वर्ष
+            if ($f['jd'] < $X['vivah']['jd']) { $add('व्यक्तिगत', 'विवाह से पहले', 'द्विरागमन विवाह के बाद ही', 'bad'); }
+            else {
+                $yr = (int) floor(($f['jd'] - $X['vivah']['jd']) / 365.2425) + 1;
+                if ($yr % 2 === 1) { $add('व्यक्तिगत', 'विवाह से ' . self::ord($yr) . ' वर्ष', 'विषम वर्ष — द्विरागमन विहित', 'good', 6); }
+                else { $add('व्यक्तिगत', 'विवाह से ' . self::ord($yr) . ' वर्ष (सम)', 'द्विरागमन विषम (1/3/5वें) वर्ष में', 'bad'); }
+            }
+        }
+        if (!empty($X['mpreg'])) {   // मुंडन — माता 5 मास+ गर्भवती, बालक 5 वर्ष से छोटा
+            $child = null;
+            foreach ($persons as $P) { if ($P['role'] === 'child') { $child = $P; } }
+            $young = $child === null || $child['birthJd'] === null || ($f['jd'] - $child['birthJd']) < 5 * 365.2425;
+            if ($young) { $add('व्यक्तिगत', 'माता गर्भवती', '5 वर्ष से छोटे बालक का मुंडन माता के 5 मास से अधिक गर्भ में वर्जित' . ($child === null || $child['birthJd'] === null ? ' (बालक की आयु अज्ञात)' : ''), 'bad'); }
+            elseif ($verbose) { $add('व्यक्तिगत', 'माता गर्भवती', 'बालक 5 वर्ष से बड़ा — दोष नहीं', 'ok'); }
+        }
+        if (!empty($X['wpreg'])) {
+            $add('व्यक्तिगत', 'गृहस्वामिनी गर्भवती', 'नींव/गृहारम्भ इस काल में टालें (लोक-मत)', 'warn', -8);
+            $cap[] = 'गृहस्वामिनी गर्भवती (लोक-मत)';
+        }
+        if (isset($X['death'])) {   // अंतिम संस्कार — मृत्यु से दिन (अस्थि-संचय 3/4/7, विसर्जन 10 दिन में)
+            $dd = $today - $dn($X['death']['y'], $X['death']['m'], $X['death']['d']) + 1;
+            if ($dd < 1) { $add('व्यक्तिगत', 'मृत्यु से पहले', 'दी गई मृत्यु-तिथि से पहले', 'bad'); }
+            elseif (in_array($dd, [3, 4, 7], true)) { $add('व्यक्तिगत', 'मृत्यु से ' . self::ord($dd) . ' दिन', 'अस्थि-संचय हेतु विहित', 'good', 6); }
+            elseif ($dd <= 10) { $add('व्यक्तिगत', 'मृत्यु से ' . self::ord($dd) . ' दिन', 'अस्थि-विसर्जन 10 दिन के भीतर', 'info'); }
+            else { $add('व्यक्तिगत', 'मृत्यु से ' . self::ord($dd) . ' दिन', '10 दिन बीते — विसर्जन शीघ्र', 'info'); }
         }
 
         // ═════ 11. अबूझ ═════
@@ -690,7 +802,11 @@ final class KaryaNirnay
         // "शुभ" तभी जब पुस्तिका में इस कार्य के लिए गिनाए हर पंचांग-अंग (तिथि/वार/नक्षत्र)
         // की शुभ सूची पूरी हो; कोई अंग सूची से बाहर हो तो क्षण चलने योग्य है पर "मध्यम"।
         // (वरना हल्के नियम वाले कार्यों में साल का हर दिन "शुभ" निकलता — खोज बेकार।)
-        if (!$hard && $abujh === null && array_intersect($warn, self::LIMB_MISS) !== []) {
+        if (!$hard && $abujh === null && !$fixedDay && array_intersect($warn, self::LIMB_MISS) !== []) {
+            $score = min($score, self::SHUBH - 1);
+        }
+        // व्यक्ति/स्थिति की कमी (गुरु/सूर्य बल हीन, वाम रवि नहीं …) — अबूझ दिन पर भी
+        if (!$hard && $cap !== []) {
             $score = min($score, self::SHUBH - 1);
         }
         $raw = $score;
@@ -700,7 +816,92 @@ final class KaryaNirnay
             'hard' => $hard, 'lagnaOnly' => $hard && !$hardOther, 'raw' => $raw,
             'score' => $hard ? min($score, 30) : $score, 'grade' => $grade,
             'tone' => $grade === 'शुभ' ? 'pos' : ($grade === 'मध्यम' ? 'info' : 'neg'),
-            'bad' => $bad, 'warn' => $warn, 'good' => $good, 'abujh' => $abujh, 'checks' => $checks,
+            'bad' => $bad, 'warn' => $warn, 'good' => $good, 'abujh' => $abujh, 'checks' => $checks, 'cap' => $cap,
         ];
+    }
+
+    /** ctx से व्यक्ति — नया रूप persons (KaryaVyakti), पुराना natal + personal (एक जातक)। */
+    private static function persons(array $ctx): array
+    {
+        if (isset($ctx['persons'])) { return $ctx['persons']; }
+        $n = !empty($ctx['personal']) ? ($ctx['natal'] ?? null) : null;
+        if ($n === null) { return []; }
+        return [$n + ['role' => 'self', 'short' => 'जातक', 'first' => false, 'src' => 'birth', 'pada' => 0, 'birthMd' => null]];
+    }
+
+    /**
+     * शिशु-संस्कारों के आयु-नियम (पुस्तिका का "काल" स्तम्भ)। आयु: जन्म का दिन = 1ला दिन,
+     * पहले 30.44 दिन = 1ला मास, पहले 365.24 दिन = 1ला वर्ष; उपनयन का वर्ष गर्भ से (जन्म − 280 दिन)।
+     */
+    private static function ageRule(string $kind, array $P, array $f, array $ctx, callable $add, array &$cap, bool &$fixed): void
+    {
+        if ($P['birthJd'] === null) {
+            $add('व्यक्तिगत', 'आयु-नियम', 'शिशु की जन्म-तिथि नहीं दी — नियत दिन/मास/वर्ष नहीं जाँचे', 'info');
+            return;
+        }
+        $days = $f['jd'] - $P['birthJd'];
+        if ($days < 0) { $add('व्यक्तिगत', 'जन्म से पहले', 'यह क्षण शिशु के जन्म से पहले का है', 'bad'); return; }
+        $d = (int) floor($days) + 1;
+        $mo = (int) floor($days / 30.4375) + 1;
+        $y = (int) floor($days / 365.2425) + 1;
+        $g = (string) $P['gender'];
+        switch ($kind) {
+            case 'namkaran':
+                if ($d <= 10) { $add('व्यक्तिगत', 'सूतक काल', 'जन्म से ' . self::ord($d) . ' दिन — 10 दिन के सूतक में नामकरण नहीं', 'bad'); }
+                elseif ($d === 11 || $d === 12) { $add('व्यक्तिगत', 'जन्म से ' . self::ord($d) . ' दिन', 'नियत दिन — तिथि-वार विचार शिथिल', 'good', 15); $fixed = true; }
+                elseif (in_array($d, [13, 16, 19, 22], true)) { $add('व्यक्तिगत', 'जन्म से ' . self::ord($d) . ' दिन', 'कुल-परंपरा का नियत दिन', 'good', 8); }
+                elseif ($mo === 3) { $add('व्यक्तिगत', '3रा मास', 'नियत दिन बीतने पर तीसरा मास विहित', 'good', 4); }
+                elseif ($mo < 3) { $add('व्यक्तिगत', 'जन्म से ' . self::ord($d) . ' दिन', 'नियत दिन (11, 12, 13, 16, 19, 22) नहीं — अगला विहित: 3रा मास', 'warn', -6); $cap[] = 'नामकरण का नियत दिन नहीं'; }
+                else { $add('व्यक्तिगत', 'नियत समय बीता', self::ord($mo) . ' मास — शुभ दिन पर करें', 'warn', -4); }
+                break;
+            case 'nishkraman':
+                if ($d < 12) { $add('व्यक्तिगत', 'जन्म से ' . self::ord($d) . ' दिन', '12वें दिन से पहले घर से बाहर नहीं', 'bad'); }
+                elseif ($mo === 4) { $add('व्यक्तिगत', '4था मास', 'निष्क्रमण का विहित मास', 'good', 8); }
+                elseif ($d === 12 || $mo === 3) { $add('व्यक्तिगत', $d === 12 ? '12वाँ दिन' : '3रा मास', 'सूर्य-दर्शन — ग्राह्य', 'ok'); }
+                elseif ($mo < 4) { $add('व्यक्तिगत', self::ord($mo) . ' मास', 'निष्क्रमण 4थे मास में (सूर्य-दर्शन 12वें दिन/3रे मास)', 'warn', -6); $cap[] = 'निष्क्रमण का मास नहीं'; }
+                else { $add('व्यक्तिगत', self::ord($mo) . ' मास', 'विहित मास (4था) बीता — शुभ दिन पर', 'warn', -4); }
+                break;
+            case 'annaprashan':
+                if ($mo < 5) { $add('व्यक्तिगत', self::ord($mo) . ' मास', 'अन्नप्राशन 5वें/6ठे मास से पहले नहीं', 'bad'); break; }
+                if ($g === '') { $add('व्यक्तिगत', 'बालक या बालिका?', 'बालक का सम (6/8) और बालिका का विषम (5/7) मास — लिंग चुनें', 'warn', -6); $cap[] = 'शिशु का लिंग नहीं चुना'; break; }
+                $even = $g === 'm';
+                if (($mo % 2 === 0) === $even) {
+                    if ($mo <= 12) { $add('व्यक्तिगत', self::ord($mo) . ' मास', ($even ? 'बालक: सम' : 'बालिका: विषम') . ' मास — विहित', 'good', 8); }
+                    else { $add('व्यक्तिगत', self::ord($mo) . ' मास', 'विलम्ब, पर उचित ' . ($even ? 'सम' : 'विषम') . ' मास', 'ok'); }
+                } else {
+                    $add('व्यक्तिगत', self::ord($mo) . ' मास ' . ($even ? '(विषम)' : '(सम)'), ($even ? 'बालक का अन्नप्राशन सम (6/8/10/12)' : 'बालिका का विषम (5/7/9/11)') . ' मास में', 'bad');
+                }
+                break;
+            case 'mundan':
+                if ($y % 2 === 1) { $add('व्यक्तिगत', self::ord($y) . ' वर्ष (विषम)', 'मुंडन विहित', $y <= 7 ? 'good' : 'ok', $y <= 7 ? 6 : 0); }
+                else { $add('व्यक्तिगत', self::ord($y) . ' वर्ष (सम)', 'मुंडन विषम वर्ष (1/3/5/7) में', 'bad'); }
+                break;
+            case 'karnavedh':
+                if ($d < 12) { $add('व्यक्तिगत', 'जन्म से ' . self::ord($d) . ' दिन', '12वें दिन से पहले नहीं', 'bad'); }
+                elseif ($d === 12 || $d === 16) { $add('व्यक्तिगत', 'जन्म से ' . self::ord($d) . ' दिन', 'कर्णवेध हेतु विहित', 'good', 8); }
+                elseif ($y === 1 && in_array($mo, [6, 7, 8], true)) { $add('व्यक्तिगत', self::ord($mo) . ' मास', 'कर्णवेध हेतु विहित', 'good', 8); }
+                elseif (in_array($y, [3, 5], true)) { $add('व्यक्तिगत', self::ord($y) . ' वर्ष', 'कर्णवेध हेतु विहित', 'good', 6); }
+                elseif ($y > 5 && $y % 2 === 1) { $add('व्यक्तिगत', self::ord($y) . ' वर्ष (विषम)', 'ग्राह्य', 'ok'); }
+                else { $add('व्यक्तिगत', 'आयु: ' . ($y === 1 ? self::ord($mo) . ' मास' : self::ord($y) . ' वर्ष'), 'विहित आयु नहीं (12/16वाँ दिन, 6/7/8वाँ मास, 3/5वाँ वर्ष)', 'warn', -6); $cap[] = 'कर्णवेध की विहित आयु नहीं'; }
+                break;
+            case 'vidyarambh':
+                if ($y === 5) { $add('व्यक्तिगत', '5वाँ वर्ष', 'विद्यारम्भ हेतु विहित', 'good', 8); }
+                elseif ($y === 3) { $add('व्यक्तिगत', '3रा वर्ष', 'विद्यारम्भ — कुछ मत में', 'ok'); }
+                elseif ($y < 3) { $add('व्यक्तिगत', self::ord($y) . ' वर्ष', 'आयु कम — 5वाँ वर्ष श्रेष्ठ', 'warn', -6); }
+                else { $add('व्यक्तिगत', self::ord($y) . ' वर्ष', 'बड़ी आयु — शुभ दिन पर्याप्त', 'info'); }
+                break;
+            case 'upanayan':
+                $v = (string) ($ctx['opts']['varna'] ?? 'brahmin');
+                $R = ['brahmin' => [8, 5, 16, 'ब्राह्मण'], 'kshatriya' => [11, 6, 22, 'क्षत्रिय'], 'vaishya' => [12, 8, 24, 'वैश्य']][$v] ?? null;
+                if ($R === null) { $add('व्यक्तिगत', 'आयु-नियम', 'वर्ण-आयु परंपरा नहीं देखी', 'info'); break; }
+                [$ideal, $kamya, $max, $vn] = $R;
+                $gy = (int) floor(($f['jd'] - ($P['birthJd'] - 280.0)) / 365.2425) + 1;
+                if ($gy === $ideal) { $add('व्यक्तिगत', 'गर्भ से ' . self::ord($gy) . ' वर्ष', $vn . ' हेतु विहित (मनु 2.36)', 'good', 10); }
+                elseif ($gy === $kamya) { $add('व्यक्तिगत', 'गर्भ से ' . self::ord($gy) . ' वर्ष', 'काम्य उपनयन (मनु 2.37)', 'good', 6); }
+                elseif ($gy < $kamya) { $add('व्यक्तिगत', 'गर्भ से ' . self::ord($gy) . ' वर्ष', 'आयु कम — ' . $vn . ' हेतु ' . $kamya . '/' . self::ord($ideal) . ' वर्ष', 'bad'); }
+                elseif ($gy <= $max) { $add('व्यक्तिगत', 'गर्भ से ' . self::ord($gy) . ' वर्ष', 'विहित सीमा (' . $max . ' वर्ष) के भीतर; आदर्श ' . self::ord($ideal) . '', 'warn', -2); }
+                else { $add('व्यक्तिगत', 'गर्भ से ' . self::ord($gy) . ' वर्ष', 'सावित्री-काल (' . $max . ') बीता — प्रायश्चित्त सहित (मत)', 'warn', -8); }
+                break;
+        }
     }
 }

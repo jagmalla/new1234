@@ -1118,17 +1118,18 @@ final class CalcController
     /**
      * 🔍 कार्य-मुहूर्त तिथि-खोज (87 कार्य, मालिक की नियम-पुस्तिका) — अवधि के हर
      * दिन का दर्जा व शुभ समय-खिड़कियाँ। GET task, from, to (DD-MM-YYYY), lat, lon,
-     * tz, zone (IANA), o_<विकल्प>, personal + bdate/btime/blat/blon/btz/gender।
+     * tz, zone (IANA), o_<विकल्प>; व्यक्ति <भूमिका>_m/_d/_t/_lat/_lon/_tz/_g/_n/_k/_f
+     * ({@see \AutoBusiness\Astro\Muhurat\KaryaVyakti::fromRequest}) व स्थिति x_<प्रश्न>।
      */
     public function karyaScanJson(): void
     {
         AdminGuard::require();
         header('Content-Type: application/json');
         try {
-            [$eng, $task, $place, $opts, $natal, $personal] = $this->karyaArgs();
+            [$eng, $task, $place, $opts, $who] = $this->karyaArgs();
             $res = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::scan($eng, $task,
                 self::parseDate((string) ($_GET['from'] ?? '')), self::parseDate((string) ($_GET['to'] ?? '')),
-                $place, $opts, $natal, $personal);
+                $place, $opts, $who);
             if (!empty($res['ok'])) { $res['info'] = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::taskInfo($task); $res['opts'] = $opts; }
             echo json_encode($res, JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
@@ -1143,17 +1144,40 @@ final class CalcController
         AdminGuard::require();
         header('Content-Type: application/json');
         try {
-            [$eng, $task, $place, $opts, $natal, $personal] = $this->karyaArgs();
+            [$eng, $task, $place, $opts, $who] = $this->karyaArgs();
             $hm = null;
             $time = trim((string) ($_GET['time'] ?? ''));
             if ($time !== '') { $hm = self::parseTime($time); }
             $res = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::check($eng, $task, self::parseDate((string) ($_GET['date'] ?? '')),
-                $hm, $place, $opts, $natal, $personal);
+                $hm, $place, $opts, $who);
             if (!empty($res['ok'])) { $res['opts'] = $opts; }
             echo json_encode($res, JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(400);
             echo json_encode(['ok' => false, 'error' => 'जाँच नहीं हो सकी — तिथि/समय/स्थान जाँचें।']);
+        }
+    }
+
+    /**
+     * ③ "किसके लिए मुहूर्त" — भरे व्यक्तियों का सार (राशि, नक्षत्र-चरण, लग्न, नाम-अक्षर,
+     * आयु, कार्य-टिप्पणी), वर-कन्या का गुण-मिलान, अधूरे खाने। पन्ना हर बदलाव पर पूछता है।
+     */
+    public function karyaWhoJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+        try {
+            [$eng, $task, , , $who] = $this->karyaArgs();
+            if (!isset(\AutoBusiness\Astro\Muhurat\KaryaNiyamData::TASKS[$task])) { throw new \InvalidArgumentException('task'); }
+            $now = 2440587.5 + time() / 86400.0;
+            $out = ['ok' => true, 'persons' => [], 'missing' => $who['missing']];
+            foreach ($who['persons'] as $P) { $out['persons'][] = \AutoBusiness\Astro\Muhurat\KaryaVyakti::summary($eng, $P, $task, $now); }
+            if (in_array($task, ['1.10', '1.11'], true)) { $out['milan'] = \AutoBusiness\Astro\Muhurat\KaryaVyakti::milan($who['persons']); }
+            if (isset($who['extra']['death'])) { $out['death'] = \AutoBusiness\Astro\Muhurat\KaryaVyakti::deathNotes($eng, $who['extra']['death']); }
+            echo json_encode($out, JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'विवरण समझ नहीं आया — तिथि DD-MM-YYYY व समय HH:MM में दें।']);
         }
     }
 
@@ -1185,16 +1209,9 @@ final class CalcController
             if (is_string($k) && str_starts_with($k, 'o_') && is_string($v)) { $raw[substr($k, 2)] = $v; }
         }
         $opts = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::cleanOpts($task, $raw);
-        $personal = (string) ($_GET['personal'] ?? '1') === '1';
-        $natal = null;
-        if ($personal && !empty($_GET['bdate'])) {
-            $natal = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::natal($eng, [
-                'date' => (string) $_GET['bdate'], 'time' => (string) ($_GET['btime'] ?? '12:00'),
-                'lat' => self::parseAngle((string) ($_GET['blat'] ?? '0')), 'lon' => self::parseAngle((string) ($_GET['blon'] ?? '0')),
-                'tz' => self::parseTz((string) ($_GET['btz'] ?? '5.5')), 'gender' => (string) ($_GET['gender'] ?? ''),
-            ]);
-        }
-        return [$eng, $task, $place, $opts, $natal, $personal];
+        // ③ जिनके लिए मुहूर्त — व्यक्ति (वर/कन्या/शिशु/जातक …) व स्थिति के उत्तर
+        $who = \AutoBusiness\Astro\Muhurat\KaryaVyakti::fromRequest($eng, $task, $_GET, (float) $place['tz']);
+        return [$eng, $task, $place, $opts, $who];
     }
 
     /**
