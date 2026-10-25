@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Deliver a finished change to the astrology app — run the 62-check self-test, scan for credentials, record the decision in Hindi, commit with the required trailers, push with backoff, and hand the owner correctly named update files. Use whenever a change is complete and ready to go out, or when the owner says ship / deliver / give me the file / give me the zip.
+description: Deliver a finished change to the astrology app — run the 64-check self-test, scan for credentials, record the decision in Hindi, commit with the required trailers, push with backoff, and hand the owner correctly named update files. Use whenever a change is complete and ready to go out, or when the owner says ship / deliver / give me the file / give me the zip.
 ---
 
 # Ship a change
@@ -14,7 +14,7 @@ change "looks small".
 ```bash
 php -l <each changed .php file>          # syntax
 node -c <each changed .js file>          # syntax
-php tests/lalkitab_process_check.php     # must print: पास: 62 · फेल: 0
+php tests/lalkitab_process_check.php     # must print: पास: 64 · फेल: 0
 ```
 
 `LK_BASE` is already exported by the session-start hook. If the suite cannot
@@ -51,12 +51,10 @@ changed, and what was measured. Frequencies and measurements, not adjectives.
 ## 4. Commit
 
 Never mention the model name anywhere in a commit, PR, or code comment.
-The message must end with exactly these two lines:
-
-```
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01PEe7MTRHVeppoGi3kv1pA2
-```
+The message must end with the two attribution lines (`Co-Authored-By: …` and
+`Claude-Session: …`) exactly as the current session's system reminder gives
+them — copy them from there each time; they change between sessions, so they
+are deliberately not written down here.
 
 Before committing, make sure `_devrouter.php` is not staged (it is gitignored,
 so this should take care of itself).

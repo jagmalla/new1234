@@ -83,6 +83,9 @@ final class LalKitabSelfCheck
         // विवाह-मुहूर्त तिथि-खोजक — पूरे एक साल की माँग पर पूरा साल जाँचा जाए
         $mdfYear = self::fetch($base . '/milan?mdf_from=' . rawurlencode(date('d-m-Y'))
             . '&mdf_to=' . rawurlencode(date('d-m-Y', strtotime('+1 year'))));
+        // मुहूर्त › तिथि खोज — वही "1 वर्ष" की माँग, उसके अपने स्कैनर पर
+        $tkYear = self::fetch($base . '/calc/muhuratScan?type=vivaha&tz=5.5&lite=1&from='
+            . rawurlencode(date('d-m-Y')) . '&to=' . rawurlencode(date('d-m-Y', strtotime('+1 year'))));
 
         // कन्या के लिंग वाली एक कुंडली — मिलान की कड़ी सही तरफ़ भरती है या नहीं
         $femalePage = self::fetch($base . '/calc?date=01-12-1980&time=10:30&lat=28.6139&lon=77.2090'
@@ -1023,6 +1026,46 @@ final class LalKitabSelfCheck
             $want = date('d-m-Y', strtotime('+1 year'));
             if (!preg_match('/id="mdf_to"[^>]*value="' . preg_quote($want, '/') . '"/u', $mdfYear)) { return false; }
             return preg_match('/class="mdf-tab on"\s*\n?\s*data-months="12"/u', $mdfYear) === 1;
+        });
+
+        // मुहूर्त › तिथि खोज — उप-मेन्यू और दृश्य मौजूद हों, बारहों श्रेणियाँ सूची में
+        // हों, और हर उप-श्रेणी का नियम-प्रकार स्कैनर सचमुच पहचानता हो। सूची में
+        // प्रकार का एक टाइपो चुपचाप "सामान्य पंचांग-शुद्धि" बन जाता — विवाह खोजने
+        // वाले को विवाह के नियम के बिना दिन मिलते और कोई कुछ न कहता।
+        $add('TK-1', 'मुहूर्त › तिथि खोज: 12 श्रेणियाँ, हर उप-श्रेणी का नियम स्कैनर में मौजूद', static function () use ($pages): bool {
+            $html = (string) reset($pages);
+            if (mb_strpos($html, 'data-mview="tithi"') === false || mb_strpos($html, 'id="mah-view-tithi"') === false) { return false; }
+            if (!preg_match('/<script type="application\/json" id="tk-data">(.*?)<\/script>/su', $html, $m)) { return false; }
+            $cats = json_decode($m[1], true)['cats'] ?? [];
+            if (count($cats) !== 12) { return false; }
+            $types = \AutoBusiness\Astro\Muhurat\MuhuratDateScanner::TYPES;
+            $n = 0;
+            foreach ($cats as $c) {
+                if (empty($c['subs'])) { return false; }
+                foreach ($c['subs'] as $s) {
+                    $n++;
+                    // खोज-बंद वाली का कोई प्रकार नहीं; बाक़ी हर एक का प्रकार स्कैनर का हो
+                    if ($s['status'] === 'pending') { if ($s['type'] !== '') { return false; } continue; }
+                    if (!isset($types[$s['type']])) { return false; }
+                }
+            }
+            foreach (\AutoBusiness\Astro\Muhurat\TithiKhojCatalog::CATEGORIES as [, , $subs]) {
+                foreach ($subs as $row) {
+                    if (($row[1] ?? null) !== null && !isset($types[$row[1]])) { return false; }
+                }
+            }
+            return $n >= 83;   // मालिक की दी हुई सूची की हर उप-श्रेणी
+        });
+
+        // "1 वर्ष" चुनने पर पूरा साल जाँचा जाए — यह स्कैनर पहले 120 दिन पर चुपचाप
+        // कट जाता था (MDF-2 वाली ही भूल)। और lite=1 पर शुभता-पट्टी सिर्फ़ शुभ/मध्यम
+        // दिनों पर आए; हर पंक्ति पर आने से साल भर का जवाब 126 KB की जगह 418 KB था।
+        $add('TK-2', 'तिथि खोज: साल भर की माँग पर पूरा साल जाँचा जाता है (कटता नहीं), जवाब हल्का', static function () use ($tkYear): bool {
+            if ($tkYear === null) { return false; }
+            $d = json_decode($tkYear, true);
+            if (!is_array($d) || empty($d['ok']) || !empty($d['capped']) || (int) ($d['scanned'] ?? 0) < 365) { return false; }
+            if (isset($d['rows'][0]['bar_html'])) { return false; }
+            return !empty($d['best']) && isset($d['best'][0]['bar_html']);
         });
 
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {

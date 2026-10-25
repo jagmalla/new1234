@@ -121,9 +121,9 @@ a specific panel. Here is the complete tree, in menu order.
 | 6 | 🗂️ **Varga Charts** | — | All 15 divisional charts in a grid |
 | 7 | ⏳ **Dasha** | Current Dasha · Vimshottari (5 levels) | The running period and the full dasha tree |
 | 8 | 💪 **Bala (Strength)** | Shadbala · Bhava Bala · Ashtakavarga · Vimshopaka | The four strength systems |
-| 9 | 🔭 **Gochar (Transit)** | Gochar Calculation · 12-Month Timeline | Current transits + a year-ahead timeline |
+| 9 | 🔭 **Gochar (Transit)** | Prashan Kundali · Gochar Calculation · 12-Month Timeline | Horary chart of this moment, current transits + a year-ahead timeline |
 | 10 | 🗓️ **Varshaphal** | Year Selection · Varsha + Mudda Dasha · Annual Positions · Bala + Year Lord | The annual (Tajik) chart and its reading |
-| 11 | 🕉️ **Mahurat · मुहूर्त** | — | Auspicious-time finder (see §12) |
+| 11 | 🕉️ **Mahurat · मुहूर्त** | Mahurat Phal · Tithi Khoj | Muhurat for a chosen moment, and a date-range search for good days (see §14) |
 | 12 | 📕 **Laal Kitab** | निचोड़ · ग्रह फल · भाव फल · संबंध-जाल · ऋण·श्राप·दोष · समय · उपाय · संदर्भ | The whole Lal Kitab reading (see §11) |
 
 A separate page, **Kundali Milan** (`/milan`), is reached from the menu/links and
@@ -319,6 +319,11 @@ birth chart.
 
 Sub-menu:
 
+- **Prashan Kundali** (default when Gochar opens) — the chart of the moment the
+  question is asked, read by Tajik Neelkanthi: a strength gauge (लग्न, लग्नेश,
+  लग्न↔चन्द्र, लग्नेश↔चन्द्र, चन्द्र-बल) and the General reading — लग्न by rashi,
+  planets in the 1st, लग्नेश, चन्द्र, then all twelve houses. Every house is counted
+  from the *prashna* lagna. Engine: `public_html/assets/js/prashan.js`.
 - **Gochar Calculation** — a date/time/place card (change it and everything
   below recomputes) and the transit chart drawn beside the natal D1. A
   **Rotate** control turns the charts. Served live by the `calc/gochar` endpoint.
@@ -491,6 +496,42 @@ The auspiciousness score and its red/amber/green bar come from
 dates) is done by `MuhuratDateScanner` and served by `calc/muhuratScan`. All the
 rule data sits in `MuhuratChintamaniData` and `ShatkarmaData`.
 
+### 14.1 Tithi Khoj · तिथि खोज (Mahurat › Tithi Khoj)
+
+The second view of the Mahurat page — "on which days in this period is it good
+to do X?". The parent **Mahurat** button always opens *Mahurat Phal* (the page
+above); the sub-item **Tithi Khoj** swaps in this view (`setMahView`). It can also
+be opened from **और देखें**, from the Custom Screen picker (`muh_tithi`), or by
+link: `?sec=muhurat&mview=tithi`.
+
+1. **कार्य चुनें** — *मुख्य श्रेणी* dropdown (12), then *उप-श्रेणी* dropdown (83
+   in all). The list lives in `app/Astro/Muhurat/TithiKhojCatalog.php`.
+2. **अवधि चुनें** — tabs 1 / 3 / 6 months / 1 year (from today; month added first,
+   day clamped, same as the Milan finder), or type both dates (DD-MM-YYYY), or tap
+   📅 for the device calendar. **कार्य-स्थान का समय** picks the time zone of the
+   place where the work will happen (pre-selected: birth place).
+3. **खोजें** — one call to `calc/muhuratScan?type=…&from=…&to=…&tz=…&lite=1`
+   (up to 400 days; `lite=1` sends the score bar only for good days).
+
+Every sub-category shows which rule it is searched with:
+
+| Mark | Meaning | Count |
+|---|---|---|
+| ✅ | A classical rule already exists — searched with that scanner type (e.g. शादी → विवाह, गौना → द्विरागमन, गृह प्रवेश, मुंडन, शपथ → राज्याभिषेक, मुकदमा → युद्ध/विवाद) | 22 |
+| 🟡 | Its own rule is still to be added — searched with general panchang-shuddhi, and the page says so on the result | 49 |
+| ⏳ | Its yardstick is not a general "good day" (षट्कर्म, अंतिम संस्कार, ग्रह शांति, surgery, C-section, weapons) — search stays off until its rule is added | 12 |
+
+Results: शुभ / मध्यम / अशुभ counts; **शुभ दिन सूची** (best first, or date order
+grouped by month); **कैलेंडर** (one coloured month grid per month, tap a day for
+its detail); and the full day-by-day table. The chosen work, time zone, view and
+order are remembered in the browser.
+
+**Adding a category's rule later:** add a type to `MuhuratDateScanner` (its
+`TYPES` and `evaluate()`), then write that type against the sub-category in
+`TithiKhojCatalog` — the page needs no change. Self-checks **TK-1** (12
+categories, every type known to the scanner) and **TK-2** (a full year is scanned,
+response stays light) guard it.
+
 ---
 
 ## 15. Page: Today · आज
@@ -517,8 +558,9 @@ The catalogue (56 options) covers everything in the app:
   साढ़ेसाती, मांगलिक, आयु-दशा, आयु योग, स्वास्थ्य, भवन, वर्ष कुंडली, तुलना.
 - **Varshaphal** — General, Saham, Tajik, Varshesh, Muntha, Bhava-Phal, Dasha-Phal.
 - **Gochar** — Gochar Phal.
-- **Muhurat** — आज का मुहूर्त (static card); the full श्रेणी-वार finder opens the
-  Muhurat page (it is live/date-driven, so it can't be a frozen snapshot).
+- **Muhurat** — आज का मुहूर्त (static card); the full श्रेणी-वार finder and
+  **तिथि खोज** open the Muhurat page (they are live/date-driven, so they can't be
+  frozen snapshots).
 - **Dasha** — Vimshottari, Mudda.
 - **Bala** — Shadbala, Bhava Bala, Ashtakavarga, Vimshopaka.
 - **Other** — Kundali Milan (opens the Milan page).
@@ -602,7 +644,7 @@ onto it via `.htaccess`).
 | `calc/lalkitabVarsh` | The Lal Kitab annual (varsh) chart for an age. |
 | `calc/dashaPhala` | Dasha-period readings. |
 | `calc/dashaEngine` | Deeper on-demand dasha drill-downs. |
-| `calc/muhuratScan` | Scan a date range for auspicious days. |
+| `calc/muhuratScan` | Scan a date range (up to 400 days) for auspicious days; `lite=1` sends the score bar only for good days (Tithi Khoj). |
 | `calc/translate` | Translate the prediction text (language switch). |
 | `calc/ping` | Health check. |
 | `milan` | The Kundali Milan page. |
@@ -668,7 +710,7 @@ their own chart; the muhurat and varshaphal readings follow it on their own
 
 ## 21. Quality control
 
-A self-check harness (`LalKitabSelfCheck`, **62 checks**) fetches real pages over
+A self-check harness (`LalKitabSelfCheck`, **64 checks**) fetches real pages over
 HTTP and asserts against the rendered HTML — run from the command line
 (`php tests/lalkitab_process_check.php`) or the browser (`/lk-selfcheck.php`).
 Every new rule gets a check, and every check is "negative-tested" (the fault is

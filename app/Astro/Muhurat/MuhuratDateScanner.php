@@ -16,7 +16,10 @@ use AutoBusiness\Astro\Time\JulianDay;
  */
 final class MuhuratDateScanner
 {
-    private const MAX_DAYS = 120;
+    /* पहले 120 था — "1 वर्ष" माँगने वाले को चार महीने का ही उत्तर मिलता था और
+       बाक़ी शुभ दिन दिखते ही नहीं थे (वही भूल जो विवाह-तिथि खोजक में MDF-2 ने
+       पकड़ी थी)। एक दिन की गणना ~0.3 ms है, इसलिए 400 दिन भी पल भर का काम है। */
+    private const MAX_DAYS = 400;
 
     /** समर्थित प्रकार → प्रदर्शन-नाम (drop-down)। */
     public const TYPES = [

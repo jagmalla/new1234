@@ -1443,6 +1443,13 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="muhurat"><span class="l2-ic">🕉️</span>Mahurat · मुहूर्त</button>
+                <div class="l2-sub">
+                    <?php /* एक ही पन्ने के दो दृश्य — मुहूर्त फल (चुनी तिथि का फल, जैसा
+                             पहले था) और तिथि खोज (अवधि में शुभ दिन खोजना)। ऊपर वाला
+                             "Mahurat" हमेशा मुहूर्त फल खोलता है। */ ?>
+                    <button type="button" data-sec="muhurat" data-mview="phal">Mahurat Phal</button>
+                    <button type="button" data-sec="muhurat" data-mview="tithi">Tithi Khoj · तिथि खोज</button>
+                </div>
             </div>
             <div class="l2-mi">
                 <button type="button" data-sec="varsha"><span class="l2-ic">🗓️</span>Varshaphal</button>
@@ -2205,7 +2212,8 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
             echo $mpGroup('🗓️ वर्षफल / Varshaphal Predictions', $c);
 
             echo $mpGroup('🕉️ मुहूर्त / Muhurat',
-                $mpChip('🕉️ मुहूर्त — श्रेणी-वार शुभ समय', ['more' => 'sec', 'val' => 'muhurat']));
+                $mpChip('🕉️ मुहूर्त — श्रेणी-वार शुभ समय', ['more' => 'sec', 'val' => 'muhurat'])
+                . $mpChip('🔍 तिथि खोज — अवधि में शुभ दिन', ['more' => 'sec', 'val' => 'muhurat', 'mview' => 'tithi']));
             ?>
 
             <?php // 6) लाल किताब — वही आठ समूह जो उसकी अपनी ड्रॉपडाउन में हैं
@@ -2580,6 +2588,9 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         <!-- ============ मुहूर्त (Mahurat) — dedicated transit+muhurat page ======= -->
         <div id="sec-muhurat" class="l2-section l2-full hidden space-y-4 md:space-y-6">
             <?php $nativeBar('🕉️ मुहूर्त / Muhurat', '#b45309'); ?>
+            <!-- दृश्य 1 — मुहूर्त फल (पन्ना जैसा पहले था)। मेन्यू का "Tithi Khoj"
+                 इसे छिपाकर नीचे वाला दृश्य 2 दिखाता है (setMahView)। -->
+            <div id="mah-view-phal" class="space-y-4 md:space-y-6">
             <!-- Gochar calculation details (change the transit date/time/place;
                  the muhurat prediction below re-computes with it). -->
             <div class="bg-white rounded-lg shadow p-4">
@@ -2624,6 +2635,12 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
                     <div id="mah-varsha" class="w-full"></div>
                 </div>
             </div>
+            </div><!-- /mah-view-phal -->
+
+            <!-- दृश्य 2 — 🔍 तिथि खोज: कार्य (श्रेणी › उप-श्रेणी) + अवधि चुनकर शुभ दिन -->
+            <div id="mah-view-tithi" class="hidden">
+                <?php require __DIR__ . '/_tithi_khoj.php'; ?>
+            </div><!-- /mah-view-tithi -->
         </div><!-- /sec-muhurat -->
 
         <!-- ============ वर्ष कुंडली (full-width section) ============ -->
@@ -3026,6 +3043,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 <script src="<?= $h($asset('/assets/js/datefmt.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/northchart.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/prashan.js')) ?>"></script>
+<script src="<?= $h($asset('/assets/js/tithikhoj.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/chartzoom.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/dasha.js')) ?>"></script>
 <script src="<?= $h($asset('/assets/js/citysearch.js')) ?>"></script>
@@ -4122,6 +4140,9 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     var box = document.getElementById('mah-phal');
     var transit = document.getElementById('mah-transit');
     if (!box || !transit) { return; }
+    // तिथि खोज वाला दृश्य खुला हो तो यह हिस्सा छिपा है — छिपे में सब 0 नपता और
+    // ऊँचाई 160px पर अटक जाती। दिखते ही resize पर सही नाप हो जाती है।
+    if (!box.offsetParent) { return; }
     var transitCard = transit.closest('.rounded-lg');
     var phalCard = box.closest('.rounded-lg');
     if (!transitCard || !phalCard) { return; }
@@ -4899,6 +4920,18 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 200);
     if (focusPred && pp) { pp.scrollIntoView({ block: 'nearest' }); }
   }
+  // मुहूर्त पन्ने के दो दृश्य: 'phal' (मुहूर्त फल — जैसा पहले था) और 'tithi'
+  // (🔍 तिथि खोज)। तिथि खोज अपना सब पहली बार खुलने पर ही जोड़ती है।
+  function setMahView(v) {
+    var tithi = v === 'tithi';
+    var a = document.getElementById('mah-view-phal');
+    var b = document.getElementById('mah-view-tithi');
+    if (a) { a.classList.toggle('hidden', tithi); }
+    if (b) { b.classList.toggle('hidden', !tithi); }
+    if (tithi && window.ABTithiKhoj) { window.ABTithiKhoj.ensure(); }
+    // मुहूर्त फल पर लौटते ही चित्र व फल-डिब्बे की ऊँचाई फिर से नपे
+    if (!tithi) { setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 60); }
+  }
   function activateBalTab(v) {
     document.querySelectorAll('.bal-tabbar button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-bal') === v);
@@ -4954,6 +4987,8 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
 
       showSection(sec, btn.hasAttribute('data-focus'));
       if (btn.hasAttribute('data-tab')) { activateBalTab(btn.getAttribute('data-tab')); }
+      // Mahurat के उप-मेन्यू दृश्य बदलते हैं; ऊपर वाला "Mahurat" हमेशा मुहूर्त फल।
+      if (sec === 'muhurat') { setMahView(btn.getAttribute('data-mview') || 'phal'); }
       // Lal Kitab sub-menu items switch the reading view (Varsh Kundali / Age
       // Timeline / …). showSection('lalkitab') has already built the section and
       // attached the #lk-select change listener, so dispatching change here runs
@@ -5093,9 +5128,11 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         var tgt = chip.getAttribute('data-target');
         var tab = chip.getAttribute('data-tab');
         var lk  = chip.getAttribute('data-lk');
+        var mv  = chip.getAttribute('data-mview');
         if (tgt) { sel += '[data-target="' + tgt + '"]'; }
         else if (tab) { sel += '[data-tab="' + tab + '"]'; }
         else if (lk) { sel += '[data-lk="' + lk + '"]'; }
+        else if (mv) { sel += '[data-mview="' + mv + '"]'; }
         var btn = document.querySelector(sel) || document.querySelector('#side-menu button[data-sec="' + val + '"]');
         if (!btn) { return; }
         btn.click();                       // विभाग बन जाए, tab/view भी चुन ली जाए
@@ -5192,6 +5229,12 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
     var btn = document.querySelector('#side-menu [data-sec="' + sec.replace(/[^a-z]/gi, '') + '"]');
     if (!btn) { return; }
     btn.click();
+    // ?sec=muhurat&mview=tithi — तिथि खोज का सीधा पता (किसी को भेजने लायक)
+    var mv = (q.get('mview') || '').replace(/[^a-z]/gi, '');
+    if (mv) {
+      var mvb = document.querySelector('#side-menu [data-sec="' + btn.getAttribute('data-sec') + '"][data-mview="' + mv + '"]');
+      if (mvb) { mvb.click(); }
+    }
     var lkv = q.get('lkview');
     if (sec === 'lalkitab' && lkv) {
       var sel = document.getElementById('lk-select');
@@ -5441,6 +5484,8 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       // finder is a live, date-driven page, so it opens rather than clones.
       { g:'muh', key:'muh_today', label:'आज का मुहूर्त (पंचांग-शुद्धि)', kind:'clone', sel:'#today-muhurat-card' },
       { g:'muh', key:'muh_open',  label:'मुहूर्त — श्रेणी-वार शुभ समय',  kind:'goto',  sec:'muhurat' },
+      { g:'muh', key:'muh_tithi', label:'तिथि खोज — अवधि में शुभ दिन',   kind:'goto',  sec:'muhurat', mview:'tithi', icon:'🔍',
+        note:'कार्य और अवधि चुनकर शुभ दिन खोजने का पन्ना — यह पूरे पन्ने पर खुलता है।' },
       { g:'dasha', key:'vimshottari', label:'Vimshottari Dasha', kind:'dasha', data:'AB_DASHA' },
       { g:'dasha', key:'mudda',       label:'Mudda Dasha',       kind:'dasha', data:'AB_MUDDA' },
       { g:'bala', key:'shadbala',   label:'Shadbala',        kind:'clone', sel:'.bal-tab[data-bal="shad"]' },
@@ -5506,12 +5551,14 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       // button leaves the Custom Screen and opens that section full-page.
       if (p.kind === 'goto') {
         body.innerHTML = '<div style="text-align:center;padding:26px 14px">' +
-          '<div style="font-size:2rem">🕉️</div>' +
+          '<div style="font-size:2rem">' + (p.icon || '🕉️') + '</div>' +
           '<div style="font-weight:700;margin:6px 0 4px">' + p.label + '</div>' +
-          '<div style="font-size:.82rem;color:#64748b;margin-bottom:12px">यह पन्ना तिथि/समय बदलकर चलता है (श्रेणी-वार शुभ समय), इसलिए यह पूरे पन्ने पर खुलता है।</div>' +
+          '<div style="font-size:.82rem;color:#64748b;margin-bottom:12px">' + (p.note || 'यह पन्ना तिथि/समय बदलकर चलता है (श्रेणी-वार शुभ समय), इसलिए यह पूरे पन्ने पर खुलता है।') + '</div>' +
           '<button type="button" class="ab-btn cs-goto-btn">खोलें / Open</button></div>';
         var gb = body.querySelector('.cs-goto-btn');
-        if (gb) { gb.addEventListener('click', function () { var m = document.querySelector('[data-sec="' + p.sec + '"]'); if (m) { m.click(); } }); }
+        // mview — उसी पन्ने का कोई ख़ास दृश्य (जैसे मुहूर्त › तिथि खोज) सीधे खुले
+        var gsel = '#side-menu [data-sec="' + p.sec + '"]' + (p.mview ? '[data-mview="' + p.mview + '"]' : '');
+        if (gb) { gb.addEventListener('click', function () { var m = document.querySelector(gsel); if (m) { m.click(); } }); }
         return;
       }
       var src = document.querySelector(p.sel);

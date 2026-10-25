@@ -1096,9 +1096,12 @@ final class CalcController
             $to = self::parseDate((string) ($_GET['to'] ?? ''));
             $engine = new CalculationEngine(EphemerisFactory::create(), $ayanamsa);
             $res = \AutoBusiness\Astro\Muhurat\MuhuratDateScanner::scan($engine, $type, $from, $to, $tz);
-            // पट्टी-HTML भी जोड़ें ताकि क्लाइंट सीधे दिखा सके।
+            // पट्टी-HTML भी जोड़ें ताकि क्लाइंट सीधे दिखा सके। lite=1 पर पट्टी सिर्फ़
+            // शुभ/मध्यम दिनों (best) पर — साल भर की हर पंक्ति पर ~1 KB की पट्टी
+            // जवाब को ~470 KB बना देती थी, जबकि तिथि खोज उसे दिखाती ही best पर है।
             if (!empty($res['ok'])) {
-                foreach (['rows', 'best'] as $k) {
+                $lite = (string) ($_GET['lite'] ?? '') === '1';
+                foreach ($lite ? ['best'] : ['rows', 'best'] as $k) {
                     foreach ($res[$k] as &$row) {
                         $row['bar_html'] = \AutoBusiness\Astro\Muhurat\Auspiciousness::barHtml((int) $row['score'], (string) $row['grade']);
                     }
