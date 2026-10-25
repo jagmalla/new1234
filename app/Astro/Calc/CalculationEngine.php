@@ -342,6 +342,35 @@ final class CalculationEngine
         ];
     }
 
+    /**
+     * Every graha's sidereal longitude, ecliptic latitude, daily speed and
+     * retro flag at one instant — one ephemeris call. For the muhurat day-scanner,
+     * which needs all planets (lagna-shuddhi, asta, eclipses) many times a day.
+     *
+     * @return array<string, array{lon:float, lat:float, speed:float, retro:bool}>
+     */
+    public function siderealPositions(float $jdUt): array
+    {
+        $ayan = Ayanamsa::degrees($this->ayanamsa, $jdUt);
+        $out = [];
+        foreach ($this->eph->positions($jdUt) as $name => $p) {
+            $out[$name] = [
+                'lon' => Charts::norm((float) $p['lon'] - $ayan),
+                'lat' => (float) ($p['lat'] ?? 0.0),
+                'speed' => (float) ($p['speed'] ?? 0.0),
+                'retro' => (bool) ($p['retro'] ?? false),
+            ];
+        }
+        return $out;
+    }
+
+    /** Sidereal ascendant (deg) at an instant and place — the same formula the chart uses. */
+    public function ascendantSidereal(float $jdUt, float $lat, float $lonEast): float
+    {
+        [$ascTrop] = $this->ascendantMc($jdUt, $lat, $lonEast);
+        return Charts::norm($ascTrop - Ayanamsa::degrees($this->ayanamsa, $jdUt));
+    }
+
     public function ayanamsaName(): string
     {
         return $this->ayanamsa;

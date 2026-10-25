@@ -491,6 +491,12 @@ bala, and the nakshatra's **sanjna** (temperament: चर/क्षिप्र/
 | Yatra (travel) | `YatraMuhuratEngine`, `YatraPratishthaEngine` | journeys, installation |
 | Shatkarma (study) | `ShatkarmaStudyEngine` | the six tantric acts (study/reference) |
 
+A further category, **📋 कार्य-मुहूर्त जाँच**, checks the chosen moment against the
+owner's rule-book for any of the 87 tasks (see §14.1) — the same full checklist
+Tithi Khoj shows, re-checked whenever the transit date/time is stepped, with a
+button that jumps to Tithi Khoj for that task. The chosen category is kept when
+the date changes.
+
 The auspiciousness score and its red/amber/green bar come from
 `Auspiciousness.php`; a **date-range scan** (find every good day between two
 dates) is done by `MuhuratDateScanner` and served by `calc/muhuratScan`. All the
@@ -498,39 +504,57 @@ rule data sits in `MuhuratChintamaniData` and `ShatkarmaData`.
 
 ### 14.1 Tithi Khoj · तिथि खोज (Mahurat › Tithi Khoj)
 
-The second view of the Mahurat page — "on which days in this period is it good
-to do X?". The parent **Mahurat** button always opens *Mahurat Phal* (the page
-above); the sub-item **Tithi Khoj** swaps in this view (`setMahView`). It can also
-be opened from **और देखें**, from the Custom Screen picker (`muh_tithi`), or by
-link: `?sec=muhurat&mview=tithi`.
+The second view of the Mahurat page — "on which days in this period, and at what
+time, is it good to do X?". The parent **Mahurat** button always opens *Mahurat
+Phal* (the page above); the sub-item **Tithi Khoj** swaps in this view
+(`setMahView`). It can also be opened from **और देखें**, from the Custom Screen
+picker (`muh_tithi`), or by link: `?sec=muhurat&mview=tithi`.
 
-1. **कार्य चुनें** — *मुख्य श्रेणी* dropdown (12), then *उप-श्रेणी* dropdown (83
-   in all). The list lives in `app/Astro/Muhurat/TithiKhojCatalog.php`.
-2. **अवधि चुनें** — tabs 1 / 3 / 6 months / 1 year (from today; month added first,
-   day clamped, same as the Milan finder), or type both dates (DD-MM-YYYY), or tap
-   📅 for the device calendar. **कार्य-स्थान का समय** picks the time zone of the
-   place where the work will happen (pre-selected: birth place).
-3. **खोजें** — one call to `calc/muhuratScan?type=…&from=…&to=…&tz=…&lite=1`
-   (up to 400 days; `lite=1` sends the score bar only for good days).
+**The rules come from the owner's rule-book** (the muhurat xlsx, 20 sheets), turned
+into code once:
 
-Every sub-category shows which rule it is searched with:
+| File | Holds |
+|---|---|
+| `KaryaNiyamData.php` (generated) | the 12 categories and **87 tasks** — each with its शुभ/वर्जित tithi, vaar, nakshatra, lagna lists and the book's own text (काल, वर्जित काल, योग-करण, अपवाद, अबूझ, मतभेद) |
+| `PanchangNiyamData.php` (generated) | the reference sheets — tithi, vaar (rahu/yama/gulika parts, disha-shool, parihar), nakshatra (vish-ghati, mukh), yoga (tyajya ghati), karana/bhadra, special yogas, the आनन्दादि matrix, lagna, chandra/tara bal, varjit kaal, choghadiya, hora, yogini, parva/abujh, ratna, shatkarma |
+| `KaryaNiyamVidhi.php` (hand-written) | how each task's text is applied: paksha, which months/sun-signs, which सामान्य दोष apply, time of day, hora, required lagna-shuddhi, personal bal, festivals, and the options a task asks for (direction of travel, deity, planet, document type …) |
 
-| Mark | Meaning | Count |
-|---|---|---|
-| ✅ | A classical rule already exists — searched with that scanner type (e.g. शादी → विवाह, गौना → द्विरागमन, गृह प्रवेश, मुंडन, शपथ → राज्याभिषेक, मुकदमा → युद्ध/विवाद) | 22 |
-| 🟡 | Its own rule is still to be added — searched with general panchang-shuddhi, and the page says so on the result | 49 |
-| ⏳ | Its yardstick is not a general "good day" (षट्कर्म, अंतिम संस्कार, ग्रह शांति, surgery, C-section, weapons) — search stays off until its rule is added | 12 |
+**How a period is searched** (`KaryaTithiKhoj` + `KaryaKaal` + `KaryaNirnay`):
 
-Results: शुभ / मध्यम / अशुभ counts; **शुभ दिन सूची** (best first, or date order
-grouped by month); **कैलेंडर** (one coloured month grid per month, tap a day for
-its detail); and the full day-by-day table. The chosen work, time zone, view and
-order are remembered in the browser.
+1. Every day is taken sunrise → next sunrise for the work place (`SunTimes`), and
+   the exact moments where tithi, nakshatra, yoga, karana, moon-sign and lagna
+   change are found (bisection to about a second).
+2. All the timed doshas are laid on the same day: rahu kaal, yamaganda, gulika,
+   durmuhurta, bhadra (with mukh/puchh), yoga-tyajya ghati, paksha-randhra,
+   gandanta (tithi/nakshatra/lagna), varjyam, sankranti ±16 ghati, eclipse sutak,
+   plus abhijit/pradosh/morning/kutup windows the task may want.
+3. The day is cut at every one of those moments; each piece is judged against the
+   task's rules (`KaryaNirnay::judge`) — month/period bans (खरमास, चातुर्मास, गुरु-शुक्र
+   अस्त, बाल-वृद्ध), tithi, vaar, nakshatra, yoga/karana, special yogas, lagna-shuddhi,
+   time of day, direction, personal bal, abujh days.
+4. Neighbouring good pieces are joined into **windows** (≥ 15 minutes); the day's
+   grade is its best window. A full year takes about 1.7 s; the answer is ~15 KB
+   (gzip).
 
-**Adding a category's rule later:** add a type to `MuhuratDateScanner` (its
-`TYPES` and `evaluate()`), then write that type against the sub-category in
-`TithiKhojCatalog` — the page needs no change. Self-checks **TK-1** (12
-categories, every type known to the scanner) and **TK-2** (a full year is scanned,
-response stays light) guard it.
+**Grades:** शुभ ≥ 80 · मध्यम 60–79 · अशुभ (any hard dosha, or below 60). A moment is
+शुभ only when every limb the book lists for that task (tithi, vaar, nakshatra) is
+in its शुभ list — otherwise it is usable but मध्यम. A day that is clean except for
+lagna-shuddhi is shown मध्यम with "लग्न-शुद्धि अपूर्ण — …" so the astrologer can
+decide. Abujh days relax panchang-shuddhi but not month bans or combustion.
+
+**The page:** *मुख्य श्रेणी* (12) → *कार्य* (87); any options for that task; the
+book's rules for it (fold-out); period tabs 1/3/6 months/1 year or typed dates
+(📅 opens the device calendar); **कार्य-स्थान** (worldwide city search — the
+place's own sunrise and time zone are used); and **👤 व्यक्तिगत बल** (chandra/tara
+bal etc. from the open chart). Results: counts, a list of good days with their
+best time window, lagna, nakshatra and tithi (best first, or by date), a coloured
+calendar, the full table, and on each day **🔎 पूरा विवरण** — the complete
+rule-by-rule checklist at the best moment.
+
+Self-checks **TK-1** (12 categories, all 87 tasks with rules and options), **TK-2**
+(a full year is scanned; some, not all, days are good; every good day has a
+window), **TK-3** (the rule-book's own worked example gives the book's answer) and
+**TK-4** (चातुर्मास blocks a wedding but not a land purchase) guard it.
 
 ---
 
@@ -613,7 +637,11 @@ LalKitabMilan · LalKitabData · LalKitabSettings · LalKitabSelfCheck.
 - **Varshaphal/**, **Varshesh/**, **Muntha/**, **Saham/**, **Tajik/** — the annual
   (Tajik) engines listed in §12.
 - **Muhurat/** — the 12 muhurat engines + Auspiciousness + MuhuratDateScanner +
-  MarriageDateFinder + data classes (§12, §13).
+  MarriageDateFinder + data classes (§12, §13); and the rule-book engine for Tithi
+  Khoj / कार्य-मुहूर्त जाँच (§14.1): KaryaNiyamData, PanchangNiyamData,
+  KaryaNiyamVidhi (rules) · SunTimes, KaryaKaal (the day's exact panchang and dosha
+  windows) · KaryaNirnay (judges a moment) · KaryaTithiKhoj (scans a period, checks
+  one moment) · TithiKhojCatalog (the dropdown lists).
 - **Milan/** — GunaMilan + MilanRepository (§13).
 
 ### 17.5 Support (`Core/`, `Geo/`)
@@ -644,7 +672,10 @@ onto it via `.htaccess`).
 | `calc/lalkitabVarsh` | The Lal Kitab annual (varsh) chart for an age. |
 | `calc/dashaPhala` | Dasha-period readings. |
 | `calc/dashaEngine` | Deeper on-demand dasha drill-downs. |
-| `calc/muhuratScan` | Scan a date range (up to 400 days) for auspicious days; `lite=1` sends the score bar only for good days (Tithi Khoj). |
+| `calc/muhuratScan` | Scan a date range (up to 400 days) for auspicious days with the older per-category engines; `lite=1` sends the score bar only for good days. |
+| `calc/karyaScan` | Tithi Khoj: scan up to 400 days for one of the 87 tasks (`task`, `from`, `to`, place `lat/lon/tz/zone`, options `o_*`, optional `personal` + birth) — good days with time windows. |
+| `calc/karyaCheck` | Check one moment (`date`, `time`) for a task — the full rule-by-rule checklist (Tithi Khoj detail, कार्य-मुहूर्त जाँच). |
+| `calc/karyaInfo` | A task's rules from the rule-book (for the fold-out). |
 | `calc/translate` | Translate the prediction text (language switch). |
 | `calc/ping` | Health check. |
 | `milan` | The Kundali Milan page. |
@@ -710,7 +741,7 @@ their own chart; the muhurat and varshaphal readings follow it on their own
 
 ## 21. Quality control
 
-A self-check harness (`LalKitabSelfCheck`, **64 checks**) fetches real pages over
+A self-check harness (`LalKitabSelfCheck`, **66 checks**) fetches real pages over
 HTTP and asserts against the rendered HTML — run from the command line
 (`php tests/lalkitab_process_check.php`) or the browser (`/lk-selfcheck.php`).
 Every new rule gets a check, and every check is "negative-tested" (the fault is

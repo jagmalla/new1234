@@ -217,7 +217,7 @@
           // Second arg carries the transit moment's date/time/place for subtitles.
           if (typeof cfg.onResult === 'function') {
             try {
-              cfg.onResult(g, { date: fDate.value, time: fTime.value, place: (fPlace.value || '').trim() });
+              cfg.onResult(g, { date: fDate.value, time: fTime.value, place: (fPlace.value || '').trim(), lat: fLat.value, lon: fLon.value, tz: fTz.value });
             } catch (e) {}
           }
         })

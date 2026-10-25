@@ -83,9 +83,15 @@ final class LalKitabSelfCheck
         // विवाह-मुहूर्त तिथि-खोजक — पूरे एक साल की माँग पर पूरा साल जाँचा जाए
         $mdfYear = self::fetch($base . '/milan?mdf_from=' . rawurlencode(date('d-m-Y'))
             . '&mdf_to=' . rawurlencode(date('d-m-Y', strtotime('+1 year'))));
-        // मुहूर्त › तिथि खोज — वही "1 वर्ष" की माँग, उसके अपने स्कैनर पर
-        $tkYear = self::fetch($base . '/calc/muhuratScan?type=vivaha&tz=5.5&lite=1&from='
+        // मुहूर्त › तिथि खोज — वही "1 वर्ष" की माँग, नियम-पुस्तिका वाले स्कैनर पर (विवाह, दिल्ली)
+        $tkYear = self::fetch($base . '/calc/karyaScan?task=1.11&lat=28.6139&lon=77.2090&tz=5.5&zone=Asia/Kolkata&from='
             . rawurlencode(date('d-m-Y')) . '&to=' . rawurlencode(date('d-m-Y', strtotime('+1 year'))));
+        // एक तय क्षण (चातुर्मास के बीच) पर दो कार्यों की जाँच — विवाह रुके, भूमि-क्रय नहीं
+        $tkChk = [];
+        foreach (['1.11', '2.01'] as $tkId) {
+            $tkChk[$tkId] = self::fetch($base . '/calc/karyaCheck?task=' . $tkId
+                . '&date=15-08-2027&time=10:00&lat=28.6139&lon=77.2090&tz=5.5&zone=Asia/Kolkata');
+        }
 
         // कन्या के लिंग वाली एक कुंडली — मिलान की कड़ी सही तरफ़ भरती है या नहीं
         $femalePage = self::fetch($base . '/calc?date=01-12-1980&time=10:30&lat=28.6139&lon=77.2090'
@@ -1028,44 +1034,91 @@ final class LalKitabSelfCheck
             return preg_match('/class="mdf-tab on"\s*\n?\s*data-months="12"/u', $mdfYear) === 1;
         });
 
-        // मुहूर्त › तिथि खोज — उप-मेन्यू और दृश्य मौजूद हों, बारहों श्रेणियाँ सूची में
-        // हों, और हर उप-श्रेणी का नियम-प्रकार स्कैनर सचमुच पहचानता हो। सूची में
-        // प्रकार का एक टाइपो चुपचाप "सामान्य पंचांग-शुद्धि" बन जाता — विवाह खोजने
-        // वाले को विवाह के नियम के बिना दिन मिलते और कोई कुछ न कहता।
-        $add('TK-1', 'मुहूर्त › तिथि खोज: 12 श्रेणियाँ, हर उप-श्रेणी का नियम स्कैनर में मौजूद', static function () use ($pages): bool {
+        // मुहूर्त › तिथि खोज — उप-मेन्यू और दृश्य मौजूद हों, बारहों श्रेणियाँ हों, और
+        // नियम-पुस्तिका के सभी 87 कार्य सूची में हों — हर एक का अपना विधि-नियम
+        // (KaryaNiyamVidhi) व हर विकल्प की परिभाषा मौजूद हो। किसी कार्य का नियम छूट
+        // जाए तो वह चुपचाप "सामान्य पंचांग-शुद्धि" से खोजा जाता और कोई कुछ न कहता।
+        $add('TK-1', 'मुहूर्त › तिथि खोज: 12 श्रेणियाँ, पुस्तिका के सभी 87 कार्य, हर कार्य का नियम व विकल्प मौजूद', static function () use ($pages): bool {
             $html = (string) reset($pages);
             if (mb_strpos($html, 'data-mview="tithi"') === false || mb_strpos($html, 'id="mah-view-tithi"') === false) { return false; }
+            if (mb_strpos($html, 'data-mc="karya"') === false) { return false; }   // मुहूर्त फल › कार्य-मुहूर्त जाँच
             if (!preg_match('/<script type="application\/json" id="tk-data">(.*?)<\/script>/su', $html, $m)) { return false; }
-            $cats = json_decode($m[1], true)['cats'] ?? [];
+            $data = json_decode($m[1], true);
+            $cats = $data['cats'] ?? [];
+            $optDefs = $data['options'] ?? [];
             if (count($cats) !== 12) { return false; }
-            $types = \AutoBusiness\Astro\Muhurat\MuhuratDateScanner::TYPES;
-            $n = 0;
+            $tasks = \AutoBusiness\Astro\Muhurat\KaryaNiyamData::TASKS;
+            $seen = [];
             foreach ($cats as $c) {
                 if (empty($c['subs'])) { return false; }
                 foreach ($c['subs'] as $s) {
-                    $n++;
-                    // खोज-बंद वाली का कोई प्रकार नहीं; बाक़ी हर एक का प्रकार स्कैनर का हो
-                    if ($s['status'] === 'pending') { if ($s['type'] !== '') { return false; } continue; }
-                    if (!isset($types[$s['type']])) { return false; }
+                    $id = (string) $s['key'];
+                    if (!isset($tasks[$id]) || (string) $tasks[$id]['c'] !== (string) $c['key']) { return false; }
+                    if (!isset(\AutoBusiness\Astro\Muhurat\KaryaNiyamVidhi::TASKS[$id])) { return false; }
+                    foreach ($s['opts'] as $o) { if (empty($optDefs[$o]['choices'])) { return false; } }
+                    $seen[$id] = true;
                 }
             }
-            foreach (\AutoBusiness\Astro\Muhurat\TithiKhojCatalog::CATEGORIES as [, , $subs]) {
-                foreach ($subs as $row) {
-                    if (($row[1] ?? null) !== null && !isset($types[$row[1]])) { return false; }
-                }
-            }
-            return $n >= 83;   // मालिक की दी हुई सूची की हर उप-श्रेणी
+            return count($seen) === 87 && count($tasks) === 87;
         });
 
-        // "1 वर्ष" चुनने पर पूरा साल जाँचा जाए — यह स्कैनर पहले 120 दिन पर चुपचाप
-        // कट जाता था (MDF-2 वाली ही भूल)। और lite=1 पर शुभता-पट्टी सिर्फ़ शुभ/मध्यम
-        // दिनों पर आए; हर पंक्ति पर आने से साल भर का जवाब 126 KB की जगह 418 KB था।
-        $add('TK-2', 'तिथि खोज: साल भर की माँग पर पूरा साल जाँचा जाता है (कटता नहीं), जवाब हल्का', static function () use ($tkYear): bool {
+        // "1 वर्ष" चुनने पर पूरा साल जाँचा जाए (MDF-2 वाली भूल — पहले 120 दिन पर
+        // चुपचाप कट जाता था); विवाह के कुछ दिन मिलें पर हर दिन नहीं (नियम न ढीले, न
+        // इतने कड़े कि साल भर में कुछ न मिले); हर मिले दिन पर समय-खिड़की हो; और जवाब
+        // हल्का रहे (भीतरी टुकड़े/खंड बाहर न जाएँ)।
+        $add('TK-2', 'तिथि खोज: विवाह — पूरा साल जाँचा, कुछ (पर सब नहीं) दिन शुभ, हर शुभ दिन पर समय-खिड़की', static function () use ($tkYear): bool {
             if ($tkYear === null) { return false; }
             $d = json_decode($tkYear, true);
             if (!is_array($d) || empty($d['ok']) || !empty($d['capped']) || (int) ($d['scanned'] ?? 0) < 365) { return false; }
-            if (isset($d['rows'][0]['bar_html'])) { return false; }
-            return !empty($d['best']) && isset($d['best'][0]['bar_html']);
+            if (mb_strpos($tkYear, '"_segs"') !== false || mb_strpos($tkYear, '"blocks"') !== false) { return false; }
+            $good = 0;
+            foreach ($d['rows'] as $r) {
+                if ($r['grade'] === 'अशुभ') { continue; }
+                $good++;
+                if (empty($r['windows'][0]['from']) || (int) ($r['windows'][0]['mins'] ?? 0) < 15) { return false; }
+            }
+            return $good >= 5 && $good <= 120;
+        });
+
+        // पुस्तिका की "मुहूर्त_जाँच" शीट का अपना उदाहरण — विवाह · शुक्ल सप्तमी · गुरुवार ·
+        // रोहिणी · मिथुन लग्न · सौभाग्य योग। पुस्तिका का उत्तर: तिथि/वार/नक्षत्र/लग्न/योग
+        // ✔, करण गर (भद्रा नहीं), वार-नक्षत्र योग "उत्पात" ✘, अग्निवास आकाश, शिववास
+        // भोजन, योगिनी वायव्य, दिशाशूल दक्षिण। इंजन वही कहे।
+        $add('TK-3', 'कार्य-नियम इंजन पुस्तिका के जाँच-उदाहरण (विवाह, गुरु-रोहिणी = उत्पात) जैसा ही उत्तर दे', static function (): bool {
+            $eng = new \AutoBusiness\Astro\Calc\CalculationEngine(\AutoBusiness\Astro\Ephemeris\EphemerisFactory::create(), 'lahiri');
+            $jd = \AutoBusiness\Astro\Time\JulianDay::fromGregorian(2027, 2, 11, 0, 0, 0.0, 5.5);
+            $kk = new \AutoBusiness\Astro\Muhurat\KaryaKaal($eng, 28.61, 77.21, new \DateTimeZone('Asia/Kolkata'), 5.5, $jd - 1, $jd + 3);
+            $day = $kk->day(2027, 2, 11);
+            // पुस्तिका के पीले कक्ष (शेष तथ्य उस दिन के असली)
+            $f = array_merge($kk->facts($day, $day['rise'] + 0.2), ['tithi' => 7, 'tp' => 7, 'paksha' => 's', 'vaar' => 5,
+                'nak' => 4, 'nak28' => 4, 'yoga' => 4, 'sunNak' => 4, 'vishti' => false, 'ascSign' => 2,
+                'karanaName' => \AutoBusiness\Astro\Muhurat\KaryaKaal::karanaName(12)[0]]);
+            $opts = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::cleanOpts('1.11', []);
+            $t = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::prepare('1.11', $opts);
+            $j = \AutoBusiness\Astro\Muhurat\KaryaNirnay::judge($t, $f, $day,
+                ['fest' => [], 'eclipses' => [], 'natal' => null, 'personal' => false, 'opts' => $opts], true);
+            $row = static function (string $label) use ($j): ?array {
+                foreach ($j['checks'] as $c) { if ($c['l'] === $label) { return $c; } }
+                return null;
+            };
+            $want = [['पक्ष', 'ok', ''], ['तिथि', 'ok', 'सप्तमी'], ['वार', 'ok', 'गुरुवार'], ['नक्षत्र', 'ok', 'रोहिणी'],
+                ['लग्न', 'ok', 'मिथुन'], ['योग: सौभाग्य', 'good', ''], ['करण', 'ok', 'गर'], ['आनन्दादि: उत्पात', 'bad', ''],
+                ['अग्निवास', 'info', 'आकाश'], ['शिववास', 'info', 'भोजन'], ['दिशाशूल · योगिनी', 'info', 'दक्षिण में दिशाशूल · योगिनी वायव्य']];
+            foreach ($want as [$label, $st, $has]) {
+                $c = $row($label);
+                if ($c === null || $c['s'] !== $st || ($has !== '' && mb_strpos($c['v'], $has) === false)) { return false; }
+            }
+            return \AutoBusiness\Astro\Muhurat\KaryaKaal::karanaName(13)[0] === 'वणिज' && $j['hard'] && in_array('आनन्दादि: उत्पात', $j['bad'], true);
+        });
+
+        // चातुर्मास (देवशयनी → देवउठनी) विवाह रोकता है, पर भूमि-क्रय जैसे कार्यों को नहीं —
+        // वर्जित काल हर कार्य पर अपना-अपना लगे, सब पर एक-सा नहीं।
+        $add('TK-4', 'कार्य-जाँच: चातुर्मास में विवाह वर्जित, भूमि-क्रय पर चातुर्मास का दोष नहीं', static function () use ($tkChk): bool {
+            $v = json_decode((string) ($tkChk['1.11'] ?? ''), true);
+            $l = json_decode((string) ($tkChk['2.01'] ?? ''), true);
+            if (empty($v['ok']) || empty($l['ok'])) { return false; }
+            $has = static fn (array $d): bool => (bool) array_filter($d['verdict']['bad'], static fn ($b) => mb_strpos($b, 'चातुर्मास') !== false);
+            return $v['verdict']['grade'] === 'अशुभ' && $has($v) && !$has($l) && !empty($v['verdict']['checks']);
         });
 
         $add('Y11', 'हर पन्ने पर "कुंडली बाँधती नहीं" वाली सीमा', static function () use ($pages): bool {

@@ -425,6 +425,7 @@ if ($hasAny):
                 <label for="mc-cat-select">🕉️ कार्य / श्रेणी चुनें</label>
                 <select id="mc-cat-select" class="mc-cat-select">
                     <option value="general">🗓️ सामान्य मुहूर्त (पंचांग-शुद्धि)</option>
+                    <option value="karya">📋 कार्य-मुहूर्त जाँच (87 कार्य — नियम-पुस्तिका)</option>
                     <option value="datesearch">🔍 तिथि-खोज (Date Search — शुभ दिन खोजें)</option>
                     <option value="personal">🙋 व्यक्तिगत मुहूर्त (आपकी कुण्डली से)</option>
                     <option value="vivaha">💍 विवाह मुहूर्त + गुण-मिलान</option>
@@ -445,6 +446,9 @@ if ($hasAny):
                     <option value="shatkarma">📜 अभिचार / षट्कर्म (शास्त्र-अध्ययन)</option>
                 </select>
             </div>
+
+            <?php // ---- 📋 कार्य-मुहूर्त जाँच: 87 कार्यों के नियम (KaryaNirnay) — पैनल tithikhoj.js भरता है ---- ?>
+            <div class="mc-panel hidden" data-mc="karya"><div class="tk-mp" data-karya-panel></div></div>
 
             <?php // ---- 🗓️ General Muhurat verdict (Muhurta-Chintamani) ----
             if ($gm !== null && !empty($gm['ok'])): $P = $gm['panchang']; ?>

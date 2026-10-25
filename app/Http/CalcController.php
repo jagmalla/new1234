@@ -1116,6 +1116,88 @@ final class CalcController
     }
 
     /**
+     * 🔍 कार्य-मुहूर्त तिथि-खोज (87 कार्य, मालिक की नियम-पुस्तिका) — अवधि के हर
+     * दिन का दर्जा व शुभ समय-खिड़कियाँ। GET task, from, to (DD-MM-YYYY), lat, lon,
+     * tz, zone (IANA), o_<विकल्प>, personal + bdate/btime/blat/blon/btz/gender।
+     */
+    public function karyaScanJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+        try {
+            [$eng, $task, $place, $opts, $natal, $personal] = $this->karyaArgs();
+            $res = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::scan($eng, $task,
+                self::parseDate((string) ($_GET['from'] ?? '')), self::parseDate((string) ($_GET['to'] ?? '')),
+                $place, $opts, $natal, $personal);
+            if (!empty($res['ok'])) { $res['info'] = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::taskInfo($task); $res['opts'] = $opts; }
+            echo json_encode($res, JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'खोज नहीं हो सकी — तिथि DD-MM-YYYY में व स्थान सही दें।']);
+        }
+    }
+
+    /** एक तिथि (+ वैकल्पिक समय HH:MM) की पूरी नियम-जाँच व उस दिन की शुभ खिड़कियाँ। */
+    public function karyaCheckJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+        try {
+            [$eng, $task, $place, $opts, $natal, $personal] = $this->karyaArgs();
+            $hm = null;
+            $time = trim((string) ($_GET['time'] ?? ''));
+            if ($time !== '') { $hm = self::parseTime($time); }
+            $res = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::check($eng, $task, self::parseDate((string) ($_GET['date'] ?? '')),
+                $hm, $place, $opts, $natal, $personal);
+            if (!empty($res['ok'])) { $res['opts'] = $opts; }
+            echo json_encode($res, JSON_UNESCAPED_UNICODE);
+        } catch (\Throwable $e) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'जाँच नहीं हो सकी — तिथि/समय/स्थान जाँचें।']);
+        }
+    }
+
+    /** कार्य का नियम-पत्र (कार्यपुस्तिका का पाठ, विकल्प, टिप्पणी)। */
+    public function karyaInfoJson(): void
+    {
+        AdminGuard::require();
+        header('Content-Type: application/json');
+        $info = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::taskInfo((string) ($_GET['task'] ?? ''));
+        echo json_encode($info === [] ? ['ok' => false, 'error' => 'अज्ञात कार्य।'] : ['ok' => true, 'info' => $info], JSON_UNESCAPED_UNICODE);
+    }
+
+    /** कार्य-मुहूर्त के साझा अनुरोध-मान (और उत्तर gzip — साल भर का उत्तर ~190 KB से ~15 KB)। */
+    private function karyaArgs(): array
+    {
+        if (!headers_sent() && !ini_get('zlib.output_compression') && str_contains((string) ($_SERVER['HTTP_ACCEPT_ENCODING'] ?? ''), 'gzip')) {
+            ob_start('ob_gzhandler');
+        }
+        $eng = new CalculationEngine(EphemerisFactory::create(), (string) ($_GET['ayanamsa'] ?? 'lahiri'));
+        $task = (string) ($_GET['task'] ?? '');
+        $place = [
+            'lat' => self::parseAngle((string) ($_GET['lat'] ?? '28.6139')),
+            'lon' => self::parseAngle((string) ($_GET['lon'] ?? '77.2090')),
+            'tz' => self::parseTz((string) ($_GET['tz'] ?? '5.5')),
+            'zone' => preg_match('#^[A-Za-z_]+(/[A-Za-z0-9_+\-]+){0,2}$#', (string) ($_GET['zone'] ?? '')) ? (string) $_GET['zone'] : null,
+        ];
+        $raw = [];
+        foreach ($_GET as $k => $v) {
+            if (is_string($k) && str_starts_with($k, 'o_') && is_string($v)) { $raw[substr($k, 2)] = $v; }
+        }
+        $opts = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::cleanOpts($task, $raw);
+        $personal = (string) ($_GET['personal'] ?? '1') === '1';
+        $natal = null;
+        if ($personal && !empty($_GET['bdate'])) {
+            $natal = \AutoBusiness\Astro\Muhurat\KaryaTithiKhoj::natal($eng, [
+                'date' => (string) $_GET['bdate'], 'time' => (string) ($_GET['btime'] ?? '12:00'),
+                'lat' => self::parseAngle((string) ($_GET['blat'] ?? '0')), 'lon' => self::parseAngle((string) ($_GET['blon'] ?? '0')),
+                'tz' => self::parseTz((string) ($_GET['btz'] ?? '5.5')), 'gender' => (string) ($_GET['gender'] ?? ''),
+            ]);
+        }
+        return [$eng, $task, $place, $opts, $natal, $personal];
+    }
+
+    /**
      * JSON endpoint for the Varshaphal question box: rebuilds the natal chart
      * from the birth params, computes the annual (solar-return) chart + Mudda
      * dasha for the requested year, and returns a render-ready payload.

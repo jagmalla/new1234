@@ -42,6 +42,18 @@ try {
             (new CalcController())->muhuratScanJson();
             break;
 
+        case 'GET calc/karyaScan':
+            (new CalcController())->karyaScanJson();
+            break;
+
+        case 'GET calc/karyaCheck':
+            (new CalcController())->karyaCheckJson();
+            break;
+
+        case 'GET calc/karyaInfo':
+            (new CalcController())->karyaInfoJson();
+            break;
+
         case 'GET calc/ping':
         case 'POST calc/ping':
             (new CalcController())->ping();

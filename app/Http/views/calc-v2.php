@@ -2993,6 +2993,7 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
   window.AB_DASHA  = <?= json_encode($chart['dasha']['mahadashas'] ?? [], JSON_UNESCAPED_UNICODE) ?>;
   window.AB_MUDDA  = <?= json_encode($vp['mudda_dasha'] ?? [], JSON_UNESCAPED_UNICODE) ?>;
   window.AB_BIRTH  = <?= json_encode($birthJs ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
+  window.AB_GENDER = <?= json_encode((string) ($in['gender'] ?? ''), JSON_UNESCAPED_UNICODE) ?>;
   window.AB_TZ     = <?= json_encode((float) ($meta['tz'] ?? 0)) ?>;
   window.AB_YEAR   = <?= json_encode((int) $in['forYear']) ?>;
   window.AB_HOUSES = <?= json_encode($chart['houses'] ?? new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
@@ -4113,13 +4114,21 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
         fallback: { lat: (window.AB_BIRTH && window.AB_BIRTH.lat) || 28.61, lon: (window.AB_BIRTH && window.AB_BIRTH.lon) || 77.21, tz: window.AB_TZ },
         injectPhal: false,
         steppers: true,   // date/time +/- buttons; each step re-fetches → muhurat फल updates
-        onResult: function (g) {
+        onResult: function (g, meta) {
           var box = document.getElementById('mah-phal');
           if (!box || g.phal_html == null) { return; }
           var tmp = document.createElement('div');
           tmp.innerHTML = g.phal_html;
           var mu = tmp.querySelector('.gochar-cat[data-cat="muhurat"]');
           box.innerHTML = mu ? mu.innerHTML : '<div class="text-sm text-gray-500 p-2">इस तिथि हेतु मुहूर्त विवरण उपलब्ध नहीं।</div>';
+          // तिथि/समय बदलने पर फ़्रैगमेंट नया आता है — चुनी श्रेणी वही रहे
+          // (कार्य-मुहूर्त जाँच पैनल नए क्षण पर फिर जाँचता है)।
+          if (window.ABTithiKhoj) { window.ABTithiKhoj.refreshPhal(meta); }
+          var mcSel = box.querySelector('#mc-cat-select');
+          if (mcSel && window.AB_MC_LAST && mcSel.querySelector('option[value="' + window.AB_MC_LAST + '"]')) {
+            mcSel.value = window.AB_MC_LAST;
+            mcSel.dispatchEvent(new Event('change', { bubbles: true }));
+          }
           // Lift the context strip into the full-width bar above the chart+prediction
           // so the prediction column starts directly at the श्रेणी dropdown.
           var ctxHost = document.getElementById('mah-context');
@@ -4357,11 +4366,17 @@ $nativeBar = static function (string $title, string $accent = '#7c3aed') use ($i
       // category selector — toggle the top-level muhurat panels
       var sel = e.target.closest('#mc-cat-select');
       if (sel) {
-        var root = sel.closest('[data-cat="muhurat"]') || document;
+        // #mah-phal holds the fragment's innerHTML (no data-cat wrapper)
+        var root = sel.closest('[data-cat="muhurat"], #mah-phal') || document;
         var val = sel.value;
+        window.AB_MC_LAST = val;
         root.querySelectorAll('.mc-panel').forEach(function (p) {
           p.classList.toggle('hidden', p.getAttribute('data-mc') !== val);
         });
+        if (val === 'karya' && window.ABTithiKhoj) {
+          var kp = root.querySelector('.mc-panel[data-mc="karya"] [data-karya-panel]');
+          if (kp) { window.ABTithiKhoj.mountPhal(kp); }
+        }
         return;
       }
       // संस्कार rite / यात्रा direction sub-selector — toggle the per-item cards
